@@ -230,6 +230,12 @@ async fn command(
     member(&tx, &p.user.id, &channel)?;
     let at = now().max(0) as u64;
     let mut session = load(&tx, &channel, at, active)?;
+    if s.dj.is_some() && matches!(input.command, Command::Enqueue { .. }) {
+        return Err(ApiError(
+            StatusCode::BAD_REQUEST,
+            "use DJ queue preparation",
+        ));
+    }
     session
         .apply(&p.user.id, input.expected_revision, input.command, at)
         .map_err(domain)?;
@@ -262,8 +268,12 @@ async fn stop(
         json!({"channel_id":channel}),
     )?;
     tx.commit()?;
+    drop(db);
     if let Some(gateway) = &s.plex {
         gateway.stop_channel(&channel);
+    }
+    if let Some(player) = &s.dj {
+        player.stop_channel(&channel);
     }
     Ok(Json(json!({"stopped":true})))
 }

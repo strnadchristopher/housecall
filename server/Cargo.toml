@@ -37,3 +37,5 @@ tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"
 proptest = "1"
 tempfile = "3"
+
+str0m = { version = "0.25", default-features = false, features = ["openssl"] }

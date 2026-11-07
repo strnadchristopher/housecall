@@ -16,13 +16,13 @@ Only evidence with a successful terminal result establishes a pass. Provisional 
 | Search/pin/react/edit/typing/read | API/client tests | full browser interactions per platform |
 | Giphy | fixed-origin parser/property tests | keyed fixture/live picker fetch and playback |
 | Markdown/embeds | inert markdown AST + public-IP DNS-pinned text previews/SSRF tests | Opus safe semantic renderer; remote image previews |
-| Voice/video/screenshare | 3-browser Opus/VP8 + screen replacement; synthetic localhost median48ms/p95 71ms | physical LAN glass-to-glass; load passes5 peers but fails10, 30 unverified |
+| Voice/video/screenshare | 3-browser Opus/VP8 + screen replacement; synthetic localhost median48ms/p95 71ms | physical LAN glass-to-glass; optimized load passes10; thirty-peer/sustained load unverified |
 | Plex activity | 3-browser real synthetic HLS decode, browse/play/pause/seek with <0.5s drift | live Plex transcoder/library/subtitles and native media support |
-| DJ activity | parser/queue/votes + HTTP/CLI adapters | actual matched source playback, banter between songs, supplied voice reference |
+| DJ activity | encrypted local intro+song, route authorization,3-browser decode/sync/skip fixtures | live matched providers, supplied voice reference, progressive start |
 | Shared VM | controller lease + built VM image + nft VPN namespace isolation | booted Debian, WebRTC capture/audio/control, guest-level VPN check, reset |
 | Gimme | durable worker/idempotency/restart fixtures + 3-user dry-run channel status | live provider compatibility; no production calls in sprint |
 | Reports | consent/redaction and owner authorization tests | consented screenshot upload/display flow |
-| Compose | configuration validation | isolated container build/runtime health/readiness |
+| Compose | built image and corrected isolated startup/small-scan checks | completed runtime receipt, multi-GiB browser, final source image |
 | Desktop | patched Tauri Linux release + checksum, Windows/macOS CI | observed Windows/macOS CI success and real OS media permissions |
 | Android | ARM64 APK/signature + installed WebView invite/chat/unsend/revoke E2E | quiet core emulator rerun passes with no ANR; native passkeys/push/media, physical device; Romeo unavailable |
 | iOS | shared Tauri crate/mobile entry + Maya plan | generated Xcode project and build verification |

@@ -1,4 +1,5 @@
 pub mod activities;
+pub mod dj;
 pub mod embeds;
 pub mod gimme;
 pub mod giphy;
@@ -89,6 +90,7 @@ pub struct AppState {
     pub transcoder: Option<Arc<transcode::Processor>>,
     pub plex: Option<Arc<plex::Gateway>>,
     pub gimme: Arc<gimme::Worker>,
+    pub dj: Option<Arc<dj::Player>>,
 }
 #[derive(Clone, Serialize, Debug)]
 pub struct User {
@@ -125,6 +127,7 @@ impl AppState {
         passkeys::init(&db)?;
         activities::init(&db)?;
         gimme::init(&db)?;
+        dj::init(&db)?;
         Ok(Self {
             db: Arc::new(Mutex::new(db)),
             setup_hash: hash(setup_token),
@@ -139,6 +142,7 @@ impl AppState {
             transcoder: None,
             plex: None,
             gimme: gimme::Worker::dry_run(),
+            dj: None,
         })
     }
     fn limited(&self, key: String, max: u32) -> bool {
@@ -181,6 +185,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .merge(media::routes())
         .merge(giphy::routes())
         .merge(gimme::routes())
+        .merge(dj::routes())
         .merge(passkeys::private_routes())
         .merge(activities::routes())
         .route("/me", get(me))
@@ -562,7 +567,7 @@ async fn accept(State(s): State<AppState>, Json(v): Json<Accept>) -> ApiResult<V
 }
 async fn me(State(s): State<AppState>, Extension(p): Extension<Principal>) -> Json<Value> {
     Json(
-        json!({"user":p.user,"session_id":p.session_id,"capabilities":{"password":true,"passkeys":s.passkeys.is_some(),"chat":true,"embeds":true,"uploads":s.media.is_some(),"transcode":s.transcoder.is_some(),"plex":s.plex.is_some() && s.voice.is_some(),"voice":s.voice.is_some(),"activities":false,"activity_sync":true,"activity_playback":false,"giphy":giphy::configured(),"gimme_dry_run":s.gimme.is_dry_run(),"push":false}}),
+        json!({"user":p.user,"session_id":p.session_id,"capabilities":{"password":true,"passkeys":s.passkeys.is_some(),"chat":true,"embeds":true,"uploads":s.media.is_some(),"transcode":s.transcoder.is_some(),"plex":s.plex.is_some() && s.voice.is_some(),"voice":s.voice.is_some(),"activities":false,"activity_sync":true,"activity_playback":false,"giphy":giphy::configured(),"gimme_dry_run":s.gimme.is_dry_run(),"dj":s.dj.is_some() && s.voice.is_some(),"push":false}}),
     )
 }
 async fn devices(

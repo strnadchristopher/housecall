@@ -1,0 +1,30 @@
+   Compiling chriscord-activities v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/activities)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.53s
+     Running unittests src/lib.rs (target/debug/deps/chriscord_activities-36674029bd505c75)
+
+running 4 tests
+test dj::playback_tests::cdn_policy_rejects_private_hosts_redirect_tricks_and_special_addresses ... ok
+test dj::playback_tests::oversized_declared_audio_is_rejected_before_creating_a_cache_file ... ok
+test dj::playback_tests::downloader_streams_only_pinned_fixture_origin_and_never_follows_redirects ... ok
+test dj::playback_tests::resolver_process_uses_explicit_local_runtime_and_disables_remote_components ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/domain.rs (target/debug/deps/domain-6e6d9ca6127ad090)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+
+     Running tests/plex_hls.rs (target/debug/deps/plex_hls-1712ce224b69bc25)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+     Running tests/providers.rs (target/debug/deps/providers-c0ff0463dee61069)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
