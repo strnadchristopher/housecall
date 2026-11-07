@@ -98,3 +98,16 @@ FFmpeg receives decrypted bytes only through stdin and writes output only throug
 ## Text-only link metadata
 
 `GET /api/embeds?url=<encoded-https-url>` requires an authenticated device session and returns `{url,hostname,title,description}`. Only public HTTPS port 443 is permitted; every DNS result is checked before the selected address is pinned. Redirects, proxy inheritance, userinfo, private IPs and active HTML are rejected. HTML is bounded to 512 KiB and at most two previews run concurrently. The client renders the returned strings as text; this endpoint does not proxy images or third-party scripts.
+
+## Plex watch-party gateway
+
+Set both `PLEX_URL` and `PLEX_TOKEN` to enable the provider; `capabilities.plex` also requires configured voice transport. Every Plex route requires current channel membership, a connected caller device in voice, and an active Plex activity. Credentials stay in server-side provider headers.
+
+- `GET /api/channels/:id/plex/sections` → `{libraries:[{id,title,kind}]}`.
+- `GET /api/channels/:id/plex/items?section=:id&start=0` → `{items:[{id,title,kind,duration_ms,subtitles:[{id,language,codec,embedded}]}]}`.
+- `GET /api/channels/:id/plex/metadata/:rating_key` → one item with subtitle choices.
+- `POST /api/channels/:id/plex/playback` with `{rating_key,subtitle_id?:string}` → `{playback_id,rating_key,manifest_url}`. The host first selects the same media ID in the synchronized activity; only the host may select subtitles. Peers reuse the shared playback.
+- `GET /api/channels/:id/plex/playback` returns the current descriptor. Host-only `DELETE` stops it; stopping the activity also closes its gateway session.
+- `GET /api/channels/:id/plex/resources/:opaque_id` streams authorized HLS manifests/segments and subtitle resources. Every rewritten URI stays on the authenticated Chriscord origin; HLS requests must include the bearer and device-key headers. Segment streaming rechecks the device session and voice/activity access every second. Provider URLs/tokens never appear in client manifests.
+
+Play/pause/seek remain revision-checked activity commands. Playback descriptors emit `plex.playback`; clients use the activity clock for synchronization. The gateway does not by itself establish playback quality or synchronization measurements; those require the three-client fixture/live-provider evidence.

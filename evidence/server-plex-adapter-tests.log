@@ -1,0 +1,13 @@
+   Compiling chriscord-activities v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/activities)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.65s
+     Running tests/plex_hls.rs (target/debug/deps/plex_hls-1712ce224b69bc25)
+
+running 4 tests
+test all_hls_uri_forms_are_local_and_credentials_stay_server_side ... ok
+test resource_fixture_preserves_range_strips_query_token_and_refuses_redirect ... ok
+proptest: FileFailurePersistence::SourceParallel set, but failed to find lib.rs or main.rs
+test origin_path_redirect_style_and_attribute_ssrf_rejected ... ok
+test arbitrary_manifest_input_never_panics ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.67s
+

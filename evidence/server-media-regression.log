@@ -1,0 +1,54 @@
+   Compiling crypto-common v0.1.7
+   Compiling serde_core v1.0.229
+   Compiling syn v3.0.9
+   Compiling universal-hash v0.5.1
+   Compiling cipher v0.4.4
+   Compiling polyval v0.6.2
+   Compiling once_cell v1.21.4
+   Compiling serde_json v1.0.154
+   Compiling tempfile v3.27.0
+   Compiling ghash v0.5.1
+   Compiling ctr v0.9.2
+   Compiling aes v0.8.4
+   Compiling serde_derive v1.0.229
+   Compiling thiserror-impl v2.0.21
+   Compiling aead v0.5.2
+   Compiling memchr v2.8.3
+   Compiling rusty-fork v0.3.1
+   Compiling aes-gcm v0.10.3
+   Compiling thiserror v2.0.21
+   Compiling serde v1.0.229
+   Compiling uuid v1.29.1
+   Compiling proptest v1.12.0
+   Compiling chriscord-media v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/media)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 22.26s
+     Running unittests src/lib.rs (target/debug/deps/chriscord_media-a10f90bf0424290b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/security.rs (target/debug/deps/security-b101b2c725ed45dd)
+
+running 10 tests
+test live_clamd_releases_clean_and_quarantines_eicar ... ignored, requires isolated live clamd fixture via CHRISCORD_TEST_CLAMD_SOCKET
+proptest: FileFailurePersistence::SourceParallel set, but failed to find lib.rs or main.rs
+test clamd_protocol_accepts_only_definitive_clean_response ... ok
+test multi_gib_interrupted_upload ... ignored, explicit large fixture: writes and reads >2 GiB, run separately
+proptest: FileFailurePersistence::SourceParallel set, but failed to find lib.rs or main.rs
+test malformed_and_overflow_uploads_fail_closed ... ok
+test range_parser_never_panics_and_success_is_bounded ... ok
+test resume_large_fixture_after_process_interrupt ... ignored, continues the exact owned disk fixture after an actual process interruption
+test zero_length_and_range_edge_cases ... ok
+test ciphertext_tamper_is_detected_before_output ... ok
+test resume_encryption_ranges_and_access ... ok
+test arbitrary_bytes_roundtrip ... ok
+
+test result: ok. 7 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 20.43s
+
+   Doc-tests chriscord_media
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

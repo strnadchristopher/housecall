@@ -12,6 +12,21 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::BTreeSet;
 
+/// Recheck channel and connected voice membership before provider operations; no DB lock crosses await.
+pub async fn authorized_snapshot(
+    s: &AppState,
+    p: &Principal,
+    channel: &str,
+) -> Result<chriscord_activities::Snapshot, ApiError> {
+    let active = active_roster(s, p, channel).await?;
+    let db = s.db.lock().unwrap();
+    member(&db, &p.user.id, channel)?;
+    let at = now().max(0) as u64;
+    load(&db, channel, at, active)?
+        .snapshot(&p.user.id, at)
+        .map_err(domain)
+}
+
 pub fn init(db: &Connection) -> rusqlite::Result<()> {
     db.execute_batch("CREATE TABLE IF NOT EXISTS activities(channel_id TEXT PRIMARY KEY REFERENCES channels(id) ON DELETE CASCADE,state TEXT NOT NULL);")
 }
@@ -248,6 +263,9 @@ async fn stop(
         json!({"channel_id":channel}),
     )?;
     tx.commit()?;
+    if let Some(gateway) = &s.plex {
+        gateway.stop_channel(&channel);
+    }
     Ok(Json(json!({"stopped":true})))
 }
 #[derive(Deserialize)]

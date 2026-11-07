@@ -224,3 +224,219 @@ fn parse_item(v: &serde_json::Value) -> Result<Item> {
         subtitles,
     })
 }
+
+/// A manifest resource validated against the configured Plex origin and transcode path.
+/// URLs stay server-side; expose only an application-issued opaque resource identifier.
+#[derive(Clone, Debug)]
+pub struct Resource {
+    pub url: Url,
+    pub playlist: bool,
+}
+impl Plex {
+    pub fn resource(&self, base: &Url, reference: &str, playlist: bool) -> Result<Resource> {
+        if reference.is_empty() || reference.len() > 8192 || reference.chars().any(char::is_control)
+        {
+            return Err(Error::Invalid("Plex resource URI"));
+        }
+        let mut url = base
+            .join(reference)
+            .map_err(|_| Error::Invalid("Plex resource URI"))?;
+        if url.origin() != self.origin.origin()
+            || !url.username().is_empty()
+            || url.password().is_some()
+            || url.fragment().is_some()
+            || !(url.path() == "/video/:/transcode/universal/start.m3u8"
+                || url
+                    .path()
+                    .starts_with("/video/:/transcode/universal/session/")
+                || url
+                    .path()
+                    .strip_prefix("/library/streams/")
+                    .is_some_and(|id| numeric(id).is_ok()))
+            || url.path().contains('%')
+            || url.path().to_ascii_lowercase().contains("%5c")
+            || url.path().to_ascii_lowercase().contains("%2e")
+        {
+            return Err(Error::Invalid("Plex resource origin or path"));
+        }
+        let query: Vec<(String, String)> = url
+            .query_pairs()
+            .filter(|(key, _)| !key.eq_ignore_ascii_case("x-plex-token"))
+            .map(|(k, v)| (k.into_owned(), v.into_owned()))
+            .collect();
+        url.set_query(None);
+        if !query.is_empty() {
+            url.query_pairs_mut().extend_pairs(query);
+        }
+        let playlist = playlist || url.path().ends_with(".m3u8") || url.path().ends_with(".m3u");
+        Ok(Resource { url, playlist })
+    }
+    pub async fn fetch(
+        &self,
+        resource: &Resource,
+        range: Option<&str>,
+    ) -> Result<reqwest::Response> {
+        let resource = self.resource(&resource.url, resource.url.as_str(), resource.playlist)?;
+        let mut request = self.get(resource.url.as_str())?;
+        if let Some(range) = range {
+            let interval = range
+                .strip_prefix("bytes=")
+                .and_then(|v| v.split_once('-'))
+                .ok_or(Error::Invalid("Plex byte range"))?;
+            let start: u64 = interval
+                .0
+                .parse()
+                .map_err(|_| Error::Invalid("Plex byte range"))?;
+            if range.len() > 64 {
+                return Err(Error::Invalid("Plex byte range"));
+            }
+            if !interval.1.is_empty() {
+                let end: u64 = interval
+                    .1
+                    .parse()
+                    .map_err(|_| Error::Invalid("Plex byte range"))?;
+                if end < start || end - start >= 64 * 1024 * 1024 {
+                    return Err(Error::Invalid("Plex byte range"));
+                }
+            }
+            request = request.header(reqwest::header::RANGE, range);
+        }
+        let response = request.send().await.map_err(|_| Error::Provider)?;
+        if !response.status().is_success() {
+            return Err(Error::Provider);
+        }
+        Ok(response)
+    }
+    pub async fn stop(&self, session_id: &str) -> Result<()> {
+        if session_id.is_empty()
+            || session_id.len() > 128
+            || !session_id
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-')
+        {
+            return Err(Error::Invalid("Plex session"));
+        }
+        self.get("/video/:/transcode/universal/stop")?
+            .query(&[("session", session_id)])
+            .send()
+            .await
+            .map_err(|_| Error::Provider)?
+            .error_for_status()
+            .map_err(|_| Error::Provider)?;
+        Ok(())
+    }
+    fn manifest_resource(&self, base: &Url, reference: &str, playlist: bool) -> Result<Resource> {
+        let resource = self.resource(base, reference, playlist)?;
+        if resource.url.path() == "/video/:/transcode/universal/start.m3u8" {
+            return Err(Error::Invalid("HLS cannot invoke Plex control endpoints"));
+        }
+        Ok(resource)
+    }
+    /// Rewrite every URI line and URI-valued attribute (including keys, maps, subtitles,
+    /// alternate renditions and nested playlists). Reject external origins and malformed grammar.
+    /// `register` must return a local path and bound its opaque-resource registry.
+    pub fn rewrite_manifest<F>(&self, text: &str, base: &Url, mut register: F) -> Result<String>
+    where
+        F: FnMut(Resource) -> Result<String>,
+    {
+        if text.len() > 1024 * 1024 || text.lines().next() != Some("#EXTM3U") || text.contains('\0')
+        {
+            return Err(Error::Invalid("Plex HLS manifest"));
+        }
+        let mut out = String::new();
+        let mut next_playlist = false;
+        for line in text.lines() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            let rewritten = if !line.starts_with('#') {
+                let local = register(self.manifest_resource(base, line, next_playlist)?)?;
+                next_playlist = false;
+                local_uri(local)?
+            } else if line.contains("URI=") {
+                let (tag, attrs) = line
+                    .split_once(':')
+                    .ok_or(Error::Invalid("Plex HLS attributes"))?;
+                let mut encoded = Vec::new();
+                for attr in attributes(attrs)? {
+                    let (key, value) = attr
+                        .split_once('=')
+                        .ok_or(Error::Invalid("Plex HLS attribute"))?;
+                    if key.is_empty()
+                        || !key
+                            .bytes()
+                            .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'-')
+                    {
+                        return Err(Error::Invalid("Plex HLS attribute"));
+                    }
+                    if key == "URI" || key.ends_with("-URI") {
+                        let value = value
+                            .strip_prefix('"')
+                            .and_then(|v| v.strip_suffix('"'))
+                            .ok_or(Error::Invalid("Plex HLS URI quoting"))?;
+                        let playlist = matches!(
+                            tag,
+                            "#EXT-X-MEDIA"
+                                | "#EXT-X-I-FRAME-STREAM-INF"
+                                | "#EXT-X-RENDITION-REPORT"
+                        );
+                        let local =
+                            local_uri(register(self.manifest_resource(base, value, playlist)?)?)?;
+                        encoded.push(format!("{key}=\"{local}\""));
+                    } else {
+                        encoded.push(attr.to_owned());
+                    }
+                }
+                format!("{tag}:{}", encoded.join(","))
+            } else if line.starts_with("#EXT") {
+                if line.starts_with("#EXT-X-STREAM-INF:") {
+                    next_playlist = true;
+                }
+                line.to_owned()
+            } else {
+                continue;
+            }; // Strip provider comments, which can contain private URLs.
+               // No origin or token may leak through non-URI metadata attributes/comments.
+            if rewritten.contains("://")
+                || rewritten.contains(&self.token)
+                || rewritten.chars().any(|c| c.is_control())
+            {
+                return Err(Error::Invalid("Plex HLS private metadata"));
+            }
+            out.push_str(&rewritten);
+            out.push('\n');
+        }
+        Ok(out)
+    }
+}
+fn local_uri(value: String) -> Result<String> {
+    if !value.starts_with("/api/") || value.contains(['"', '\n', '\r', '\\', '?', '#']) {
+        return Err(Error::Invalid("HLS proxy URI"));
+    }
+    Ok(value)
+}
+fn attributes(value: &str) -> Result<Vec<&str>> {
+    let mut quoted = false;
+    let mut start = 0;
+    let mut result = Vec::new();
+    for (index, c) in value.char_indices() {
+        match c {
+            '"' => quoted = !quoted,
+            '\\' | '\r' | '\n' => return Err(Error::Invalid("HLS attribute escaping")),
+            ',' if !quoted => {
+                result.push(value[start..index].trim());
+                start = index + 1;
+            }
+            _ => {}
+        }
+    }
+    if quoted {
+        return Err(Error::Invalid("HLS unclosed quote"));
+    }
+    result.push(value[start..].trim());
+    if result.len() > 64 {
+        return Err(Error::Invalid("HLS attribute count"));
+    }
+    Ok(result)
+}

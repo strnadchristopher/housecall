@@ -1,0 +1,18 @@
+   Compiling bitflags v2.13.2
+   Compiling openssl v0.10.82
+   Compiling str0m-proto v0.8.0
+   Compiling tower-http v0.6.11
+   Compiling webauthn-attestation-ca v0.5.5
+   Compiling str0m-openssl v0.7.0
+   Compiling is v0.12.0
+   Compiling webauthn-rs-core v0.5.5
+   Compiling reqwest v0.12.28
+   Compiling selectors v0.41.0
+   Compiling str0m v0.25.0
+   Compiling rusqlite v0.37.0
+   Compiling scraper v0.29.0
+   Compiling chriscord-sfu v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/sfu)
+   Compiling chriscord-activities v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/activities)
+   Compiling webauthn-rs v0.5.5
+   Compiling chriscord-server v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/server)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 32s

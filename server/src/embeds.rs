@@ -206,7 +206,20 @@ fn text(input: &str, limit: usize) -> String {
         .collect()
 }
 fn extract(url: Url, html: &str) -> Preview {
-    let doc = Html::parse_document(html);
+    // Only a bounded document prefix is needed for head metadata. Cap tag count
+    // before constructing a DOM so pathological nesting cannot consume a worker
+    // indefinitely even though the HTTP body itself is already bounded.
+    let mut end = html.len().min(64 * 1024);
+    while !html.is_char_boundary(end) {
+        end -= 1;
+    }
+    let prefix = &html[..end];
+    let safe = if prefix.bytes().filter(|c| *c == b'<').take(2049).count() > 2048 {
+        ""
+    } else {
+        prefix
+    };
+    let doc = Html::parse_document(safe);
     let mut title = String::new();
     let mut description = String::new();
     for el in doc.select(&Selector::parse("meta").unwrap()) {
@@ -296,6 +309,13 @@ mod tests {
         assert!(!json.contains("127.0.0.1"));
         assert!(!json.contains("bad()"));
         assert!(!json.contains("http://evil"));
+    }
+    #[test]
+    fn pathological_tag_nesting_falls_back_without_building_a_dom() {
+        let html = "<b>".repeat(50000);
+        let value = extract(Url::parse("https://example.com/").unwrap(), &html);
+        assert_eq!(value.title, "example.com");
+        assert!(value.description.is_empty());
     }
     proptest! {
         #[test] fn parser_never_emits_unbounded_fields(html in ".{0,4096}") {

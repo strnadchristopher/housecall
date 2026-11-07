@@ -64,6 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     chriscord_server::voice::configure(&mut state)?;
     chriscord_server::transcode::configure(&mut state)?;
+    chriscord_server::plex::configure(&mut state)?;
     let static_dir = std::env::var("CHRISCORD_STATIC_DIR").unwrap_or_else(|_| "client/dist".into());
     let bind = std::env::var("CHRISCORD_BIND").unwrap_or_else(|_| "127.0.0.1:3000".into());
     let listener = tokio::net::TcpListener::bind(&bind).await?;

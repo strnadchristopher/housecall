@@ -3,6 +3,7 @@ pub mod embeds;
 pub mod giphy;
 pub mod media;
 pub mod passkeys;
+pub mod plex;
 pub mod servers;
 pub mod transcode;
 pub mod voice;
@@ -85,6 +86,7 @@ pub struct AppState {
     pub passkeys: Option<Arc<passkeys::Passkeys>>,
     pub voice: Option<Arc<chriscord_sfu::Sfu>>,
     pub transcoder: Option<Arc<transcode::Processor>>,
+    pub plex: Option<Arc<plex::Gateway>>,
 }
 #[derive(Clone, Serialize, Debug)]
 pub struct User {
@@ -132,6 +134,7 @@ impl AppState {
             passkeys: None,
             voice: None,
             transcoder: None,
+            plex: None,
         })
     }
     fn limited(&self, key: String, max: u32) -> bool {
@@ -167,6 +170,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         ]);
     let private = Router::new()
         .merge(embeds::routes())
+        .merge(plex::routes())
         .merge(transcode::routes())
         .merge(voice::routes())
         .merge(servers::routes())
@@ -553,7 +557,7 @@ async fn accept(State(s): State<AppState>, Json(v): Json<Accept>) -> ApiResult<V
 }
 async fn me(State(s): State<AppState>, Extension(p): Extension<Principal>) -> Json<Value> {
     Json(
-        json!({"user":p.user,"session_id":p.session_id,"capabilities":{"password":true,"passkeys":s.passkeys.is_some(),"chat":true,"embeds":true,"uploads":s.media.is_some(),"transcode":s.transcoder.is_some(),"voice":s.voice.is_some(),"activities":false,"activity_sync":true,"activity_playback":false,"giphy":giphy::configured(),"push":false}}),
+        json!({"user":p.user,"session_id":p.session_id,"capabilities":{"password":true,"passkeys":s.passkeys.is_some(),"chat":true,"embeds":true,"uploads":s.media.is_some(),"transcode":s.transcoder.is_some(),"plex":s.plex.is_some() && s.voice.is_some(),"voice":s.voice.is_some(),"activities":false,"activity_sync":true,"activity_playback":false,"giphy":giphy::configured(),"push":false}}),
     )
 }
 async fn devices(
