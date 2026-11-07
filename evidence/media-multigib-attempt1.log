@@ -1,0 +1,12 @@
+   Compiling chriscord-media v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/media)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.73s
+     Running unittests src/lib.rs (crates/media/target/debug/deps/chriscord_media-a10f90bf0424290b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/security.rs (crates/media/target/debug/deps/security-b101b2c725ed45dd)
+
+running 1 test
+test multi_gib_interrupted_upload ... 

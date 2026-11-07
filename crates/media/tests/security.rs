@@ -287,3 +287,51 @@ fn live_clamd_releases_clean_and_quarantines_eicar() {
         "Live ClamAV: clean encrypted upload released; EICAR test string remains quarantined and unreadable."
     );
 }
+
+#[test]
+#[ignore = "continues the exact owned disk fixture after an actual process interruption"]
+fn resume_large_fixture_after_process_interrupt() {
+    let path = std::path::PathBuf::from(
+        std::env::var("CHRISCORD_LARGE_FIXTURE_PATH").expect("owned fixture path"),
+    );
+    let root = std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/target"))
+        .canonicalize()
+        .unwrap();
+    let path = path.canonicalize().unwrap();
+    assert_eq!(path.parent().unwrap(), root);
+    assert!(
+        path.file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .starts_with("media-large-")
+    );
+    let directory = fs::read_dir(&path).unwrap().next().unwrap().unwrap();
+    let id = uuid::Uuid::parse_str(directory.file_name().to_str().unwrap()).unwrap();
+    let store = Store::new(&path, [9; 32]).unwrap();
+    let meta = store.inspect(id, "a").unwrap();
+    assert_eq!(meta.filename, "multi-gib.bin");
+    assert_eq!(meta.length, 2147483771);
+    let resumed_at = meta.offset;
+    assert!(resumed_at > 1024 * 1024 * 1024);
+    let mut offset = resumed_at;
+    let chunk = vec![0x5a; MAX_CHUNK];
+    while offset < meta.length {
+        let n = (meta.length - offset).min(MAX_CHUNK as u64) as usize;
+        store.append(id, "a", offset, &chunk[..n]).unwrap();
+        offset += n as u64;
+    }
+    store.finalize(id, "a", &Clean).unwrap();
+    let mut out = vec![];
+    store
+        .read_range(id, meta.length - 123, meta.length)
+        .unwrap()
+        .read_to_end(&mut out)
+        .unwrap();
+    assert_eq!(out, vec![0x5a; 123]);
+    println!(
+        "PASS actual process interruption/restart; resumed_at={resumed_at}; total_bytes={}; full encrypted upload decrypted through fixture scanner; final range verified; no malware-scanning claim",
+        meta.length
+    );
+    fs::remove_dir_all(&path).unwrap();
+}
