@@ -1,0 +1,6 @@
+PASS direct_subnet_canary_positive_control
+PASS debian_guest_boot_0
+PASS qmp_running
+PASS running_overlay_reset_denied
+PASS qmp_keyboard_reaches_guest
+PASS guest_frame_captured

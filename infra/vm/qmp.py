@@ -3,6 +3,7 @@ Only a trusted local operator should have access to the control directory.
 """
 import json
 import socket
+import time
 
 
 class Qmp:
@@ -14,6 +15,7 @@ class Qmp:
             self.socket.connect(str(path))
             self.reader = self.socket.makefile('rb')
             self.sequence = 0
+            self.next_key_at = 0.0
             if 'QMP' not in self._read():
                 raise ValueError('Missing QMP greeting')
             self._call('qmp_capabilities')
@@ -62,11 +64,16 @@ class Qmp:
         }
         if not isinstance(keys, list) or not 1 <= len(keys) <= 64 or any(k not in allowed for k in keys):
             raise ValueError('Unsupported or excessive key input')
-        events = []
+        # QEMU's PS/2 FIFO contains only16 scancodes. A single large QMP list can
+        # silently overflow it before the guest gets a chance to drain the device.
         for key in keys:
-            events.extend({'type': 'key', 'data': {'down': down, 'key': {'type': 'qcode', 'data': key}}}
-                          for down in (True, False))
-        self._call('input-send-event', {'events': events})
+            delay = self.next_key_at - time.monotonic()
+            if delay > 0:
+                time.sleep(delay)
+            events = [{'type': 'key', 'data': {'down': down, 'key': {'type': 'qcode', 'data': key}}}
+                      for down in (True, False)]
+            self._call('input-send-event', {'events': events})
+            self.next_key_at = time.monotonic() + 0.020
 
     def type_text(self, value):
         mapping = {' ': 'spc', '\n': 'ret', '/': 'slash', '-': 'minus', '.': 'dot'}

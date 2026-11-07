@@ -36,6 +36,7 @@ OWNED = []
 NETWORKS = []
 CHECKS = []
 SERIAL = None
+SCENARIO = 'full'
 spec = importlib.util.spec_from_file_location('vm_qmp', ROOT / 'infra/vm/qmp.py')
 qmp_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(qmp_module)
@@ -90,11 +91,11 @@ def download():
 
 
 class Serial:
-    def __init__(self):
+    def __init__(self, log_name='vm-guest-serial.log'):
         self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.socket.settimeout(1)
         self.socket.connect(str(CONTROL / 'serial.sock'))
-        self.log = (EVIDENCE / 'vm-guest-serial.log').open('ab')
+        self.log = (EVIDENCE / log_name).open('ab')
         self.buffer = b''
 
     def receive_until(self, pattern, seconds=15):
@@ -198,7 +199,7 @@ def start_vm():
         time.sleep(.2)
     else:
         raise RuntimeError('QEMU sockets unavailable: ' + docker('logs', VM, check=False).stderr[-1500:])
-    SERIAL = Serial()
+    SERIAL = Serial('vm-guest-input-serial.log' if SCENARIO == 'input' else 'vm-guest-serial.log')
     SERIAL.login()
     code, output = SERIAL.command('cat /etc/os-release; ip -4 address; ip -4 route')
     record('debian_guest_boot_' + str(len([c for c in CHECKS if c['name'].startswith('debian_guest_boot')])), code == 0 and 'Debian GNU/Linux' in output)
@@ -242,11 +243,12 @@ def guest_matrix(prefix, vpn_works):
 
 
 def main():
-    global SERIAL
+    global SERIAL, SCENARIO
     parser = argparse.ArgumentParser()
     parser.add_argument('--download', action='store_true')
-    parser.add_argument('--scenario', choices=['full', 'network-persistence'], default='full')
+    parser.add_argument('--scenario', choices=['full', 'network-persistence', 'input'], default='full')
     args = parser.parse_args()
+    SCENARIO = args.scenario
     if args.download:
         download()
         print('Pinned Debian image verified; no runtime started')
@@ -267,21 +269,28 @@ def main():
         record('qmp_running', qmp.status()['running'])
         denied = reset_overlay()
         record('running_overlay_reset_denied', denied.returncode == 75 and 'VM is running' in denied.stderr, denied.stderr.strip())
-        if args.scenario == 'full':
+        if args.scenario in ('full', 'input'):
             # This remains a real acceptance gate; the independent network scenario does not retry it.
             qmp.type_text('root\n')
             time.sleep(1)
             qmp.type_text('touch /root/qmp-marker\n')
             time.sleep(1)
-            record('qmp_keyboard_reaches_guest', SERIAL.command('test -f /root/qmp-marker')[0] == 0)
+            delivered = SERIAL.command('test -f /root/qmp-marker')[0] == 0
+            # Capture even on failure; a QMP acknowledgement alone is not delivery proof.
+            qmp.screenshot()
+            shutil.copyfile(CONTROL / 'frame.ppm', EVIDENCE / 'vm-guest-input-console.ppm')
+            record('qmp_keyboard_reaches_guest', delivered)
         else:
             CHECKS.append({'name': 'qmp_keyboard_reaches_guest', 'passed': False,
                            'skipped': 'Blocked by failed console-input assertion in full attempt2; this scenario tests independent network/persistence only'})
         qmp.screenshot()
         frame = CONTROL / 'frame.ppm'
         record('guest_frame_captured', frame.is_file() and 100 < frame.stat().st_size < 16 * 1024 * 1024)
-        shutil.copyfile(frame, EVIDENCE / 'vm-guest-console.ppm')
+        capture = 'vm-guest-input-console.ppm' if args.scenario == 'input' else 'vm-guest-console.ppm'
+        shutil.copyfile(frame, EVIDENCE / capture)
         qmp.close()
+        if args.scenario == 'input':
+            return
         record('persistent_marker_written', SERIAL.command('echo persisted > /root/persistent-marker; sync')[0] == 0)
         guest_matrix('vpn_up', True)
         record('guest_ipv6_has_no_default_route', SERIAL.command('test -z "$(ip -6 route show default)"')[0] == 0,
@@ -317,7 +326,8 @@ def main():
             SERIAL = None
         for name in OWNED:
             logs = docker('logs', name, check=False)
-            (EVIDENCE / ('vm-guest-' + name.removeprefix(PREFIX + '-') + '.log')).write_text(logs.stdout + logs.stderr)
+            log_prefix = 'vm-guest-input-' if args.scenario == 'input' else 'vm-guest-'
+            (EVIDENCE / (log_prefix + name.removeprefix(PREFIX + '-') + '.log')).write_text(logs.stdout + logs.stderr)
         cleaned = True
         for name in reversed(OWNED):
             cleaned = docker('rm', '-f', name, check=False).returncode == 0 and cleaned
