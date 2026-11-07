@@ -1,0 +1,9 @@
+{
+  "totalBytes": 2147483771,
+  "interrupted": true,
+  "resumedAt": "4194304",
+  "completedOffset": "2147483771",
+  "scanStatus": "quarantined",
+  "elapsedSeconds": 39.616633399,
+  "note": "Actual Playwright browser File upload with aborted PATCH and resumed server offset. Large-file ClamAV limits remain a separate acceptance gap; quarantine is never presented as safe media."
+}

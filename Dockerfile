@@ -15,7 +15,10 @@ ENV CARGO_BUILD_JOBS=1
 RUN --mount=type=cache,target=/usr/local/cargo/registry --mount=type=cache,target=/build/target cargo clean --release -p chriscord-server -p chriscord-activities -p chriscord-media -p chriscord-sfu && cargo build --locked --release -p chriscord-server && cp /build/target/release/chriscord-server /build/chriscord-server
 
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl ffmpeg && rm -rf /var/lib/apt/lists/* && useradd --uid 10001 --create-home chriscord && mkdir -p /data && chown 10001:10001 /data
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl ffmpeg python3 espeak-ng && rm -rf /var/lib/apt/lists/* && useradd --uid 10001 --create-home chriscord && mkdir -p /data && chown 10001:10001 /data
+# Official zipimport release bundles EJS; no runtime download of executable solver code.
+RUN curl --fail --location --retry 2 https://github.com/yt-dlp/yt-dlp/releases/download/2026.08.19/yt-dlp -o /usr/local/bin/yt-dlp && echo '1fa6733c37ea6fb51c99ad8fe785e7b7e5f3246c9b980230329d4fb72ed8d4d6  /usr/local/bin/yt-dlp' | sha256sum --check && chmod 0755 /usr/local/bin/yt-dlp
+COPY --from=client /usr/local/bin/node /usr/local/bin/node
 COPY --from=server /build/chriscord-server /usr/local/bin/chriscord-server
 COPY --from=client /build/client/dist /app/client
 USER 10001:10001

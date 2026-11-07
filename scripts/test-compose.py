@@ -23,8 +23,11 @@ def main():
     override=RUNTIME/'override.yaml'
     override.write_text('volumes:\n  scanner-db:\n    external: true\n    name: chriscord-sprint-scanner_scanner-db\n')
     base=['sudo','-n','docker','--host','unix:///var/run/docker.sock','compose','--env-file',str(envfile),'-p',PROJECT,'-f',str(ROOT/'compose.yaml'),'-f',str(override)]
-    clean_env={k:v for k,v in os.environ.items() if not k.startswith(('CHRISCORD_','SFU_','PLEX_','GIMME_','GIPHY_','SWITCHBOARD_','APNS_','FCM_','GLUETUN_','VM_'))}
+    clean_env={k:v for k,v in os.environ.items() if not k.startswith(('CHRISCORD_','SFU_','PLEX_','GIMME_','GIPHY_','SWITCHBOARD_','APNS_','FCM_','GLUETUN_','VM_','DJ_','SPOTIFY_','YT_DLP_'))}
     checks=[]
+    completed=False
+    def checkpoint():
+        EVIDENCE.write_text(json.dumps({'project':PROJECT,'completed':completed,'checks':checks,'note':'Isolated local Docker fixture; no Shiva deployment. Synthetic credentials never logged.'},indent=2)+'\n')
     def cli(*args,check=True):
         return subprocess.run(base+list(args),cwd=ROOT,env=clean_env,check=check,timeout=240,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
     origin=f'http://127.0.0.1:{port}'
@@ -40,6 +43,7 @@ def main():
         except urllib.error.HTTPError as e:return e.code,None,dict(e.headers)
     def verify(name,condition):
         checks.append({'check':name,'passed':bool(condition)})
+        checkpoint()
         if not condition:raise AssertionError(name)
     try:
         result=cli('up','-d','--no-build','app','scanner');print(result.stdout,flush=True)
@@ -87,13 +91,14 @@ def main():
         verify('delete encrypted file',call('/api/uploads/'+uid,auth=owner,method='DELETE')[0]==200)
         verify('deleted ciphertext unavailable',call('/api/media/'+uid,auth=friend)[0]==404)
         if os.environ.get('CHRISCORD_LARGE_BROWSER')=='1':
-            result=subprocess.run(['node',str(ROOT/'scripts/test-large-browser.mjs'),origin],cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=660)
+            result=subprocess.run(['node',str(ROOT/'scripts/test-large-browser.mjs'),origin],cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=780)
             (ROOT/'evidence'/'client-multigib.log').write_text(result.stdout)
             verify('browser multi-GiB interrupted resume',result.returncode==0)
+        completed=True
     finally:
         logs=cli('logs','--no-color',check=False).stdout
         (ROOT/'evidence'/'compose-container.log').write_text(logs)
-        EVIDENCE.write_text(json.dumps({'project':PROJECT,'checks':checks,'note':'Isolated local Docker fixture; no Shiva deployment. Synthetic credentials never logged.'},indent=2)+'\n')
+        checkpoint()
         cleanup=cli('down','--volumes','--remove-orphans',check=False)
         print(cleanup.stdout)
         envfile.unlink(missing_ok=True)

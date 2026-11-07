@@ -30,6 +30,9 @@ services:
       GIMME_DRY_RUN: "true"
       SWITCHBOARD_URL: ${SWITCHBOARD_URL:-https://switchboard.littleobelisk.com/v1/chat/completions}
       SWITCHBOARD_API_KEY: ${SWITCHBOARD_API_KEY:-}
+      DJ_ENABLED: ${DJ_ENABLED:-false}
+      DJ_TMPFS_DIR: /tmp/chriscord-dj
+      SPOTIFY_ACCESS_TOKEN: ${SPOTIFY_ACCESS_TOKEN:-}
       APNS_KEY_PATH: ${APNS_KEY_PATH:-}
       FCM_CREDENTIALS_PATH: ${FCM_CREDENTIALS_PATH:-}
     volumes:

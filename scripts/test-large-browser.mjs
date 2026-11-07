@@ -14,7 +14,7 @@ const handle=await open(file,'wx',0o600);await handle.truncate(total);await hand
 const browser=await chromium.launch({headless:true});
 const started=performance.now();
 const evidence={totalBytes:total,interrupted:false,resumedAt:null,completedOffset:null,scanStatus:null,elapsedSeconds:null,note:'Actual Playwright browser File upload with aborted PATCH and resumed server offset. Large-file ClamAV limits remain a separate acceptance gap; quarantine is never presented as safe media.'};
-const timer=setTimeout(()=>void browser.close(),600000);
+const timer=setTimeout(()=>void browser.close(),720000);
 try {
  const page=await browser.newPage();
  await page.goto(origin);
@@ -38,7 +38,10 @@ try {
   const request=route.request();
   if(request.method()==='PATCH' && Number(request.headers()['upload-offset'])>=4194304 && !evidence.interrupted) {
    evidence.interrupted=true;evidence.resumedAt=request.headers()['upload-offset'];
-   await route.abort('connectionreset');interruptResolve();return;
+   await route.abort('connectionreset');
+   // Do not retain/intercept another 2 GiB of request bodies through the driver.
+   await page.unroute('**/api/uploads/*');
+   interruptResolve();return;
   }
   await route.continue();
  });
@@ -54,7 +57,7 @@ try {
   const response=await page.request.get(origin+'/api/uploads/'+id,{headers:auth});return (await response.json()).offset;
  },{timeout:10000}).toBe(evidence.resumedAt);
  await page.getByRole('button',{name:'Resume upload',exact:true}).click();
- await expect.poll(()=>evidence.completedOffset,{timeout:300000,intervals:[1000]}).toBe(String(total));
+ await expect.poll(()=>evidence.completedOffset,{timeout:480000,intervals:[1000]}).toBe(String(total));
  await expect.poll(async()=>{
   const response=await page.request.get(origin+'/api/uploads/'+id,{headers:auth});
   const metadata=await response.json();evidence.scanStatus=metadata.status;return metadata.status;
@@ -65,6 +68,9 @@ try {
  if(evidence.scanStatus==='quarantined') {
   const response=await page.request.get(origin+'/api/media/'+id,{headers:auth});assert.equal(response.status(),423);
  } else assert.equal(evidence.scanStatus,'ready');
+ // Wait for the uploader's completion request and subsequent metadata refresh,
+ // not merely the independent server-side status poll, before taking the UI receipt.
+ await expect(page.getByTestId('screen-uploads')).toContainText(`(${evidence.scanStatus})`,{timeout:15000});
  await page.screenshot({path:path.join(root,'evidence','client-multigib.png'),fullPage:true});
  const removed=await page.request.delete(origin+'/api/uploads/'+id,{headers:auth});assert.equal(removed.status(),200);
  evidence.elapsedSeconds=(performance.now()-started)/1000;
