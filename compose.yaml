@@ -1,0 +1,73 @@
+name: chriscord
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    init: true
+    ports:
+      - "127.0.0.1:${CHRISCORD_PORT:-4317}:3000"
+    environment:
+      CHRISCORD_BIND: 0.0.0.0:3000
+      CHRISCORD_DATABASE: /data/chriscord.sqlite
+      CHRISCORD_STATIC_DIR: /app/client
+      CHRISCORD_SETUP_TOKEN: ${CHRISCORD_SETUP_TOKEN:?Set a random bootstrap token in .env}
+      CHRISCORD_ORIGIN: ${CHRISCORD_ORIGIN:-http://localhost:4317}
+      CHRISCORD_MEDIA_DIR: /data/media
+      CHRISCORD_MEDIA_KEY: ${CHRISCORD_MEDIA_KEY:?Set a random 32-byte hex media encryption key in .env}
+      CHRISCORD_CLAMD_SOCKET: /scan/clamd.sock
+      GIPHY_API_KEY: ${GIPHY_API_KEY:-}
+      PLEX_URL: ${PLEX_URL:-}
+      PLEX_TOKEN: ${PLEX_TOKEN:-}
+      GIMME_BASE_URL: ${GIMME_BASE_URL:-https://api.littleobelisk.com}
+      GIMME_AGENT_API_KEY: ${GIMME_AGENT_API_KEY:-}
+      GIMME_DRY_RUN: "true"
+      SWITCHBOARD_URL: ${SWITCHBOARD_URL:-https://switchboard.littleobelisk.com/v1/chat/completions}
+      SWITCHBOARD_API_KEY: ${SWITCHBOARD_API_KEY:-}
+      APNS_KEY_PATH: ${APNS_KEY_PATH:-}
+      FCM_CREDENTIALS_PATH: ${FCM_CREDENTIALS_PATH:-}
+    volumes:
+      - app-data:/data
+      - scan-socket:/scan:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    mem_limit: 1g
+    pids_limit: 128
+  scanner:
+    image: clamav/clamav:1.4
+    profiles: [scanning]
+    volumes:
+      - scan-socket:/run/clamav
+      - scanner-db:/var/lib/clamav
+      - ./infra/clamd.conf:/etc/clamav/clamd.conf:ro
+    mem_limit: 2g
+    pids_limit: 128
+  shared-vm:
+    profiles: [vm]
+    build: infra/vm
+    # Existing Shiva VPN namespace; no fallback bridge and no host networking.
+    network_mode: container:${GLUETUN_CONTAINER:-gluetun}
+    devices:
+      - /dev/kvm:/dev/kvm
+    volumes:
+      - vm-disk:/vm
+      - vm-control:/control
+    environment:
+      VM_MEMORY_MB: ${VM_MEMORY_MB:-2048}
+      VM_CPUS: ${VM_CPUS:-2}
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 3g
+    pids_limit: 128
+volumes:
+  app-data:
+  scan-socket:
+  scanner-db:
+  vm-disk:
+  vm-control:

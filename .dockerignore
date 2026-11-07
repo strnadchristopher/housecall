@@ -1,0 +1,10 @@
+.git
+vendor-ref
+**/target
+**/node_modules
+**/dist
+.env
+.env.*
+evidence
+.runtime
+data
