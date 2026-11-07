@@ -12,14 +12,14 @@ Only evidence with a successful terminal result establishes a pass. Provisional 
 | Chat + DMs | 3-user Playwright, API security tests | native/browser parity; complete thread subscription UX |
 | Unsend | server purge and client tombstone tests | APNs/FCM native retraction under OS constraints |
 | Large resumable media | media property and >2GiB interrupted fixture | browser >2GiB transfer, real scanner limit handling, disk-full |
-| Media transcode/thumb/stream | actual FFmpeg fMP4/JPEG decoded fixture + byte-range crypto tests | streamed authenticated client player; seek-dependent source formats |
+| Media transcode/thumb/stream | actual FFmpeg fMP4/JPEG + authenticated browser MSE playback before full buffering, access/unsend checks | seek outside retained buffer, native WebView decoding, seek-dependent source formats |
 | Search/pin/react/edit/typing/read | API/client tests | full browser interactions per platform |
 | Giphy | fixed-origin parser/property tests | keyed fixture/live picker fetch and playback |
 | Markdown/embeds | inert markdown AST + public-IP DNS-pinned text previews/SSRF tests | Opus safe semantic renderer; remote image previews |
 | Voice/video/screenshare | 3-browser Opus/VP8 + screen replacement; synthetic localhost median48ms/p95 71ms | physical LAN glass-to-glass; optimized load passes10; thirty-peer/sustained load unverified |
 | Plex activity | 3-browser real synthetic HLS decode, browse/play/pause/seek with <0.5s drift | live Plex transcoder/library/subtitles and native media support |
 | DJ activity | encrypted local intro+song, route authorization,3-browser decode/sync/skip fixtures | live matched providers, supplied voice reference, progressive start |
-| Shared VM | controller lease + built VM image + nft VPN namespace isolation | booted Debian, WebRTC capture/audio/control, guest-level VPN check, reset |
+| Shared VM | booted Debian12, paced QMP input, guest HTTP/DNS VPN-only and tunnel/container failure checks, persistent disk/offline reset | app WebRTC capture/audio/viewer and controller-lease integration; external IPv6 guest baseline |
 | Gimme | durable worker/idempotency/restart fixtures + 3-user dry-run channel status | live provider compatibility; no production calls in sprint |
 | Reports | realClamAV3.9s browser consent/upload/owner-only download/resolve + API authorization | native screenshot/log capture consent, Opus presentation |
 | Compose | built image and corrected isolated startup/small-scan checks | completed runtime receipt, multi-GiB browser, final source image |

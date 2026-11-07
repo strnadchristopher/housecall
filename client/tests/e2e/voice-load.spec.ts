@@ -35,6 +35,7 @@ async function resources() {
 }
 async function media(page: Page) {
   return page.evaluate(async () => {
+    const streams: { id: string; kind: string; frames: number; packets: number; lost: number; jitter: number }[] = [];
     let video = 0,
       audio = 0,
       frames = 0,
@@ -42,12 +43,13 @@ async function media(page: Page) {
     for (const peer of (window as any).loadPeers as RTCPeerConnection[])
       for (const stat of (await peer.getStats()).values())
         if (stat.type === "inbound-rtp") {
+          streams.push({ id: stat.id, kind: stat.kind, frames: stat.framesDecoded ?? 0, packets: stat.packetsReceived ?? 0, lost: stat.packetsLost ?? 0, jitter: stat.jitter ?? 0 });
           if (stat.kind === "video" && stat.framesDecoded > 0) video++;
           if (stat.kind === "audio" && stat.packetsReceived > 0) audio++;
           frames += stat.framesDecoded ?? 0;
           bytes += stat.bytesReceived ?? 0;
         }
-    return { video, audio, frames, bytes };
+    return { video, audio, frames, bytes, streams };
   });
 }
 // Counts and stable states only: never save SDP, ICE addresses, auth headers or media.
@@ -93,6 +95,7 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
   const contexts: BrowserContext[] = [];
   const browsers: Browser[] = [browser];
   const stages: unknown[] = [];
+  const sustained: unknown[] = [];
   const samples: Awaited<ReturnType<typeof resources>>[] = [];
   const participantHeaders: Record<string, string>[] = [];
   let terminalDiagnostics: unknown[] = [];
@@ -276,6 +279,18 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
         ),
         `${count} peers must each decode every other peer`,
       ).toBeTruthy();
+      if (count === 30) {
+        for (let sample = 0; sample < 4; sample++) {
+          const previous = peers;
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          peers = await Promise.all(contexts.map(context => media(context.pages()[0])));
+          sustained.push({ elapsedMs: Date.now() - started, peers, resources: await resources() });
+          expect(peers.every((peer, index) => peer.streams.length === 58 && peer.streams.every(stream => {
+            const before = previous[index].streams.find(item => item.id === stream.id);
+            return before && (stream.kind === "video" ? stream.frames > before.frames : stream.packets > before.packets);
+          })), "Every one of 870 audio and870 video receivers must progress during each five-second interval").toBeTruthy();
+        }
+      }
     }
   } finally {
     clearInterval(timer);
@@ -307,6 +322,7 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
           note: "Real Chromium fake-capture RTP through the Rust SFU at reduced video resolution/frame rate. Not a production 720p or physical glass-to-glass claim. Dedicated systemd cgroup memory/CPU excludes unrelated browsers; ps CPU is lifetime average and summed RSS includes background browsers/shared pages. The first failed attempt incorrectly applied an absolute summed-RSS guard to unrelated Chrome processes.",
           before,
           stages,
+          sustained,
           samples,
           terminalDiagnostics,
           serverDiagnostics,

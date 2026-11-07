@@ -7,6 +7,7 @@ use std::{
     collections::VecDeque,
     net::{IpAddr, SocketAddr, UdpSocket},
     sync::{
+        atomic::{AtomicBool, AtomicU64, Ordering},
         mpsc::{self, SyncSender},
         Arc,
     },
@@ -88,6 +89,8 @@ pub struct WorkerDiagnostics {
     pub max_iteration_us: u64,
     pub max_output_batch: usize,
     pub max_receive_batch: usize,
+    pub ingress_dropped: u64,
+    pub max_ingress_age_us: u64,
     pub max_propagation_batch: usize,
 }
 struct ClosedPeer {
@@ -159,13 +162,11 @@ impl Sfu {
             public_ip,
             socket.local_addr().map_err(|_| Error::Io)?.port(),
         );
-        socket
-            .set_read_timeout(Some(Duration::from_millis(10)))
-            .map_err(|_| Error::Io)?;
+        let ingress = Ingress::start(socket.try_clone().map_err(|_| Error::Io)?)?;
         let (tx, rx) = mpsc::sync_channel(128);
         std::thread::Builder::new()
             .name("chriscord-sfu".into())
-            .spawn(move || run(socket, address, rx, authorize))
+            .spawn(move || run(socket, ingress, address, rx, authorize))
             .map_err(|_| Error::Io)?;
         Ok(Self { tx, address })
     }
@@ -244,15 +245,91 @@ pub fn validate_offer(offer: &SdpOffer) -> Result<()> {
     }
     Ok(())
 }
-fn run(socket: UdpSocket, address: SocketAddr, rx: mpsc::Receiver<Control>, authorize: Authorize) {
+// A slow output/SDP round must not prevent draining the kernel receive socket.
+// At most1024 UDP datagrams are retained (<=64MiB even for maximal hostile packets).
+// Queue overflow drops and processing age remain visible in room diagnostics.
+struct Datagram {
+    bytes: Vec<u8>,
+    source: SocketAddr,
+    received_at: Instant,
+}
+struct Ingress {
+    packets: mpsc::Receiver<Datagram>,
+    stop: Arc<AtomicBool>,
+    dropped: Arc<AtomicU64>,
+    thread: Option<std::thread::JoinHandle<()>>,
+}
+impl Ingress {
+    fn start(socket: UdpSocket) -> Result<Self> {
+        socket
+            .set_read_timeout(Some(Duration::from_millis(10)))
+            .map_err(|_| Error::Io)?;
+        let (tx, packets) = mpsc::sync_channel(1024);
+        let stop = Arc::new(AtomicBool::new(false));
+        let dropped = Arc::new(AtomicU64::new(0));
+        let stopping = stop.clone();
+        let drops = dropped.clone();
+        let thread = std::thread::Builder::new()
+            .name("chriscord-udp".into())
+            .spawn(move || {
+                let mut buffer = [0u8; 65536];
+                while !stopping.load(Ordering::Relaxed) {
+                    match socket.recv_from(&mut buffer) {
+                        Ok((n, source)) => {
+                            let packet = Datagram {
+                                bytes: buffer[..n].to_vec(),
+                                source,
+                                received_at: Instant::now(),
+                            };
+                            match tx.try_send(packet) {
+                                Ok(()) => {}
+                                Err(mpsc::TrySendError::Full(_)) => {
+                                    drops.fetch_add(1, Ordering::Relaxed);
+                                }
+                                Err(mpsc::TrySendError::Disconnected(_)) => break,
+                            }
+                        }
+                        Err(e)
+                            if matches!(
+                                e.kind(),
+                                std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+                            ) => {}
+                        Err(_) => break,
+                    }
+                }
+            })
+            .map_err(|_| Error::Io)?;
+        Ok(Self {
+            packets,
+            stop,
+            dropped,
+            thread: Some(thread),
+        })
+    }
+}
+impl Drop for Ingress {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::Relaxed);
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
+    }
+}
+fn run(
+    socket: UdpSocket,
+    ingress: Ingress,
+    address: SocketAddr,
+    rx: mpsc::Receiver<Control>,
+    authorize: Authorize,
+) {
     let mut clients: Vec<Client> = Vec::new();
     let mut queued: VecDeque<Propagated> = VecDeque::new();
-    let mut buffer = [0u8; 65536];
     let mut auth_at = Instant::now();
     let mut history = VecDeque::new();
     let mut worker = WorkerDiagnostics::default();
     loop {
         let iteration_at = Instant::now();
+        worker.ingress_dropped = ingress.dropped.load(Ordering::Relaxed);
         while history.front().is_some_and(|h: &ClosedPeer| {
             iteration_at.saturating_duration_since(h.at) >= Duration::from_secs(60)
         }) {
@@ -400,59 +477,46 @@ fn run(socket: UdpSocket, address: SocketAddr, rx: mpsc::Receiver<Control>, auth
         let timeout = deadline
             .saturating_duration_since(Instant::now())
             .clamp(Duration::from_millis(1), Duration::from_millis(10));
-        if socket.set_nonblocking(false).is_err() || socket.set_read_timeout(Some(timeout)).is_err()
-        {
-            return;
-        }
-        // Wait for the first datagram, then drain a bounded ready batch. Reading
-        // only one datagram between every peer's output/timeout rounds starves
-        // the receive queue during joins and O(n²) forwarding bursts.
         let mut received = 0;
-        let mut batch_started = None;
-        for _ in 0..64 {
-            match socket.recv_from(&mut buffer) {
-                Ok((n, source)) => {
-                    received += 1;
-                    if let Ok(contents) = (&buffer[..n]).try_into() {
-                        let input = Input::Receive(
-                            Instant::now(),
-                            Receive {
-                                proto: Protocol::Udp,
-                                source,
-                                destination: address,
-                                contents,
-                            },
-                        );
-                        if let Some(client) = clients.iter_mut().find(|c| c.accepts(&input)) {
-                            client.handle_input(input);
-                        }
-                    }
-                    if let Some(started) = batch_started {
-                        if Instant::now().duration_since(started) >= Duration::from_millis(1) {
-                            break;
-                        }
-                    } else {
-                        batch_started = Some(Instant::now());
-                        if socket.set_nonblocking(true).is_err() {
-                            return;
-                        }
-                    }
+        let batch_at = Instant::now();
+        for index in 0..64 {
+            let packet = if index == 0 {
+                match ingress.packets.recv_timeout(timeout) {
+                    Ok(packet) => packet,
+                    Err(mpsc::RecvTimeoutError::Timeout) => break,
+                    Err(mpsc::RecvTimeoutError::Disconnected) => return,
                 }
-                Err(e)
-                    if matches!(
-                        e.kind(),
-                        std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
-                    ) =>
-                {
-                    break
+            } else {
+                match ingress.packets.try_recv() {
+                    Ok(packet) => packet,
+                    Err(mpsc::TryRecvError::Empty) => break,
+                    Err(mpsc::TryRecvError::Disconnected) => return,
                 }
-                Err(_) => return,
+            };
+            received += 1;
+            let at = Instant::now();
+            worker.max_ingress_age_us = worker
+                .max_ingress_age_us
+                .max(at.duration_since(packet.received_at).as_micros() as u64);
+            if let Ok(contents) = packet.bytes.as_slice().try_into() {
+                let input = Input::Receive(
+                    at,
+                    Receive {
+                        proto: Protocol::Udp,
+                        source: packet.source,
+                        destination: address,
+                        contents,
+                    },
+                );
+                if let Some(client) = clients.iter_mut().find(|c| c.accepts(&input)) {
+                    client.handle_input(input);
+                }
+            }
+            if batch_at.elapsed() >= Duration::from_millis(1) {
+                break;
             }
         }
         worker.max_receive_batch = worker.max_receive_batch.max(received);
-        if socket.set_nonblocking(false).is_err() {
-            return;
-        }
         let now = Instant::now();
         for client in &mut clients {
             client.handle_input(Input::Timeout(now));
@@ -465,6 +529,26 @@ fn run(socket: UdpSocket, address: SocketAddr, rx: mpsc::Receiver<Control>, auth
 #[cfg(test)]
 mod diagnostic_tests {
     use super::*;
+    #[test]
+    fn ingress_is_bounded_counts_overflow_and_stops_without_a_packet() {
+        let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+        let address = socket.local_addr().unwrap();
+        let ingress = Ingress::start(socket).unwrap();
+        let sender = UdpSocket::bind("127.0.0.1:0").unwrap();
+        let until = Instant::now() + Duration::from_secs(2);
+        while ingress.dropped.load(Ordering::Relaxed) == 0 && Instant::now() < until {
+            for _ in 0..32 {
+                sender.send_to(&[7; 100], address).unwrap();
+            }
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        assert!(ingress.dropped.load(Ordering::Relaxed) > 0);
+        let stopped = Instant::now();
+        drop(ingress);
+        assert!(stopped.elapsed() < Duration::from_secs(1));
+        let idle = Ingress::start(UdpSocket::bind("127.0.0.1:0").unwrap()).unwrap();
+        drop(idle);
+    }
     #[test]
     fn disconnect_history_is_bounded_expires_and_is_room_scoped() {
         str0m::crypto::from_feature_flags().install_process_default();
