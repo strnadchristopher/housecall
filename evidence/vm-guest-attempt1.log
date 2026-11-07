@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/home/christopher/GitHub/.worktrees/chriscord/sprint/scripts/test-vm-guest.py", line 327, in <module>
+    main()
+    ~~~~^^
+  File "/home/christopher/GitHub/.worktrees/chriscord/sprint/scripts/test-vm-guest.py", line 261, in main
+    start_vm()
+    ~~~~~~~~^^
+  File "/home/christopher/GitHub/.worktrees/chriscord/sprint/scripts/test-vm-guest.py", line 199, in start_vm
+    SERIAL = Serial()
+  File "/home/christopher/GitHub/.worktrees/chriscord/sprint/scripts/test-vm-guest.py", line 96, in __init__
+    self.socket.connect(str(CONTROL / 'serial.sock'))
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: AF_UNIX path too long

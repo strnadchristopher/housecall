@@ -1,0 +1,258 @@
+========================================
+========================================
+=============== gluetun ================
+========================================
+=========== Made with ❤️ by ============
+======= https://github.com/qdm12 =======
+========================================
+========================================
+
+Running version latest built on 2026-11-07T03:40:50.101Z (commit 6767e80) on Linux 6.12.113+deb13-amd64 (x86_64)
+
+🔧 Need help? ☕ Discussion? https://github.com/qdm12/gluetun/discussions/new/choose
+🐛 Bug? ✨ New feature? https://github.com/qdm12/gluetun/issues/new/choose
+💻 Email? quentin.mcgaw@gmail.com
+💰 Help me? https://www.paypal.me/qmcgaw https://github.com/sponsors/qdm12
+2026-11-07T09:35:33Z INFO [routing] default route found: interface eth0, gateway 172.29.241.1, assigned IP 172.29.241.4 and family v4
+2026-11-07T09:35:33Z INFO [routing] local ethernet link found: eth0
+2026-11-07T09:35:33Z INFO [routing] local ipnet found: 172.29.241.0/24
+2026-11-07T09:35:33Z INFO [firewall] enabling...
+2026-11-07T09:35:33Z INFO [firewall] enabled successfully
+2026-11-07T09:35:33Z INFO [storage] writing servers data files to /gluetun/servers/ with 23694 hardcoded servers
+2026-11-07T09:35:33Z INFO Alpine version: 3.23.8
+2026-11-07T09:35:33Z INFO OpenVPN version: 2.6.20
+2026-11-07T09:35:33Z INFO Firewall version: iptables v1.8.11
+2026-11-07T09:35:33Z INFO Settings summary:
+├── VPN settings:
+|   ├── VPN provider settings:
+|   |   ├── Name: custom
+|   |   └── Server selection settings:
+|   |       ├── VPN type: wireguard
+|   |       ├── Selection mode: random
+|   |       └── Wireguard selection settings:
+|   |           ├── Endpoint IP address: 172.29.241.2
+|   |           ├── Endpoint port: 51820
+|   |           └── Server public key: tTPO3CU7U9tMnopIUGy3iAZa9jLXzaYml8Yr0J9/F2c=
+|   ├── Wireguard settings:
+|   |   ├── Private key: YEO...3g=
+|   |   ├── Interface addresses:
+|   |   |   └── 10.99.0.2/32
+|   |   ├── Allowed IPs:
+|   |   |   └── 0.0.0.0/0
+|   |   ├── Network interface: tun0
+|   |   |   └── MTU: use path MTU discovery
+|   |   └── Implementation: userspace
+|   └── Path MTU discovery:
+|       ├── ICMP addresses:
+|       |   ├── 1.1.1.1
+|       |   └── 8.8.8.8
+|       └── TCP addresses:
+|           ├── 1.1.1.1:443
+|           ├── 8.8.8.8:443
+|           ├── 1.1.1.1:53
+|           ├── 8.8.8.8:53
+|           ├── [2606:4700:4700::1111]:53
+|           ├── [2001:4860:4860::8888]:53
+|           ├── [2606:4700:4700::1111]:443
+|           └── [2001:4860:4860::8888]:443
+├── DNS settings:
+|   ├── Upstream resolver type: plain
+|   ├── Upstream resolvers:
+|   |   └── 198.18.0.2:53
+|   ├── Caching: no
+|   ├── IPv6: no
+|   ├── Update period: disabled
+|   └── DNS filtering settings:
+|       ├── Block malicious: no
+|       └── Block ads: no
+├── Firewall settings:
+|   ├── Enabled: yes
+|   └── Iptables settings:
+|       └── Log level: info
+├── Log settings:
+|   └── Log level: info
+├── IPv6 settings:
+|   └── Check addresses:
+|       ├── [2001:4860:4860::8888]:53
+|       └── [2606:4700:4700::1111]:53
+├── Metrics settings:
+|   └── Type: noop
+├── Health settings:
+|   ├── Server listening address: 127.0.0.1:9999
+|   ├── Target addresses:
+|   |   └── 198.18.0.2:8080
+|   ├── Small health check type: ICMP echo request
+|   |   └── ICMP target IPs:
+|   |       └── 198.18.0.2
+|   └── Restart VPN on healthcheck failure: no
+├── SOCKS5 proxy server settings:
+|   └── Enabled: no
+├── Shadowsocks server settings:
+|   └── Enabled: no
+├── HTTP proxy settings:
+|   └── Enabled: no
+├── Control server settings:
+|   ├── Listening address: :8000
+|   ├── Logging: yes
+|   └── Authentication file path: /gluetun/auth/config.toml
+├── Storage settings:
+|   └── Servers directory path: /gluetun/servers/
+├── OS Alpine settings:
+|   ├── Process UID: 1000
+|   └── Process GID: 1000
+├── Public IP settings: disabled
+└── Version settings:
+    └── Enabled: no
+2026-11-07T09:35:33Z INFO [routing] default route found: interface eth0, gateway 172.29.241.1, assigned IP 172.29.241.4 and family v4
+2026-11-07T09:35:33Z INFO [routing] adding route for 0.0.0.0/0
+2026-11-07T09:35:33Z INFO [firewall] setting allowed subnets...
+2026-11-07T09:35:33Z INFO [routing] default route found: interface eth0, gateway 172.29.241.1, assigned IP 172.29.241.4 and family v4
+2026-11-07T09:35:33Z INFO [healthcheck] listening on 127.0.0.1:9999
+2026-11-07T09:35:33Z INFO [http server] http server listening on [::]:8000
+2026-11-07T09:35:33Z INFO [firewall] allowing VPN connection...
+2026-11-07T09:35:33Z INFO [wireguard] Connecting to 172.29.241.2:51820
+2026-11-07T09:35:33Z INFO [vpn] wireguard setup is complete. Note wireguard is a silent protocol and it may or may not work, without giving any error message. Typically i/o timeout errors indicate the wireguard connection is not working.
+2026-11-07T09:35:33Z INFO [MTU discovery] finding maximum MTU, this can take up to 6 seconds
+2026-11-07T09:35:33Z INFO [MTU discovery] reverting VPN interface tun0 MTU to 1320 (due to: ICMP path MTU discovery: finding IPv4 next hop MTU to 1.1.1.1: ICMP destination unreachable: code 0)
+2026-11-07T09:35:33Z INFO [dns] DNS server listening on [::]:53
+2026-11-07T09:35:33Z INFO [dns] ready and using DNS server with plain upstream resolvers
+2026-11-07T09:35:33Z INFO [dns] downloading hostnames and IP block lists
+2026-11-07T09:35:33Z WARN [dns] running leak check: request failed: performing request: Get "https://33g3y45ri47ynkrac0lpfr8qsihrkas68ekmzofw-25b74yiu4ei7.ipleak.net/dnsdetection/": dial tcp: lookup 33g3y45ri47ynkrac0lpfr8qsihrkas68ekmzofw-25b74yiu4ei7.ipleak.net on 127.0.0.1:53: no such host
+
+2026-11-07T09:36:50Z WARN Caught OS signal terminated, shutting down
+2026-11-07T09:36:50Z INFO updater ticker: terminated ✔️
+2026-11-07T09:36:50Z INFO dns ticker: terminated ✔️
+2026-11-07T09:36:50Z INFO http server: terminated ✔️
+2026-11-07T09:36:50Z INFO control: terminated ✔️
+2026-11-07T09:36:50Z INFO updater: terminated ✔️
+2026-11-07T09:36:50Z INFO tickers: terminated ✔️
+2026-11-07T09:36:50Z INFO HTTP health server: terminated ✔️
+2026-11-07T09:36:50Z INFO vpn: terminated ✔️
+2026-11-07T09:36:50Z INFO shadowsocks proxy: terminated ✔️
+2026-11-07T09:36:50Z INFO http proxy: terminated ✔️
+2026-11-07T09:36:50Z INFO dns: terminated ✔️
+2026-11-07T09:36:50Z INFO other: terminated ✔️
+2026-11-07T09:36:50Z INFO [routing] routing cleanup...
+2026-11-07T09:36:50Z INFO [routing] default route found: interface eth0, gateway 172.29.241.1, assigned IP 172.29.241.4 and family v4
+2026-11-07T09:36:50Z INFO [routing] deleting route for 0.0.0.0/0
+2026-11-07T09:36:50Z INFO Shutdown successful
+========================================
+========================================
+=============== gluetun ================
+========================================
+=========== Made with ❤️ by ============
+======= https://github.com/qdm12 =======
+========================================
+========================================
+
+Running version latest built on 2026-11-07T03:40:50.101Z (commit 6767e80) on Linux 6.12.113+deb13-amd64 (x86_64)
+
+🔧 Need help? ☕ Discussion? https://github.com/qdm12/gluetun/discussions/new/choose
+🐛 Bug? ✨ New feature? https://github.com/qdm12/gluetun/issues/new/choose
+💻 Email? quentin.mcgaw@gmail.com
+💰 Help me? https://www.paypal.me/qmcgaw https://github.com/sponsors/qdm12
+2026-11-07T09:37:04Z INFO [routing] default route found: interface eth0, gateway 172.29.241.1, assigned IP 172.29.241.4 and family v4
+2026-11-07T09:37:04Z INFO [routing] local ethernet link found: eth0
+2026-11-07T09:37:04Z INFO [routing] local ipnet found: 172.29.241.0/24
+2026-11-07T09:37:04Z INFO [firewall] enabling...
+2026-11-07T09:37:04Z INFO [firewall] enabled successfully
+2026-11-07T09:37:05Z INFO [storage] merging by most recent 23694 hardcoded servers and 23694 servers read from manifest file /gluetun/servers/manifest.json
+2026-11-07T09:37:05Z INFO Alpine version: 3.23.8
+2026-11-07T09:37:05Z INFO OpenVPN version: 2.6.20
+2026-11-07T09:37:05Z INFO Firewall version: iptables v1.8.11
+2026-11-07T09:37:05Z INFO Settings summary:
+├── VPN settings:
+|   ├── VPN provider settings:
+|   |   ├── Name: custom
+|   |   └── Server selection settings:
+|   |       ├── VPN type: wireguard
+|   |       ├── Selection mode: random
+|   |       └── Wireguard selection settings:
+|   |           ├── Endpoint IP address: 172.29.241.2
+|   |           ├── Endpoint port: 51820
+|   |           └── Server public key: tTPO3CU7U9tMnopIUGy3iAZa9jLXzaYml8Yr0J9/F2c=
+|   ├── Wireguard settings:
+|   |   ├── Private key: YEO...3g=
+|   |   ├── Interface addresses:
+|   |   |   └── 10.99.0.2/32
+|   |   ├── Allowed IPs:
+|   |   |   └── 0.0.0.0/0
+|   |   ├── Network interface: tun0
+|   |   |   └── MTU: use path MTU discovery
+|   |   └── Implementation: userspace
+|   └── Path MTU discovery:
+|       ├── ICMP addresses:
+|       |   ├── 1.1.1.1
+|       |   └── 8.8.8.8
+|       └── TCP addresses:
+|           ├── 1.1.1.1:443
+|           ├── 8.8.8.8:443
+|           ├── 1.1.1.1:53
+|           ├── 8.8.8.8:53
+|           ├── [2606:4700:4700::1111]:53
+|           ├── [2001:4860:4860::8888]:53
+|           ├── [2606:4700:4700::1111]:443
+|           └── [2001:4860:4860::8888]:443
+├── DNS settings:
+|   ├── Upstream resolver type: plain
+|   ├── Upstream resolvers:
+|   |   └── 198.18.0.2:53
+|   ├── Caching: no
+|   ├── IPv6: no
+|   ├── Update period: disabled
+|   └── DNS filtering settings:
+|       ├── Block malicious: no
+|       └── Block ads: no
+├── Firewall settings:
+|   ├── Enabled: yes
+|   └── Iptables settings:
+|       └── Log level: info
+├── Log settings:
+|   └── Log level: info
+├── IPv6 settings:
+|   └── Check addresses:
+|       ├── [2001:4860:4860::8888]:53
+|       └── [2606:4700:4700::1111]:53
+├── Metrics settings:
+|   └── Type: noop
+├── Health settings:
+|   ├── Server listening address: 127.0.0.1:9999
+|   ├── Target addresses:
+|   |   └── 198.18.0.2:8080
+|   ├── Small health check type: ICMP echo request
+|   |   └── ICMP target IPs:
+|   |       └── 198.18.0.2
+|   └── Restart VPN on healthcheck failure: no
+├── SOCKS5 proxy server settings:
+|   └── Enabled: no
+├── Shadowsocks server settings:
+|   └── Enabled: no
+├── HTTP proxy settings:
+|   └── Enabled: no
+├── Control server settings:
+|   ├── Listening address: :8000
+|   ├── Logging: yes
+|   └── Authentication file path: /gluetun/auth/config.toml
+├── Storage settings:
+|   └── Servers directory path: /gluetun/servers/
+├── OS Alpine settings:
+|   ├── Process UID: 1000
+|   └── Process GID: 1000
+├── Public IP settings: disabled
+└── Version settings:
+    └── Enabled: no
+2026-11-07T09:37:05Z INFO [routing] default route found: interface eth0, gateway 172.29.241.1, assigned IP 172.29.241.4 and family v4
+2026-11-07T09:37:05Z INFO [routing] adding route for 0.0.0.0/0
+2026-11-07T09:37:05Z INFO [firewall] setting allowed subnets...
+2026-11-07T09:37:05Z INFO [routing] default route found: interface eth0, gateway 172.29.241.1, assigned IP 172.29.241.4 and family v4
+2026-11-07T09:37:05Z INFO [healthcheck] listening on 127.0.0.1:9999
+2026-11-07T09:37:05Z INFO [http server] http server listening on [::]:8000
+2026-11-07T09:37:05Z INFO [firewall] allowing VPN connection...
+2026-11-07T09:37:05Z INFO [wireguard] Connecting to 172.29.241.2:51820
+2026-11-07T09:37:05Z INFO [vpn] wireguard setup is complete. Note wireguard is a silent protocol and it may or may not work, without giving any error message. Typically i/o timeout errors indicate the wireguard connection is not working.
+2026-11-07T09:37:05Z INFO [MTU discovery] finding maximum MTU, this can take up to 6 seconds
+2026-11-07T09:37:05Z INFO [MTU discovery] reverting VPN interface tun0 MTU to 1320 (due to: ICMP path MTU discovery: finding IPv4 next hop MTU to 1.1.1.1: ICMP destination unreachable: code 0)
+2026-11-07T09:37:05Z INFO [dns] DNS server listening on [::]:53
+2026-11-07T09:37:05Z INFO [dns] ready and using DNS server with plain upstream resolvers
+2026-11-07T09:37:05Z INFO [dns] downloading hostnames and IP block lists
+2026-11-07T09:37:05Z WARN [dns] running leak check: request failed: performing request: Get "https://4brc0l329046cve6up6xr7s3fom6dh4vh9hrzac7-6wvehj4z0id7.ipleak.net/dnsdetection/": dial tcp: lookup 4brc0l329046cve6up6xr7s3fom6dh4vh9hrzac7-6wvehj4z0id7.ipleak.net on 127.0.0.1:53: no such host

@@ -1,0 +1,191 @@
+{
+  "scope": "actual Debian12 guest; local admin QMP; no app/WebRTC/audio bridge",
+  "scenario": "network-persistence",
+  "base_url": "https://cloud.debian.org/images/cloud/bookworm/20261026-2643/debian-12-nocloud-amd64-20261026-2643.qcow2",
+  "base_sha512": "3b7c3342105085c60097147c7f7491e761c115170213ba7d9c87685e32d234bdafe0ddf8d6fd6600a6a837c761fa229ce8b9fe2086d1235f8eebeb778d05b977",
+  "base_bytes": 421527552,
+  "overlay_bytes": 7471104,
+  "vm_memory_mb": 768,
+  "vm_vcpus": 1,
+  "checks": [
+    {
+      "name": "direct_subnet_canary_positive_control",
+      "passed": true
+    },
+    {
+      "name": "debian_guest_boot_0",
+      "passed": true
+    },
+    {
+      "name": "qmp_running",
+      "passed": true
+    },
+    {
+      "name": "running_overlay_reset_denied",
+      "passed": true,
+      "detail": "VM is running or another disk operation is active"
+    },
+    {
+      "name": "qmp_keyboard_reaches_guest",
+      "passed": false,
+      "skipped": "Blocked by failed console-input assertion in full attempt2; this scenario tests independent network/persistence only"
+    },
+    {
+      "name": "guest_frame_captured",
+      "passed": true
+    },
+    {
+      "name": "persistent_marker_written",
+      "passed": true
+    },
+    {
+      "name": "vpn_up_vpn_http",
+      "passed": true
+    },
+    {
+      "name": "vpn_up_vpn_dns",
+      "passed": true
+    },
+    {
+      "name": "vpn_up_direct_subnet_http_blocked",
+      "passed": true
+    },
+    {
+      "name": "vpn_up_direct_subnet_dns_blocked",
+      "passed": true
+    },
+    {
+      "name": "vpn_up_host_loopback_http_unreachable",
+      "passed": true,
+      "detail": "No loopback HTTP positive control in this guest fixture; observation alone does not prove filtering"
+    },
+    {
+      "name": "guest_ipv6_has_no_default_route",
+      "passed": true,
+      "detail": "IPv6 disabled by QEMU networking; not external IPv6 filtering proof"
+    },
+    {
+      "name": "tunnel_down_vpn_http",
+      "passed": true
+    },
+    {
+      "name": "tunnel_down_vpn_dns",
+      "passed": true
+    },
+    {
+      "name": "tunnel_down_direct_subnet_http_blocked",
+      "passed": true
+    },
+    {
+      "name": "tunnel_down_direct_subnet_dns_blocked",
+      "passed": true
+    },
+    {
+      "name": "tunnel_down_host_loopback_http_unreachable",
+      "passed": true,
+      "detail": "No loopback HTTP positive control in this guest fixture; observation alone does not prove filtering"
+    },
+    {
+      "name": "tunnel_restored_vpn_http",
+      "passed": true
+    },
+    {
+      "name": "tunnel_restored_vpn_dns",
+      "passed": true
+    },
+    {
+      "name": "tunnel_restored_direct_subnet_http_blocked",
+      "passed": true
+    },
+    {
+      "name": "tunnel_restored_direct_subnet_dns_blocked",
+      "passed": true
+    },
+    {
+      "name": "tunnel_restored_host_loopback_http_unreachable",
+      "passed": true,
+      "detail": "No loopback HTTP positive control in this guest fixture; observation alone does not prove filtering"
+    },
+    {
+      "name": "debian_guest_boot_1",
+      "passed": true
+    },
+    {
+      "name": "overlay_persists_across_restart",
+      "passed": true
+    },
+    {
+      "name": "gluetun_stopped_vpn_http",
+      "passed": true
+    },
+    {
+      "name": "gluetun_stopped_vpn_dns",
+      "passed": true
+    },
+    {
+      "name": "gluetun_stopped_direct_subnet_http_blocked",
+      "passed": true
+    },
+    {
+      "name": "gluetun_stopped_direct_subnet_dns_blocked",
+      "passed": true
+    },
+    {
+      "name": "gluetun_stopped_host_loopback_http_unreachable",
+      "passed": true,
+      "detail": "No loopback HTTP positive control in this guest fixture; observation alone does not prove filtering"
+    },
+    {
+      "name": "debian_guest_boot_2",
+      "passed": true
+    },
+    {
+      "name": "overlay_persists_across_vpn_restart",
+      "passed": true
+    },
+    {
+      "name": "vpn_restarted_vpn_http",
+      "passed": true
+    },
+    {
+      "name": "vpn_restarted_vpn_dns",
+      "passed": true
+    },
+    {
+      "name": "vpn_restarted_direct_subnet_http_blocked",
+      "passed": true
+    },
+    {
+      "name": "vpn_restarted_direct_subnet_dns_blocked",
+      "passed": true
+    },
+    {
+      "name": "vpn_restarted_host_loopback_http_unreachable",
+      "passed": true,
+      "detail": "No loopback HTTP positive control in this guest fixture; observation alone does not prove filtering"
+    },
+    {
+      "name": "offline_overlay_reset_succeeds",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "base_checksum_unchanged",
+      "passed": true
+    },
+    {
+      "name": "debian_guest_boot_3",
+      "passed": true
+    },
+    {
+      "name": "reset_removes_persistent_changes",
+      "passed": true
+    },
+    {
+      "name": "reset_guest_vpn_http_works",
+      "passed": true
+    }
+  ],
+  "prefix": "chriscord-sprint-vpn-guest-ef9c2e20",
+  "cleaned_owned_containers_and_network": true
+}
