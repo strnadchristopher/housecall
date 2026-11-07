@@ -5,8 +5,10 @@
     "invite acceptance inside installed APK",
     "native WebView sends chat through authenticated HTTP",
     "cross-user message sync, mention and unsend notification-record retraction",
+    "native window has no ANR dialog",
     "owner revocation returns installed app to sign-in"
   ],
   "note": "Real installed APK/WebView via ADB and Playwright. Password fallback; not native passkey, physical device, APNs/FCM or media-permission evidence.",
-  "joinSeconds": 4.695456781000001
+  "joinSeconds": 4.605730487,
+  "passed": true
 }

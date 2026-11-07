@@ -1,6 +1,7 @@
 /** Installed Tauri APK against isolated localhost API; never changes CSP through DevTools. */
 import { _android, expect } from '../client/node_modules/@playwright/test/index.mjs';
 import { writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 const origin='http://127.0.0.1:3031';
 const password='Android synthetic password 123';
 const evidence={platform:'Android API35 x86_64 emulator with arm64-v8a translation',artifact:'Dedicated debug test APK permits only http://127.0.0.1:3031 in addition to normal CSP',checks:[],note:'Real installed APK/WebView via ADB and Playwright. Password fallback; not native passkey, physical device, APNs/FCM or media-permission evidence.'};
@@ -41,11 +42,22 @@ try {
  expect((await call('/api/notifications',undefined,session)).notifications.some(n=>n.message_id===mention.id)).toBe(false);
  evidence.checks.push('cross-user message sync, mention and unsend notification-record retraction');
  await device.screenshot({path:'evidence/android-chat.png'});
+ const adb='.runtime/android-sdk/platform-tools/adb';
+ const adbArgs=['-P','5038','-s','emulator-5580'];
+ execFileSync(adb,[...adbArgs,'shell','uiautomator','dump','/sdcard/chriscord-test-window.xml'],{timeout:15000});
+ const nativeWindow=execFileSync(adb,[...adbArgs,'exec-out','cat','/sdcard/chriscord-test-window.xml'],{timeout:5000}).toString();
+ expect(nativeWindow).not.toMatch(/isn.t responding|System UI isn/i);
+ evidence.checks.push('native window has no ANR dialog');
  await call('/api/users/'+session.user.id+'/sessions',undefined,owner,'DELETE');
  await expect(page.getByTestId('screen-login')).toBeVisible({timeout:15000});
  await expect(page.getByRole('alert')).toContainText('revoked');
  evidence.checks.push('owner revocation returns installed app to sign-in');
+ evidence.passed=true;
  console.log(`PASS Android installed-APK core E2E: ${evidence.checks.length} checks; invite ${evidence.joinSeconds.toFixed(2)}s`);
+} catch (error) {
+ evidence.passed=false;
+ evidence.failure=error.message;
+ throw error;
 } finally {
  await writeFile('evidence/android-e2e.json',JSON.stringify(evidence,null,2)+'\n');
  await device.close();

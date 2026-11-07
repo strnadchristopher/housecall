@@ -11,7 +11,8 @@ COPY Cargo.toml Cargo.lock ./
 COPY server/ ./server/
 COPY crates/ ./crates/
 ENV CARGO_BUILD_JOBS=1
-RUN --mount=type=cache,target=/usr/local/cargo/registry --mount=type=cache,target=/build/target cargo build --locked --release -p chriscord-server && cp /build/target/release/chriscord-server /build/chriscord-server
+# COPY preserves source mtimes; invalidate local crates so a newer target cache cannot hide edits.
+RUN --mount=type=cache,target=/usr/local/cargo/registry --mount=type=cache,target=/build/target cargo clean --release -p chriscord-server -p chriscord-activities -p chriscord-media -p chriscord-sfu && cargo build --locked --release -p chriscord-server && cp /build/target/release/chriscord-server /build/chriscord-server
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl ffmpeg && rm -rf /var/lib/apt/lists/* && useradd --uid 10001 --create-home chriscord && mkdir -p /data && chown 10001:10001 /data

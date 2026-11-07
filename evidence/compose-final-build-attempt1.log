@@ -1,0 +1,110 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile:
+#1 transferring dockerfile: 1.23kB 0.0s done
+#1 DONE 1.8s
+
+#2 [internal] load metadata for docker.io/library/node:22-bookworm-slim
+#2 DONE 0.5s
+
+#3 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#3 DONE 0.5s
+
+#4 [internal] load metadata for docker.io/library/rust:1.98-bookworm
+#4 DONE 0.5s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 178B done
+#5 DONE 0.0s
+
+#6 [server 1/6] FROM docker.io/library/rust:1.98-bookworm@sha256:93ce27a88655056a51dbdd8f5f2d7ddc071c7b0070fb288a37b5a285fc83971e
+#6 DONE 0.0s
+
+#7 [stage-2 1/4] FROM docker.io/library/debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc
+#7 DONE 0.0s
+
+#8 [client 1/6] FROM docker.io/library/node:22-bookworm-slim@sha256:5ec23b7c622b00547753bc6ffd78085dd868a68aeb41c8e0a1418f033e13d96d
+#8 DONE 0.0s
+
+#9 [internal] load build context
+#9 transferring context: 247.60kB 0.0s done
+#9 DONE 0.1s
+
+#10 [client 3/6] COPY client/package*.json ./
+#10 CACHED
+
+#11 [client 2/6] WORKDIR /build/client
+#11 CACHED
+
+#12 [client 4/6] RUN npm ci
+#12 CACHED
+
+#13 [server 2/6] WORKDIR /build
+#13 CACHED
+
+#14 [server 3/6] COPY Cargo.toml Cargo.lock ./
+#14 CACHED
+
+#15 [server 4/6] COPY server/ ./server/
+#15 DONE 0.4s
+
+#16 [client 5/6] COPY client/ ./
+#16 DONE 0.4s
+
+#17 [client 6/6] RUN npm run build
+#17 ...
+
+#18 [server 5/6] COPY crates/ ./crates/
+#18 DONE 0.2s
+
+#19 [server 6/6] RUN --mount=type=cache,target=/usr/local/cargo/registry --mount=type=cache,target=/build/target cargo build --locked --release -p chriscord-server && cp /build/target/release/chriscord-server /build/chriscord-server
+#19 1.689    Compiling chriscord-sfu v0.1.0 (/build/crates/sfu)
+#19 ...
+
+#17 [client 6/6] RUN npm run build
+#17 1.161 
+#17 1.161 > chriscord-client@0.1.0 build
+#17 1.161 > tsc --noEmit && vite build
+#17 1.161 
+#17 10.33 vite v6.4.5 building for production...
+#17 10.45 transforming...
+#17 ...
+
+#19 [server 6/6] RUN --mount=type=cache,target=/usr/local/cargo/registry --mount=type=cache,target=/build/target cargo build --locked --release -p chriscord-server && cp /build/target/release/chriscord-server /build/chriscord-server
+#19 11.51    Compiling chriscord-server v0.1.0 (/build/server)
+#19 12.69 error[E0624]: method `parts` is private
+#19 12.69    --> server/src/gimme.rs:419:38
+#19 12.69     |
+#19 12.69 419 |     let (path, body) = input.request.parts().map_err(|_| invalid())?;
+#19 12.69     |                                      ^^^^^ private method
+#19 12.69     |
+#19 12.69    --> crates/activities/src/gimme.rs:21:4
+#19 12.69     |
+#19 12.69     = note: private method defined here
+#19 12.69 
+#19 15.46 For more information about this error, try `rustc --explain E0624`.
+#19 15.47 error: could not compile `chriscord-server` (lib) due to 1 previous error
+#19 ERROR: process "/bin/sh -c cargo build --locked --release -p chriscord-server && cp /build/target/release/chriscord-server /build/chriscord-server" did not complete successfully: exit code: 101
+
+#17 [client 6/6] RUN npm run build
+#17 CANCELED
+------
+ > [server 6/6] RUN --mount=type=cache,target=/usr/local/cargo/registry --mount=type=cache,target=/build/target cargo build --locked --release -p chriscord-server && cp /build/target/release/chriscord-server /build/chriscord-server:
+ chriscord-sfu v0.1.0 (/build/crates/sfu)
+11.51    Compiling chriscord-server v0.1.0 (/build/server)
+|
+12.69     = note: private method defined here
+12.69 
+15.46 For more information about this error, try `rustc --explain E0624`.
+15.47 error: could not compile `chriscord-server` (lib) due to 1 previous error
+------
+Dockerfile:14
+--------------------
+  12 |     COPY crates/ ./crates/
+  13 |     ENV CARGO_BUILD_JOBS=1
+  14 | >>> RUN --mount=type=cache,target=/usr/local/cargo/registry --mount=type=cache,target=/build/target cargo build --locked --release -p chriscord-server && cp /build/target/release/chriscord-server /build/chriscord-server
+  15 |     
+  16 |     FROM debian:bookworm-slim
+--------------------
+ERROR: failed to solve: process "/bin/sh -c cargo build --locked --release -p chriscord-server && cp /build/target/release/chriscord-server /build/chriscord-server" did not complete successfully: exit code: 101
