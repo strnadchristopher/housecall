@@ -25,7 +25,7 @@ All timestamps are epoch milliseconds and JSON fields snake_case. Except health/
 - `POST /api/reports`: `{kind:"bug"|"feature",body,logs:null,logs_consent:false,screenshot_id:null,screenshot_consent:false}` → `{id}`. Logs and screenshots require separate consent; screenshots reference owned, scanned uploads.
 - `GET /api/reports`: owner → `{reports:[...]}`. `PATCH /api/reports/:id`: owner `{status:"open"|"resolved"}` → `{ok:true}`.
 
-Passwords 12–256 bytes; usernames 2–32 ASCII letters/digits/underscore/dash. Message bodies max 16 KiB, reports max 32 KiB. Rich embeds, voice media transport and push delivery are not implemented by this slice and are advertised unavailable. Passkeys and encrypted uploads are enabled only when configured. Activity state sync is implemented; provider playback remains unavailable. Unsend retracts durable in-app notifications and emits tombstones; it does not claim remote APNs/FCM delivery.
+Passwords 12–256 bytes; usernames 2–32 ASCII letters/digits/underscore/dash. Message bodies max 16 KiB, reports max 32 KiB. Authenticated text-only link metadata is available through the SSRF-checked embeds endpoint. Voice transport, passkeys, encrypted uploads and media derivatives are enabled only when configured. Activity state sync is implemented; provider playback and remote push delivery remain unavailable. Unsend retracts durable in-app notifications and emits tombstones; it does not claim remote APNs/FCM delivery.
 
 ## Encrypted resumable uploads
 
@@ -54,3 +54,47 @@ Owner administration: `GET /api/invites` lists `{invites:[{id,expires_at,used_at
 Reports may now attach `screenshot_id` for a ready, owned encrypted upload with `screenshot_consent:true`; logs still require separate consent. Owner report listing returns `screenshot_id`. `GET /api/reports/:id/screenshot` is owner-only authenticated streaming, even when the report's original upload belongs to a private conversation. Report diagnostics are never included without explicit per-attachment consent.
 
 Activity state synchronization endpoints are `/api/channels/:id/activity` GET/POST `{kind:"plex"|"dj"|"vm"}`/DELETE; `/activity/commands` POST `{expected_revision,command:{type,...}}`; and `/gimme/requests` POST `{request:{media:"movie"|"tv",query},idempotency_key}`. All require channel membership, state changes use revisions, and host/control permissions are enforced server-side. This is synchronized activity state, not provider streaming or a voice SFU. Gimme endpoint always returns explicitly marked dry-run plans and never requests real media.
+
+## Server namespaces, roles and threads
+
+Default server ID is `home`, retaining channel ID `general`. Channels now expose `server_id` (null for DMs). Owner-created servers each get a general channel. Invitations accept optional `server_id` (default `home`); redemption joins only that server and its general channel. Owner may explicitly add existing accounts to other servers.
+
+- `GET /api/servers` → `{servers:[{id,name,general_channel_id}]}`, current memberships only.
+- `POST /api/servers` owner `{name}` → server DTO.
+- `GET /api/servers/:id/members` → `{members:[User]}`, server membership required.
+- `POST /api/servers/:id/members` owner `{user_id}` → `{ok:true}`; joins general channel and broadcasts `member.joined`.
+- `POST /api/channels` accepts optional `server_id`; all selected channel members must belong to that server. DMs remain independent of server namespaces.
+- `GET /api/servers/:id/roles` → `{roles:[{id,name,member_ids}]}`, server membership required.
+- `POST /api/servers/:id/roles` owner `{name}` → `{id,server_id,name,member_ids:[]}`.
+- `POST /api/roles/:id/members` owner `{user_id}` assigns a current server member; `DELETE /api/roles/:id/members/:user_id` unassigns; `DELETE /api/roles/:id` deletes role.
+- Message send accepts `role_mention_ids:[]`. Server validates same-server roles and resolves recipients by intersecting role membership with the conversation's current membership. Returned `mention_ids` are effective recipients; `role_mention_ids` preserve intent. A role never grants channel access or sends private-channel notifications to outsiders.
+- `GET /api/channels/:id/messages?reply_to=<parent_id>` returns only that parent's replies, still with normal membership/search/pagination constraints. Unsend clears reply parent pointers and removes parent-owned attachments.
+
+Capabilities distinguish `activity_sync:true` from `activity_playback:false`. Passkey origin config rejects credentials, paths, queries and fragments; password hashing/verification uses at most two concurrent Argon2 jobs with 429 overload responses.
+
+## Voice transport
+
+Set both `SFU_BIND=<udp address:port>` and `SFU_PUBLIC_IP=<routable address>` to enable the Rust SFU. Authentication and current channel membership are checked on signaling and rechecked during active media; revoked sessions are disconnected. No TURN service or Internet reachability is inferred from successful LAN signaling.
+
+- `POST /api/channels/:id/voice/join`: raw SDP offer JSON `{type:"offer",sdp}` → `{peer_id,answer:{type:"answer",sdp}}`.
+- `GET /api/channels/:id/voice/stats`: `{peers:[...]}`, authorized room stats.
+- `DELETE /api/channels/:id/voice/:peer_id`: leaves only the caller's own session/peer.
+
+When SFU is configured, activity launch/read/control/stop requires a connected voice session and the synchronized roster contains only connected peers. Without configured SFU, `activity_sync` remains a domain synchronization prototype and `activity_playback` remains false. Live camera/Opus decode, bitrate, browser compatibility, screen share and latency need their own measurements; synthetic encrypted RTP forwarding is not glass-to-glass evidence.
+
+## Asynchronous CPU video derivatives
+
+With encrypted media configured and `CHRISCORD_FFMPEG` (default `/usr/bin/ffmpeg`) present, `capabilities.transcode` is true. `CHRISCORD_TRANSCODE_TIMEOUT_SECONDS` defaults to 21600 (maximum86400). Jobs are persisted in SQLite, processed one at a time, with at most32 queued/running jobs. Restart marks interrupted jobs failed and retryable; re-POST the source to retry.
+
+- `POST /api/uploads/:id/derive` requires a ready scanned upload owned by the caller plus current channel membership. Returns **202** `{id,status:"queued"}`. An active job for that source returns409; a full queue returns429.
+- `GET /api/media-jobs/:id` requires job ownership and channel membership. Returns `{id,source_id,owner_id,channel_id,status:"queued"|"running"|"ready"|"failed",error:null|string,retryable,created_at,updated_at}`. Ready jobs add `video_path` and `thumbnail_path`.
+- `GET /api/media-jobs/:id/video` and `/thumbnail` require current channel membership and a ready job. They support authenticated byte ranges, with `video/mp4` and `image/jpeg` respectively. Other states return409.
+- Message attachment DTOs now include nullable `video_path` and `thumbnail_path`. A durable `media.ready` event `{upload_id,job_id}` tells members to refresh attachments. Original deletion or message unsend marks jobs `source_deleted`, disables reads and deletes every generated encrypted object.
+
+FFmpeg receives decrypted bytes only through stdin and writes output only through stdout. Bounded buffers feed encrypted chunks; plaintext never spills to disk. Video is CPU H.264/AAC fragmented MP4, at most1920×1080 without upscaling, one encoder/filter thread; thumbnail is JPEG320 pixels wide. FFmpeg has fixed arguments, empty inherited environment, pipe-only protocol access, bounded allocation/probe options, and kill-on-drop timeout. Source deletion and owner membership are checked every 250 milliseconds to cancel active processing independently of pipe progress. Both generated outputs must pass the normal scanner before the job becomes ready. Scanner rejection, missing binary, malformed input, storage failures and timeouts stay explicit failed states with no published derivative.
+
+**Format limitation:** input must be demuxable from a non-seekable pipe. Fragmented/streamable MP4 is verified with an actual generated audiovisual fixture and decoded resulting MP4. A conventional MP4 with metadata at its end may require backward seeks and fail with `input_not_streamable` or `input_unsupported_or_ffmpeg_failed`; no plaintext spool or misleading successful status is used. The original encrypted upload remains available, and failure never imposes a product-wide upload-size cap.
+
+## Text-only link metadata
+
+`GET /api/embeds?url=<encoded-https-url>` requires an authenticated device session and returns `{url,hostname,title,description}`. Only public HTTPS port 443 is permitted; every DNS result is checked before the selected address is pinned. Redirects, proxy inheritance, userinfo, private IPs and active HTML are rejected. HTML is bounded to 512 KiB and at most two previews run concurrently. The client renders the returned strings as text; this endpoint does not proxy images or third-party scripts.

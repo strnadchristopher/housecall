@@ -37,6 +37,7 @@ fn upstream() -> ApiError {
 }
 fn client() -> Result<Client, ApiError> {
     Client::builder()
+        .no_proxy()
         .timeout(Duration::from_secs(15))
         .redirect(reqwest::redirect::Policy::none())
         .https_only(true)

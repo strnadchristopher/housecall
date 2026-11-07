@@ -43,7 +43,41 @@ fn roster(db: &Connection, channel: &str) -> Result<BTreeSet<String>, ApiError> 
         .collect::<rusqlite::Result<BTreeSet<String>>>()?;
     Ok(rows)
 }
-fn load(db: &Connection, channel: &str, at: u64) -> Result<Session, ApiError> {
+async fn active_roster(
+    s: &AppState,
+    p: &Principal,
+    channel: &str,
+) -> Result<Option<BTreeSet<String>>, ApiError> {
+    {
+        let db = s.db.lock().unwrap();
+        member(&db, &p.user.id, channel)?;
+    }
+    let Some(voice) = &s.voice else {
+        return Ok(None);
+    };
+    let peers = voice
+        .stats(channel.to_owned(), p.session_id.clone())
+        .await
+        .map_err(|_| ApiError(StatusCode::FORBIDDEN, "join voice before using an activity"))?;
+    let members: BTreeSet<String> = peers
+        .into_iter()
+        .filter(|peer| peer.connected)
+        .map(|peer| peer.user_id)
+        .collect();
+    if !members.contains(&p.user.id) {
+        return Err(ApiError(
+            StatusCode::FORBIDDEN,
+            "voice transport is not connected",
+        ));
+    }
+    Ok(Some(members))
+}
+fn load(
+    db: &Connection,
+    channel: &str,
+    at: u64,
+    active: Option<BTreeSet<String>>,
+) -> Result<Session, ApiError> {
     let encoded: String = db
         .query_row(
             "SELECT state FROM activities WHERE channel_id=?1",
@@ -59,7 +93,13 @@ fn load(db: &Connection, channel: &str, at: u64) -> Result<Session, ApiError> {
         )
     })?;
     session
-        .replace_members(roster(db, channel)?, at)
+        .replace_members(
+            match active {
+                Some(members) => members,
+                None => roster(db, channel)?,
+            },
+            at,
+        )
         .map_err(domain)?;
     session.tick(at);
     Ok(session)
@@ -99,6 +139,7 @@ async fn start(
     Path(channel): Path<String>,
     Json(input): Json<Start>,
 ) -> ApiResult<Value> {
+    let active = active_roster(&s, &p, &channel).await?;
     let mut db = s.db.lock().unwrap();
     let tx = db.transaction()?;
     member(&tx, &p.user.id, &channel)?;
@@ -110,8 +151,16 @@ async fn start(
         return Err(ApiError(StatusCode::CONFLICT, "activity already running"));
     }
     let at = now().max(0) as u64;
-    let session =
-        Session::new(input.kind, p.user.id.clone(), roster(&tx, &channel)?, at).map_err(domain)?;
+    let session = Session::new(
+        input.kind,
+        p.user.id.clone(),
+        match active {
+            Some(members) => members,
+            None => roster(&tx, &channel)?,
+        },
+        at,
+    )
+    .map_err(domain)?;
     let response = save(&tx, &channel, &session, &p.user.id, at)?;
     tx.commit()?;
     Ok(response)
@@ -121,6 +170,7 @@ async fn snapshot(
     Extension(p): Extension<Principal>,
     Path(channel): Path<String>,
 ) -> ApiResult<Value> {
+    let active = active_roster(&s, &p, &channel).await?;
     let mut db = s.db.lock().unwrap();
     let tx = db.transaction()?;
     member(&tx, &p.user.id, &channel)?;
@@ -133,7 +183,7 @@ async fn snapshot(
         )
         .optional()?
         .ok_or(ApiError(StatusCode::NOT_FOUND, "no activity in channel"))?;
-    let session = load(&tx, &channel, at)?;
+    let session = load(&tx, &channel, at, active)?;
     let encoded = serde_json::to_string(&session).map_err(|_| {
         ApiError(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -160,11 +210,12 @@ async fn command(
     Path(channel): Path<String>,
     Json(input): Json<ActivityCommand>,
 ) -> ApiResult<Value> {
+    let active = active_roster(&s, &p, &channel).await?;
     let mut db = s.db.lock().unwrap();
     let tx = db.transaction()?;
     member(&tx, &p.user.id, &channel)?;
     let at = now().max(0) as u64;
-    let mut session = load(&tx, &channel, at)?;
+    let mut session = load(&tx, &channel, at, active)?;
     session
         .apply(&p.user.id, input.expected_revision, input.command, at)
         .map_err(domain)?;
@@ -177,11 +228,12 @@ async fn stop(
     Extension(p): Extension<Principal>,
     Path(channel): Path<String>,
 ) -> ApiResult<Value> {
+    let active = active_roster(&s, &p, &channel).await?;
     let mut db = s.db.lock().unwrap();
     let tx = db.transaction()?;
     member(&tx, &p.user.id, &channel)?;
     let at = now().max(0) as u64;
-    let session = load(&tx, &channel, at)?;
+    let session = load(&tx, &channel, at, active)?;
     if session.snapshot(&p.user.id, at).map_err(domain)?.host != p.user.id {
         return Err(ApiError(
             StatusCode::FORBIDDEN,
@@ -240,6 +292,7 @@ mod tests {
     use super::*;
     use axum::{body::Body, http::Request};
     use http_body_util::BodyExt;
+    use std::sync::Arc;
     use tower::ServiceExt;
     fn state() -> AppState {
         let state = AppState::new(":memory:", "fixture-setup").unwrap();
@@ -437,5 +490,36 @@ mod tests {
         assert_eq!(body["dry_run"], true);
         assert_eq!(body["provider_verified"], false);
         assert_eq!(body["operation"]["state"], "dry_run");
+    }
+    #[tokio::test]
+    async fn configured_voice_requires_connected_session_for_activity_routes() {
+        let mut state = state();
+        state.voice = Some(Arc::new(
+            chriscord_sfu::Sfu::start(
+                "127.0.0.1:0".parse().unwrap(),
+                "127.0.0.1".parse().unwrap(),
+                Arc::new(|_, _, _| true),
+            )
+            .unwrap(),
+        ));
+        for (method, path, body) in [
+            ("GET", "/api/channels/room/activity", json!(null)),
+            (
+                "POST",
+                "/api/channels/room/activity",
+                json!({"kind":"plex"}),
+            ),
+            ("DELETE", "/api/channels/room/activity", json!(null)),
+            (
+                "POST",
+                "/api/channels/room/activity/commands",
+                json!({"expected_revision":0,"command":{"type":"play"}}),
+            ),
+        ] {
+            assert_eq!(
+                call(&state, Some('a'), method, path, body).await.0,
+                StatusCode::FORBIDDEN
+            );
+        }
     }
 }

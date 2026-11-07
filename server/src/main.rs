@@ -27,6 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
         let file = std::fs::OpenOptions::new()
             .create(true)
+            .truncate(false)
             .read(true)
             .write(true)
             .mode(0o600)
@@ -61,6 +62,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             timeout: std::time::Duration::from_secs(300),
         });
     }
+    chriscord_server::voice::configure(&mut state)?;
+    chriscord_server::transcode::configure(&mut state)?;
     let static_dir = std::env::var("CHRISCORD_STATIC_DIR").unwrap_or_else(|_| "client/dist".into());
     let bind = std::env::var("CHRISCORD_BIND").unwrap_or_else(|_| "127.0.0.1:3000".into());
     let listener = tokio::net::TcpListener::bind(&bind).await?;

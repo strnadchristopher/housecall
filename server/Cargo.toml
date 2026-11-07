@@ -27,6 +27,11 @@ chriscord-activities = { path = "../crates/activities", version = "0.1.0" }
 
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
 
+chriscord-sfu = { path = "../crates/sfu", version = "0.1.0" }
+
+scraper = "0.29"
+url = "2"
+
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"

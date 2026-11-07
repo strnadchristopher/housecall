@@ -182,23 +182,52 @@ impl Store {
         Ok(meta)
     }
     pub fn finalize(&self, id: Uuid, owner: &str, scanner: &dyn Scanner) -> Result<Upload> {
-        let _guard = self.gate.lock().map_err(|_| Error::Conflict)?;
-        let mut meta = self.owned(id, owner)?;
-        if meta.offset != meta.length || meta.status == Status::Ready {
-            return Err(Error::Conflict);
-        }
-        // Persist quarantine before calling any external process, so a crash fails closed.
-        meta.status = Status::Quarantined;
-        self.save(&meta)?;
+        let meta = {
+            let _guard = self.gate.lock().map_err(|_| Error::Conflict)?;
+            let mut meta = self.owned(id, owner)?;
+            if meta.offset != meta.length || meta.status == Status::Ready {
+                return Err(Error::Conflict);
+            }
+            // Quarantine before the external scan. No append is possible while quarantined.
+            meta.status = Status::Quarantined;
+            self.save(&meta)?;
+            meta
+        };
+        // Do not hold the store-wide lock across scanner I/O. Deletion must cancel availability
+        // immediately, and unrelated encrypted uploads must continue during a long scan.
         let mut reader = self.reader(meta.clone(), 0, meta.length)?;
         scanner.scan(&mut reader).map_err(|_| Error::Quarantined)?;
         if reader.remaining != 0 {
             return Err(Error::Quarantined);
         }
-        meta.status = Status::Ready;
-        self.save(&meta)?;
-        Ok(meta)
+        let _guard = self.gate.lock().map_err(|_| Error::Conflict)?;
+        let mut current = self.owned(id, owner)?;
+        if current.status != Status::Quarantined
+            || current.offset != meta.offset
+            || current.length != meta.length
+        {
+            return Err(Error::Conflict);
+        }
+        current.status = Status::Ready;
+        self.save(&current)?;
+        Ok(current)
     }
+    /// Trusted server-generated streams only. HTTP upload endpoints must never expose this operation.
+    /// A generated stream starts with an unknown declared length (`u64::MAX`), then fixes its
+    /// length to the actual authenticated chunk offset before the normal fail-closed scan.
+    pub fn finish_generated(&self, id: Uuid, owner: &str, scanner: &dyn Scanner) -> Result<Upload> {
+        {
+            let _guard = self.gate.lock().map_err(|_| Error::Conflict)?;
+            let mut meta = self.owned(id, owner)?;
+            if meta.status != Status::Uploading || meta.length != u64::MAX || meta.offset == 0 {
+                return Err(Error::Conflict);
+            }
+            meta.length = meta.offset;
+            self.save(&meta)?;
+        }
+        self.finalize(id, owner, scanner)
+    }
+
     /// The caller must first authorize membership using metadata.channel_id.
     pub fn read_range(&self, id: Uuid, start: u64, end_exclusive: u64) -> Result<MediaReader> {
         let _guard = self.gate.lock().map_err(|_| Error::Conflict)?;

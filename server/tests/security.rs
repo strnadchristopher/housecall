@@ -639,3 +639,229 @@ async fn credential_burst_has_bounded_memory_and_fails_fast() {
         );
     }
 }
+
+#[tokio::test]
+async fn server_namespaces_role_mentions_and_threads_are_scoped() {
+    let (api, _, owner, alice, bob) = fixture().await;
+    for (method, path) in [
+        ("GET", "/api/servers"),
+        ("POST", "/api/servers"),
+        ("GET", "/api/servers/id/members"),
+        ("POST", "/api/servers/id/members"),
+        ("GET", "/api/servers/id/roles"),
+        ("POST", "/api/servers/id/roles"),
+        ("POST", "/api/roles/id/members"),
+        ("DELETE", "/api/roles/id/members/user"),
+        ("DELETE", "/api/roles/id"),
+    ] {
+        assert_eq!(
+            call(&api, method, path, None, json!({})).await.0,
+            StatusCode::UNAUTHORIZED,
+            "{method} {path}"
+        )
+    }
+    assert_eq!(
+        call(
+            &api,
+            "POST",
+            "/api/servers",
+            Some(&alice),
+            json!({"name":"unauthorized"})
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    let (status, server) = call(
+        &api,
+        "POST",
+        "/api/servers",
+        Some(&owner),
+        json!({"name":"Cinema"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let sid = server["id"].as_str().unwrap();
+    let cid = server["general_channel_id"].as_str().unwrap();
+    let members = format!("/api/servers/{sid}/members");
+    let roles = format!("/api/servers/{sid}/roles");
+    for path in [&members, &roles] {
+        assert_eq!(
+            call(&api, "GET", path, Some(&bob), json!({})).await.0,
+            StatusCode::FORBIDDEN
+        )
+    }
+    assert_eq!(
+        call(
+            &api,
+            "POST",
+            &members,
+            Some(&alice),
+            json!({"user_id":bob["user"]["id"]})
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        call(
+            &api,
+            "POST",
+            &members,
+            Some(&owner),
+            json!({"user_id":alice["user"]["id"]})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let (status, role) = call(
+        &api,
+        "POST",
+        &roles,
+        Some(&owner),
+        json!({"name":"Movie fans"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let rid = role["id"].as_str().unwrap();
+    let assign = format!("/api/roles/{rid}/members");
+    assert_eq!(
+        call(
+            &api,
+            "POST",
+            &assign,
+            Some(&alice),
+            json!({"user_id":alice["user"]["id"]})
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        call(
+            &api,
+            "POST",
+            &assign,
+            Some(&owner),
+            json!({"user_id":bob["user"]["id"]})
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        call(
+            &api,
+            "POST",
+            &assign,
+            Some(&owner),
+            json!({"user_id":alice["user"]["id"]})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let (status, parent) = call(
+        &api,
+        "POST",
+        &format!("/api/channels/{cid}/messages"),
+        Some(&owner),
+        json!({"body":"Movie night","role_mention_ids":[rid]}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(parent["mention_ids"], json!([alice["user"]["id"]]));
+    let (_, notes) = call(&api, "GET", "/api/notifications", Some(&alice), json!({})).await;
+    assert_eq!(notes["notifications"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        call(
+            &api,
+            "POST",
+            "/api/channels/general/messages",
+            Some(&owner),
+            json!({"body":"wrong server","role_mention_ids":[rid]})
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    let (_, private) = call(
+        &api,
+        "POST",
+        "/api/channels",
+        Some(&owner),
+        json!({"name":"secret","kind":"channel","server_id":sid}),
+    )
+    .await;
+    let (_, msg) = call(
+        &api,
+        "POST",
+        &format!("/api/channels/{}/messages", private["id"].as_str().unwrap()),
+        Some(&owner),
+        json!({"body":"private role mention","role_mention_ids":[rid]}),
+    )
+    .await;
+    assert_eq!(msg["mention_ids"], json!([]));
+    let mid = parent["id"].as_str().unwrap();
+    let (status, reply) = call(
+        &api,
+        "POST",
+        &format!("/api/channels/{cid}/messages"),
+        Some(&alice),
+        json!({"body":"I'm in","reply_to":mid}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (_, thread) = call(
+        &api,
+        "GET",
+        &format!("/api/channels/{cid}/messages?reply_to={mid}"),
+        Some(&alice),
+        json!({}),
+    )
+    .await;
+    assert_eq!(thread["messages"].as_array().unwrap().len(), 1);
+    assert_eq!(thread["messages"][0]["id"], reply["id"]);
+    let (_, invite) = call(
+        &api,
+        "POST",
+        "/api/invites",
+        Some(&owner),
+        json!({"expires_in_seconds":60,"server_id":sid}),
+    )
+    .await;
+    let(status,dave)=call(&api,"POST","/api/invites/accept",None,json!({"token":invite["token"],"username":"dave","password":"test-password-long","device_name":"test"})).await;
+    assert_eq!(status, StatusCode::OK);
+    let (_, joined) = call(&api, "GET", "/api/servers", Some(&dave), json!({})).await;
+    assert_eq!(joined["servers"].as_array().unwrap().len(), 1);
+    assert_eq!(joined["servers"][0]["id"], sid);
+    assert_eq!(
+        call(
+            &api,
+            "GET",
+            "/api/channels/general/messages",
+            Some(&dave),
+            json!({})
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    for path in [
+        format!(
+            "/api/roles/{rid}/members/{}",
+            alice["user"]["id"].as_str().unwrap()
+        ),
+        format!("/api/roles/{rid}"),
+    ] {
+        assert_eq!(
+            call(&api, "DELETE", &path, Some(&alice), json!({})).await.0,
+            StatusCode::FORBIDDEN
+        );
+        assert_eq!(
+            call(&api, "DELETE", &path, Some(&owner), json!({})).await.0,
+            StatusCode::OK
+        )
+    }
+}

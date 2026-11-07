@@ -117,6 +117,8 @@ async fn remove(
     Path(id): Path<Uuid>,
 ) -> ApiResult<Value> {
     let store = store(&s)?;
+    store.inspect(id, &p.user.id)?;
+    crate::transcode::purge_source(&s.db.lock().unwrap(), &store, id, &p.user.id)?;
     blocking(move || store.delete(id, &p.user.id)).await?;
     Ok(Json(json!({"ok":true})))
 }

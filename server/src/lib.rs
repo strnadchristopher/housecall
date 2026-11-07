@@ -1,7 +1,11 @@
 pub mod activities;
+pub mod embeds;
 pub mod giphy;
 pub mod media;
 pub mod passkeys;
+pub mod servers;
+pub mod transcode;
+pub mod voice;
 use argon2::{
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
@@ -79,6 +83,8 @@ pub struct AppState {
     pub media: Option<Arc<chriscord_media::Store>>,
     pub scanner: Arc<dyn chriscord_media::Scanner>,
     pub passkeys: Option<Arc<passkeys::Passkeys>>,
+    pub voice: Option<Arc<chriscord_sfu::Sfu>>,
+    pub transcoder: Option<Arc<transcode::Processor>>,
 }
 #[derive(Clone, Serialize, Debug)]
 pub struct User {
@@ -110,6 +116,8 @@ impl AppState {
  CREATE TABLE IF NOT EXISTS reports(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),kind TEXT NOT NULL,body TEXT NOT NULL,logs TEXT,created_at INTEGER NOT NULL,status TEXT NOT NULL DEFAULT 'open');")?;
         db.execute_batch("CREATE TABLE IF NOT EXISTS attachments(upload_id TEXT PRIMARY KEY,message_id TEXT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,filename TEXT NOT NULL,length TEXT NOT NULL);")?;
         db.execute_batch("CREATE TABLE IF NOT EXISTS report_media(report_id TEXT PRIMARY KEY REFERENCES reports(id) ON DELETE CASCADE,upload_id TEXT NOT NULL);")?;
+        transcode::init(&db)?;
+        servers::init(&db)?;
         passkeys::init(&db)?;
         activities::init(&db)?;
         Ok(Self {
@@ -122,6 +130,8 @@ impl AppState {
             media: None,
             scanner: Arc::new(chriscord_media::RejectScanner),
             passkeys: None,
+            voice: None,
+            transcoder: None,
         })
     }
     fn limited(&self, key: String, max: u32) -> bool {
@@ -156,6 +166,10 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
             axum::http::header::RANGE,
         ]);
     let private = Router::new()
+        .merge(embeds::routes())
+        .merge(transcode::routes())
+        .merge(voice::routes())
+        .merge(servers::routes())
         .merge(media::routes())
         .merge(giphy::routes())
         .merge(passkeys::private_routes())
@@ -352,11 +366,10 @@ async fn setup(State(s): State<AppState>, Json(v): Json<Setup>) -> ApiResult<Val
         params![u.id, u.username, pw],
     )?;
     tx.execute(
-        "INSERT INTO channels VALUES('general','general','channel')",
+        "INSERT INTO channels(id,name,kind,server_id) VALUES('general','general','channel','home')",
         [],
     )?;
-    tx.execute("INSERT INTO members VALUES('general',?)", [&u.id])?;
-    emit(&tx, "general", "member.joined", json!({"user_id":u.id}))?;
+    servers::join(&tx, &u.id, "home")?;
     let result = session(&tx, u, &v.device_name)?;
     tx.commit()?;
     Ok(Json(result))
@@ -421,6 +434,7 @@ async fn login(State(s): State<AppState>, Json(v): Json<Login>) -> ApiResult<Val
 #[derive(Deserialize)]
 struct Invite {
     expires_in_seconds: i64,
+    server_id: Option<String>,
 }
 async fn invite(
     State(s): State<AppState>,
@@ -433,12 +447,15 @@ async fn invite(
     }
     let token = secret();
     let expires = now() + v.expires_in_seconds * 1000;
-    s.db.lock().unwrap().execute(
-        "INSERT INTO invites VALUES(?,?,NULL)",
-        params![hash(&token), expires],
+    let db = s.db.lock().unwrap();
+    let server_id = v.server_id.unwrap_or_else(|| "home".into());
+    servers::exists(&db, &server_id)?;
+    db.execute(
+        "INSERT INTO invites(token_hash,expires_at,used_at,server_id) VALUES(?,?,NULL,?)",
+        params![hash(&token), expires, server_id],
     )?;
     Ok(Json(
-        json!({"id":hash(&token),"token":token,"expires_at":expires}),
+        json!({"id":hash(&token),"token":token,"expires_at":expires,"server_id":server_id}),
     ))
 }
 async fn invites(
@@ -524,15 +541,19 @@ async fn accept(State(s): State<AppState>, Json(v): Json<Accept>) -> ApiResult<V
         "INSERT INTO users VALUES(?,?,?,0)",
         params![u.id, u.username, pw],
     )?;
-    tx.execute("INSERT INTO members VALUES('general',?)", [&u.id])?;
-    emit(&tx, "general", "member.joined", json!({"user_id":u.id}))?;
+    let server_id: String = tx.query_row(
+        "SELECT server_id FROM invites WHERE token_hash=?",
+        [hash(&v.token)],
+        |r| r.get(0),
+    )?;
+    servers::join(&tx, &u.id, &server_id)?;
     let result = session(&tx, u, &v.device_name)?;
     tx.commit()?;
     Ok(Json(result))
 }
 async fn me(State(s): State<AppState>, Extension(p): Extension<Principal>) -> Json<Value> {
     Json(
-        json!({"user":p.user,"session_id":p.session_id,"capabilities":{"password":true,"passkeys":s.passkeys.is_some(),"chat":true,"uploads":s.media.is_some(),"voice":false,"activities":false,"giphy":giphy::configured(),"push":false}}),
+        json!({"user":p.user,"session_id":p.session_id,"capabilities":{"password":true,"passkeys":s.passkeys.is_some(),"chat":true,"embeds":true,"uploads":s.media.is_some(),"transcode":s.transcoder.is_some(),"voice":s.voice.is_some(),"activities":false,"activity_sync":true,"activity_playback":false,"giphy":giphy::configured(),"push":false}}),
     )
 }
 async fn devices(
@@ -563,12 +584,13 @@ async fn channels(
     Extension(p): Extension<Principal>,
 ) -> ApiResult<Value> {
     let db = s.db.lock().unwrap();
-    let mut q=db.prepare("SELECT c.id,c.name,c.kind FROM channels c JOIN members m ON m.channel_id=c.id WHERE m.user_id=? ORDER BY c.name")?;
-    let rows=q.query_map([p.user.id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"name":r.get::<_,String>(1)?,"kind":r.get::<_,String>(2)?})))?.collect::<Result<Vec<_>,_>>()?;
+    let mut q=db.prepare("SELECT c.id,c.name,c.kind,c.server_id FROM channels c JOIN members m ON m.channel_id=c.id WHERE m.user_id=? ORDER BY c.name")?;
+    let rows=q.query_map([p.user.id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"name":r.get::<_,String>(1)?,"kind":r.get::<_,String>(2)?,"server_id":r.get::<_,Option<String>>(3)?})))?.collect::<Result<Vec<_>,_>>()?;
     Ok(Json(json!({"channels":rows})))
 }
 #[derive(Deserialize)]
 struct CreateChannel {
+    server_id: Option<String>,
     name: String,
     kind: String,
     #[serde(default)]
@@ -599,7 +621,15 @@ async fn create_channel(
     }
     let mut db = s.db.lock().unwrap();
     let tx = db.transaction()?;
+    let server_id = if v.kind == "channel" {
+        Some(v.server_id.unwrap_or_else(|| "home".into()))
+    } else {
+        None
+    };
     for id in &v.member_ids {
+        if let Some(sid) = &server_id {
+            servers::member(&tx, id, sid)?;
+        }
         if tx
             .query_row("SELECT 1 FROM users WHERE id=?", [id], |_| Ok(()))
             .optional()?
@@ -610,15 +640,17 @@ async fn create_channel(
     }
     let id = secret();
     tx.execute(
-        "INSERT INTO channels VALUES(?,?,?)",
-        params![id, v.name, v.kind],
+        "INSERT INTO channels(id,name,kind,server_id) VALUES(?,?,?,?)",
+        params![id, v.name, v.kind, server_id],
     )?;
     for uid in v.member_ids {
         tx.execute("INSERT INTO members VALUES(?,?)", params![id, uid])?;
     }
     emit(&tx, &id, "channel.created", json!({"channel_id":id}))?;
     tx.commit()?;
-    Ok(Json(json!({"id":id,"name":v.name,"kind":v.kind})))
+    Ok(Json(
+        json!({"id":id,"name":v.name,"kind":v.kind,"server_id":server_id}),
+    ))
 }
 async fn members(State(s): State<AppState>) -> ApiResult<Value> {
     let db = s.db.lock().unwrap();
@@ -639,6 +671,7 @@ struct MessageQuery {
     before: Option<i64>,
     q: Option<String>,
     pinned: Option<bool>,
+    reply_to: Option<String>,
 }
 fn message(db: &Connection, id: &str) -> Result<Value, ApiError> {
     let mut msg=db.query_row("SELECT id,channel_id,author_id,body,reply_to,created_at,edited_at,revision,pinned,mention_ids FROM messages WHERE id=?",[id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"channel_id":r.get::<_,String>(1)?,"author_id":r.get::<_,String>(2)?,"body":r.get::<_,String>(3)?,"reply_to":r.get::<_,Option<String>>(4)?,"created_at":r.get::<_,i64>(5)?,"edited_at":r.get::<_,Option<i64>>(6)?,"revision":r.get::<_,i64>(7)?,"pinned":r.get::<_,bool>(8)?,"mention_ids":serde_json::from_str::<Value>(&r.get::<_,String>(9)?).unwrap_or(json!([]))}))).optional()?.ok_or_else(missing)?;
@@ -649,9 +682,14 @@ fn message(db: &Connection, id: &str) -> Result<Value, ApiError> {
         })?
         .collect::<Result<Vec<_>, _>>()?;
     msg["reactions"] = json!(reactions);
+    let mut q = db.prepare("SELECT role_id FROM message_roles WHERE message_id=?")?;
+    let roles = q
+        .query_map([id], |r| r.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    msg["role_mention_ids"] = json!(roles);
     let mut q =
-        db.prepare("SELECT upload_id,filename,length FROM attachments WHERE message_id=?")?;
-    let attachments=q.query_map([id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"filename":r.get::<_,String>(1)?,"length":r.get::<_,String>(2)?})))?.collect::<Result<Vec<_>,_>>()?;
+        db.prepare("SELECT upload_id,filename,length,(SELECT id FROM media_jobs WHERE source_id=attachments.upload_id AND status='ready' ORDER BY created_at DESC LIMIT 1) FROM attachments WHERE message_id=?")?;
+    let attachments=q.query_map([id],|r|{let job=r.get::<_,Option<String>>(3)?;Ok(json!({"id":r.get::<_,String>(0)?,"filename":r.get::<_,String>(1)?,"length":r.get::<_,String>(2)?,"video_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/video")),"thumbnail_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/thumbnail"))}))})?.collect::<Result<Vec<_>,_>>()?;
     msg["attachments"] = json!(attachments);
     Ok(msg)
 }
@@ -688,14 +726,16 @@ async fn messages(
     }
     let db = s.db.lock().unwrap();
     member(&db, &p.user.id, &cid)?;
-    let mut q=db.prepare("SELECT id FROM messages WHERE channel_id=? AND created_at<? AND (?=0 OR pinned=1) AND instr(lower(body),lower(?))>0 ORDER BY created_at DESC,id DESC LIMIT 100")?;
+    let mut q=db.prepare("SELECT id FROM messages WHERE channel_id=? AND created_at<? AND (?=0 OR pinned=1) AND instr(lower(body),lower(?))>0 AND (? IS NULL OR reply_to=?) ORDER BY created_at DESC,id DESC LIMIT 100")?;
     let ids = q
         .query_map(
             params![
                 cid,
                 v.before.unwrap_or(i64::MAX),
                 v.pinned.unwrap_or(false),
-                v.q.unwrap_or_default()
+                v.q.unwrap_or_default(),
+                v.reply_to,
+                v.reply_to
             ],
             |r| r.get::<_, String>(0),
         )?
@@ -715,6 +755,8 @@ struct SendMessage {
     mention_ids: Vec<String>,
     #[serde(default)]
     attachment_ids: Vec<uuid::Uuid>,
+    #[serde(default)]
+    role_mention_ids: Vec<String>,
 }
 fn body_valid(body: &str) -> Result<(), ApiError> {
     if body.trim().is_empty() || body.len() > 16384 {
@@ -752,6 +794,10 @@ async fn send_message(
             .query_map([&cid], |r| r.get(0))?
             .collect::<Result<Vec<_>, _>>()?;
     }
+    v.mention_ids
+        .extend(servers::resolve_mentions(&tx, &cid, &v.role_mention_ids)?);
+    v.role_mention_ids.sort();
+    v.role_mention_ids.dedup();
     v.mention_ids.sort();
     v.mention_ids.dedup();
     for uid in &v.mention_ids {
@@ -779,6 +825,9 @@ async fn send_message(
     }
     let id = secret();
     tx.execute("INSERT INTO messages(id,channel_id,author_id,body,reply_to,created_at,mention_ids) VALUES(?,?,?,?,?,?,?)",params![id,cid,p.user.id,v.body,v.reply_to,now(),json!(v.mention_ids).to_string()])?;
+    for role in &v.role_mention_ids {
+        tx.execute("INSERT INTO message_roles VALUES(?,?)", params![id, role])?;
+    }
     for upload in attachments {
         tx.execute(
             "INSERT INTO attachments VALUES(?,?,?,?)",
@@ -854,6 +903,7 @@ async fn unsend(
     if let Some(store) = &s.media {
         for aid in attachment_ids {
             let aid = uuid::Uuid::parse_str(&aid).map_err(|_| bad("invalid stored attachment"))?;
+            transcode::purge_source(&tx, store, aid, &author)?;
             match store.delete(aid, &author) {
                 Ok(()) | Err(chriscord_media::Error::NotFound) => {}
                 Err(e) => return Err(e.into()),

@@ -1,0 +1,18 @@
+   Compiling phf_shared v0.14.0
+   Compiling phf_generator v0.14.0
+   Compiling phf_macros v0.14.0
+    Checking phf v0.14.0
+   Compiling string_cache_codegen v0.11.2
+   Compiling phf_codegen v0.14.0
+   Compiling web_atoms v0.3.0
+    Checking string_cache v0.11.0
+    Checking tendril v0.5.1
+    Checking cssparser v0.38.0
+    Checking markup5ever v0.40.0
+    Checking servo_arc v0.5.0
+    Checking selectors v0.41.0
+    Checking html5ever v0.40.1
+    Checking ego-tree v0.11.1
+    Checking scraper v0.29.0
+    Checking chriscord-server v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/server)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 17.01s
