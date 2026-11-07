@@ -47,7 +47,9 @@ pub(crate) struct Client {
     chosen_rid: Option<Rid>,
 }
 
-const SIGNAL_MAX_BYTES: usize = 128 * 1024;
+// Thirty two-track publishers require ~61 media sections in a receiver's SDP.
+// Keep a finite limit while allowing the resulting offer and answer to fit.
+pub(crate) const SIGNAL_MAX_BYTES: usize = 256 * 1024;
 const SIGNAL_SEND_TIMEOUT: Duration = Duration::from_secs(5);
 const SIGNAL_ANSWER_TIMEOUT: Duration = Duration::from_secs(15);
 const SIGNAL_RETRY_INTERVAL: Duration = Duration::from_millis(10);

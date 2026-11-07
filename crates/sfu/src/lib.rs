@@ -87,6 +87,7 @@ pub struct WorkerDiagnostics {
     /// Includes socket wait (at most10ms normally), useful for identifying scheduling stalls.
     pub max_iteration_us: u64,
     pub max_output_batch: usize,
+    pub max_receive_batch: usize,
     pub max_propagation_batch: usize,
 }
 struct ClosedPeer {
@@ -292,6 +293,8 @@ fn run(socket: UdpSocket, address: SocketAddr, rx: mpsc::Receiver<Control>, auth
                     // One connection per device in one voice channel; reconnect revokes old transport.
                     clients.retain(|c| c.session != session);
                     let mut rtc = Rtc::builder()
+                        .set_sctp_max_message_size(peer::SIGNAL_MAX_BYTES as u32)
+                        .set_sctp_max_buffered_amount(peer::SIGNAL_MAX_BYTES * 2)
                         .set_reordering_size_audio(3)
                         .set_reordering_timeout_audio(Some(Duration::from_millis(60)))
                         .set_stats_interval(Some(Duration::from_secs(1)))
@@ -374,7 +377,7 @@ fn run(socket: UdpSocket, address: SocketAddr, rx: mpsc::Receiver<Control>, auth
         let mut deadline = Instant::now() + Duration::from_millis(10);
         for client in &mut clients {
             let mut outputs = 0;
-            for _ in 0..256 {
+            for _ in 0..64 {
                 outputs += 1;
                 if !client.rtc.is_alive() {
                     break;
@@ -397,32 +400,58 @@ fn run(socket: UdpSocket, address: SocketAddr, rx: mpsc::Receiver<Control>, auth
         let timeout = deadline
             .saturating_duration_since(Instant::now())
             .clamp(Duration::from_millis(1), Duration::from_millis(10));
-        if socket.set_read_timeout(Some(timeout)).is_err() {
+        if socket.set_nonblocking(false).is_err() || socket.set_read_timeout(Some(timeout)).is_err()
+        {
             return;
         }
-        match socket.recv_from(&mut buffer) {
-            Ok((n, source)) => {
-                if let Ok(contents) = (&buffer[..n]).try_into() {
-                    let input = Input::Receive(
-                        Instant::now(),
-                        Receive {
-                            proto: Protocol::Udp,
-                            source,
-                            destination: address,
-                            contents,
-                        },
-                    );
-                    if let Some(client) = clients.iter_mut().find(|c| c.accepts(&input)) {
-                        client.handle_input(input);
+        // Wait for the first datagram, then drain a bounded ready batch. Reading
+        // only one datagram between every peer's output/timeout rounds starves
+        // the receive queue during joins and O(n²) forwarding bursts.
+        let mut received = 0;
+        let mut batch_started = None;
+        for _ in 0..64 {
+            match socket.recv_from(&mut buffer) {
+                Ok((n, source)) => {
+                    received += 1;
+                    if let Ok(contents) = (&buffer[..n]).try_into() {
+                        let input = Input::Receive(
+                            Instant::now(),
+                            Receive {
+                                proto: Protocol::Udp,
+                                source,
+                                destination: address,
+                                contents,
+                            },
+                        );
+                        if let Some(client) = clients.iter_mut().find(|c| c.accepts(&input)) {
+                            client.handle_input(input);
+                        }
+                    }
+                    if let Some(started) = batch_started {
+                        if Instant::now().duration_since(started) >= Duration::from_millis(1) {
+                            break;
+                        }
+                    } else {
+                        batch_started = Some(Instant::now());
+                        if socket.set_nonblocking(true).is_err() {
+                            return;
+                        }
                     }
                 }
+                Err(e)
+                    if matches!(
+                        e.kind(),
+                        std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+                    ) =>
+                {
+                    break
+                }
+                Err(_) => return,
             }
-            Err(e)
-                if matches!(
-                    e.kind(),
-                    std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
-                ) => {}
-            Err(_) => return,
+        }
+        worker.max_receive_batch = worker.max_receive_batch.max(received);
+        if socket.set_nonblocking(false).is_err() {
+            return;
         }
         let now = Instant::now();
         for client in &mut clients {

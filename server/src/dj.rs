@@ -869,10 +869,7 @@ mod tests {
                         .unwrap();
                     let mut request = Vec::new();
                     let mut buf = [0u8; 4096];
-                    loop {
-                        let Ok(n) = socket.read(&mut buf) else {
-                            break;
-                        };
+                    while let Ok(n) = socket.read(&mut buf) {
                         if n == 0 {
                             break;
                         }
@@ -1374,15 +1371,16 @@ mod tests {
             .await["track"]
                 .is_null());
         }
-        let seen = provider.seen.lock().unwrap();
-        assert_eq!(seen.len(), 4);
-        for request in seen.iter().filter(|r| r.starts_with("POST")) {
-            assert!(request
-                .to_lowercase()
-                .contains("x-inference-task: chriscord.dj"));
-            assert!(request.contains("\"model\":\"role:chat\""));
+        {
+            let seen = provider.seen.lock().unwrap();
+            assert_eq!(seen.len(), 4);
+            for request in seen.iter().filter(|r| r.starts_with("POST")) {
+                assert!(request
+                    .to_lowercase()
+                    .contains("x-inference-task: chriscord.dj"));
+                assert!(request.contains("\"model\":\"role:chat\""));
+            }
         }
-        drop(seen);
         let bytes: u64 = state
             .db
             .lock()

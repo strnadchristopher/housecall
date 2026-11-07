@@ -1,0 +1,4418 @@
+{
+  "profile": {
+    "peers": 30,
+    "width": 320,
+    "height": 180,
+    "framesPerSecond": 5,
+    "opusTargetBps": 510000,
+    "loadDeadlineMs": 60000
+  },
+  "note": "Real Chromium fake-capture RTP through the Rust SFU at reduced video resolution/frame rate. Not a production 720p or physical glass-to-glass claim. Dedicated systemd cgroup memory/CPU excludes unrelated browsers; ps CPU is lifetime average and summed RSS includes background browsers/shared pages. The first failed attempt incorrectly applied an absolute summed-RSS guard to unrelated Chrome processes.",
+  "before": {
+    "serverUdp": {
+      "receiveQueueBytes": 0,
+      "drops": 0
+    },
+    "at": 1794042999501,
+    "cgroupMiB": 638.91796875,
+    "cgroupCpuUsec": 11612148,
+    "rssMiB": 3189,
+    "cpuPercent": 31.800000000000004,
+    "availableMiB": 7855
+  },
+  "stages": [
+    {
+      "count": 5,
+      "elapsedMs": 3144,
+      "peers": [
+        {
+          "video": 4,
+          "audio": 4,
+          "frames": 28,
+          "bytes": 84240
+        },
+        {
+          "video": 4,
+          "audio": 4,
+          "frames": 20,
+          "bytes": 82604
+        },
+        {
+          "video": 4,
+          "audio": 4,
+          "frames": 20,
+          "bytes": 76858
+        },
+        {
+          "video": 4,
+          "audio": 4,
+          "frames": 14,
+          "bytes": 56379
+        },
+        {
+          "video": 4,
+          "audio": 4,
+          "frames": 11,
+          "bytes": 39768
+        }
+      ],
+      "resources": {
+        "serverUdp": {
+          "receiveQueueBytes": 0,
+          "drops": 4
+        },
+        "at": 1794043031247,
+        "cgroupMiB": 1788.1796875,
+        "cgroupCpuUsec": 46098525,
+        "rssMiB": 7339,
+        "cpuPercent": 135.59999999999997,
+        "availableMiB": 7457
+      }
+    },
+    {
+      "count": 10,
+      "elapsedMs": 24997,
+      "peers": [
+        {
+          "video": 8,
+          "audio": 8,
+          "frames": 285,
+          "bytes": 2104426
+        },
+        {
+          "video": 6,
+          "audio": 6,
+          "frames": 236,
+          "bytes": 1744710
+        },
+        {
+          "video": 6,
+          "audio": 6,
+          "frames": 248,
+          "bytes": 1640299
+        },
+        {
+          "video": 6,
+          "audio": 6,
+          "frames": 253,
+          "bytes": 1616312
+        },
+        {
+          "video": 6,
+          "audio": 6,
+          "frames": 238,
+          "bytes": 1633587
+        },
+        {
+          "video": 6,
+          "audio": 8,
+          "frames": 203,
+          "bytes": 1580335
+        },
+        {
+          "video": 7,
+          "audio": 7,
+          "frames": 184,
+          "bytes": 1448561
+        },
+        {
+          "video": 8,
+          "audio": 8,
+          "frames": 251,
+          "bytes": 2045356
+        },
+        {
+          "video": 0,
+          "audio": 0,
+          "frames": 0,
+          "bytes": 0
+        },
+        {
+          "video": 8,
+          "audio": 8,
+          "frames": 171,
+          "bytes": 1586153
+        }
+      ],
+      "resources": {
+        "serverUdp": {
+          "receiveQueueBytes": 176000,
+          "drops": 6189
+        },
+        "at": 1794043053133,
+        "cgroupMiB": 1938.56640625,
+        "cgroupCpuUsec": 100689828,
+        "rssMiB": 7698,
+        "cpuPercent": 177.09999999999985,
+        "availableMiB": 7241
+      }
+    }
+  ],
+  "samples": [
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 0,
+        "drops": 0
+      },
+      "at": 1794043028094,
+      "cgroupMiB": 1676.7109375,
+      "cgroupCpuUsec": 41456179,
+      "rssMiB": 6946,
+      "cpuPercent": 252.20000000000002,
+      "availableMiB": 7621
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 0,
+        "drops": 0
+      },
+      "at": 1794043028437,
+      "cgroupMiB": 1697.125,
+      "cgroupCpuUsec": 41638925,
+      "rssMiB": 7116,
+      "cpuPercent": 206.69999999999996,
+      "availableMiB": 7598
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 0,
+        "drops": 0
+      },
+      "at": 1794043028678,
+      "cgroupMiB": 1703.90234375,
+      "cgroupCpuUsec": 41862107,
+      "rssMiB": 7148,
+      "cpuPercent": 183.2,
+      "availableMiB": 7593
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 11136,
+        "drops": 0
+      },
+      "at": 1794043028991,
+      "cgroupMiB": 1718.98046875,
+      "cgroupCpuUsec": 42308399,
+      "rssMiB": 7190,
+      "cpuPercent": 165.9,
+      "availableMiB": 7575
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 0,
+        "drops": 0
+      },
+      "at": 1794043029286,
+      "cgroupMiB": 1733.171875,
+      "cgroupCpuUsec": 42796115,
+      "rssMiB": 7231,
+      "cpuPercent": 157.9,
+      "availableMiB": 7557
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 17600,
+        "drops": 4
+      },
+      "at": 1794043030149,
+      "cgroupMiB": 1772.2421875,
+      "cgroupCpuUsec": 44450422,
+      "rssMiB": 7315,
+      "cpuPercent": 143.4,
+      "availableMiB": 7499
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 0,
+        "drops": 4
+      },
+      "at": 1794043031290,
+      "cgroupMiB": 1788.83203125,
+      "cgroupCpuUsec": 46179035,
+      "rssMiB": 7340,
+      "cpuPercent": 135.69999999999996,
+      "availableMiB": 7455
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 57664,
+        "drops": 4
+      },
+      "at": 1794043031545,
+      "cgroupMiB": 1795.9765625,
+      "cgroupCpuUsec": 46575788,
+      "rssMiB": 7367,
+      "cpuPercent": 133.99999999999997,
+      "availableMiB": 7452
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 170752,
+        "drops": 4
+      },
+      "at": 1794043031823,
+      "cgroupMiB": 1812.48046875,
+      "cgroupCpuUsec": 47301100,
+      "rssMiB": 7407,
+      "cpuPercent": 133.89999999999998,
+      "availableMiB": 7428
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 86016,
+        "drops": 53
+      },
+      "at": 1794043032120,
+      "cgroupMiB": 1827.63671875,
+      "cgroupCpuUsec": 47968838,
+      "rssMiB": 7447,
+      "cpuPercent": 133.29999999999998,
+      "availableMiB": 7411
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 96384,
+        "drops": 53
+      },
+      "at": 1794043032134,
+      "cgroupMiB": 1826.2890625,
+      "cgroupCpuUsec": 48000513,
+      "rssMiB": 7447,
+      "cpuPercent": 133,
+      "availableMiB": 7411
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 183104,
+        "drops": 116
+      },
+      "at": 1794043032443,
+      "cgroupMiB": 1831.8515625,
+      "cgroupCpuUsec": 48644524,
+      "rssMiB": 7473,
+      "cpuPercent": 132.49999999999997,
+      "availableMiB": 7395
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 151616,
+        "drops": 517
+      },
+      "at": 1794043034108,
+      "cgroupMiB": 1887.80859375,
+      "cgroupCpuUsec": 52585769,
+      "rssMiB": 7587,
+      "cpuPercent": 134.5,
+      "availableMiB": 7339
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 182144,
+        "drops": 1158
+      },
+      "at": 1794043036118,
+      "cgroupMiB": 1914.68359375,
+      "cgroupCpuUsec": 57263974,
+      "rssMiB": 7630,
+      "cpuPercent": 138.70000000000002,
+      "availableMiB": 7287
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 160896,
+        "drops": 1835
+      },
+      "at": 1794043038128,
+      "cgroupMiB": 1931.34765625,
+      "cgroupCpuUsec": 62238730,
+      "rssMiB": 7645,
+      "cpuPercent": 143.7,
+      "availableMiB": 7227
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 188864,
+        "drops": 2404
+      },
+      "at": 1794043040167,
+      "cgroupMiB": 1932.90625,
+      "cgroupCpuUsec": 67476467,
+      "rssMiB": 7646,
+      "cpuPercent": 149.1,
+      "availableMiB": 7236
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 174912,
+        "drops": 3121
+      },
+      "at": 1794043042168,
+      "cgroupMiB": 1949.61328125,
+      "cgroupCpuUsec": 72890691,
+      "rssMiB": 7677,
+      "cpuPercent": 154.90000000000003,
+      "availableMiB": 7237
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 195136,
+        "drops": 3634
+      },
+      "at": 1794043044243,
+      "cgroupMiB": 1961.37890625,
+      "cgroupCpuUsec": 78412631,
+      "rssMiB": 7687,
+      "cpuPercent": 160.3,
+      "availableMiB": 7225
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 175936,
+        "drops": 4290
+      },
+      "at": 1794043046208,
+      "cgroupMiB": 1957.09765625,
+      "cgroupCpuUsec": 83247611,
+      "rssMiB": 7692,
+      "cpuPercent": 165.09999999999997,
+      "availableMiB": 7243
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 173376,
+        "drops": 5312
+      },
+      "at": 1794043048115,
+      "cgroupMiB": 1960.125,
+      "cgroupCpuUsec": 87806912,
+      "rssMiB": 7699,
+      "cpuPercent": 168.20000000000002,
+      "availableMiB": 7230
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 178944,
+        "drops": 5712
+      },
+      "at": 1794043050154,
+      "cgroupMiB": 1954.23046875,
+      "cgroupCpuUsec": 93295128,
+      "rssMiB": 7703,
+      "cpuPercent": 172.5999999999999,
+      "availableMiB": 7240
+    },
+    {
+      "serverUdp": {
+        "receiveQueueBytes": 189184,
+        "drops": 6050
+      },
+      "at": 1794043052115,
+      "cgroupMiB": 1941.05078125,
+      "cgroupCpuUsec": 98307688,
+      "rssMiB": 7698,
+      "cpuPercent": 176.2999999999999,
+      "availableMiB": 7240
+    }
+  ],
+  "terminalDiagnostics": [
+    {
+      "index": 0,
+      "voice": {
+        "phase": "live",
+        "peerId": 0,
+        "hasError": false,
+        "errorCategory": null
+      },
+      "signalingMessages": [
+        {
+          "at": 26102.5,
+          "direction": "received",
+          "bytes": 10051,
+          "type": "offer",
+          "mediaSections": 5
+        },
+        {
+          "at": 26154,
+          "direction": "sent",
+          "bytes": 10758,
+          "type": "answer",
+          "mediaSections": 5
+        },
+        {
+          "at": 26395.5,
+          "direction": "received",
+          "bytes": 14509,
+          "type": "offer",
+          "mediaSections": 7
+        },
+        {
+          "at": 26428,
+          "direction": "sent",
+          "bytes": 14891,
+          "type": "answer",
+          "mediaSections": 7
+        },
+        {
+          "at": 26678,
+          "direction": "received",
+          "bytes": 18964,
+          "type": "offer",
+          "mediaSections": 9
+        },
+        {
+          "at": 26730.800000071526,
+          "direction": "sent",
+          "bytes": 19024,
+          "type": "answer",
+          "mediaSections": 9
+        },
+        {
+          "at": 27145.100000023842,
+          "direction": "received",
+          "bytes": 23424,
+          "type": "offer",
+          "mediaSections": 11
+        },
+        {
+          "at": 27190.5,
+          "direction": "sent",
+          "bytes": 23157,
+          "type": "answer",
+          "mediaSections": 11
+        },
+        {
+          "at": 28995,
+          "direction": "received",
+          "bytes": 27878,
+          "type": "offer",
+          "mediaSections": 13
+        },
+        {
+          "at": 29084.300000071526,
+          "direction": "sent",
+          "bytes": 27290,
+          "type": "answer",
+          "mediaSections": 13
+        },
+        {
+          "at": 35516.5,
+          "direction": "received",
+          "bytes": 42637,
+          "type": "offer",
+          "mediaSections": 19
+        },
+        {
+          "at": 35609.300000071526,
+          "direction": "sent",
+          "bytes": 39689,
+          "type": "answer",
+          "mediaSections": 19
+        }
+      ],
+      "peers": [
+        {
+          "connection": "connected",
+          "ice": "connected",
+          "gathering": "complete",
+          "signaling": "stable",
+          "local": {
+            "type": "answer",
+            "bytes": 37357,
+            "mediaSections": 19
+          },
+          "remote": {
+            "type": "offer",
+            "bytes": 40950,
+            "mediaSections": 19
+          },
+          "channels": [
+            {
+              "readyState": "open",
+              "bufferedAmount": 0
+            }
+          ],
+          "transceivers": [
+            {
+              "mid": "0",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "1",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "8Gc",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "zvD",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "k18",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "tjx",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "6ds",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "5uT",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "Fqc",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "r4M",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "Uhz",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "9b3",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "Kbo",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "RgE",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "yGJ",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "Ohf",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "qmN",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "Dg8",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            }
+          ],
+          "streams": [
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "Uhz",
+              "packetsReceived": 685,
+              "packetsLost": 0,
+              "bytesReceived": 212099
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "6ds",
+              "packetsReceived": 822,
+              "packetsLost": 0,
+              "bytesReceived": 245465
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "yGJ",
+              "packetsReceived": 465,
+              "packetsLost": 0,
+              "bytesReceived": 164555
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "8Gc",
+              "packetsReceived": 898,
+              "packetsLost": 0,
+              "bytesReceived": 235773
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "qmN",
+              "packetsReceived": 458,
+              "packetsLost": 0,
+              "bytesReceived": 163920
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "Kbo",
+              "packetsReceived": 304,
+              "packetsLost": 0,
+              "bytesReceived": 108902
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "Fqc",
+              "packetsReceived": 824,
+              "packetsLost": 0,
+              "bytesReceived": 246672
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "k18",
+              "packetsReceived": 785,
+              "packetsLost": 0,
+              "bytesReceived": 185737
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "tjx",
+              "packetsReceived": 118,
+              "packetsLost": 0,
+              "framesDecoded": 49,
+              "bytesReceived": 87240,
+              "keyFramesDecoded": 19,
+              "pliCount": 33,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "RgE",
+              "packetsReceived": 46,
+              "packetsLost": 0,
+              "framesDecoded": 15,
+              "bytesReceived": 37006,
+              "keyFramesDecoded": 9,
+              "pliCount": 20,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "r4M",
+              "packetsReceived": 117,
+              "packetsLost": 0,
+              "framesDecoded": 52,
+              "bytesReceived": 85857,
+              "keyFramesDecoded": 17,
+              "pliCount": 20,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "zvD",
+              "packetsReceived": 126,
+              "packetsLost": 0,
+              "framesDecoded": 54,
+              "bytesReceived": 91070,
+              "keyFramesDecoded": 21,
+              "pliCount": 19,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "Ohf",
+              "packetsReceived": 65,
+              "packetsLost": 0,
+              "framesDecoded": 16,
+              "bytesReceived": 48263,
+              "keyFramesDecoded": 12,
+              "pliCount": 25,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "9b3",
+              "packetsReceived": 98,
+              "packetsLost": 0,
+              "framesDecoded": 44,
+              "bytesReceived": 71817,
+              "keyFramesDecoded": 14,
+              "pliCount": 25,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "Dg8",
+              "packetsReceived": 71,
+              "packetsLost": 0,
+              "framesDecoded": 22,
+              "bytesReceived": 51689,
+              "keyFramesDecoded": 11,
+              "pliCount": 16,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "5uT",
+              "packetsReceived": 116,
+              "packetsLost": 0,
+              "framesDecoded": 37,
+              "bytesReceived": 83581,
+              "keyFramesDecoded": 19,
+              "pliCount": 27,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "audio",
+              "mid": "0",
+              "packetsSent": 1243,
+              "bytesSent": 326303,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "video",
+              "mid": "1",
+              "packetsSent": 172,
+              "framesEncoded": 87,
+              "bytesSent": 125848,
+              "pliCount": 115,
+              "nackCount": 18
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "voice": {
+        "phase": "live",
+        "peerId": 1,
+        "hasError": false,
+        "errorCategory": null
+      },
+      "signalingMessages": [
+        {
+          "at": 24412.799999952316,
+          "direction": "received",
+          "bytes": 10157,
+          "type": "offer",
+          "mediaSections": 5
+        },
+        {
+          "at": 24462.799999952316,
+          "direction": "sent",
+          "bytes": 10756,
+          "type": "answer",
+          "mediaSections": 5
+        },
+        {
+          "at": 24707,
+          "direction": "received",
+          "bytes": 14615,
+          "type": "offer",
+          "mediaSections": 7
+        },
+        {
+          "at": 24733.799999952316,
+          "direction": "sent",
+          "bytes": 14889,
+          "type": "answer",
+          "mediaSections": 7
+        },
+        {
+          "at": 24995,
+          "direction": "received",
+          "bytes": 19075,
+          "type": "offer",
+          "mediaSections": 9
+        },
+        {
+          "at": 25114,
+          "direction": "sent",
+          "bytes": 19022,
+          "type": "answer",
+          "mediaSections": 9
+        },
+        {
+          "at": 25459.5,
+          "direction": "received",
+          "bytes": 23531,
+          "type": "offer",
+          "mediaSections": 11
+        },
+        {
+          "at": 25500.399999976158,
+          "direction": "sent",
+          "bytes": 23155,
+          "type": "answer",
+          "mediaSections": 11
+        },
+        {
+          "at": 27310.299999952316,
+          "direction": "received",
+          "bytes": 27991,
+          "type": "offer",
+          "mediaSections": 13
+        },
+        {
+          "at": 27376,
+          "direction": "sent",
+          "bytes": 27288,
+          "type": "answer",
+          "mediaSections": 13
+        },
+        {
+          "at": 28260.199999928474,
+          "direction": "received",
+          "bytes": 32448,
+          "type": "offer",
+          "mediaSections": 15
+        },
+        {
+          "at": 28341.899999976158,
+          "direction": "sent",
+          "bytes": 31421,
+          "type": "answer",
+          "mediaSections": 15
+        },
+        {
+          "at": 29119.899999976158,
+          "direction": "received",
+          "bytes": 36908,
+          "type": "offer",
+          "mediaSections": 17
+        },
+        {
+          "at": 29166,
+          "direction": "sent",
+          "bytes": 35554,
+          "type": "answer",
+          "mediaSections": 17
+        },
+        {
+          "at": 33332.5,
+          "direction": "received",
+          "bytes": 46519,
+          "type": "offer",
+          "mediaSections": 21
+        },
+        {
+          "at": 33397.89999997616,
+          "direction": "sent",
+          "bytes": 43821,
+          "type": "answer",
+          "mediaSections": 21
+        },
+        {
+          "at": 46422.89999997616,
+          "direction": "received",
+          "bytes": 44725,
+          "type": "offer",
+          "mediaSections": 21
+        },
+        {
+          "at": 46531.699999928474,
+          "direction": "sent",
+          "bytes": 43813,
+          "type": "answer",
+          "mediaSections": 21
+        },
+        {
+          "at": 48393.09999990463,
+          "direction": "received",
+          "bytes": 43909,
+          "type": "offer",
+          "mediaSections": 21
+        },
+        {
+          "at": 48455.199999928474,
+          "direction": "sent",
+          "bytes": 43797,
+          "type": "answer",
+          "mediaSections": 21
+        }
+      ],
+      "peers": [
+        {
+          "connection": "connected",
+          "ice": "connected",
+          "gathering": "complete",
+          "signaling": "stable",
+          "local": {
+            "type": "answer",
+            "bytes": 41217,
+            "mediaSections": 21
+          },
+          "remote": {
+            "type": "offer",
+            "bytes": 42179,
+            "mediaSections": 21
+          },
+          "channels": [
+            {
+              "readyState": "open",
+              "bufferedAmount": 43797
+            }
+          ],
+          "transceivers": [
+            {
+              "mid": "0",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "1",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "Dk7",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "z1C",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "HaM",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "zfU",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "JNl",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "ivU",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "5UE",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "CM2",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "6Rf",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "Joy",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "20b",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "YEq",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            }
+          ],
+          "streams": [
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "20b",
+              "packetsReceived": 459,
+              "packetsLost": 0,
+              "bytesReceived": 164436
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "Dk7",
+              "packetsReceived": 864,
+              "packetsLost": 0,
+              "bytesReceived": 220386
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "5UE",
+              "packetsReceived": 736,
+              "packetsLost": 0,
+              "bytesReceived": 220880
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "HaM",
+              "packetsReceived": 810,
+              "packetsLost": 0,
+              "bytesReceived": 245429
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "6Rf",
+              "packetsReceived": 597,
+              "packetsLost": 0,
+              "bytesReceived": 202315
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "JNl",
+              "packetsReceived": 826,
+              "packetsLost": 0,
+              "bytesReceived": 247352
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "ivU",
+              "packetsReceived": 117,
+              "packetsLost": 0,
+              "framesDecoded": 52,
+              "bytesReceived": 85857,
+              "keyFramesDecoded": 17,
+              "pliCount": 20,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "CM2",
+              "packetsReceived": 109,
+              "packetsLost": 0,
+              "framesDecoded": 49,
+              "bytesReceived": 81736,
+              "keyFramesDecoded": 17,
+              "pliCount": 25,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "z1C",
+              "packetsReceived": 122,
+              "packetsLost": 0,
+              "framesDecoded": 55,
+              "bytesReceived": 90767,
+              "keyFramesDecoded": 19,
+              "pliCount": 23,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "Joy",
+              "packetsReceived": 92,
+              "packetsLost": 0,
+              "framesDecoded": 27,
+              "bytesReceived": 66967,
+              "keyFramesDecoded": 17,
+              "pliCount": 27,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "zfU",
+              "packetsReceived": 114,
+              "packetsLost": 0,
+              "framesDecoded": 35,
+              "bytesReceived": 81935,
+              "keyFramesDecoded": 18,
+              "pliCount": 28,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "YEq",
+              "packetsReceived": 71,
+              "packetsLost": 0,
+              "framesDecoded": 22,
+              "bytesReceived": 51689,
+              "keyFramesDecoded": 11,
+              "pliCount": 15,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "audio",
+              "mid": "0",
+              "packetsSent": 1230,
+              "bytesSent": 324500,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "video",
+              "mid": "1",
+              "packetsSent": 194,
+              "framesEncoded": 86,
+              "bytesSent": 137164,
+              "pliCount": 108,
+              "nackCount": 28
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "voice": {
+        "phase": "live",
+        "peerId": 2,
+        "hasError": false,
+        "errorCategory": null
+      },
+      "signalingMessages": [
+        {
+          "at": 23520.400000095367,
+          "direction": "received",
+          "bytes": 15202,
+          "type": "offer",
+          "mediaSections": 7
+        },
+        {
+          "at": 23564.100000023842,
+          "direction": "sent",
+          "bytes": 14887,
+          "type": "answer",
+          "mediaSections": 7
+        },
+        {
+          "at": 23811.800000071526,
+          "direction": "received",
+          "bytes": 18960,
+          "type": "offer",
+          "mediaSections": 9
+        },
+        {
+          "at": 23849.900000095367,
+          "direction": "sent",
+          "bytes": 19020,
+          "type": "answer",
+          "mediaSections": 9
+        },
+        {
+          "at": 24273.200000047684,
+          "direction": "received",
+          "bytes": 23415,
+          "type": "offer",
+          "mediaSections": 11
+        },
+        {
+          "at": 24318.200000047684,
+          "direction": "sent",
+          "bytes": 23153,
+          "type": "answer",
+          "mediaSections": 11
+        },
+        {
+          "at": 26126,
+          "direction": "received",
+          "bytes": 27869,
+          "type": "offer",
+          "mediaSections": 13
+        },
+        {
+          "at": 26173.600000023842,
+          "direction": "sent",
+          "bytes": 27286,
+          "type": "answer",
+          "mediaSections": 13
+        },
+        {
+          "at": 27074.400000095367,
+          "direction": "received",
+          "bytes": 32329,
+          "type": "offer",
+          "mediaSections": 15
+        },
+        {
+          "at": 27183.300000071526,
+          "direction": "sent",
+          "bytes": 31419,
+          "type": "answer",
+          "mediaSections": 15
+        },
+        {
+          "at": 33153.200000047684,
+          "direction": "received",
+          "bytes": 47097,
+          "type": "offer",
+          "mediaSections": 21
+        },
+        {
+          "at": 33237.300000071526,
+          "direction": "sent",
+          "bytes": 43818,
+          "type": "answer",
+          "mediaSections": 21
+        }
+      ],
+      "peers": [
+        {
+          "connection": "connected",
+          "ice": "connected",
+          "gathering": "complete",
+          "signaling": "stable",
+          "local": {
+            "type": "answer",
+            "bytes": 41238,
+            "mediaSections": 21
+          },
+          "remote": {
+            "type": "offer",
+            "bytes": 45238,
+            "mediaSections": 21
+          },
+          "channels": [
+            {
+              "readyState": "open",
+              "bufferedAmount": 43818
+            }
+          ],
+          "transceivers": [
+            {
+              "mid": "0",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "1",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "BR8",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "joJ",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "nsA",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "HJK",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "hRL",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "OXb",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "LKm",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "tK8",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "LoE",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "NZV",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "Jyk",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "TCS",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "ruT",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "EKi",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "vYc",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "dcY",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "s4e",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "ITg",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            }
+          ],
+          "streams": [
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "LoE",
+              "packetsReceived": 657,
+              "packetsLost": 0,
+              "bytesReceived": 192685
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "BR8",
+              "packetsReceived": 769,
+              "packetsLost": 0,
+              "bytesReceived": 190606
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "Jyk",
+              "packetsReceived": 428,
+              "packetsLost": 0,
+              "bytesReceived": 147990
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "nsA",
+              "packetsReceived": 805,
+              "packetsLost": 0,
+              "bytesReceived": 205428
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "LKm",
+              "packetsReceived": 746,
+              "packetsLost": 0,
+              "bytesReceived": 219199
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "hRL",
+              "packetsReceived": 790,
+              "packetsLost": 0,
+              "bytesReceived": 234497
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "HJK",
+              "packetsReceived": 117,
+              "packetsLost": 0,
+              "framesDecoded": 50,
+              "bytesReceived": 84421,
+              "keyFramesDecoded": 19,
+              "pliCount": 20,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "OXb",
+              "packetsReceived": 116,
+              "packetsLost": 0,
+              "framesDecoded": 37,
+              "bytesReceived": 83581,
+              "keyFramesDecoded": 19,
+              "pliCount": 26,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "TCS",
+              "packetsReceived": 61,
+              "packetsLost": 0,
+              "framesDecoded": 18,
+              "bytesReceived": 47851,
+              "keyFramesDecoded": 11,
+              "pliCount": 19,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "joJ",
+              "packetsReceived": 107,
+              "packetsLost": 0,
+              "framesDecoded": 52,
+              "bytesReceived": 79909,
+              "keyFramesDecoded": 17,
+              "pliCount": 22,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "NZV",
+              "packetsReceived": 100,
+              "packetsLost": 0,
+              "framesDecoded": 42,
+              "bytesReceived": 75862,
+              "keyFramesDecoded": 17,
+              "pliCount": 25,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "tK8",
+              "packetsReceived": 107,
+              "packetsLost": 0,
+              "framesDecoded": 49,
+              "bytesReceived": 78270,
+              "keyFramesDecoded": 16,
+              "pliCount": 19,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "audio",
+              "mid": "0",
+              "packetsSent": 1217,
+              "bytesSent": 318316,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "video",
+              "mid": "1",
+              "packetsSent": 179,
+              "framesEncoded": 89,
+              "bytesSent": 121341,
+              "pliCount": 121,
+              "nackCount": 18
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "voice": {
+        "phase": "live",
+        "peerId": 3,
+        "hasError": false,
+        "errorCategory": null
+      },
+      "signalingMessages": [
+        {
+          "at": 22843.599999904633,
+          "direction": "received",
+          "bytes": 20359,
+          "type": "offer",
+          "mediaSections": 9
+        },
+        {
+          "at": 22904,
+          "direction": "sent",
+          "bytes": 19023,
+          "type": "answer",
+          "mediaSections": 9
+        },
+        {
+          "at": 23288.299999952316,
+          "direction": "received",
+          "bytes": 23431,
+          "type": "offer",
+          "mediaSections": 11
+        },
+        {
+          "at": 23336.599999904633,
+          "direction": "sent",
+          "bytes": 23156,
+          "type": "answer",
+          "mediaSections": 11
+        },
+        {
+          "at": 25148.599999904633,
+          "direction": "received",
+          "bytes": 27888,
+          "type": "offer",
+          "mediaSections": 13
+        },
+        {
+          "at": 25216.599999904633,
+          "direction": "sent",
+          "bytes": 27289,
+          "type": "answer",
+          "mediaSections": 13
+        },
+        {
+          "at": 26112.099999904633,
+          "direction": "received",
+          "bytes": 32348,
+          "type": "offer",
+          "mediaSections": 15
+        },
+        {
+          "at": 26184.399999976158,
+          "direction": "sent",
+          "bytes": 31422,
+          "type": "answer",
+          "mediaSections": 15
+        }
+      ],
+      "peers": [
+        {
+          "connection": "connected",
+          "ice": "connected",
+          "gathering": "complete",
+          "signaling": "stable",
+          "local": {
+            "type": "answer",
+            "bytes": 29586,
+            "mediaSections": 15
+          },
+          "remote": {
+            "type": "offer",
+            "bytes": 31059,
+            "mediaSections": 15
+          },
+          "channels": [
+            {
+              "readyState": "open",
+              "bufferedAmount": 0
+            }
+          ],
+          "transceivers": [
+            {
+              "mid": "0",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "1",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "zDb",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "20N",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "g8K",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "qg9",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "rAj",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "BpR",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "XOi",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "ua3",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "3cv",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "Gzu",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "vMS",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "Lys",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            }
+          ],
+          "streams": [
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "vMS",
+              "packetsReceived": 403,
+              "packetsLost": 0,
+              "bytesReceived": 143825
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "XOi",
+              "packetsReceived": 727,
+              "packetsLost": 0,
+              "bytesReceived": 224102
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "g8K",
+              "packetsReceived": 813,
+              "packetsLost": 0,
+              "bytesReceived": 213535
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "3cv",
+              "packetsReceived": 672,
+              "packetsLost": 0,
+              "bytesReceived": 201234
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "rAj",
+              "packetsReceived": 762,
+              "packetsLost": 0,
+              "bytesReceived": 182694
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "zDb",
+              "packetsReceived": 778,
+              "packetsLost": 0,
+              "bytesReceived": 199113
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "Gzu",
+              "packetsReceived": 102,
+              "packetsLost": 0,
+              "framesDecoded": 44,
+              "bytesReceived": 76162,
+              "keyFramesDecoded": 16,
+              "pliCount": 26,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "20N",
+              "packetsReceived": 111,
+              "packetsLost": 0,
+              "framesDecoded": 52,
+              "bytesReceived": 82490,
+              "keyFramesDecoded": 17,
+              "pliCount": 28,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "BpR",
+              "packetsReceived": 116,
+              "packetsLost": 0,
+              "framesDecoded": 47,
+              "bytesReceived": 85161,
+              "keyFramesDecoded": 18,
+              "pliCount": 33,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "ua3",
+              "packetsReceived": 104,
+              "packetsLost": 0,
+              "framesDecoded": 46,
+              "bytesReceived": 74926,
+              "keyFramesDecoded": 15,
+              "pliCount": 20,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "qg9",
+              "packetsReceived": 118,
+              "packetsLost": 0,
+              "framesDecoded": 46,
+              "bytesReceived": 85219,
+              "keyFramesDecoded": 19,
+              "pliCount": 20,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "Lys",
+              "packetsReceived": 61,
+              "packetsLost": 0,
+              "framesDecoded": 18,
+              "bytesReceived": 47851,
+              "keyFramesDecoded": 11,
+              "pliCount": 19,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "audio",
+              "mid": "0",
+              "packetsSent": 1204,
+              "bytesSent": 370519,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "video",
+              "mid": "1",
+              "packetsSent": 184,
+              "framesEncoded": 83,
+              "bytesSent": 130730,
+              "pliCount": 124,
+              "nackCount": 28
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "voice": {
+        "phase": "live",
+        "peerId": 4,
+        "hasError": false,
+        "errorCategory": null
+      },
+      "signalingMessages": [
+        {
+          "at": 21686,
+          "direction": "received",
+          "bytes": 25510,
+          "type": "offer",
+          "mediaSections": 11
+        },
+        {
+          "at": 21770.899999976158,
+          "direction": "sent",
+          "bytes": 23154,
+          "type": "answer",
+          "mediaSections": 11
+        },
+        {
+          "at": 23505.5,
+          "direction": "received",
+          "bytes": 27888,
+          "type": "offer",
+          "mediaSections": 13
+        },
+        {
+          "at": 23548.600000023842,
+          "direction": "sent",
+          "bytes": 27287,
+          "type": "answer",
+          "mediaSections": 13
+        },
+        {
+          "at": 30113.100000023842,
+          "direction": "received",
+          "bytes": 32348,
+          "type": "offer",
+          "mediaSections": 15
+        },
+        {
+          "at": 30174.700000047684,
+          "direction": "sent",
+          "bytes": 31420,
+          "type": "answer",
+          "mediaSections": 15
+        }
+      ],
+      "peers": [
+        {
+          "connection": "connected",
+          "ice": "connected",
+          "gathering": "complete",
+          "signaling": "stable",
+          "local": {
+            "type": "answer",
+            "bytes": 29584,
+            "mediaSections": 15
+          },
+          "remote": {
+            "type": "offer",
+            "bytes": 31059,
+            "mediaSections": 15
+          },
+          "channels": [
+            {
+              "readyState": "open",
+              "bufferedAmount": 0
+            }
+          ],
+          "transceivers": [
+            {
+              "mid": "0",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "1",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "bSo",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "PHa",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "CDc",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "9Pu",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "d8Q",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "RVX",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "J4R",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "r2G",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "8TY",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "8N2",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "rma",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "UUZ",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            }
+          ],
+          "streams": [
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "rma",
+              "packetsReceived": 322,
+              "packetsLost": 0,
+              "bytesReceived": 115363
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "CDc",
+              "packetsReceived": 828,
+              "packetsLost": 0,
+              "bytesReceived": 226341
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "bSo",
+              "packetsReceived": 796,
+              "packetsLost": 0,
+              "bytesReceived": 212438
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "J4R",
+              "packetsReceived": 781,
+              "packetsLost": 0,
+              "bytesReceived": 239244
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "8TY",
+              "packetsReceived": 736,
+              "packetsLost": 0,
+              "bytesReceived": 220880
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "d8Q",
+              "packetsReceived": 733,
+              "packetsLost": 0,
+              "bytesReceived": 179655
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "UUZ",
+              "packetsReceived": 46,
+              "packetsLost": 0,
+              "framesDecoded": 15,
+              "bytesReceived": 37006,
+              "keyFramesDecoded": 9,
+              "pliCount": 19,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "r2G",
+              "packetsReceived": 111,
+              "packetsLost": 0,
+              "framesDecoded": 34,
+              "bytesReceived": 79583,
+              "keyFramesDecoded": 17,
+              "pliCount": 29,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "9Pu",
+              "packetsReceived": 118,
+              "packetsLost": 0,
+              "framesDecoded": 46,
+              "bytesReceived": 84725,
+              "keyFramesDecoded": 19,
+              "pliCount": 21,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "8N2",
+              "packetsReceived": 109,
+              "packetsLost": 0,
+              "framesDecoded": 49,
+              "bytesReceived": 81736,
+              "keyFramesDecoded": 17,
+              "pliCount": 25,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "PHa",
+              "packetsReceived": 115,
+              "packetsLost": 0,
+              "framesDecoded": 52,
+              "bytesReceived": 85024,
+              "keyFramesDecoded": 17,
+              "pliCount": 22,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "RVX",
+              "packetsReceived": 111,
+              "packetsLost": 0,
+              "framesDecoded": 45,
+              "bytesReceived": 80635,
+              "keyFramesDecoded": 17,
+              "pliCount": 36,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "audio",
+              "mid": "0",
+              "packetsSent": 1180,
+              "bytesSent": 364836,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "video",
+              "mid": "1",
+              "packetsSent": 174,
+              "framesEncoded": 85,
+              "bytesSent": 119517,
+              "pliCount": 81,
+              "nackCount": 23
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "voice": {
+        "phase": "live",
+        "peerId": 5,
+        "hasError": false,
+        "errorCategory": null
+      },
+      "signalingMessages": [
+        {
+          "at": 22284.600000023842,
+          "direction": "received",
+          "bytes": 30663,
+          "type": "offer",
+          "mediaSections": 13
+        },
+        {
+          "at": 22399.399999976158,
+          "direction": "sent",
+          "bytes": 27284,
+          "type": "answer",
+          "mediaSections": 13
+        },
+        {
+          "at": 28977.600000023842,
+          "direction": "received",
+          "bytes": 32347,
+          "type": "offer",
+          "mediaSections": 15
+        },
+        {
+          "at": 29021.399999976158,
+          "direction": "sent",
+          "bytes": 31417,
+          "type": "answer",
+          "mediaSections": 15
+        },
+        {
+          "at": 37103.700000047684,
+          "direction": "received",
+          "bytes": 47105,
+          "type": "offer",
+          "mediaSections": 21
+        },
+        {
+          "at": 37278.89999997616,
+          "direction": "sent",
+          "bytes": 43816,
+          "type": "answer",
+          "mediaSections": 21
+        }
+      ],
+      "peers": [
+        {
+          "connection": "connected",
+          "ice": "connected",
+          "gathering": "complete",
+          "signaling": "stable",
+          "local": {
+            "type": "answer",
+            "bytes": 41236,
+            "mediaSections": 21
+          },
+          "remote": {
+            "type": "offer",
+            "bytes": 45246,
+            "mediaSections": 21
+          },
+          "channels": [
+            {
+              "readyState": "open",
+              "bufferedAmount": 0
+            }
+          ],
+          "transceivers": [
+            {
+              "mid": "0",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "1",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "kiC",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "KRj",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "fx3",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "55B",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "LQv",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "Z5x",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "IKU",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "F51",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "OS4",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "S6n",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "xTI",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "VUe",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "nyU",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "fnh",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "TQu",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "EsT",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "JUQ",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "Ilf",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            }
+          ],
+          "streams": [
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "OS4",
+              "packetsReceived": 712,
+              "packetsLost": 0,
+              "bytesReceived": 234521
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "LQv",
+              "packetsReceived": 634,
+              "packetsLost": 0,
+              "bytesReceived": 167086
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "TQu",
+              "packetsReceived": 19,
+              "packetsLost": 0,
+              "bytesReceived": 6873
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "fx3",
+              "packetsReceived": 734,
+              "packetsLost": 0,
+              "bytesReceived": 214506
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "IKU",
+              "packetsReceived": 683,
+              "packetsLost": 0,
+              "bytesReceived": 226684
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "xTI",
+              "packetsReceived": 328,
+              "packetsLost": 0,
+              "bytesReceived": 117403
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "nyU",
+              "packetsReceived": 17,
+              "packetsLost": 0,
+              "bytesReceived": 6119
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "kiC",
+              "packetsReceived": 699,
+              "packetsLost": 0,
+              "bytesReceived": 199673
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "fnh",
+              "packetsReceived": 2,
+              "packetsLost": 0,
+              "framesDecoded": 0,
+              "bytesReceived": 792,
+              "keyFramesDecoded": 0,
+              "pliCount": 4,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "Z5x",
+              "packetsReceived": 100,
+              "packetsLost": 0,
+              "framesDecoded": 37,
+              "bytesReceived": 73489,
+              "keyFramesDecoded": 16,
+              "pliCount": 35,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "KRj",
+              "packetsReceived": 110,
+              "packetsLost": 0,
+              "framesDecoded": 47,
+              "bytesReceived": 80944,
+              "keyFramesDecoded": 16,
+              "pliCount": 26,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "VUe",
+              "packetsReceived": 46,
+              "packetsLost": 0,
+              "framesDecoded": 15,
+              "bytesReceived": 37006,
+              "keyFramesDecoded": 9,
+              "pliCount": 18,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "S6n",
+              "packetsReceived": 108,
+              "packetsLost": 0,
+              "framesDecoded": 44,
+              "bytesReceived": 77869,
+              "keyFramesDecoded": 15,
+              "pliCount": 23,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "55B",
+              "packetsReceived": 109,
+              "packetsLost": 0,
+              "framesDecoded": 35,
+              "bytesReceived": 78948,
+              "keyFramesDecoded": 17,
+              "pliCount": 24,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "F51",
+              "packetsReceived": 103,
+              "packetsLost": 0,
+              "framesDecoded": 26,
+              "bytesReceived": 74272,
+              "keyFramesDecoded": 16,
+              "pliCount": 33,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "audio",
+              "mid": "0",
+              "packetsSent": 1090,
+              "bytesSent": 328477,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "video",
+              "mid": "1",
+              "packetsSent": 170,
+              "framesEncoded": 77,
+              "bytesSent": 120532,
+              "pliCount": 112,
+              "nackCount": 20
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "voice": {
+        "phase": "live",
+        "peerId": 6,
+        "hasError": false,
+        "errorCategory": null
+      },
+      "signalingMessages": [
+        {
+          "at": 22568.200000047684,
+          "direction": "received",
+          "bytes": 40961,
+          "type": "offer",
+          "mediaSections": 17
+        },
+        {
+          "at": 22685,
+          "direction": "sent",
+          "bytes": 35552,
+          "type": "answer",
+          "mediaSections": 17
+        },
+        {
+          "at": 28292,
+          "direction": "received",
+          "bytes": 46405,
+          "type": "offer",
+          "mediaSections": 21
+        },
+        {
+          "at": 28345,
+          "direction": "sent",
+          "bytes": 43818,
+          "type": "answer",
+          "mediaSections": 21
+        }
+      ],
+      "peers": [
+        {
+          "connection": "connected",
+          "ice": "connected",
+          "gathering": "complete",
+          "signaling": "stable",
+          "local": {
+            "type": "answer",
+            "bytes": 41238,
+            "mediaSections": 21
+          },
+          "remote": {
+            "type": "offer",
+            "bytes": 44573,
+            "mediaSections": 21
+          },
+          "channels": [
+            {
+              "readyState": "open",
+              "bufferedAmount": 43818
+            }
+          ],
+          "transceivers": [
+            {
+              "mid": "0",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "1",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "bMd",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "gdD",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "dsg",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "hpY",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "xP5",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "g6d",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "sJi",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "Dhk",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "qVJ",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "vOv",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "NFp",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "lyz",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "LTx",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "4IJ",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "0mB",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "mXM",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "QtL",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "URm",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            }
+          ],
+          "streams": [
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "xP5",
+              "packetsReceived": 472,
+              "packetsLost": 0,
+              "bytesReceived": 129978
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "NFp",
+              "packetsReceived": 481,
+              "packetsLost": 0,
+              "bytesReceived": 149835
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "LTx",
+              "packetsReceived": 485,
+              "packetsLost": 0,
+              "bytesReceived": 147120
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "qVJ",
+              "packetsReceived": 477,
+              "packetsLost": 0,
+              "bytesReceived": 167710
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "dsg",
+              "packetsReceived": 497,
+              "packetsLost": 0,
+              "bytesReceived": 145374
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "sJi",
+              "packetsReceived": 489,
+              "packetsLost": 0,
+              "bytesReceived": 173886
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "bMd",
+              "packetsReceived": 460,
+              "packetsLost": 0,
+              "bytesReceived": 132493
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "Dhk",
+              "packetsReceived": 86,
+              "packetsLost": 0,
+              "framesDecoded": 20,
+              "bytesReceived": 60797,
+              "keyFramesDecoded": 13,
+              "pliCount": 40,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "hpY",
+              "packetsReceived": 74,
+              "packetsLost": 0,
+              "framesDecoded": 28,
+              "bytesReceived": 54979,
+              "keyFramesDecoded": 12,
+              "pliCount": 36,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "g6d",
+              "packetsReceived": 75,
+              "packetsLost": 0,
+              "framesDecoded": 28,
+              "bytesReceived": 54175,
+              "keyFramesDecoded": 12,
+              "pliCount": 25,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "vOv",
+              "packetsReceived": 75,
+              "packetsLost": 0,
+              "framesDecoded": 25,
+              "bytesReceived": 54259,
+              "keyFramesDecoded": 11,
+              "pliCount": 20,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "gdD",
+              "packetsReceived": 81,
+              "packetsLost": 0,
+              "framesDecoded": 33,
+              "bytesReceived": 61111,
+              "keyFramesDecoded": 14,
+              "pliCount": 23,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "lyz",
+              "packetsReceived": 72,
+              "packetsLost": 0,
+              "framesDecoded": 21,
+              "bytesReceived": 55124,
+              "keyFramesDecoded": 11,
+              "pliCount": 26,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "4IJ",
+              "packetsReceived": 84,
+              "packetsLost": 0,
+              "framesDecoded": 29,
+              "bytesReceived": 61720,
+              "keyFramesDecoded": 16,
+              "pliCount": 26,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "audio",
+              "mid": "0",
+              "packetsSent": 1055,
+              "bytesSent": 321337,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "video",
+              "mid": "1",
+              "packetsSent": 169,
+              "framesEncoded": 75,
+              "bytesSent": 119644,
+              "pliCount": 80,
+              "nackCount": 21
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "voice": {
+        "phase": "live",
+        "peerId": 7,
+        "hasError": false,
+        "errorCategory": null
+      },
+      "signalingMessages": [
+        {
+          "at": 21669.600000023842,
+          "direction": "received",
+          "bytes": 46115,
+          "type": "offer",
+          "mediaSections": 19
+        },
+        {
+          "at": 21853.899999976158,
+          "direction": "sent",
+          "bytes": 39687,
+          "type": "answer",
+          "mediaSections": 19
+        },
+        {
+          "at": 24264,
+          "direction": "received",
+          "bytes": 45717,
+          "type": "offer",
+          "mediaSections": 21
+        },
+        {
+          "at": 24340.5,
+          "direction": "sent",
+          "bytes": 43820,
+          "type": "answer",
+          "mediaSections": 21
+        },
+        {
+          "at": 37851,
+          "direction": "received",
+          "bytes": 44616,
+          "type": "offer",
+          "mediaSections": 21
+        },
+        {
+          "at": 37907.700000047684,
+          "direction": "sent",
+          "bytes": 43812,
+          "type": "answer",
+          "mediaSections": 21
+        }
+      ],
+      "peers": [
+        {
+          "connection": "connected",
+          "ice": "connected",
+          "gathering": "complete",
+          "signaling": "stable",
+          "local": {
+            "type": "answer",
+            "bytes": 41232,
+            "mediaSections": 21
+          },
+          "remote": {
+            "type": "offer",
+            "bytes": 42858,
+            "mediaSections": 21
+          },
+          "channels": [
+            {
+              "readyState": "open",
+              "bufferedAmount": 43812
+            }
+          ],
+          "transceivers": [
+            {
+              "mid": "0",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "1",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "ZPj",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "egL",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "7e2",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "iGm",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "brF",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "3vT",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "feu",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "7U1",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "tMV",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "455",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "j1f",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "HOm",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "MFY",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "Jvk",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "DNg",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "gSI",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            }
+          ],
+          "streams": [
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "MFY",
+              "packetsReceived": 638,
+              "packetsLost": 0,
+              "bytesReceived": 204421
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "tMV",
+              "packetsReceived": 633,
+              "packetsLost": 0,
+              "bytesReceived": 225065
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "DNg",
+              "packetsReceived": 396,
+              "packetsLost": 0,
+              "bytesReceived": 138790
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "j1f",
+              "packetsReceived": 642,
+              "packetsLost": 0,
+              "bytesReceived": 208938
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "feu",
+              "packetsReceived": 601,
+              "packetsLost": 0,
+              "bytesReceived": 213963
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "ZPj",
+              "packetsReceived": 619,
+              "packetsLost": 0,
+              "bytesReceived": 189791
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "7e2",
+              "packetsReceived": 654,
+              "packetsLost": 0,
+              "bytesReceived": 203156
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "brF",
+              "packetsReceived": 554,
+              "packetsLost": 0,
+              "bytesReceived": 160212
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "Jvk",
+              "packetsReceived": 102,
+              "packetsLost": 0,
+              "framesDecoded": 35,
+              "bytesReceived": 72612,
+              "keyFramesDecoded": 15,
+              "pliCount": 28,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "7U1",
+              "packetsReceived": 89,
+              "packetsLost": 0,
+              "framesDecoded": 21,
+              "bytesReceived": 64564,
+              "keyFramesDecoded": 14,
+              "pliCount": 24,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "HOm",
+              "packetsReceived": 91,
+              "packetsLost": 0,
+              "framesDecoded": 39,
+              "bytesReceived": 66477,
+              "keyFramesDecoded": 11,
+              "pliCount": 24,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "iGm",
+              "packetsReceived": 93,
+              "packetsLost": 0,
+              "framesDecoded": 33,
+              "bytesReceived": 68049,
+              "keyFramesDecoded": 15,
+              "pliCount": 20,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "3vT",
+              "packetsReceived": 86,
+              "packetsLost": 0,
+              "framesDecoded": 30,
+              "bytesReceived": 63138,
+              "keyFramesDecoded": 14,
+              "pliCount": 33,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "egL",
+              "packetsReceived": 98,
+              "packetsLost": 0,
+              "framesDecoded": 40,
+              "bytesReceived": 72477,
+              "keyFramesDecoded": 15,
+              "pliCount": 25,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "gSI",
+              "packetsReceived": 55,
+              "packetsLost": 0,
+              "framesDecoded": 22,
+              "bytesReceived": 42758,
+              "keyFramesDecoded": 8,
+              "pliCount": 22,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "455",
+              "packetsReceived": 94,
+              "packetsLost": 0,
+              "framesDecoded": 37,
+              "bytesReceived": 66954,
+              "keyFramesDecoded": 12,
+              "pliCount": 21,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "audio",
+              "mid": "0",
+              "packetsSent": 1030,
+              "bytesSent": 314506,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "video",
+              "mid": "1",
+              "packetsSent": 166,
+              "framesEncoded": 71,
+              "bytesSent": 129039,
+              "pliCount": 65,
+              "nackCount": 19
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "voice": {
+        "phase": "live",
+        "peerId": 8,
+        "hasError": false,
+        "errorCategory": null
+      },
+      "signalingMessages": [
+        {
+          "at": 31041,
+          "direction": "received",
+          "bytes": 51262,
+          "type": "offer",
+          "mediaSections": 21
+        },
+        {
+          "at": 31232.600000023842,
+          "direction": "sent",
+          "bytes": 43822,
+          "type": "answer",
+          "mediaSections": 21
+        }
+      ],
+      "peers": [
+        {
+          "connection": "connected",
+          "ice": "connected",
+          "gathering": "complete",
+          "signaling": "stable",
+          "local": {
+            "type": "answer",
+            "bytes": 41242,
+            "mediaSections": 21
+          },
+          "remote": {
+            "type": "offer",
+            "bytes": 49241,
+            "mediaSections": 21
+          },
+          "channels": [
+            {
+              "readyState": "open",
+              "bufferedAmount": 43822
+            }
+          ],
+          "transceivers": [
+            {
+              "mid": "0",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "1",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "ftF",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "g6I",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "ueK",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "bOR",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "GFk",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "FHR",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "RoI",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "GjP",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "vXR",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "FaI",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "2tX",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "VzU",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "xtX",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "NsO",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "ohI",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "2ev",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "emj",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "koc",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            }
+          ],
+          "streams": [
+            {
+              "type": "outbound-rtp",
+              "kind": "audio",
+              "mid": "0",
+              "packetsSent": 987,
+              "bytesSent": 306342,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "video",
+              "mid": "1",
+              "packetsSent": 152,
+              "framesEncoded": 78,
+              "bytesSent": 110083,
+              "pliCount": 39,
+              "nackCount": 25
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "voice": {
+        "phase": "live",
+        "peerId": 9,
+        "hasError": false,
+        "errorCategory": null
+      },
+      "signalingMessages": [
+        {
+          "at": 20401.899999976158,
+          "direction": "received",
+          "bytes": 51260,
+          "type": "offer",
+          "mediaSections": 21
+        },
+        {
+          "at": 20522.399999976158,
+          "direction": "sent",
+          "bytes": 43822,
+          "type": "answer",
+          "mediaSections": 21
+        },
+        {
+          "at": 36612.199999928474,
+          "direction": "received",
+          "bytes": 44608,
+          "type": "offer",
+          "mediaSections": 21
+        },
+        {
+          "at": 36665.89999997616,
+          "direction": "sent",
+          "bytes": 43814,
+          "type": "answer",
+          "mediaSections": 21
+        }
+      ],
+      "peers": [
+        {
+          "connection": "connected",
+          "ice": "connected",
+          "gathering": "complete",
+          "signaling": "stable",
+          "local": {
+            "type": "answer",
+            "bytes": 41234,
+            "mediaSections": 21
+          },
+          "remote": {
+            "type": "offer",
+            "bytes": 42850,
+            "mediaSections": 21
+          },
+          "channels": [
+            {
+              "readyState": "open",
+              "bufferedAmount": 43814
+            }
+          ],
+          "transceivers": [
+            {
+              "mid": "0",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "1",
+              "direction": "sendonly",
+              "currentDirection": "sendonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "g14",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "ldt",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "zmS",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "iTu",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "itb",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "5h8",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "sF6",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "GmX",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "4iS",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "Gsk",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "962",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "uLX",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "ci1",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "VAZ",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            },
+            {
+              "mid": "apD",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "audio",
+              "readyState": "live"
+            },
+            {
+              "mid": "FkV",
+              "direction": "recvonly",
+              "currentDirection": "recvonly",
+              "kind": "video",
+              "readyState": "live"
+            }
+          ],
+          "streams": [
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "sF6",
+              "packetsReceived": 415,
+              "packetsLost": 0,
+              "bytesReceived": 149052
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "zmS",
+              "packetsReceived": 469,
+              "packetsLost": 0,
+              "bytesReceived": 168902
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "g14",
+              "packetsReceived": 441,
+              "packetsLost": 0,
+              "bytesReceived": 155066
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "itb",
+              "packetsReceived": 368,
+              "packetsLost": 0,
+              "bytesReceived": 130103
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "962",
+              "packetsReceived": 457,
+              "packetsLost": 0,
+              "bytesReceived": 161611
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "apD",
+              "packetsReceived": 395,
+              "packetsLost": 0,
+              "bytesReceived": 138450
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "ci1",
+              "packetsReceived": 464,
+              "packetsLost": 0,
+              "bytesReceived": 164215
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "audio",
+              "mid": "4iS",
+              "packetsReceived": 448,
+              "packetsLost": 0,
+              "bytesReceived": 159533
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "VAZ",
+              "packetsReceived": 65,
+              "packetsLost": 0,
+              "framesDecoded": 17,
+              "bytesReceived": 48263,
+              "keyFramesDecoded": 12,
+              "pliCount": 24,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "uLX",
+              "packetsReceived": 65,
+              "packetsLost": 0,
+              "framesDecoded": 35,
+              "bytesReceived": 45742,
+              "keyFramesDecoded": 7,
+              "pliCount": 12,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "FkV",
+              "packetsReceived": 54,
+              "packetsLost": 0,
+              "framesDecoded": 22,
+              "bytesReceived": 41983,
+              "keyFramesDecoded": 8,
+              "pliCount": 20,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "iTu",
+              "packetsReceived": 69,
+              "packetsLost": 0,
+              "framesDecoded": 20,
+              "bytesReceived": 49572,
+              "keyFramesDecoded": 10,
+              "pliCount": 16,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "5h8",
+              "packetsReceived": 57,
+              "packetsLost": 0,
+              "framesDecoded": 14,
+              "bytesReceived": 43257,
+              "keyFramesDecoded": 10,
+              "pliCount": 26,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "GmX",
+              "packetsReceived": 62,
+              "packetsLost": 0,
+              "framesDecoded": 11,
+              "bytesReceived": 45771,
+              "keyFramesDecoded": 10,
+              "pliCount": 21,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "ldt",
+              "packetsReceived": 70,
+              "packetsLost": 0,
+              "framesDecoded": 27,
+              "bytesReceived": 51549,
+              "keyFramesDecoded": 10,
+              "pliCount": 19,
+              "nackCount": 0
+            },
+            {
+              "type": "inbound-rtp",
+              "kind": "video",
+              "mid": "Gsk",
+              "packetsReceived": 69,
+              "packetsLost": 0,
+              "framesDecoded": 32,
+              "bytesReceived": 49012,
+              "keyFramesDecoded": 8,
+              "pliCount": 13,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "audio",
+              "mid": "0",
+              "packetsSent": 1013,
+              "bytesSent": 306323,
+              "nackCount": 0
+            },
+            {
+              "type": "outbound-rtp",
+              "kind": "video",
+              "mid": "1",
+              "packetsSent": 176,
+              "framesEncoded": 82,
+              "bytesSent": 121841,
+              "pliCount": 36,
+              "nackCount": 25
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 11,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 12,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 13,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 14,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 15,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 16,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 17,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 18,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 19,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 20,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 21,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 22,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 23,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 24,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 25,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 26,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 27,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 28,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    },
+    {
+      "index": 29,
+      "voice": null,
+      "signalingMessages": [],
+      "peers": []
+    }
+  ],
+  "serverDiagnostics": {
+    "peers": [
+      {
+        "connected": true,
+        "diagnostics": {
+          "forwarding_codec_mismatch": 0,
+          "forwarding_not_ready": 1265,
+          "ice_state": "connected",
+          "incoming_tracks": 2,
+          "last_signal_in_bytes": 39689,
+          "last_signal_in_m_lines": 19,
+          "last_signal_out_bytes": 45704,
+          "last_signal_out_m_lines": 21,
+          "outgoing_negotiating": 2,
+          "outgoing_open": 16,
+          "outgoing_waiting": 0,
+          "pending_offer_ms": 13803,
+          "received_datagrams": 1795,
+          "signaling_backpressure": 0,
+          "signaling_queued_bytes": 0,
+          "signaling_sent": 7,
+          "transmitted_datagrams": 7080
+        },
+        "forwarded_bytes": 2136435,
+        "forwarded_frames": 5794,
+        "peer_id": 0,
+        "received_frames": 975,
+        "recent_disconnects": [
+          {
+            "age_ms": 1453,
+            "diagnostics": {
+              "forwarding_codec_mismatch": 0,
+              "forwarding_not_ready": 1985,
+              "ice_state": "connected",
+              "incoming_tracks": 2,
+              "last_signal_in_bytes": 31422,
+              "last_signal_in_m_lines": 15,
+              "last_signal_out_bytes": 47114,
+              "last_signal_out_m_lines": 21,
+              "outgoing_negotiating": 6,
+              "outgoing_open": 12,
+              "outgoing_waiting": 0,
+              "pending_offer_ms": 15001,
+              "received_datagrams": 1591,
+              "signaling_backpressure": 0,
+              "signaling_queued_bytes": 0,
+              "signaling_sent": 5,
+              "transmitted_datagrams": 5667
+            },
+            "peer_id": 3,
+            "reason": "signaling_answer_timeout"
+          },
+          {
+            "age_ms": 1976,
+            "diagnostics": {
+              "forwarding_codec_mismatch": 0,
+              "forwarding_not_ready": 4928,
+              "ice_state": "completed",
+              "incoming_tracks": 2,
+              "last_signal_in_bytes": 0,
+              "last_signal_in_m_lines": 0,
+              "last_signal_out_bytes": 51262,
+              "last_signal_out_m_lines": 21,
+              "outgoing_negotiating": 18,
+              "outgoing_open": 0,
+              "outgoing_waiting": 0,
+              "pending_offer_ms": 15009,
+              "received_datagrams": 844,
+              "signaling_backpressure": 0,
+              "signaling_queued_bytes": 0,
+              "signaling_sent": 1,
+              "transmitted_datagrams": 573
+            },
+            "peer_id": 8,
+            "reason": "signaling_answer_timeout"
+          },
+          {
+            "age_ms": 2282,
+            "diagnostics": {
+              "forwarding_codec_mismatch": 0,
+              "forwarding_not_ready": 1843,
+              "ice_state": "connected",
+              "incoming_tracks": 2,
+              "last_signal_in_bytes": 31419,
+              "last_signal_in_m_lines": 15,
+              "last_signal_out_bytes": 47097,
+              "last_signal_out_m_lines": 21,
+              "outgoing_negotiating": 6,
+              "outgoing_open": 12,
+              "outgoing_waiting": 0,
+              "pending_offer_ms": 15001,
+              "received_datagrams": 1620,
+              "signaling_backpressure": 0,
+              "signaling_queued_bytes": 0,
+              "signaling_sent": 6,
+              "transmitted_datagrams": 5725
+            },
+            "peer_id": 2,
+            "reason": "signaling_answer_timeout"
+          },
+          {
+            "age_ms": 4371,
+            "diagnostics": {
+              "forwarding_codec_mismatch": 0,
+              "forwarding_not_ready": 1480,
+              "ice_state": "connected",
+              "incoming_tracks": 2,
+              "last_signal_in_bytes": 35552,
+              "last_signal_in_m_lines": 17,
+              "last_signal_out_bytes": 46405,
+              "last_signal_out_m_lines": 21,
+              "outgoing_negotiating": 4,
+              "outgoing_open": 14,
+              "outgoing_waiting": 0,
+              "pending_offer_ms": 15001,
+              "received_datagrams": 1147,
+              "signaling_backpressure": 0,
+              "signaling_queued_bytes": 0,
+              "signaling_sent": 2,
+              "transmitted_datagrams": 4534
+            },
+            "peer_id": 6,
+            "reason": "signaling_answer_timeout"
+          }
+        ],
+        "user_id": "4670fe223fd353d1583de98c8864e2cab64f6b7da6d0cfd2b479c1448e42726b",
+        "worker": {
+          "max_iteration_us": 161545,
+          "max_output_batch": 36,
+          "max_propagation_batch": 18
+        }
+      },
+      {
+        "connected": true,
+        "diagnostics": {
+          "forwarding_codec_mismatch": 0,
+          "forwarding_not_ready": 459,
+          "ice_state": "connected",
+          "incoming_tracks": 2,
+          "last_signal_in_bytes": 43813,
+          "last_signal_in_m_lines": 21,
+          "last_signal_out_bytes": 43909,
+          "last_signal_out_m_lines": 21,
+          "outgoing_negotiating": 0,
+          "outgoing_open": 12,
+          "outgoing_waiting": 0,
+          "pending_offer_ms": 1502,
+          "received_datagrams": 2133,
+          "signaling_backpressure": 0,
+          "signaling_queued_bytes": 0,
+          "signaling_sent": 10,
+          "transmitted_datagrams": 8254
+        },
+        "forwarded_bytes": 2458968,
+        "forwarded_frames": 6648,
+        "peer_id": 1,
+        "received_frames": 997,
+        "user_id": "46046237cb17b5cb4b2f54d607540921f9d8ce2b5478f8dad876ed00877cd109"
+      },
+      {
+        "connected": true,
+        "diagnostics": {
+          "forwarding_codec_mismatch": 0,
+          "forwarding_not_ready": 1875,
+          "ice_state": "connected",
+          "incoming_tracks": 2,
+          "last_signal_in_bytes": 31420,
+          "last_signal_in_m_lines": 15,
+          "last_signal_out_bytes": 47107,
+          "last_signal_out_m_lines": 21,
+          "outgoing_negotiating": 6,
+          "outgoing_open": 12,
+          "outgoing_waiting": 0,
+          "pending_offer_ms": 14385,
+          "received_datagrams": 1619,
+          "signaling_backpressure": 0,
+          "signaling_queued_bytes": 0,
+          "signaling_sent": 4,
+          "transmitted_datagrams": 5710
+        },
+        "forwarded_bytes": 1651430,
+        "forwarded_frames": 4633,
+        "peer_id": 4,
+        "received_frames": 919,
+        "user_id": "2ab90dc5df8e45d8671a27af333e2cd662466c4f910791f5f6966bf8896d1159"
+      },
+      {
+        "connected": true,
+        "diagnostics": {
+          "forwarding_codec_mismatch": 0,
+          "forwarding_not_ready": 1869,
+          "ice_state": "connected",
+          "incoming_tracks": 2,
+          "last_signal_in_bytes": 43816,
+          "last_signal_in_m_lines": 21,
+          "last_signal_out_bytes": 43394,
+          "last_signal_out_m_lines": 21,
+          "outgoing_negotiating": 0,
+          "outgoing_open": 10,
+          "outgoing_waiting": 0,
+          "pending_offer_ms": 875,
+          "received_datagrams": 1532,
+          "signaling_backpressure": 0,
+          "signaling_queued_bytes": 0,
+          "signaling_sent": 4,
+          "transmitted_datagrams": 5380
+        },
+        "forwarded_bytes": 1613434,
+        "forwarded_frames": 4259,
+        "peer_id": 5,
+        "received_frames": 822,
+        "user_id": "f9794caaf6dde29165ec0b10c9e626cb0c0f0307a6b30aafc28e3be04476aadb"
+      },
+      {
+        "connected": true,
+        "diagnostics": {
+          "forwarding_codec_mismatch": 0,
+          "forwarding_not_ready": 603,
+          "ice_state": "connected",
+          "incoming_tracks": 2,
+          "last_signal_in_bytes": 43820,
+          "last_signal_in_m_lines": 21,
+          "last_signal_out_bytes": 44616,
+          "last_signal_out_m_lines": 21,
+          "outgoing_negotiating": 0,
+          "outgoing_open": 16,
+          "outgoing_waiting": 0,
+          "pending_offer_ms": 4364,
+          "received_datagrams": 1507,
+          "signaling_backpressure": 0,
+          "signaling_queued_bytes": 0,
+          "signaling_sent": 3,
+          "transmitted_datagrams": 6839
+        },
+        "forwarded_bytes": 2283257,
+        "forwarded_frames": 5789,
+        "peer_id": 7,
+        "received_frames": 786,
+        "user_id": "485af87b93a979dda23e922eb65d98a0caa47dbcb4044d97208877989d55c770"
+      },
+      {
+        "connected": true,
+        "diagnostics": {
+          "forwarding_codec_mismatch": 0,
+          "forwarding_not_ready": 2072,
+          "ice_state": "connected",
+          "incoming_tracks": 2,
+          "last_signal_in_bytes": 43822,
+          "last_signal_in_m_lines": 21,
+          "last_signal_out_bytes": 44608,
+          "last_signal_out_m_lines": 21,
+          "outgoing_negotiating": 0,
+          "outgoing_open": 16,
+          "outgoing_waiting": 0,
+          "pending_offer_ms": 4359,
+          "received_datagrams": 1342,
+          "signaling_backpressure": 0,
+          "signaling_queued_bytes": 0,
+          "signaling_sent": 2,
+          "transmitted_datagrams": 5026
+        },
+        "forwarded_bytes": 1760425,
+        "forwarded_frames": 4167,
+        "peer_id": 9,
+        "received_frames": 757,
+        "user_id": "696d2eef7c6289c742d1f12170afe4bbd0928ca4883cdd9468b0647e78a101ea"
+      }
+    ]
+  }
+}

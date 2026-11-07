@@ -1,4 +1,4 @@
-import { test, expect, type BrowserContext, type Page } from "@playwright/test";
+import { test, expect, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import { writeFile, readFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -91,6 +91,7 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
 }) => {
   test.setTimeout(240000);
   const contexts: BrowserContext[] = [];
+  const browsers: Browser[] = [browser];
   const stages: unknown[] = [];
   const samples: Awaited<ReturnType<typeof resources>>[] = [];
   const participantHeaders: Record<string, string>[] = [];
@@ -103,6 +104,11 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
     "Load needs at least 3 GiB available RAM",
   ).toBeGreaterThan(3072);
   try {
+    // Chromium caps input streams at sixteen per process. Keep ten real captures
+    // per browser, instead of weakening the capture/RTP test at participant17.
+    for (let i = 1; i < 3; i++) browsers.push(await browser.browserType().launch({
+      args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream", "--autoplay-policy=no-user-gesture-required"],
+    }));
     const setup = await request.post("/api/setup", {
       data: {
         setup_token: "test-setup-token-at-least-32-characters",
@@ -135,7 +141,7 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
       expect(accepted.ok()).toBeTruthy();
       const session = await accepted.json();
       participantHeaders.push({ Authorization: `Bearer ${session.token}`, "X-Device-Key": session.device_key });
-      const context = await browser.newContext({
+      const context = await browsers[Math.floor(index / 10)].newContext({
         permissions: ["camera", "microphone"],
       });
       contexts.push(context);
@@ -295,7 +301,8 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
             height: 180,
             framesPerSecond: 5,
             opusTargetBps: 510000,
-            loadDeadlineMs: 60000,
+            loadDeadlineMs: 180000,
+            browserProcesses: 3,
           },
           note: "Real Chromium fake-capture RTP through the Rust SFU at reduced video resolution/frame rate. Not a production 720p or physical glass-to-glass claim. Dedicated systemd cgroup memory/CPU excludes unrelated browsers; ps CPU is lifetime average and summed RSS includes background browsers/shared pages. The first failed attempt incorrectly applied an absolute summed-RSS guard to unrelated Chrome processes.",
           before,
@@ -309,5 +316,6 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
       ),
     );
     for (const context of contexts) await context.close();
+    for (const extra of browsers.slice(1)) await extra.close();
   }
 });

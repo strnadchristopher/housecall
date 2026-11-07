@@ -1,0 +1,25 @@
+
+Running 1 test using 1 worker
+
+Media stage 5: 5/5 fully receiving; elapsed 2396ms
+Media stage 10: 10/10 fully receiving; elapsed 6597ms
+  ✘  1 [chromium] › tests/e2e/voice-load.spec.ts:88:1 › bounded thirty-peer real RTP load at 320x180 five fps (20.9s)
+
+
+  1) [chromium] › tests/e2e/voice-load.spec.ts:88:1 › bounded thirty-peer real RTP load at 320x180 five fps 
+
+    Error: page.evaluate: NotReadableError: Could not start audio source
+
+      234 |           contexts[joined]
+      235 |             .pages()[0]
+    > 236 |             .evaluate(() => (window as any).loadVoice.join("general", true)),
+          |              ^
+      237 |           new Promise((_, reject) =>
+      238 |             setTimeout(
+      239 |               () => reject(new Error("Join exceeded ten seconds")),
+        at /home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/voice-load.spec.ts:236:14
+
+    Error Context: test-results/voice-load-bounded-thirty--31ec9-TP-load-at-320x180-five-fps-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/e2e/voice-load.spec.ts:88:1 › bounded thirty-peer real RTP load at 320x180 five fps 
