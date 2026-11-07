@@ -98,6 +98,10 @@ it("resumes at the server byte offset after interruption without repeating compl
   const api = {
     get: async () => ({ ...current }),
     request: async (_path: string, options: RequestInit) => {
+      if (options.method === "POST") {
+        current = { ...current, status: "quarantined" };
+        return current;
+      }
       const offset = new Headers(options.headers).get("Upload-Offset")!;
       offsets.push(offset);
       current = {
@@ -124,6 +128,26 @@ it("resumes at the server byte offset after interruption without repeating compl
   await uploader.resume("up", file);
   expect(offsets).toEqual(["0", "4194304"]);
   expect(current.status).toBe("quarantined");
+});
+it("account teardown suppresses delayed upload creation and completion callbacks", async () => {
+  const file = new File(["private"], "private.txt");
+  const upload: Upload = { id: "old", channel_id: "old-channel", filename: file.name, length: String(file.size), offset: String(file.size), status: "uploading" };
+  for (const operation of ["create", "resume"] as const) {
+    let finish!: (value: Upload) => void;
+    const delayed = new Promise<Upload>(resolve => { finish = resolve; });
+    const get = vi.fn(async () => upload);
+    const request = vi.fn(() => delayed);
+    const changed = vi.fn();
+    const uploader = new ResumableUpload({ get, request } as unknown as Api, changed);
+    const work = operation === "create" ? uploader.create("old-channel", file) : uploader.resume(upload.id, file);
+    await Promise.resolve();
+    changed.mockClear();
+    uploader.pause();
+    finish({ ...upload, status: "ready" });
+    await expect(work).rejects.toMatchObject({ name: "AbortError" });
+    expect(changed).not.toHaveBeenCalled();
+    expect(get).toHaveBeenCalledTimes(operation === "create" ? 0 : 1);
+  }
 });
 import { opusFullband } from "../src/transport/voice";
 it("requests fullband stereo maximum Opus bitrate without changing other codecs", () => {

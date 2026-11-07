@@ -16,20 +16,30 @@ export class ResumableUpload {
   ) {}
   pause() {
     this.active?.abort();
+    this.active = undefined;
+  }
+  private begin() {
+    this.pause();
+    const controller = new AbortController();
+    this.active = controller;
+    return controller;
+  }
+  private publish(upload: Upload, controller: AbortController) {
+    if (controller.signal.aborted || this.active !== controller)
+      throw new DOMException("Upload paused", "AbortError");
+    this.changed(upload);
   }
   async create(channelId: string, file: File) {
-    const upload = await this.api.post<Upload>("/api/uploads", {
-      channel_id: channelId,
-      filename: file.name,
-      length: String(file.size),
+    const controller = this.begin();
+    const upload = await this.api.request<Upload>("/api/uploads", {
+      method: "POST", signal: controller.signal,
+      body: JSON.stringify({ channel_id: channelId, filename: file.name, length: String(file.size) }),
     });
-    this.changed(upload);
+    this.publish(upload, controller);
     return upload;
   }
   async resume(uploadId: string, file: File) {
-    this.active?.abort();
-    const controller = new AbortController();
-    this.active = controller;
+    const controller = this.begin();
     let upload = await this.api.get<Upload>(
       `/api/uploads/${uploadId}`,
       controller.signal,
@@ -40,10 +50,10 @@ export class ResumableUpload {
     )
       throw new Error("Select the original file with the same name and size");
     if (upload.status !== "uploading") {
-      this.changed(upload);
+      this.publish(upload, controller);
       return upload;
     }
-    this.changed(upload);
+    this.publish(upload, controller);
     while (BigInt(upload.offset) < BigInt(upload.length)) {
       if (controller.signal.aborted)
         throw new DOMException("Upload paused", "AbortError");
@@ -61,18 +71,19 @@ export class ResumableUpload {
         body: chunk,
         signal: controller.signal,
       });
-      this.changed(upload);
+      this.publish(upload, controller);
     }
     try {
-      upload = await this.api.post<Upload>(
+      upload = await this.api.request<Upload>(
         `/api/uploads/${uploadId}/complete`,
-        {},
+        { method: "POST", body: "{}", signal: controller.signal },
       );
     } catch (error) {
-      this.changed(await this.api.get<Upload>(`/api/uploads/${uploadId}`));
+      if (!controller.signal.aborted && this.active === controller)
+        this.publish(await this.api.get<Upload>(`/api/uploads/${uploadId}`, controller.signal), controller);
       throw error;
     }
-    this.changed(upload);
+    this.publish(upload, controller);
     return upload;
   }
 }

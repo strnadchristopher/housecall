@@ -78,6 +78,10 @@ export function App() {
     () => new ResumableUpload(c.api, setUpload),
     [c.api],
   );
+  useEffect(() => {
+    uploader.pause();
+    return () => uploader.pause();
+  }, [uploader, c.auth]);
   const [draft, setDraft] = useState("");
   const lastTyping = useRef(0);
   const authFields = useRef({
