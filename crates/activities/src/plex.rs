@@ -1,0 +1,226 @@
+//! PMS requests keep the Plex token in an HTTP header on the server.
+use crate::{Error, Result};
+use serde::{Deserialize, Serialize};
+use url::Url;
+
+pub struct Plex {
+    origin: Url,
+    token: String,
+    client: reqwest::Client,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Library {
+    pub id: String,
+    pub title: String,
+    pub kind: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Item {
+    pub id: String,
+    pub title: String,
+    pub kind: String,
+    pub duration_ms: u64,
+    pub subtitles: Vec<Subtitle>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Subtitle {
+    pub id: String,
+    pub language: String,
+    pub codec: String,
+    pub embedded: bool,
+}
+impl Plex {
+    pub fn new(origin: &str, token: String) -> Result<Self> {
+        if token.is_empty() {
+            return Err(Error::Invalid("Plex token"));
+        }
+        Ok(Self {
+            origin: crate::origin(origin)?,
+            token,
+            client: crate::http()?,
+        })
+    }
+    fn get(&self, path: &str) -> Result<reqwest::RequestBuilder> {
+        let url = self
+            .origin
+            .join(path)
+            .map_err(|_| Error::Invalid("Plex path"))?;
+        if url.origin() != self.origin.origin() {
+            return Err(Error::Invalid("Plex origin"));
+        }
+        Ok(self
+            .client
+            .get(url)
+            .header("X-Plex-Token", &self.token)
+            .header("X-Plex-Client-Identifier", "chriscord-server")
+            .header("X-Plex-Product", "Chriscord")
+            .header("Accept", "application/json"))
+    }
+    pub async fn libraries(&self) -> Result<Vec<Library>> {
+        let json: serde_json::Value = crate::read_json(
+            self.get("/library/sections")?
+                .send()
+                .await
+                .map_err(|_| Error::Provider)?
+                .error_for_status()
+                .map_err(|_| Error::Provider)?,
+            2 * 1024 * 1024,
+        )
+        .await?;
+        json["MediaContainer"]["Directory"]
+            .as_array()
+            .ok_or(Error::Provider)?
+            .iter()
+            .map(|v| {
+                let id = v["key"].as_str().ok_or(Error::Provider)?;
+                numeric(id)?;
+                Ok(Library {
+                    id: id.to_owned(),
+                    title: v["title"].as_str().unwrap_or("").to_owned(),
+                    kind: v["type"].as_str().unwrap_or("").to_owned(),
+                })
+            })
+            .collect()
+    }
+    pub async fn browse(&self, library_id: &str, start: u64) -> Result<Vec<Item>> {
+        numeric(library_id)?;
+        let json: serde_json::Value = crate::read_json(
+            self.get(&format!("/library/sections/{library_id}/all"))?
+                .query(&[
+                    ("X-Plex-Container-Start", start.to_string()),
+                    ("X-Plex-Container-Size", "100".to_owned()),
+                ])
+                .send()
+                .await
+                .map_err(|_| Error::Provider)?
+                .error_for_status()
+                .map_err(|_| Error::Provider)?,
+            2 * 1024 * 1024,
+        )
+        .await?;
+        json["MediaContainer"]["Metadata"]
+            .as_array()
+            .ok_or(Error::Provider)?
+            .iter()
+            .map(parse_item)
+            .collect()
+    }
+    pub async fn metadata(&self, id: &str) -> Result<Item> {
+        numeric(id)?;
+        let json: serde_json::Value = crate::read_json(
+            self.get(&format!("/library/metadata/{id}"))?
+                .send()
+                .await
+                .map_err(|_| Error::Provider)?
+                .error_for_status()
+                .map_err(|_| Error::Provider)?,
+            2 * 1024 * 1024,
+        )
+        .await?;
+        parse_item(&json["MediaContainer"]["Metadata"][0])
+    }
+    /// Return upstream to an authorized media proxy. Never redirect clients to PMS.
+    /// HLS manifests need same-origin URI rewriting and per-segment authorization by the caller.
+    pub async fn transcode(
+        &self,
+        media_id: &str,
+        session_id: &str,
+        offset_ms: u64,
+        subtitle_id: Option<&str>,
+    ) -> Result<reqwest::Response> {
+        numeric(media_id)?;
+        if session_id.is_empty()
+            || session_id.len() > 128
+            || !session_id
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-')
+        {
+            return Err(Error::Invalid("Plex session"));
+        }
+        if let Some(id) = subtitle_id {
+            numeric(id)?;
+        }
+        let mut query = vec![
+            ("path", format!("/library/metadata/{media_id}")),
+            ("session", session_id.to_owned()),
+            ("protocol", "hls".to_owned()),
+            ("directPlay", "0".to_owned()),
+            ("directStream", "0".to_owned()),
+            ("offset", (offset_ms / 1000).to_string()),
+            ("mediaIndex", "0".to_owned()),
+            ("partIndex", "0".to_owned()),
+            ("videoCodec", "h264".to_owned()),
+            ("audioCodec", "aac".to_owned()),
+            ("maxVideoBitrate", "20000".to_owned()),
+            ("videoResolution", "1920x1080".to_owned()),
+            ("subtitleSize", "100".to_owned()),
+        ];
+        if let Some(id) = subtitle_id {
+            query.push(("subtitleStreamID", id.to_owned()));
+            query.push(("subtitles", "burn".to_owned()));
+        }
+        self.get("/video/:/transcode/universal/start.m3u8")?
+            .query(&query)
+            .send()
+            .await
+            .map_err(|_| Error::Provider)?
+            .error_for_status()
+            .map_err(|_| Error::Provider)
+    }
+    pub async fn subtitle(&self, id: &str) -> Result<reqwest::Response> {
+        numeric(id)?;
+        self.get(&format!("/library/streams/{id}"))?
+            .query(&[("format", "srt")])
+            .send()
+            .await
+            .map_err(|_| Error::Provider)?
+            .error_for_status()
+            .map_err(|_| Error::Provider)
+    }
+}
+fn numeric(id: &str) -> Result<()> {
+    if id.is_empty() || id.len() > 20 || !id.bytes().all(|b| b.is_ascii_digit()) {
+        Err(Error::Invalid("Plex numeric id"))
+    } else {
+        Ok(())
+    }
+}
+fn parse_item(v: &serde_json::Value) -> Result<Item> {
+    let id = v["ratingKey"].as_str().ok_or(Error::Provider)?;
+    numeric(id)?;
+    let mut subtitles = Vec::new();
+    if let Some(media) = v["Media"].as_array() {
+        for m in media {
+            if let Some(parts) = m["Part"].as_array() {
+                for part in parts {
+                    if let Some(streams) = part["Stream"].as_array() {
+                        for s in streams
+                            .iter()
+                            .filter(|s| s["streamType"].as_u64() == Some(3))
+                        {
+                            let sid = s["id"]
+                                .as_u64()
+                                .map(|id| id.to_string())
+                                .or_else(|| s["id"].as_str().map(str::to_owned))
+                                .ok_or(Error::Provider)?;
+                            numeric(&sid)?;
+                            subtitles.push(Subtitle {
+                                id: sid,
+                                language: s["language"].as_str().unwrap_or("Unknown").to_owned(),
+                                codec: s["codec"].as_str().unwrap_or("").to_owned(),
+                                embedded: s.get("key").is_none(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(Item {
+        id: id.to_owned(),
+        title: v["title"].as_str().unwrap_or("").to_owned(),
+        kind: v["type"].as_str().unwrap_or("").to_owned(),
+        duration_ms: v["duration"].as_u64().unwrap_or(0),
+        subtitles,
+    })
+}

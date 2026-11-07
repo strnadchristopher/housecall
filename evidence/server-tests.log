@@ -1,0 +1,51 @@
+   Compiling chriscord-media v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/media)
+   Compiling chriscord-server v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 32.14s
+     Running unittests src/lib.rs (target/debug/deps/chriscord_server-594cc5406fe7a8ef)
+
+running 8 tests
+test giphy::tests::accepted_ids_cannot_change_origin ... ok
+test giphy::tests::malicious_provider_urls_never_cross_boundary ... ok
+test giphy::tests::query_and_media_boundaries ... ok
+test activities::tests::three_clients_share_persisted_activity_and_enforce_revision_and_host ... ok
+test passkeys::tests::rp_origin_requires_secure_context ... ok
+test activities::tests::removed_channel_member_loses_activity_access_and_gimme_is_dry_run ... ok
+test activities::tests::all_activity_routes_require_authentication_and_channel_membership ... ok
+test passkeys::tests::challenge_expiry_consumption_and_session_binding ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.72s
+
+     Running unittests src/main.rs (target/debug/deps/chriscord_server-70d24794415ec684)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/media.rs (target/debug/deps/media-27d6e1192db8200b)
+
+running 1 test
+test encrypted_upload_http_resume_ownership_quarantine_range_and_limits ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.73s
+
+     Running tests/security.rs (target/debug/deps/security-04d64b767cbdfedb)
+
+running 9 tests
+test all_private_endpoints_reject_unauthenticated ... ok
+test membership_and_owner_authorization_matrix ... ok
+test consent_limits_edits_and_read_state ... ok
+test owner_invite_and_user_session_revocation ... ok
+test rate_limits_and_no_remote_embed_fetch ... ok
+test username_parser_is_total ... ok
+test unsend_purges_content_notifications_reactions_pins_and_search ... ok
+test invite_single_use_race_expiry_and_transaction_rollback ... ok
+test session_binding_revocation_login_and_setup_guard ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.91s
+
+   Doc-tests chriscord_server
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -17,3 +17,10 @@
 *.apk
 *.aab
 *.AppImage
+**/__pycache__/
+*.pyc
+**/local.properties
+**/.gradle/
+**/tauri.properties
+**/gen/android/.idea/
+**/gen/android/app/src/main/jniLibs/

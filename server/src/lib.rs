@@ -1,0 +1,1140 @@
+pub mod activities;
+pub mod giphy;
+pub mod media;
+pub mod passkeys;
+use argon2::{
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2,
+};
+use axum::{
+    extract::{DefaultBodyLimit, Path, Query, State},
+    http::{HeaderMap, StatusCode},
+    middleware::{self, Next},
+    response::{IntoResponse, Response},
+    routing::{delete, get, patch, post},
+    Extension, Json, Router,
+};
+use rand::{rngs::OsRng, RngCore};
+use rusqlite::{params, Connection, OptionalExtension};
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+    time::{SystemTime, UNIX_EPOCH},
+};
+
+pub type ApiResult<T> = Result<Json<T>, ApiError>;
+#[derive(Debug)]
+pub struct ApiError(StatusCode, &'static str);
+impl IntoResponse for ApiError {
+    fn into_response(self) -> Response {
+        (self.0, Json(json!({"error":self.1}))).into_response()
+    }
+}
+impl From<rusqlite::Error> for ApiError {
+    fn from(e: rusqlite::Error) -> Self {
+        tracing::error!(error=%e,"database operation failed");
+        Self(StatusCode::INTERNAL_SERVER_ERROR, "storage error")
+    }
+}
+fn bad(msg: &'static str) -> ApiError {
+    ApiError(StatusCode::BAD_REQUEST, msg)
+}
+fn forbidden() -> ApiError {
+    ApiError(StatusCode::FORBIDDEN, "forbidden")
+}
+fn unauthorized() -> ApiError {
+    ApiError(StatusCode::UNAUTHORIZED, "invalid or expired session")
+}
+fn missing() -> ApiError {
+    ApiError(StatusCode::NOT_FOUND, "not found")
+}
+fn conflict(msg: &'static str) -> ApiError {
+    ApiError(StatusCode::CONFLICT, msg)
+}
+pub fn now() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as i64
+}
+fn secret() -> String {
+    let mut bytes = [0u8; 32];
+    OsRng.fill_bytes(&mut bytes);
+    hex::encode(bytes)
+}
+fn hash(v: &str) -> String {
+    hex::encode(Sha256::digest(v.as_bytes()))
+}
+#[derive(Clone)]
+pub struct AppState {
+    pub db: Arc<Mutex<Connection>>,
+    setup_hash: String,
+    limits: Arc<Mutex<HashMap<String, (i64, u32)>>>,
+    pub public_auth_limit: u32,
+    pub auth_slots: Arc<tokio::sync::Semaphore>,
+    pub client_origins: Vec<axum::http::HeaderValue>,
+    pub media: Option<Arc<chriscord_media::Store>>,
+    pub scanner: Arc<dyn chriscord_media::Scanner>,
+    pub passkeys: Option<Arc<passkeys::Passkeys>>,
+}
+#[derive(Clone, Serialize, Debug)]
+pub struct User {
+    pub id: String,
+    pub username: String,
+    pub is_owner: bool,
+}
+#[derive(Clone)]
+pub struct Principal {
+    pub user: User,
+    pub session_id: String,
+}
+impl AppState {
+    pub fn new(database: &str, setup_token: &str) -> Result<Self, rusqlite::Error> {
+        let db = Connection::open(database)?;
+        db.execute_batch("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
+ CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,username TEXT UNIQUE NOT NULL,password TEXT NOT NULL,is_owner INTEGER NOT NULL DEFAULT 0);
+ CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),token_hash TEXT UNIQUE NOT NULL,device_hash TEXT NOT NULL,device_name TEXT NOT NULL,created_at INTEGER NOT NULL,expires_at INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS invites(token_hash TEXT PRIMARY KEY,expires_at INTEGER NOT NULL,used_at INTEGER);
+ CREATE TABLE IF NOT EXISTS channels(id TEXT PRIMARY KEY,name TEXT NOT NULL,kind TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS members(channel_id TEXT NOT NULL REFERENCES channels(id),user_id TEXT NOT NULL REFERENCES users(id),PRIMARY KEY(channel_id,user_id));
+ CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY,channel_id TEXT NOT NULL REFERENCES channels(id),author_id TEXT NOT NULL REFERENCES users(id),body TEXT NOT NULL,reply_to TEXT,created_at INTEGER NOT NULL,edited_at INTEGER,revision INTEGER NOT NULL DEFAULT 1,pinned INTEGER NOT NULL DEFAULT 0,mention_ids TEXT NOT NULL DEFAULT '[]');
+ CREATE INDEX IF NOT EXISTS messages_channel_time ON messages(channel_id,created_at);
+ CREATE TABLE IF NOT EXISTS reactions(message_id TEXT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,user_id TEXT NOT NULL REFERENCES users(id),emoji TEXT NOT NULL,PRIMARY KEY(message_id,user_id,emoji));
+ CREATE TABLE IF NOT EXISTS notifications(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),message_id TEXT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,channel_id TEXT NOT NULL,created_at INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT NOT NULL REFERENCES users(id),kind TEXT NOT NULL,channel_id TEXT,payload TEXT NOT NULL,created_at INTEGER NOT NULL);
+ CREATE INDEX IF NOT EXISTS events_user_cursor ON events(user_id,id);
+ CREATE TABLE IF NOT EXISTS reads(channel_id TEXT NOT NULL,user_id TEXT NOT NULL,message_id TEXT NOT NULL,PRIMARY KEY(channel_id,user_id));
+ CREATE TABLE IF NOT EXISTS reports(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),kind TEXT NOT NULL,body TEXT NOT NULL,logs TEXT,created_at INTEGER NOT NULL,status TEXT NOT NULL DEFAULT 'open');")?;
+        db.execute_batch("CREATE TABLE IF NOT EXISTS attachments(upload_id TEXT PRIMARY KEY,message_id TEXT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,filename TEXT NOT NULL,length TEXT NOT NULL);")?;
+        db.execute_batch("CREATE TABLE IF NOT EXISTS report_media(report_id TEXT PRIMARY KEY REFERENCES reports(id) ON DELETE CASCADE,upload_id TEXT NOT NULL);")?;
+        passkeys::init(&db)?;
+        activities::init(&db)?;
+        Ok(Self {
+            db: Arc::new(Mutex::new(db)),
+            setup_hash: hash(setup_token),
+            limits: Default::default(),
+            public_auth_limit: 40,
+            auth_slots: Arc::new(tokio::sync::Semaphore::new(2)),
+            client_origins: vec![],
+            media: None,
+            scanner: Arc::new(chriscord_media::RejectScanner),
+            passkeys: None,
+        })
+    }
+    fn limited(&self, key: String, max: u32) -> bool {
+        let mut limits = self.limits.lock().unwrap();
+        let stamp = now() / 60000;
+        if limits.len() > 4096 {
+            limits.retain(|_, v| v.0 == stamp);
+        }
+        let v = limits.entry(key).or_insert((stamp, 0));
+        if v.0 != stamp {
+            *v = (stamp, 0)
+        }
+        v.1 += 1;
+        v.1 > max
+    }
+}
+pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
+    let cors = tower_http::cors::CorsLayer::new()
+        .allow_origin(state.client_origins.clone())
+        .allow_methods([
+            axum::http::Method::GET,
+            axum::http::Method::POST,
+            axum::http::Method::PATCH,
+            axum::http::Method::DELETE,
+            axum::http::Method::HEAD,
+        ])
+        .allow_headers([
+            axum::http::header::AUTHORIZATION,
+            axum::http::header::CONTENT_TYPE,
+            axum::http::HeaderName::from_static("x-device-key"),
+            axum::http::HeaderName::from_static("upload-offset"),
+            axum::http::header::RANGE,
+        ]);
+    let private = Router::new()
+        .merge(media::routes())
+        .merge(giphy::routes())
+        .merge(passkeys::private_routes())
+        .merge(activities::routes())
+        .route("/me", get(me))
+        .route("/invites", get(invites).post(invite))
+        .route("/invites/{id}", delete(revoke_invite))
+        .route("/users/{id}/sessions", delete(revoke_user_sessions))
+        .route("/devices", get(devices))
+        .route("/devices/{id}", delete(revoke))
+        .route("/channels", get(channels).post(create_channel))
+        .route("/members", get(members))
+        .route("/channels/{id}/messages", get(messages).post(send_message))
+        .route("/messages/{id}", patch(edit_message).delete(unsend))
+        .route("/messages/{id}/reactions", post(react))
+        .route("/messages/{id}/pin", post(pin))
+        .route("/channels/{id}/read", post(mark_read))
+        .route("/channels/{id}/typing", post(typing))
+        .route("/notifications", get(notifications))
+        .route("/events", get(events))
+        .route("/reports", get(reports).post(report))
+        .route("/reports/{id}", patch(resolve_report))
+        .route("/reports/{id}/screenshot", get(report_screenshot))
+        .route_layer(middleware::from_fn_with_state(state.clone(), authenticate));
+    let public = Router::new()
+        .merge(passkeys::public_routes())
+        .route("/setup", post(setup))
+        .route("/login", post(login))
+        .route("/invites/accept", post(accept))
+        .route_layer(middleware::from_fn_with_state(state.clone(), public_limit));
+    let mut router = Router::new()
+        .nest(
+            "/api",
+            private
+                .merge(public)
+                .route("/health", get(|| async { Json(json!({"ok":true})) })),
+        )
+        .with_state(state);
+    if let Some(path) = static_dir {
+        router = router.fallback_service(
+            tower_http::services::ServeDir::new(path).append_index_html_on_directories(true),
+        );
+    }
+    router
+        .layer(cors)
+        .layer(DefaultBodyLimit::max(128 * 1024))
+        .layer(middleware::from_fn(headers))
+}
+async fn headers(request: axum::extract::Request, next: Next) -> Response {
+    let mut r = next.run(request).await;
+    let h = r.headers_mut();
+    for(k,v)in[("content-security-policy","default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"),("x-content-type-options","nosniff"),("referrer-policy","no-referrer"),("cache-control","no-store"),("permissions-policy","camera=(self), microphone=(self), geolocation=()")]{h.insert(axum::http::HeaderName::from_static(k),v.parse().unwrap());}
+    r
+}
+async fn public_limit(
+    State(s): State<AppState>,
+    req: axum::extract::Request,
+    next: Next,
+) -> Result<Response, ApiError> {
+    if s.limited("public".into(), s.public_auth_limit) {
+        return Err(ApiError(StatusCode::TOO_MANY_REQUESTS, "try again later"));
+    }
+    Ok(next.run(req).await)
+}
+pub fn identify(s: &AppState, h: &HeaderMap) -> Result<Principal, ApiError> {
+    let token = h
+        .get("authorization")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .filter(|v| v.len() == 64)
+        .ok_or_else(unauthorized)?;
+    let device = h
+        .get("x-device-key")
+        .and_then(|v| v.to_str().ok())
+        .filter(|v| v.len() == 64)
+        .ok_or_else(unauthorized)?;
+    let db = s.db.lock().unwrap();
+    db.query_row("SELECT u.id,u.username,u.is_owner,s.id FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.device_hash=? AND s.expires_at>?",params![hash(token),hash(device),now()],|r|Ok(Principal{user:User{id:r.get(0)?,username:r.get(1)?,is_owner:r.get(2)?},session_id:r.get(3)?})).optional()?.ok_or_else(unauthorized)
+}
+async fn authenticate(
+    State(s): State<AppState>,
+    mut req: axum::extract::Request,
+    next: Next,
+) -> Result<Response, ApiError> {
+    let p = identify(&s, req.headers())?;
+    if s.limited(p.session_id.clone(), 600) {
+        return Err(ApiError(StatusCode::TOO_MANY_REQUESTS, "try again later"));
+    }
+    req.extensions_mut().insert(p);
+    Ok(next.run(req).await)
+}
+pub fn member(db: &Connection, uid: &str, cid: &str) -> Result<(), ApiError> {
+    if db
+        .query_row(
+            "SELECT 1 FROM members WHERE channel_id=? AND user_id=?",
+            params![cid, uid],
+            |_| Ok(()),
+        )
+        .optional()?
+        .is_none()
+    {
+        Err(forbidden())
+    } else {
+        Ok(())
+    }
+}
+fn owner(p: &Principal) -> Result<(), ApiError> {
+    if p.user.is_owner {
+        Ok(())
+    } else {
+        Err(forbidden())
+    }
+}
+fn emit(db: &Connection, cid: &str, kind: &str, payload: Value) -> Result<(), ApiError> {
+    db.execute("INSERT INTO events(user_id,kind,channel_id,payload,created_at) SELECT user_id,?,?,?,? FROM members WHERE channel_id=?",params![kind,cid,payload.to_string(),now(),cid])?;
+    Ok(())
+}
+pub fn valid_username(s: &str) -> bool {
+    s.len() >= 2
+        && s.len() <= 32
+        && s.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+}
+fn credentials(username: &str, password: &str, device: &str) -> Result<(), ApiError> {
+    if !valid_username(username)
+        || password.len() < 12
+        || password.len() > 256
+        || device.is_empty()
+        || device.len() > 80
+    {
+        return Err(bad("invalid username, password or device name"));
+    }
+    Ok(())
+}
+async fn password_hash(s: &AppState, password: String) -> Result<String, ApiError> {
+    let permit = s.auth_slots.clone().try_acquire_owned().map_err(|_| {
+        ApiError(
+            StatusCode::TOO_MANY_REQUESTS,
+            "credential service busy; retry shortly",
+        )
+    })?;
+    tokio::task::spawn_blocking(move || {
+        let _permit = permit;
+        Argon2::default()
+            .hash_password(password.as_bytes(), &SaltString::generate(&mut OsRng))
+            .map(|h| h.to_string())
+    })
+    .await
+    .map_err(|_| bad("credential processing failed"))?
+    .map_err(|_| bad("credential processing failed"))
+}
+fn session(db: &Connection, user: User, device_name: &str) -> Result<Value, ApiError> {
+    let (token, device_key, id) = (secret(), secret(), secret());
+    let expires = now() + 30 * 24 * 3600 * 1000;
+    db.execute(
+        "INSERT INTO sessions VALUES(?,?,?,?,?,?,?)",
+        params![
+            id,
+            user.id,
+            hash(&token),
+            hash(&device_key),
+            device_name,
+            now(),
+            expires
+        ],
+    )?;
+    Ok(json!({"token":token,"device_key":device_key,"user":user,"expires_at":expires}))
+}
+#[derive(Deserialize)]
+struct Setup {
+    setup_token: String,
+    username: String,
+    password: String,
+    device_name: String,
+}
+async fn setup(State(s): State<AppState>, Json(v): Json<Setup>) -> ApiResult<Value> {
+    if hash(&v.setup_token) != s.setup_hash {
+        return Err(forbidden());
+    }
+    credentials(&v.username, &v.password, &v.device_name)?;
+    let pw = password_hash(&s, v.password).await?;
+    let mut db = s.db.lock().unwrap();
+    let tx = db.transaction()?;
+    if tx.query_row("SELECT COUNT(*) FROM users", [], |r| r.get::<_, i64>(0))? > 0 {
+        return Err(conflict("already initialized"));
+    }
+    let u = User {
+        id: secret(),
+        username: v.username,
+        is_owner: true,
+    };
+    tx.execute(
+        "INSERT INTO users VALUES(?,?,?,1)",
+        params![u.id, u.username, pw],
+    )?;
+    tx.execute(
+        "INSERT INTO channels VALUES('general','general','channel')",
+        [],
+    )?;
+    tx.execute("INSERT INTO members VALUES('general',?)", [&u.id])?;
+    emit(&tx, "general", "member.joined", json!({"user_id":u.id}))?;
+    let result = session(&tx, u, &v.device_name)?;
+    tx.commit()?;
+    Ok(Json(result))
+}
+#[derive(Deserialize)]
+struct Login {
+    username: String,
+    password: String,
+    device_name: String,
+}
+async fn login(State(s): State<AppState>, Json(v): Json<Login>) -> ApiResult<Value> {
+    credentials(&v.username, &v.password, &v.device_name)?;
+    let found = {
+        s.db.lock()
+            .unwrap()
+            .query_row(
+                "SELECT id,username,is_owner,password FROM users WHERE username=?",
+                [&v.username],
+                |r| {
+                    Ok((
+                        User {
+                            id: r.get(0)?,
+                            username: r.get(1)?,
+                            is_owner: r.get(2)?,
+                        },
+                        r.get::<_, String>(3)?,
+                    ))
+                },
+            )
+            .optional()?
+    };
+    // Equal-cost missing-account verification prevents fast username enumeration.
+    let dummy="$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHQxMjM0NTY3OA$35GQXjfW5eDgMRCvwq6m4lfcblaxzlPN5BX2vkNVyWE";
+    let encoded = found
+        .as_ref()
+        .map(|x| x.1.clone())
+        .unwrap_or_else(|| dummy.into());
+    let permit = s.auth_slots.clone().try_acquire_owned().map_err(|_| {
+        ApiError(
+            StatusCode::TOO_MANY_REQUESTS,
+            "credential service busy; retry shortly",
+        )
+    })?;
+    let valid = tokio::task::spawn_blocking(move || {
+        let _permit = permit;
+        PasswordHash::new(&encoded)
+            .map(|h| {
+                Argon2::default()
+                    .verify_password(v.password.as_bytes(), &h)
+                    .is_ok()
+            })
+            .unwrap_or(false)
+    })
+    .await
+    .unwrap_or(false);
+    if !valid {
+        return Err(unauthorized());
+    }
+    let u = found.ok_or_else(unauthorized)?.0;
+    Ok(Json(session(&s.db.lock().unwrap(), u, &v.device_name)?))
+}
+#[derive(Deserialize)]
+struct Invite {
+    expires_in_seconds: i64,
+}
+async fn invite(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Json(v): Json<Invite>,
+) -> ApiResult<Value> {
+    owner(&p)?;
+    if !(60..=604800).contains(&v.expires_in_seconds) {
+        return Err(bad("invalid expiry"));
+    }
+    let token = secret();
+    let expires = now() + v.expires_in_seconds * 1000;
+    s.db.lock().unwrap().execute(
+        "INSERT INTO invites VALUES(?,?,NULL)",
+        params![hash(&token), expires],
+    )?;
+    Ok(Json(
+        json!({"id":hash(&token),"token":token,"expires_at":expires}),
+    ))
+}
+async fn invites(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+) -> ApiResult<Value> {
+    owner(&p)?;
+    let db = s.db.lock().unwrap();
+    let mut q = db.prepare(
+        "SELECT token_hash,expires_at,used_at FROM invites ORDER BY expires_at DESC LIMIT 500",
+    )?;
+    let rows=q.query_map([],|r|Ok(json!({"id":r.get::<_,String>(0)?,"expires_at":r.get::<_,i64>(1)?,"used_at":r.get::<_,Option<i64>>(2)?})))?.collect::<Result<Vec<_>,_>>()?;
+    Ok(Json(json!({"invites":rows})))
+}
+async fn revoke_invite(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(id): Path<String>,
+) -> ApiResult<Value> {
+    owner(&p)?;
+    if s.db
+        .lock()
+        .unwrap()
+        .execute("DELETE FROM invites WHERE token_hash=?", [id])?
+        == 0
+    {
+        return Err(missing());
+    }
+    Ok(Json(json!({"ok":true})))
+}
+async fn revoke_user_sessions(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(id): Path<String>,
+) -> ApiResult<Value> {
+    owner(&p)?;
+    let count =
+        s.db.lock()
+            .unwrap()
+            .execute("DELETE FROM sessions WHERE user_id=?", [id])?;
+    Ok(Json(json!({"ok":true,"revoked":count})))
+}
+
+#[derive(Deserialize)]
+struct Accept {
+    token: String,
+    username: String,
+    password: String,
+    device_name: String,
+}
+async fn accept(State(s): State<AppState>, Json(v): Json<Accept>) -> ApiResult<Value> {
+    credentials(&v.username, &v.password, &v.device_name)?;
+    if v.token.len() != 64 {
+        return Err(bad("invalid invite"));
+    }
+    let pw = password_hash(&s, v.password).await?;
+    let mut db = s.db.lock().unwrap();
+    let tx = db.transaction()?;
+    if tx.execute(
+        "UPDATE invites SET used_at=? WHERE token_hash=? AND used_at IS NULL AND expires_at>?",
+        params![now(), hash(&v.token), now()],
+    )? != 1
+    {
+        return Err(bad("invalid or expired invite"));
+    }
+    if tx
+        .query_row(
+            "SELECT 1 FROM users WHERE username=?",
+            [&v.username],
+            |_| Ok(()),
+        )
+        .optional()?
+        .is_some()
+    {
+        return Err(conflict("username unavailable"));
+    }
+    let u = User {
+        id: secret(),
+        username: v.username,
+        is_owner: false,
+    };
+    tx.execute(
+        "INSERT INTO users VALUES(?,?,?,0)",
+        params![u.id, u.username, pw],
+    )?;
+    tx.execute("INSERT INTO members VALUES('general',?)", [&u.id])?;
+    emit(&tx, "general", "member.joined", json!({"user_id":u.id}))?;
+    let result = session(&tx, u, &v.device_name)?;
+    tx.commit()?;
+    Ok(Json(result))
+}
+async fn me(State(s): State<AppState>, Extension(p): Extension<Principal>) -> Json<Value> {
+    Json(
+        json!({"user":p.user,"session_id":p.session_id,"capabilities":{"password":true,"passkeys":s.passkeys.is_some(),"chat":true,"uploads":s.media.is_some(),"voice":false,"activities":false,"giphy":giphy::configured(),"push":false}}),
+    )
+}
+async fn devices(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+) -> ApiResult<Value> {
+    let db = s.db.lock().unwrap();
+    let mut q=db.prepare("SELECT id,device_name,created_at,expires_at FROM sessions WHERE user_id=? AND expires_at>?")?;
+    let rows=q.query_map(params![p.user.id,now()],|r|{let id:String=r.get(0)?;Ok(json!({"current":id==p.session_id,"id":id,"device_name":r.get::<_,String>(1)?,"created_at":r.get::<_,i64>(2)?,"expires_at":r.get::<_,i64>(3)?}))})?.collect::<Result<Vec<_>,_>>()?;
+    Ok(Json(json!({"devices":rows})))
+}
+async fn revoke(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(id): Path<String>,
+) -> ApiResult<Value> {
+    if s.db.lock().unwrap().execute(
+        "DELETE FROM sessions WHERE id=? AND user_id=?",
+        params![id, p.user.id],
+    )? == 0
+    {
+        return Err(missing());
+    }
+    Ok(Json(json!({"ok":true})))
+}
+async fn channels(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+) -> ApiResult<Value> {
+    let db = s.db.lock().unwrap();
+    let mut q=db.prepare("SELECT c.id,c.name,c.kind FROM channels c JOIN members m ON m.channel_id=c.id WHERE m.user_id=? ORDER BY c.name")?;
+    let rows=q.query_map([p.user.id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"name":r.get::<_,String>(1)?,"kind":r.get::<_,String>(2)?})))?.collect::<Result<Vec<_>,_>>()?;
+    Ok(Json(json!({"channels":rows})))
+}
+#[derive(Deserialize)]
+struct CreateChannel {
+    name: String,
+    kind: String,
+    #[serde(default)]
+    member_ids: Vec<String>,
+}
+async fn create_channel(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Json(mut v): Json<CreateChannel>,
+) -> ApiResult<Value> {
+    if v.name.trim().is_empty()
+        || v.name.len() > 80
+        || !matches!(v.kind.as_str(), "channel" | "dm" | "group_dm")
+    {
+        return Err(bad("invalid conversation"));
+    }
+    if v.kind == "channel" {
+        owner(&p)?
+    }
+    v.member_ids.push(p.user.id);
+    v.member_ids.sort();
+    v.member_ids.dedup();
+    if v.member_ids.len() > 30
+        || (v.kind == "dm" && v.member_ids.len() != 2)
+        || (v.kind == "group_dm" && v.member_ids.len() < 2)
+    {
+        return Err(bad("invalid members"));
+    }
+    let mut db = s.db.lock().unwrap();
+    let tx = db.transaction()?;
+    for id in &v.member_ids {
+        if tx
+            .query_row("SELECT 1 FROM users WHERE id=?", [id], |_| Ok(()))
+            .optional()?
+            .is_none()
+        {
+            return Err(bad("unknown member"));
+        }
+    }
+    let id = secret();
+    tx.execute(
+        "INSERT INTO channels VALUES(?,?,?)",
+        params![id, v.name, v.kind],
+    )?;
+    for uid in v.member_ids {
+        tx.execute("INSERT INTO members VALUES(?,?)", params![id, uid])?;
+    }
+    emit(&tx, &id, "channel.created", json!({"channel_id":id}))?;
+    tx.commit()?;
+    Ok(Json(json!({"id":id,"name":v.name,"kind":v.kind})))
+}
+async fn members(State(s): State<AppState>) -> ApiResult<Value> {
+    let db = s.db.lock().unwrap();
+    let mut q = db.prepare("SELECT id,username,is_owner FROM users ORDER BY username")?;
+    let rows = q
+        .query_map([], |r| {
+            Ok(User {
+                id: r.get(0)?,
+                username: r.get(1)?,
+                is_owner: r.get(2)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(Json(json!({"members":rows})))
+}
+#[derive(Deserialize, Default)]
+struct MessageQuery {
+    before: Option<i64>,
+    q: Option<String>,
+    pinned: Option<bool>,
+}
+fn message(db: &Connection, id: &str) -> Result<Value, ApiError> {
+    let mut msg=db.query_row("SELECT id,channel_id,author_id,body,reply_to,created_at,edited_at,revision,pinned,mention_ids FROM messages WHERE id=?",[id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"channel_id":r.get::<_,String>(1)?,"author_id":r.get::<_,String>(2)?,"body":r.get::<_,String>(3)?,"reply_to":r.get::<_,Option<String>>(4)?,"created_at":r.get::<_,i64>(5)?,"edited_at":r.get::<_,Option<i64>>(6)?,"revision":r.get::<_,i64>(7)?,"pinned":r.get::<_,bool>(8)?,"mention_ids":serde_json::from_str::<Value>(&r.get::<_,String>(9)?).unwrap_or(json!([]))}))).optional()?.ok_or_else(missing)?;
+    let mut q = db.prepare("SELECT emoji,user_id FROM reactions WHERE message_id=?")?;
+    let reactions = q
+        .query_map([id], |r| {
+            Ok(json!({"emoji":r.get::<_,String>(0)?,"user_id":r.get::<_,String>(1)?}))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    msg["reactions"] = json!(reactions);
+    let mut q =
+        db.prepare("SELECT upload_id,filename,length FROM attachments WHERE message_id=?")?;
+    let attachments=q.query_map([id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"filename":r.get::<_,String>(1)?,"length":r.get::<_,String>(2)?})))?.collect::<Result<Vec<_>,_>>()?;
+    msg["attachments"] = json!(attachments);
+    Ok(msg)
+}
+fn message_access(
+    db: &Connection,
+    p: &Principal,
+    id: &str,
+) -> Result<(String, String, i64), ApiError> {
+    let row = db
+        .query_row(
+            "SELECT channel_id,author_id,revision FROM messages WHERE id=?",
+            [id],
+            |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, i64>(2)?,
+                ))
+            },
+        )
+        .optional()?
+        .ok_or_else(missing)?;
+    member(db, &p.user.id, &row.0)?;
+    Ok(row)
+}
+async fn messages(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(cid): Path<String>,
+    Query(v): Query<MessageQuery>,
+) -> ApiResult<Value> {
+    if v.q.as_ref().is_some_and(|q| q.len() > 256) {
+        return Err(bad("query too long"));
+    }
+    let db = s.db.lock().unwrap();
+    member(&db, &p.user.id, &cid)?;
+    let mut q=db.prepare("SELECT id FROM messages WHERE channel_id=? AND created_at<? AND (?=0 OR pinned=1) AND instr(lower(body),lower(?))>0 ORDER BY created_at DESC,id DESC LIMIT 100")?;
+    let ids = q
+        .query_map(
+            params![
+                cid,
+                v.before.unwrap_or(i64::MAX),
+                v.pinned.unwrap_or(false),
+                v.q.unwrap_or_default()
+            ],
+            |r| r.get::<_, String>(0),
+        )?
+        .collect::<Result<Vec<_>, _>>()?;
+    let rows = ids
+        .iter()
+        .rev()
+        .map(|id| message(&db, id))
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(Json(json!({"messages":rows})))
+}
+#[derive(Deserialize)]
+struct SendMessage {
+    body: String,
+    reply_to: Option<String>,
+    #[serde(default)]
+    mention_ids: Vec<String>,
+    #[serde(default)]
+    attachment_ids: Vec<uuid::Uuid>,
+}
+fn body_valid(body: &str) -> Result<(), ApiError> {
+    if body.trim().is_empty() || body.len() > 16384 {
+        return Err(bad("message must contain 1–16384 bytes"));
+    }
+    Ok(())
+}
+async fn send_message(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(cid): Path<String>,
+    Json(mut v): Json<SendMessage>,
+) -> ApiResult<Value> {
+    if v.attachment_ids.is_empty() {
+        body_valid(&v.body)?;
+    } else if v.body.len() > 16384 || v.attachment_ids.len() > 20 {
+        return Err(bad("invalid attachment message"));
+    }
+    if v.mention_ids.len() > 30 {
+        return Err(bad("too many mentions"));
+    }
+    let mut db = s.db.lock().unwrap();
+    let tx = db.transaction()?;
+    member(&tx, &p.user.id, &cid)?;
+    if let Some(reply) = &v.reply_to {
+        let (rc, _, _) = message_access(&tx, &p, reply)?;
+        if rc != cid {
+            return Err(bad("reply must be in this conversation"));
+        }
+    }
+    if v.body.contains("@everyone") {
+        owner(&p)?;
+        let mut q = tx.prepare("SELECT user_id FROM members WHERE channel_id=?")?;
+        v.mention_ids = q
+            .query_map([&cid], |r| r.get(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+    }
+    v.mention_ids.sort();
+    v.mention_ids.dedup();
+    for uid in &v.mention_ids {
+        member(&tx, uid, &cid)?;
+    }
+    let mut attachments = Vec::new();
+    for upload_id in &v.attachment_ids {
+        let store = s.media.as_ref().ok_or_else(|| bad("media unavailable"))?;
+        let upload = store.inspect(*upload_id, &p.user.id)?;
+        if upload.channel_id != cid || upload.status != chriscord_media::Status::Ready {
+            return Err(bad("attachment must be clean and in this conversation"));
+        }
+        if tx
+            .query_row(
+                "SELECT 1 FROM attachments WHERE upload_id=?",
+                [upload_id.to_string()],
+                |_| Ok(()),
+            )
+            .optional()?
+            .is_some()
+        {
+            return Err(conflict("attachment already belongs to a message"));
+        }
+        attachments.push(upload);
+    }
+    let id = secret();
+    tx.execute("INSERT INTO messages(id,channel_id,author_id,body,reply_to,created_at,mention_ids) VALUES(?,?,?,?,?,?,?)",params![id,cid,p.user.id,v.body,v.reply_to,now(),json!(v.mention_ids).to_string()])?;
+    for upload in attachments {
+        tx.execute(
+            "INSERT INTO attachments VALUES(?,?,?,?)",
+            params![
+                upload.id.to_string(),
+                id,
+                upload.filename,
+                upload.length.to_string()
+            ],
+        )?;
+    }
+    for uid in &v.mention_ids {
+        if uid != &p.user.id {
+            tx.execute(
+                "INSERT INTO notifications VALUES(?,?,?,?,?)",
+                params![secret(), uid, id, cid, now()],
+            )?;
+        }
+    }
+    emit(&tx, &cid, "message.created", json!({"message_id":id}))?;
+    let result = message(&tx, &id)?;
+    tx.commit()?;
+    Ok(Json(result))
+}
+#[derive(Deserialize)]
+struct EditMessage {
+    body: String,
+    revision: i64,
+}
+async fn edit_message(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(id): Path<String>,
+    Json(v): Json<EditMessage>,
+) -> ApiResult<Value> {
+    body_valid(&v.body)?;
+    let mut db = s.db.lock().unwrap();
+    let tx = db.transaction()?;
+    let (cid, author, revision) = message_access(&tx, &p, &id)?;
+    if author != p.user.id {
+        return Err(forbidden());
+    }
+    if revision != v.revision {
+        return Err(conflict("message changed; reload before editing"));
+    }
+    tx.execute(
+        "UPDATE messages SET body=?,edited_at=?,revision=revision+1 WHERE id=?",
+        params![v.body, now(), id],
+    )?;
+    emit(&tx, &cid, "message.edited", json!({"message_id":id}))?;
+    let result = message(&tx, &id)?;
+    tx.commit()?;
+    Ok(Json(result))
+}
+async fn unsend(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(id): Path<String>,
+) -> ApiResult<Value> {
+    let mut db = s.db.lock().unwrap();
+    let tx = db.transaction()?;
+    let (cid, author, _) = message_access(&tx, &p, &id)?;
+    if author != p.user.id && !p.user.is_owner {
+        return Err(forbidden());
+    }
+    let attachment_ids = {
+        let mut q = tx.prepare("SELECT upload_id FROM attachments WHERE message_id=?")?;
+        let ids = q
+            .query_map([&id], |r| r.get::<_, String>(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+        ids
+    };
+    if let Some(store) = &s.media {
+        for aid in attachment_ids {
+            let aid = uuid::Uuid::parse_str(&aid).map_err(|_| bad("invalid stored attachment"))?;
+            match store.delete(aid, &author) {
+                Ok(()) | Err(chriscord_media::Error::NotFound) => {}
+                Err(e) => return Err(e.into()),
+            }
+        }
+    }
+    tx.execute("UPDATE messages SET reply_to=NULL WHERE reply_to=?", [&id])?;
+    tx.execute("DELETE FROM messages WHERE id=?", [&id])?;
+    tx.execute("DELETE FROM reads WHERE message_id=?", [&id])?;
+    emit(
+        &tx,
+        &cid,
+        "message.deleted",
+        json!({"message_id":id,"notifications_retracted":true}),
+    )?;
+    tx.commit()?;
+    Ok(Json(json!({"ok":true})))
+}
+#[derive(Deserialize)]
+struct Reaction {
+    emoji: String,
+}
+async fn react(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(id): Path<String>,
+    Json(v): Json<Reaction>,
+) -> ApiResult<Value> {
+    if v.emoji.is_empty() || v.emoji.len() > 32 || v.emoji.chars().any(char::is_control) {
+        return Err(bad("invalid reaction"));
+    }
+    let mut db = s.db.lock().unwrap();
+    let tx = db.transaction()?;
+    let (cid, _, _) = message_access(&tx, &p, &id)?;
+    if tx.execute(
+        "DELETE FROM reactions WHERE message_id=? AND user_id=? AND emoji=?",
+        params![id, p.user.id, v.emoji],
+    )? == 0
+    {
+        tx.execute(
+            "INSERT INTO reactions VALUES(?,?,?)",
+            params![id, p.user.id, v.emoji],
+        )?;
+    }
+    emit(&tx, &cid, "message.reactions", json!({"message_id":id}))?;
+    tx.commit()?;
+    Ok(Json(json!({"ok":true})))
+}
+#[derive(Deserialize)]
+struct Pin {
+    pinned: bool,
+}
+async fn pin(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(id): Path<String>,
+    Json(v): Json<Pin>,
+) -> ApiResult<Value> {
+    let mut db = s.db.lock().unwrap();
+    let tx = db.transaction()?;
+    let (cid, _, _) = message_access(&tx, &p, &id)?;
+    tx.execute(
+        "UPDATE messages SET pinned=? WHERE id=?",
+        params![v.pinned, id],
+    )?;
+    emit(&tx, &cid, "message.pinned", json!({"message_id":id}))?;
+    tx.commit()?;
+    Ok(Json(json!({"ok":true})))
+}
+#[derive(Deserialize)]
+struct Read {
+    message_id: String,
+}
+async fn mark_read(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(cid): Path<String>,
+    Json(v): Json<Read>,
+) -> ApiResult<Value> {
+    let db = s.db.lock().unwrap();
+    member(&db, &p.user.id, &cid)?;
+    let (mc, _, _) = message_access(&db, &p, &v.message_id)?;
+    if mc != cid {
+        return Err(bad("message must be in conversation"));
+    }
+    db.execute("INSERT INTO reads VALUES(?,?,?) ON CONFLICT(channel_id,user_id) DO UPDATE SET message_id=excluded.message_id",params![cid,p.user.id,v.message_id])?;
+    db.execute("DELETE FROM notifications WHERE user_id=? AND channel_id=? AND message_id IN (SELECT id FROM messages WHERE created_at<=(SELECT created_at FROM messages WHERE id=?))",params![p.user.id,cid,v.message_id])?;
+    Ok(Json(json!({"ok":true})))
+}
+#[derive(Deserialize)]
+struct Typing {
+    active: bool,
+}
+async fn typing(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(cid): Path<String>,
+    Json(v): Json<Typing>,
+) -> ApiResult<Value> {
+    let db = s.db.lock().unwrap();
+    member(&db, &p.user.id, &cid)?;
+    emit(
+        &db,
+        &cid,
+        "typing",
+        json!({"user_id":p.user.id,"active":v.active,"expires_at":now()+6000}),
+    )?;
+    Ok(Json(json!({"ok":true})))
+}
+async fn notifications(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+) -> ApiResult<Value> {
+    let db = s.db.lock().unwrap();
+    let mut q=db.prepare("SELECT id,message_id,channel_id,created_at FROM notifications WHERE user_id=? AND EXISTS(SELECT 1 FROM members WHERE members.channel_id=notifications.channel_id AND members.user_id=notifications.user_id) ORDER BY created_at DESC LIMIT 500")?;
+    let rows=q.query_map([p.user.id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"message_id":r.get::<_,String>(1)?,"channel_id":r.get::<_,String>(2)?,"created_at":r.get::<_,i64>(3)?})))?.collect::<Result<Vec<_>,_>>()?;
+    Ok(Json(json!({"notifications":rows})))
+}
+#[derive(Deserialize)]
+struct EventQuery {
+    #[serde(default)]
+    after: i64,
+}
+async fn events(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Query(v): Query<EventQuery>,
+) -> ApiResult<Value> {
+    if v.after < 0 {
+        return Err(bad("invalid cursor"));
+    }
+    let db = s.db.lock().unwrap();
+    let mut q=db.prepare("SELECT id,kind,channel_id,payload,created_at FROM events WHERE user_id=? AND id>? AND (channel_id IS NULL OR EXISTS(SELECT 1 FROM members WHERE members.channel_id=events.channel_id AND members.user_id=events.user_id)) ORDER BY id LIMIT 500")?;
+    let rows=q.query_map(params![p.user.id,v.after],|r|Ok(json!({"id":r.get::<_,i64>(0)?,"kind":r.get::<_,String>(1)?,"channel_id":r.get::<_,Option<String>>(2)?,"payload":serde_json::from_str::<Value>(&r.get::<_,String>(3)?).unwrap_or(Value::Null),"created_at":r.get::<_,i64>(4)?})))?.collect::<Result<Vec<_>,_>>()?;
+    let cursor = rows
+        .last()
+        .and_then(|v| v["id"].as_i64())
+        .unwrap_or(v.after);
+    Ok(Json(json!({"events":rows,"cursor":cursor})))
+}
+#[derive(Deserialize)]
+struct Report {
+    kind: String,
+    body: String,
+    logs: Option<String>,
+    #[serde(default)]
+    logs_consent: bool,
+    screenshot_id: Option<String>,
+    #[serde(default)]
+    screenshot_consent: bool,
+}
+async fn report(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Json(v): Json<Report>,
+) -> ApiResult<Value> {
+    if !matches!(v.kind.as_str(), "bug" | "feature")
+        || v.body.trim().is_empty()
+        || v.body.len() > 32768
+    {
+        return Err(bad("invalid report"));
+    }
+    if v.logs.is_some() && !v.logs_consent {
+        return Err(bad("logs require explicit consent"));
+    }
+    if let Some(id) = &v.screenshot_id {
+        if !v.screenshot_consent {
+            return Err(bad("screenshot requires explicit consent"));
+        }
+        let uid = uuid::Uuid::parse_str(id).map_err(|_| bad("invalid screenshot ID"))?;
+        let upload = s
+            .media
+            .as_ref()
+            .ok_or_else(|| bad("media unavailable"))?
+            .inspect(uid, &p.user.id)?;
+        if upload.status != chriscord_media::Status::Ready {
+            return Err(bad("screenshot must pass scanning"));
+        }
+    }
+    if v.logs.as_ref().is_some_and(|v| v.len() > 65536) {
+        return Err(bad("logs too large"));
+    }
+    let id = secret();
+    let mut db = s.db.lock().unwrap();
+    let tx = db.transaction()?;
+    tx.execute(
+        "INSERT INTO reports(id,user_id,kind,body,logs,created_at) VALUES(?,?,?,?,?,?)",
+        params![
+            id,
+            p.user.id,
+            v.kind,
+            v.body,
+            v.logs.map(|s| redact_logs(&s)),
+            now()
+        ],
+    )?;
+    if let Some(upload_id) = v.screenshot_id {
+        tx.execute(
+            "INSERT INTO report_media VALUES(?,?)",
+            params![id, upload_id],
+        )?;
+    }
+    tx.commit()?;
+    Ok(Json(json!({"id":id})))
+}
+async fn report_screenshot(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    owner(&p)?;
+    let upload_id = {
+        let db = s.db.lock().unwrap();
+        db.query_row(
+            "SELECT upload_id FROM report_media WHERE report_id=?",
+            [id],
+            |r| r.get::<_, String>(0),
+        )
+        .optional()?
+        .ok_or_else(missing)?
+    };
+    let id = uuid::Uuid::parse_str(&upload_id).map_err(|_| bad("invalid stored upload"))?;
+    let store = s.media.clone().ok_or_else(missing)?;
+    let metadata = store.metadata(id)?;
+    media::authorized_stream(store, metadata, headers).await
+}
+pub fn redact_logs(input: &str) -> String {
+    input
+        .lines()
+        .map(|line| {
+            let low = line.to_ascii_lowercase();
+            if [
+                "token",
+                "password",
+                "authorization",
+                "secret",
+                "cookie",
+                "key",
+            ]
+            .iter()
+            .any(|k| low.contains(k))
+            {
+                "[redacted sensitive log line]"
+            } else {
+                line
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+async fn reports(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+) -> ApiResult<Value> {
+    owner(&p)?;
+    let db = s.db.lock().unwrap();
+    let mut q=db.prepare("SELECT id,user_id,kind,body,logs,created_at,status,(SELECT upload_id FROM report_media WHERE report_id=reports.id) FROM reports ORDER BY created_at DESC LIMIT 500")?;
+    let rows=q.query_map([],|r|Ok(json!({"id":r.get::<_,String>(0)?,"user_id":r.get::<_,String>(1)?,"kind":r.get::<_,String>(2)?,"body":r.get::<_,String>(3)?,"logs":r.get::<_,Option<String>>(4)?,"created_at":r.get::<_,i64>(5)?,"status":r.get::<_,String>(6)?,"screenshot_id":r.get::<_,Option<String>>(7)?})))?.collect::<Result<Vec<_>,_>>()?;
+    Ok(Json(json!({"reports":rows})))
+}
+#[derive(Deserialize)]
+struct Resolve {
+    status: String,
+}
+async fn resolve_report(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(id): Path<String>,
+    Json(v): Json<Resolve>,
+) -> ApiResult<Value> {
+    owner(&p)?;
+    if !matches!(v.status.as_str(), "open" | "resolved") {
+        return Err(bad("invalid status"));
+    }
+    if s.db.lock().unwrap().execute(
+        "UPDATE reports SET status=? WHERE id=?",
+        params![v.status, id],
+    )? == 0
+    {
+        return Err(missing());
+    }
+    Ok(Json(json!({"ok":true})))
+}
