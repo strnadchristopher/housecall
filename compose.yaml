@@ -38,7 +38,6 @@ services:
     pids_limit: 128
   scanner:
     image: clamav/clamav:1.4
-    profiles: [scanning]
     volumes:
       - scan-socket:/run/clamav
       - scanner-db:/var/lib/clamav

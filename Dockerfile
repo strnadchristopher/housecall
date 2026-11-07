@@ -9,7 +9,7 @@ FROM rust:1.98-bookworm AS server
 WORKDIR /build
 COPY Cargo.toml Cargo.lock ./
 COPY server/ ./server/
-COPY crates/media/ ./crates/media/
+COPY crates/ ./crates/
 RUN cargo build --locked --release -p chriscord-server
 
 FROM debian:bookworm-slim

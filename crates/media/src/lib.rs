@@ -279,9 +279,10 @@ impl Store {
     }
     fn save(&self, m: &Upload) -> Result<()> {
         let temp = self.dir(m.id).join(format!("{}.tmp", Uuid::new_v4()));
-        let mut f = private_file(&temp)?;
+        let mut f = io::BufWriter::new(private_file(&temp)?);
         serde_json::to_writer(&mut f, m)?;
-        f.sync_all()?;
+        f.flush()?;
+        f.get_ref().sync_all()?;
         fs::rename(&temp, self.dir(m.id).join("meta.json"))?;
         File::open(self.dir(m.id))?.sync_all()?;
         Ok(())

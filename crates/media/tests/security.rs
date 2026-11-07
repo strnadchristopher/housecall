@@ -167,7 +167,10 @@ proptest! {
 #[test]
 #[ignore = "explicit large fixture: writes and reads >2 GiB, run separately"]
 fn multi_gib_interrupted_upload() {
-    let tmp = tempfile::tempdir().unwrap();
+    let tmp = tempfile::Builder::new()
+        .prefix("media-large-")
+        .tempdir_in(concat!(env!("CARGO_MANIFEST_DIR"), "/target"))
+        .unwrap();
     let key = [9; 32];
     let length = 2u64 * 1024 * 1024 * 1024 + 123;
     let mut s = Store::new(tmp.path(), key).unwrap();
@@ -192,4 +195,49 @@ fn multi_gib_interrupted_upload() {
     println!(
         "verified bytes={length}; interrupted/reopened at=1073741824; encrypted chunk size max={MAX_CHUNK}; scanner=fixture drain (not malware scanning)"
     );
+}
+
+#[cfg(unix)]
+#[test]
+fn clamd_protocol_accepts_only_definitive_clean_response() {
+    use std::{io::Write, os::unix::net::UnixListener, time::Duration};
+    for (reply, clean) in [
+        (b"stream: OK\0".as_slice(), true),
+        (b"stream: Eicar-Test-Signature FOUND\0", false),
+        (b"INSTREAM size limit exceeded. ERROR\0", false),
+    ] {
+        let tmp = tempfile::tempdir().unwrap();
+        let socket = tmp.path().join("clamd.sock");
+        let listener = UnixListener::bind(&socket).unwrap();
+        let reply = reply.to_vec();
+        let worker = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut command = [0; 10];
+            stream.read_exact(&mut command).unwrap();
+            assert_eq!(&command, b"zINSTREAM\0");
+            let mut total = vec![];
+            loop {
+                let mut size = [0; 4];
+                stream.read_exact(&mut size).unwrap();
+                let n = u32::from_be_bytes(size) as usize;
+                if n == 0 {
+                    break;
+                }
+                let mut buf = vec![0; n];
+                stream.read_exact(&mut buf).unwrap();
+                total.extend(buf);
+            }
+            assert_eq!(total, b"fixture media bytes");
+            stream.write_all(&reply).unwrap();
+        });
+        let scanner = ClamdScanner {
+            socket,
+            timeout: Duration::from_secs(2),
+        };
+        assert_eq!(
+            scanner.scan(&mut b"fixture media bytes".as_slice()).is_ok(),
+            clean
+        );
+        worker.join().unwrap();
+    }
 }
