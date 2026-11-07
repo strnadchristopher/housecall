@@ -11,3 +11,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
+
+# Exact upstream safety backport; see ../../patches/README.md.
+[patch.crates-io]
+glib = { path = "../../patches/glib" }

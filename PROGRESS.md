@@ -6,13 +6,13 @@
 - No configured Git remote in this worktree: no remote fetch possible. No push/deploy performed.
 
 ## In progress
-- Milestone 1: contract and unstyled handoff.
+- Milestones 2–7: core chat and browser passkeys verified; media, native builds, SFU and VM hardening in active implementation. See timestamped checkpoints below.
 
 ## Remaining
-- All implementation and acceptance checks in PLAN.md. No functional feature is yet verified.
+- Full acceptance matrix in PLAN.md remains incomplete. Checkpoints below distinguish working slices from pending gates.
 
 ## Blockers / attempts
-- None yet. Missing external credentials and device services will use documented env placeholders and fixture tests, not production calls.
+- Missing external credentials and device services use documented env placeholders and fixture tests. Specific failed approaches are recorded below.
 
 ## Evidence policy
 Evidence files contain commands, observed outcomes and fixture/live distinction. Do not store tokens, private content, production URLs with credentials, or full environment dumps.
@@ -36,4 +36,11 @@ Evidence files contain commands, observed outcomes and fixture/live distinction.
 - Expanded cargo deny now passes advisories/bans/licenses/sources at current pre-SFU lockfile; evidence/cargo-deny.log. Final lockfiles still need checks after SFU/native additions.
 - Native Rust audit found real upstream glib 0.18.5 unsoundness RUSTSEC-2024-0429 and proc-macro-error unmaintained warning RUSTSEC-2024-0370. Added exact two-line glib upstream pointer-mutability backport under patches/glib, retaining licenses and visible advisory diagnostics. Native rebuild and optimized regression are pending; do not treat the earlier in-flight unpatched build as final security evidence.
 - Real ClamAV fixture passed: clean encrypted media released, EICAR test string rejected/quarantined and unreadable (evidence/media-live-clamd.log). Initial fixture bind-mount ownership prevented socket creation; corrected only .runtime/scan to image UID/GID100:101, restarted only owned scanner fixture. This verifies small-file scanning, not huge-media analyzer coverage.
-- Large encrypted fixture on disk is progressing at debug-crypto throughput (~4 MiB/s), with bounded buffers. Extended its bounded runtime from15 to30 minutes to permit both full encryption and full decrypt/scan-read passes; no success claimed before terminal receipt.
+- Large encrypted fixture on disk is progressing at debug-crypto throughput (~4 MiB/s), with bounded buffers. Attempt to extend its runtime using systemctl set-property was rejected (RuntimeMaxUSec is not dynamically settable). Original15-minute bound remains; no success claimed before terminal receipt.
+
+## Checkpoint: native build, SFU transport and security hardening
+- Linux Tauri release binary built successfully in 14m50s (evidence/client-native-linux.txt). This initial artifact predates the glib backport; the patched rebuild is required before treating it as final. Optimized glib pointer regression passes (evidence/native-glib-regression.log). Upstream version-based advisory remains visible, no security ignore.
+- Backend pre-transcode snapshot passes22 tests, including namespace/role/voice authorization. SFU standalone fixture establishes real ICE/DTLS/SRTP and forwards encoded frames between authorized peers, isolates an outsider and handles revocation (evidence/activities-sfu-tests.log). Browser decoded-media evidence is being collected separately.
+- The disk-backed large upload was deliberately stopped at committed offset1,925,185,536 before its15-minute unit limit. A separate bounded process resumes the same encrypted store, verifies the complete2,147,483,771-byte payload and removes only its own fixture on success. Evidence/media-multigib-before-interruption.log and media-multigib.log. Until terminal pass this remains pending; fixture scanner is not a malware analyzer.
+- Isolated Gluetun fixture exposed direct Docker-subnet IPv4/DNS egress even with tunnel down. UID-scoped firewall test closes that gap for IPv4; IPv6 fixture baseline fails so it is not a valid IPv6 kill-switch proof. Production VM boundary is being revised before acceptance; no Shiva/existing Gluetun modifications. Evidence/vm-killswitch*.
+- Link metadata module adds fixed HTTPS443, all-answer public-IP DNS checks, address pinning, no redirects/proxies, bounded HTML and text-only output. Integration/security tests pending.
