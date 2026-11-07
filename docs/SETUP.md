@@ -60,3 +60,9 @@ Compose binds HTTP and SFU UDP to loopback by default for isolated local testing
 Text link previews use authenticated explicit user actions. The server fetches only public HTTPS443 destinations, validates every DNS answer and pins the selected IP, disables redirects and environment proxies, limits HTML to512KiB, and returns title/description as text. It does not fetch remote thumbnails or execute page HTML. A preview request reveals the server IP to that destination; previews are not fetched automatically while typing.
 
 CPU media derivatives use CHRISCORD_FFMPEG (default /usr/bin/ffmpeg) and CHRISCORD_TRANSCODE_TIMEOUT_SECONDS (default21600, maximum86400). They run one job at a time, require scanned source and outputs, and produce encrypted fragmented MP4/JPEG through bounded pipes. See API.md for restart, cancellation, and non-seekable input limitations.
+
+### Durable Gimme requests
+
+Compose keeps `GIMME_DRY_RUN=true`: requests persist and appear in channel history without contacting Gimme. An explicitly configured standalone runtime can enable provider requests with `GIMME_DRY_RUN=false`, `GIMME_BASE_URL` and `GIMME_AGENT_API_KEY`; use HTTPS except loopback test fixtures. No production Gimme calls were made during this sprint.
+
+The worker discovers API v2, saves the submission intent before sending, and retains an accepted job ID across restart. Provider errors stop tracking visibly; an uncertain submission is never automatically repeated. Inspect the saved request/provider job before creating a new request. This implementation does not confirm a torrent, cancel a download, or interpret a subscription as completed episode downloads.

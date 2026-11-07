@@ -1,3 +1,4 @@
+import type { GimmeRequestStatus } from "../data/gimme";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { authenticatePasskey } from "../transport/passkeys";
 import { Api, ApiError } from "../transport/api";
@@ -23,6 +24,7 @@ export function useChriscord() {
     [channels, setChannels] = useState<Channel[]>([]),
     [members, setMembers] = useState<User[]>([]),
     [channel, setChannel] = useState("");
+  const [gimmeRequests, setGimmeRequests] = useState<GimmeRequestStatus[]>([]);
   const [messages, setMessages] = useState<Message[]>([]),
     [devices, setDevices] = useState<Device[]>([]),
     [reports, setReports] = useState<Report[]>([]),
@@ -45,6 +47,7 @@ export function useChriscord() {
     api.authenticate();
     setAuth(undefined);
     setMessages([]);
+    setGimmeRequests([]);
     setChannels([]);
     setMembers([]);
     setDevices([]);
@@ -74,13 +77,16 @@ export function useChriscord() {
       const active = id || cs.channels[0]?.id;
       if (active) {
         if (!selected.current) setChannel(active);
-        const result = await api.get<{ messages: Message[] }>(
-          `/api/channels/${encodeURIComponent(active)}/messages`,
-        );
+        const [result, requests] = await Promise.all([
+          api.get<{ messages: Message[] }>(`/api/channels/${encodeURIComponent(active)}/messages`),
+          api.get<{ requests: GimmeRequestStatus[] }>(`/api/channels/${encodeURIComponent(active)}/gimme/requests`),
+        ]);
         if (epoch !== generation.current) return;
         for (const m of result.messages) store.upsert(m);
-        if (active === selected.current || !selected.current)
+        if (active === selected.current || !selected.current) {
           setMessages(store.list(active));
+          setGimmeRequests(requests.requests);
+        }
       }
     },
     [api, store, notifications],
@@ -195,6 +201,7 @@ export function useChriscord() {
     selected.current = id;
     setChannel(id);
     setMessages([]);
+    setGimmeRequests([]);
     await refresh(id);
   };
   const loadDevices = async () =>
@@ -227,6 +234,7 @@ export function useChriscord() {
     members,
     channel,
     messages,
+    gimmeRequests,
     devices,
     reports,
     noticeList,

@@ -1,3 +1,4 @@
+import { gimmeStatusText } from "./data/gimme";
 import {markdownTokens} from "./data/markdown";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { VoiceSession, type VoiceStatus } from "./transport/voice";
@@ -61,7 +62,8 @@ export function App() {
     [roles, setRoles] = useState<Role[]>([]),
     [serverId, setServerId] = useState("home");
   const [preview, setPreview] = useState<LinkPreview>();
-  const [gimmeResult, setGimmeResult] = useState("");
+  const pendingGimme = useRef<{ intent: string; key: string } | undefined>(undefined);
+  useEffect(() => { pendingGimme.current = undefined; }, [c.auth?.user.id]);
   const [gifs, setGifs] = useState<
     { id: string; title: string; source_url: string }[]
   >([]);
@@ -470,14 +472,19 @@ export function App() {
         return;
       }
       if (i.screen === "gimme") {
-        const result = await c.api.post(
+        const request = { media: v.tv ? "tv" : "movie", query: String(v.query) };
+        const fingerprint = JSON.stringify([c.channel, request]);
+        if (pendingGimme.current?.intent !== fingerprint)
+          pendingGimme.current = { intent: fingerprint, key: crypto.randomUUID() };
+        await c.api.post(
           `/api/channels/${c.channel}/gimme/requests`,
           {
-            request: { media: v.tv ? "tv" : "movie", query: String(v.query) },
-            idempotency_key: crypto.randomUUID(),
+            request,
+            idempotency_key: pendingGimme.current.key,
           },
         );
-        setGimmeResult(JSON.stringify(result));
+        await c.refresh();
+        pendingGimme.current = undefined;
         return;
       }
       if (i.screen === "uploads") {
@@ -705,7 +712,7 @@ export function App() {
       { id: "gifs", label: "Giphy picker" },
       { id: "voice", label: "Voice and video" },
       { id: "activities", label: "Activity controls" },
-      { id: "gimme", label: "Gimme request (dry run)" },
+      { id: "gimme", label: c.capabilities.gimme_dry_run === false ? "Gimme request" : "Gimme request (dry run)" },
       ...(c.auth.user.is_owner
         ? [
             { id: "invites-admin", label: "Issue invitation" },
@@ -750,6 +757,7 @@ export function App() {
                   : []),
               ],
             })),
+            ...c.gimmeRequests.map(request => ({ id: `gimme-${request.id}`, text: `${request.request.query}: ${gimmeStatusText(request)}` })),
           ],
         })}
         {screen(
@@ -1146,14 +1154,14 @@ export function App() {
   else if (view === "gimme")
     content = screen({
       id: view,
-      title: "Gimme request — dry run only, no provider request sent",
+      title: c.capabilities.gimme_dry_run === false ? "Gimme requests" : "Gimme request — dry run only, no provider request sent",
       ...common,
       fields: [
         { name: "query", label: "Movie or show", required: true },
         { name: "tv", label: "TV show", type: "checkbox" },
       ],
-      submitLabel: "Preview request",
-      items: gimmeResult ? [{ id: "result", text: gimmeResult }] : [],
+      submitLabel: c.capabilities.gimme_dry_run === false ? "Request" : "Preview request",
+      items: c.gimmeRequests.map(request => ({ id: request.id, text: `${request.request.query}: ${gimmeStatusText(request)}` })),
     });
   else if (view === "uploads")
     content = screen({

@@ -18,7 +18,7 @@ pub enum Request {
     Tv { query: String },
 }
 impl Request {
-    fn parts(&self) -> Result<(&'static str, serde_json::Value)> {
+    pub fn parts(&self) -> Result<(&'static str, serde_json::Value)> {
         let (path, query) = match self {
             Self::Movie { query } => ("/agent/movies/request", query),
             Self::Tv { query } => ("/agent/tv/request", query),
@@ -132,6 +132,9 @@ impl Gimme {
         }
     }
     pub async fn discover(&mut self) -> Result<()> {
+        if self.mode != Mode::Live {
+            return Err(Error::Invalid("dry-run discovery must use a fixture"));
+        }
         self.discovered = false;
         let capabilities: serde_json::Value = crate::read_json(
             self.get("/agent/capabilities")?
@@ -250,6 +253,9 @@ impl Gimme {
             .map_err(|_| Error::Provider)?
             .error_for_status()
             .map_err(|_| Error::Provider)?;
+        if response.status() != reqwest::StatusCode::OK {
+            return Err(Error::Provider);
+        }
         let retry_header = response
             .headers()
             .get("Retry-After")

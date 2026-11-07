@@ -37,7 +37,6 @@ pub fn routes() -> Router<AppState> {
             get(snapshot).post(start).delete(stop),
         )
         .route("/channels/{id}/activity/commands", post(command))
-        .route("/channels/{id}/gimme/requests", post(gimme_dry_run))
 }
 fn domain(e: chriscord_activities::Error) -> ApiError {
     use chriscord_activities::Error::*;
@@ -267,42 +266,6 @@ async fn stop(
         gateway.stop_channel(&channel);
     }
     Ok(Json(json!({"stopped":true})))
-}
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct GimmeRequest {
-    request: chriscord_activities::gimme::Request,
-    idempotency_key: String,
-}
-/// Deliberately a reviewable dry-run action: never issues production Gimme mutations.
-async fn gimme_dry_run(
-    State(s): State<AppState>,
-    Extension(p): Extension<Principal>,
-    Path(channel): Path<String>,
-    Json(input): Json<GimmeRequest>,
-) -> ApiResult<Value> {
-    {
-        let db = s.db.lock().unwrap();
-        member(&db, &p.user.id, &channel)?;
-    }
-    let mut client = chriscord_activities::gimme::Gimme::new(
-        "https://api.littleobelisk.com/",
-        String::new(),
-        chriscord_activities::gimme::Mode::DryRun,
-    )
-    .map_err(domain)?;
-    client
-        .discover_fixture(&json!({"api_version":2}), &json!({"api_version":2}))
-        .map_err(domain)?;
-    let result = client
-        .submit(input.request, &input.idempotency_key)
-        .await
-        .map_err(domain)?;
-    let response = json!({"dry_run":true,"provider_verified":false,"operation":result});
-    let db = s.db.lock().unwrap();
-    member(&db, &p.user.id, &channel)?;
-    emit(&db, &channel, "gimme.dry_run", response.clone())?;
-    Ok(Json(response))
 }
 
 #[cfg(test)]
