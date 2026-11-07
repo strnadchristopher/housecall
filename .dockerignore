@@ -8,3 +8,7 @@ vendor-ref
 evidence
 .runtime
 data
+client/src-tauri
+patches
+**/.gradle
+**/__pycache__

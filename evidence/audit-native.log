@@ -1,0 +1,12 @@
+      Loaded 1422 security advisories (from vendor-ref/advisory-db)
+warning: directory vendor-ref/advisory-db is locked, waiting for up to 300 seconds for it to become available
+    Scanning client/src-tauri/Cargo.lock for vulnerabilities (407 crate dependencies)
+Crate:     proc-macro-error
+Version:   1.0.4
+Warning:   unmaintained
+Title:     proc-macro-error is unmaintained
+Date:      2024-09-01
+ID:        RUSTSEC-2024-0370
+URL:       https://rustsec.org/advisories/RUSTSEC-2024-0370
+
+error: 1 denied warning found!

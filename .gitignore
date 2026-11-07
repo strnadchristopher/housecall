@@ -24,3 +24,5 @@
 **/tauri.properties
 **/gen/android/.idea/
 **/gen/android/app/src/main/jniLibs/
+
+**/.kotlin/

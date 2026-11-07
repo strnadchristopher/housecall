@@ -30,4 +30,4 @@ The requested Steve Harvey voice is restricted to Christopher's private group an
 
 ## Integration boundaries
 
-Gimme uses v2 capabilities/contract discovery, stable idempotency keys and relative same-origin job polling. This sprint invokes only fixtures/dry runs. No movie confirmation/download or TV subscription against production. Plex, Giphy and Switchboard secrets stay server-side. Unconfigured features fail unavailable. Arbitrary URL embeds remain disabled until DNS/IP validation, rebinding-resistant dialing, redirect validation and bounded content parsing pass SSRF tests.
+Gimme uses v2 capabilities/contract discovery, stable idempotency keys and relative same-origin job polling. This sprint invokes only fixtures/dry runs. No movie confirmation/download or TV subscription against production. Plex, Giphy and Switchboard secrets stay server-side. Unconfigured features fail unavailable. Explicit text-only link previews now enforce public HTTPS443, all-answer DNS checks and pinned dialing, no redirects/proxy inheritance, and bounded HTML/DOM parsing. Remote images and arbitrary HTML remain disabled.

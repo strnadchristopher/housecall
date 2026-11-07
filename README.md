@@ -8,6 +8,7 @@ This sprint is **in progress**, not production-ready. [PROGRESS.md](PROGRESS.md)
 - Shared client state, transport and hooks: `client/src/`
 - Opus-owned presentation: `client/src/ui/`; [UI contract](docs/UI-CONTRACT.md)
 - Encrypted resumable media: `crates/media/`
+- Rust SFU: `crates/sfu/`
 - Synchronized activity protocol/provider adapters: `crates/activities/`
 - [Setup](docs/SETUP.md), [API](docs/API.md), [threat model](docs/THREAT-MODEL.md), [decisions](docs/DECISIONS.md), [test matrix](docs/TEST-MATRIX.md)
 

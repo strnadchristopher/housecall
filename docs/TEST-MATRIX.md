@@ -7,23 +7,23 @@ Only evidence with a successful terminal result establishes a pass. Provisional 
 | Private invite-only setup | server security tests, browser invite flow | passkey-first under 60s on actual mobile |
 | Passkeys + fallback | WebAuthn tests and virtual authenticator browser test | native authenticators, recovery hardening |
 | Device sessions/revocation | API cross-user and revoked token tests | non-exportable request signing/native secure storage |
-| Every-route authorization | security route matrix + module tests | update matrix whenever router changes |
+| Every-route authorization | automatic91-pair route inventory + module access tests | cross-user behavior tests for new features |
 | CSP/no trackers | headers assertion, source dependency audit | rendered app network review on each native platform |
-| Chat + DMs | 3-user Playwright, API security tests | multiple servers, role policy/mentions and full threads UI |
+| Chat + DMs | 3-user Playwright, API security tests | native/browser parity; complete thread subscription UX |
 | Unsend | server purge and client tombstone tests | APNs/FCM native retraction under OS constraints |
 | Large resumable media | media property and >2GiB interrupted fixture | browser >2GiB transfer, real scanner limit handling, disk-full |
-| Media transcode/thumb/stream | byte-range crypto tests | actual ffmpeg outputs, streamed authenticated player |
+| Media transcode/thumb/stream | actual FFmpeg fMP4/JPEG decoded fixture + byte-range crypto tests | streamed authenticated client player; seek-dependent source formats |
 | Search/pin/react/edit/typing/read | API/client tests | full browser interactions per platform |
 | Giphy | fixed-origin parser/property tests | keyed fixture/live picker fetch and playback |
-| Markdown/embeds | text escaping/no arbitrary fetch | safe markdown rendering and SSRF-protected embeds |
-| Voice/video/screenshare | SFU work in progress | 3-user media, <150ms LAN glass-to-glass, 30-peer media load |
+| Markdown/embeds | inert markdown AST + public-IP DNS-pinned text previews/SSRF tests | Opus safe semantic renderer; remote image previews |
+| Voice/video/screenshare | 3-browser decoded Opus/VP8 via Rust SFU | <150ms LAN glass-to-glass, 30-peer media load |
 | Plex activity | clock/state tests + Plex fixture | browse and actual transcoded playback/subtitles across 3 clients |
 | DJ activity | parser/queue/votes + HTTP/CLI adapters | actual matched source playback, banter between songs, supplied voice reference |
-| Shared VM | controller lease tests + compose/QEMU configuration | booted Debian, WebRTC capture/audio/control, guest VPN kill-switch, reset |
+| Shared VM | controller lease + built VM image + nft VPN namespace isolation | booted Debian, WebRTC capture/audio/control, guest-level VPN check, reset |
 | Gimme | v2 discovery/submission/job fixtures + explicit dry run | durable server job worker/channel status; no production calls in sprint |
 | Reports | consent/redaction and owner authorization tests | consented screenshot upload/display flow |
 | Compose | configuration validation | isolated container build/runtime health/readiness |
-| Desktop | Tauri Linux build, Windows/macOS CI | observed CI success and real OS media permissions |
+| Desktop | patched Tauri Linux release + checksum, Windows/macOS CI | observed Windows/macOS CI success and real OS media permissions |
 | Android | local toolchain installed, APK build pending | emulator E2E; Romeo unavailable after 2 SSH attempts |
 | iOS | shared Tauri crate/mobile entry + Maya plan | generated Xcode project and build verification |
 | Security dependencies | cargo audit/deny and npm audit | recheck final lockfiles, no blanket advisory suppression |
