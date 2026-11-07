@@ -15,3 +15,5 @@ tauri = { version = "2", features = [] }
 # Exact upstream safety backport; see ../../patches/README.md.
 [patch.crates-io]
 glib = { path = "../../patches/glib" }
+glib-macros = { path = "../../patches/glib-macros" }
+gtk3-macros = { path = "../../patches/gtk3-macros" }

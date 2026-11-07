@@ -1,0 +1,10 @@
+[
+  {
+    "source": "crates.io glib-macros 0.18.5",
+    "patch": "Only dependency switch to proc-macro-error3=3.1.1 with syn2-error, import paths, and standalone workspace declaration. Original license/source retained."
+  },
+  {
+    "source": "crates.io gtk3-macros 0.18.2",
+    "patch": "Only dependency switch to proc-macro-error3=3.1.1 with syn2-error, import paths, and standalone workspace declaration. Original license/source retained."
+  }
+]
