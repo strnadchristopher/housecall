@@ -1,0 +1,2 @@
+cargo fmt --manifest-path crates/sfu/Cargo.toml --check
+exit status: 0

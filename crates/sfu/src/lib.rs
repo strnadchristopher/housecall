@@ -47,6 +47,80 @@ pub struct Stats {
     pub received_frames: u64,
     pub forwarded_frames: u64,
     pub forwarded_bytes: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub diagnostics: Option<PeerDiagnostics>,
+    /// Included once per room snapshot, never used for admission or active peer counts.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recent_disconnects: Option<Vec<DisconnectedPeer>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub worker: Option<WorkerDiagnostics>,
+}
+#[derive(Debug, Clone, Serialize)]
+pub struct PeerDiagnostics {
+    pub ice_state: &'static str,
+    pub received_datagrams: u64,
+    pub transmitted_datagrams: u64,
+    pub forwarding_not_ready: u64,
+    pub forwarding_codec_mismatch: u64,
+    pub incoming_tracks: usize,
+    pub outgoing_open: usize,
+    pub outgoing_waiting: usize,
+    pub outgoing_negotiating: usize,
+    pub pending_offer_ms: Option<u64>,
+    pub signaling_queued_bytes: usize,
+    pub signaling_backpressure: u64,
+    pub signaling_sent: u64,
+    pub last_signal_in_bytes: usize,
+    pub last_signal_out_bytes: usize,
+    pub last_signal_in_m_lines: usize,
+    pub last_signal_out_m_lines: usize,
+}
+#[derive(Debug, Clone, Serialize)]
+pub struct DisconnectedPeer {
+    pub peer_id: u64,
+    pub reason: &'static str,
+    pub age_ms: u64,
+    pub diagnostics: PeerDiagnostics,
+}
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct WorkerDiagnostics {
+    /// Includes socket wait (at most10ms normally), useful for identifying scheduling stalls.
+    pub max_iteration_us: u64,
+    pub max_output_batch: usize,
+    pub max_propagation_batch: usize,
+}
+struct ClosedPeer {
+    room: String,
+    at: Instant,
+    snapshot: DisconnectedPeer,
+}
+fn remember_closed(history: &mut VecDeque<ClosedPeer>, client: &Client, now: Instant) {
+    history.push_back(ClosedPeer {
+        room: client.room.clone(),
+        at: now,
+        snapshot: DisconnectedPeer {
+            peer_id: client.id.0,
+            reason: client.disconnect_reason.unwrap_or("transport_closed"),
+            age_ms: 0,
+            diagnostics: client.diagnostics(now),
+        },
+    });
+    while history.len() > 120 {
+        history.pop_front();
+    }
+}
+fn room_history(history: &VecDeque<ClosedPeer>, room: &str, now: Instant) -> Vec<DisconnectedPeer> {
+    history
+        .iter()
+        .rev()
+        .filter(|h| h.room == room && now.saturating_duration_since(h.at) < Duration::from_secs(60))
+        .take(30)
+        .map(|h| {
+            let mut result = h.snapshot.clone();
+            result.age_ms = now.saturating_duration_since(h.at).as_millis() as u64;
+            result
+        })
+        .collect()
 }
 #[derive(Clone)]
 pub struct Sfu {
@@ -174,12 +248,27 @@ fn run(socket: UdpSocket, address: SocketAddr, rx: mpsc::Receiver<Control>, auth
     let mut queued: VecDeque<Propagated> = VecDeque::new();
     let mut buffer = [0u8; 65536];
     let mut auth_at = Instant::now();
+    let mut history = VecDeque::new();
+    let mut worker = WorkerDiagnostics::default();
     loop {
+        let iteration_at = Instant::now();
+        while history.front().is_some_and(|h: &ClosedPeer| {
+            iteration_at.saturating_duration_since(h.at) >= Duration::from_secs(60)
+        }) {
+            history.pop_front();
+        }
         if auth_at.elapsed() >= Duration::from_secs(1) {
             clients.retain(|c| authorize(&c.room, &c.user, &c.session));
             auth_at = Instant::now();
         }
-        clients.retain(|c| c.rtc.is_alive());
+        clients.retain(|c| {
+            if c.rtc.is_alive() {
+                true
+            } else {
+                remember_closed(&mut history, c, iteration_at);
+                false
+            }
+        });
         for _ in 0..32 {
             match rx.try_recv() {
                 Ok(Control::Join {
@@ -256,7 +345,8 @@ fn run(socket: UdpSocket, address: SocketAddr, rx: mpsc::Receiver<Control>, auth
                         let _ = reply.send(Err(Error::Forbidden));
                         continue;
                     }
-                    let stats = clients
+                    let snapshot_at = Instant::now();
+                    let mut stats: Vec<Stats> = clients
                         .iter()
                         .filter(|c| c.room == room)
                         .map(|c| Stats {
@@ -266,8 +356,15 @@ fn run(socket: UdpSocket, address: SocketAddr, rx: mpsc::Receiver<Control>, auth
                             received_frames: c.received_frames,
                             forwarded_frames: c.forwarded_frames,
                             forwarded_bytes: c.forwarded_bytes,
+                            diagnostics: Some(c.diagnostics(snapshot_at)),
+                            recent_disconnects: None,
+                            worker: None,
                         })
                         .collect();
+                    if let Some(first) = stats.first_mut() {
+                        first.recent_disconnects = Some(room_history(&history, &room, snapshot_at));
+                        first.worker = Some(worker.clone());
+                    }
                     let _ = reply.send(Ok(stats));
                 }
                 Err(mpsc::TryRecvError::Empty) => break,
@@ -276,7 +373,9 @@ fn run(socket: UdpSocket, address: SocketAddr, rx: mpsc::Receiver<Control>, auth
         }
         let mut deadline = Instant::now() + Duration::from_millis(10);
         for client in &mut clients {
+            let mut outputs = 0;
             for _ in 0..256 {
+                outputs += 1;
                 if !client.rtc.is_alive() {
                     break;
                 }
@@ -289,7 +388,9 @@ fn run(socket: UdpSocket, address: SocketAddr, rx: mpsc::Receiver<Control>, auth
                     event => queued.push_back(event),
                 }
             }
+            worker.max_output_batch = worker.max_output_batch.max(outputs);
         }
+        worker.max_propagation_batch = worker.max_propagation_batch.max(queued.len());
         while let Some(event) = queued.pop_front() {
             peer::propagate(&event, &mut clients);
         }
@@ -327,5 +428,38 @@ fn run(socket: UdpSocket, address: SocketAddr, rx: mpsc::Receiver<Control>, auth
         for client in &mut clients {
             client.handle_input(Input::Timeout(now));
         }
+        worker.max_iteration_us = worker
+            .max_iteration_us
+            .max(iteration_at.elapsed().as_micros() as u64);
+    }
+}
+#[cfg(test)]
+mod diagnostic_tests {
+    use super::*;
+    #[test]
+    fn disconnect_history_is_bounded_expires_and_is_room_scoped() {
+        str0m::crypto::from_feature_flags().install_process_default();
+        let now = Instant::now();
+        let mut history = VecDeque::new();
+        for n in 0..130 {
+            let client = Client::new(
+                Rtc::new(now),
+                if n % 2 == 0 { "a" } else { "b" }.into(),
+                "user".into(),
+                "secret-session".into(),
+            );
+            remember_closed(&mut history, &client, now);
+        }
+        assert_eq!(history.len(), 120);
+        let visible = room_history(&history, "a", now);
+        assert_eq!(visible.len(), 30);
+        assert!(visible.iter().all(|item| history
+            .iter()
+            .any(|h| h.room == "a" && h.snapshot.peer_id == item.peer_id)));
+        assert!(room_history(&history, "absent", now).is_empty());
+        assert!(room_history(&history, "a", now + Duration::from_secs(60)).is_empty());
+        let public = serde_json::to_string(&visible).unwrap();
+        assert!(!public.contains("secret-session"));
+        assert!(!public.contains("sdp"));
     }
 }

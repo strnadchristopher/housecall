@@ -48,6 +48,41 @@ async function media(page: Page) {
     return { video, audio, frames, bytes };
   });
 }
+// Counts and stable states only: never save SDP, ICE addresses, auth headers or media.
+async function diagnostics(page: Page) {
+  return page.evaluate(async () => {
+    const describe = (description: RTCSessionDescription | null) => description ? {
+      type: description.type,
+      bytes: new TextEncoder().encode(description.sdp).length,
+      mediaSections: (description.sdp.match(/^m=/gm) ?? []).length,
+    } : null;
+    return {
+      voice: (window as any).loadVoiceState ?? null,
+      signalingMessages: (window as any).loadSignalingMessages ?? [],
+      peers: await Promise.all(((window as any).loadPeers ?? []).map(async (peer: RTCPeerConnection) => ({
+        connection: peer.connectionState,
+        ice: peer.iceConnectionState,
+        gathering: peer.iceGatheringState,
+        signaling: peer.signalingState,
+        local: describe(peer.localDescription),
+        remote: describe(peer.remoteDescription),
+        channels: ((peer as any).loadChannels ?? []).map((channel: RTCDataChannel) => ({
+          readyState: channel.readyState, bufferedAmount: channel.bufferedAmount,
+        })),
+        transceivers: peer.getTransceivers().map((transceiver) => ({
+          mid: transceiver.mid, direction: transceiver.direction, currentDirection: transceiver.currentDirection,
+          kind: transceiver.receiver.track.kind, readyState: transceiver.receiver.track.readyState,
+        })),
+        streams: [...(await peer.getStats()).values()]
+          .filter(stat => stat.type === "inbound-rtp" || stat.type === "outbound-rtp")
+          .map(stat => ({type:stat.type, kind:stat.kind, mid:stat.mid, packetsReceived:stat.packetsReceived,
+            packetsSent:stat.packetsSent, packetsLost:stat.packetsLost, framesDecoded:stat.framesDecoded,
+            framesEncoded:stat.framesEncoded, bytesReceived:stat.bytesReceived, bytesSent:stat.bytesSent,
+            keyFramesDecoded:stat.keyFramesDecoded, pliCount:stat.pliCount, nackCount:stat.nackCount})),
+      }))),
+    };
+  });
+}
 test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
   browser,
   request,
@@ -56,6 +91,9 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
   const contexts: BrowserContext[] = [];
   const stages: unknown[] = [];
   const samples: Awaited<ReturnType<typeof resources>>[] = [];
+  const participantHeaders: Record<string, string>[] = [];
+  let terminalDiagnostics: unknown[] = [];
+  let serverDiagnostics: unknown = null;
   let timer: ReturnType<typeof setInterval> | undefined;
   const before = await resources();
   expect(
@@ -94,6 +132,7 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
       });
       expect(accepted.ok()).toBeTruthy();
       const session = await accepted.json();
+      participantHeaders.push({ Authorization: `Bearer ${session.token}`, "X-Device-Key": session.device_key });
       const context = await browser.newContext({
         permissions: ["camera", "microphone"],
       });
@@ -117,10 +156,30 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
           const Base = RTCPeerConnection;
           const peers: RTCPeerConnection[] = [];
           (window as any).loadPeers = peers;
+          const messages: unknown[] = [];
+          (window as any).loadSignalingMessages = messages;
           window.RTCPeerConnection = class extends Base {
             constructor(configuration?: RTCConfiguration) {
               super(configuration);
               peers.push(this);
+              (this as any).loadChannels = [];
+            }
+            override createDataChannel(label: string, options?: RTCDataChannelInit) {
+              const channel = super.createDataChannel(label, options);
+              (this as any).loadChannels.push(channel);
+              const record = (direction: string, value: unknown) => {
+                const data = String(value);
+                let type: string | null = null;
+                let mediaSections: number | null = null;
+                try { const parsed = JSON.parse(data); type = ["offer", "answer"].includes(parsed.type) ? parsed.type : "other";
+                  mediaSections = typeof parsed.sdp === "string" ? (parsed.sdp.match(/^m=/gm) ?? []).length : null; } catch {}
+                messages.push({ at: performance.now(), direction, bytes: new TextEncoder().encode(data).length, type, mediaSections });
+                if (messages.length > 128) messages.shift();
+              };
+              channel.addEventListener("message", event => record("received", event.data));
+              const send = channel.send.bind(channel);
+              channel.send = ((data: string) => { record("sent", data); send(data); }) as typeof channel.send;
+              return channel;
             }
           };
           const { Api } = await import("/src/transport/api.ts" as string);
@@ -131,6 +190,8 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
           api.authenticate(session);
           const elements = new Map<string, HTMLVideoElement>();
           (window as any).loadVoice = new VoiceSession(api, (state: any) => {
+            (window as any).loadVoiceState = { phase: state.phase, peerId: state.peerId, hasError: !!state.error,
+              errorCategory: state.error ? ["ICE gathering", "setRemoteDescription", "setLocalDescription", "RTCDataChannel", "OperationError", "InvalidStateError"].find(kind => String(state.error).includes(kind)) ?? "other" : null };
             for (const stream of state.streams as MediaStream[])
               if (!elements.has(stream.id)) {
                 const element = document.createElement("video");
@@ -209,6 +270,18 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
     }
   } finally {
     clearInterval(timer);
+    terminalDiagnostics = await Promise.all(contexts.map(async (context, index) => {
+      try { return { index, ...await diagnostics(context.pages()[0]) }; }
+      catch { return { index, unavailable: true }; }
+    }));
+    // Try joined participants until one is still authorized; preserve no session credentials.
+    for (const headers of participantHeaders) {
+      try {
+        const response = await request.get("/api/channels/general/voice/stats", { headers, timeout: 3000 });
+        if (response.ok()) { serverDiagnostics = await response.json(); break; }
+        serverDiagnostics = { httpStatus: response.status() };
+      } catch { serverDiagnostics = { unavailable: true }; }
+    }
     await writeFile(
       "../evidence/client-voice-load.json",
       JSON.stringify(
@@ -225,6 +298,8 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
           before,
           stages,
           samples,
+          terminalDiagnostics,
+          serverDiagnostics,
         },
         null,
         2,
