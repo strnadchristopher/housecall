@@ -1,0 +1,99 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 233B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/alpine:3.22
+#2 DONE 0.4s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [1/3] FROM docker.io/library/alpine:3.22@sha256:bfe7ceb9f09ec0566c48fb93356e45a47a00be5a1dd14fa5b909e7709c66b034
+#4 CACHED
+
+#5 [internal] load build context
+#5 transferring context: 32B done
+#5 DONE 0.0s
+
+#6 [2/3] RUN apk add --no-cache wireguard-tools wireguard-go iproute2 iptables nftables curl bind-tools dnsmasq python3
+#6 0.311 fetch https://dl-cdn.alpinelinux.org/alpine/v3.22/main/x86_64/APKINDEX.tar.gz
+#6 0.545 fetch https://dl-cdn.alpinelinux.org/alpine/v3.22/community/x86_64/APKINDEX.tar.gz
+#6 1.006 (1/60) Installing fstrm (0.6.1-r4)
+#6 1.017 (2/60) Installing krb5-conf (1.0-r2)
+#6 1.026 (3/60) Installing libcom_err (1.47.2-r2)
+#6 1.036 (4/60) Installing keyutils-libs (1.6.3-r4)
+#6 1.045 (5/60) Installing libverto (0.3.2-r2)
+#6 1.056 (6/60) Installing krb5-libs (1.21.3-r0)
+#6 1.082 (7/60) Installing json-c (0.18-r1)
+#6 1.092 (8/60) Installing nghttp2-libs (1.69.0-r0)
+#6 1.104 (9/60) Installing protobuf-c (1.5.2-r0)
+#6 1.113 (10/60) Installing userspace-rcu (0.15.2-r0)
+#6 1.126 (11/60) Installing libuv (1.51.0-r0)
+#6 1.138 (12/60) Installing xz-libs (5.8.4-r0)
+#6 1.150 (13/60) Installing libxml2 (2.13.9-r1)
+#6 1.176 (14/60) Installing bind-libs (9.20.30-r0)
+#6 1.213 (15/60) Installing bind-tools (9.20.30-r0)
+#6 1.229 (16/60) Installing brotli-libs (1.1.1-r0)
+#6 1.252 (17/60) Installing c-ares (1.34.9-r0)
+#6 1.265 (18/60) Installing libunistring (1.3-r0)
+#6 1.285 (19/60) Installing libidn2 (2.3.7-r0)
+#6 1.296 (20/60) Installing libpsl (0.21.5-r3)
+#6 1.307 (21/60) Installing zstd-libs (1.5.7-r0)
+#6 1.324 (22/60) Installing libcurl (8.14.1-r4)
+#6 1.339 (23/60) Installing curl (8.14.1-r4)
+#6 1.351 (24/60) Installing dnsmasq-common (2.91-r1)
+#6 1.703 (25/60) Installing dnsmasq (2.91-r1)
+#6 1.715 Executing dnsmasq-2.91-r1.pre-install
+#6 1.766 (26/60) Installing libcap2 (2.78-r0)
+#6 1.777 (27/60) Installing libelf (0.193-r0)
+#6 1.787 (28/60) Installing libmnl (1.0.5-r2)
+#6 1.800 (29/60) Installing iproute2-minimal (6.15.0-r0)
+#6 1.817 (30/60) Installing libxtables (1.8.11-r1)
+#6 1.827 (31/60) Installing iproute2-tc (6.15.0-r0)
+#6 2.413 (32/60) Installing iproute2-ss (6.15.0-r0)
+#6 2.424 (33/60) Installing iproute2 (6.15.0-r0)
+#6 2.438 Executing iproute2-6.15.0-r0.post-install
+#6 2.441 (34/60) Installing libnftnl (1.2.9-r0)
+#6 2.453 (35/60) Installing iptables (1.8.11-r1)
+#6 2.482 (36/60) Installing gmp (6.3.0-r3)
+#6 2.496 (37/60) Installing jansson (2.14.1-r0)
+#6 2.507 (38/60) Installing ncurses-terminfo-base (6.5_p20250503-r0)
+#6 2.519 (39/60) Installing libncursesw (6.5_p20250503-r0)
+#6 2.531 (40/60) Installing readline (8.2.13-r1)
+#6 2.542 (41/60) Installing nftables (1.1.3-r0)
+#6 2.561 (42/60) Installing libexpat (2.10.0-r0)
+#6 2.573 (43/60) Installing libbz2 (1.0.8-r6)
+#6 2.583 (44/60) Installing libffi (3.4.8-r0)
+#6 2.593 (45/60) Installing gdbm (1.24-r0)
+#6 2.603 (46/60) Installing libgcc (14.2.0-r6)
+#6 2.614 (47/60) Installing libstdc++ (14.2.0-r6)
+#6 2.639 (48/60) Installing mpdecimal (4.0.1-r0)
+#6 2.650 (49/60) Installing libpanelw (6.5_p20250503-r0)
+#6 2.660 (50/60) Installing sqlite-libs (3.49.2-r1)
+#6 2.682 (51/60) Installing python3 (3.12.16-r0)
+#6 2.867 (52/60) Installing python3-pycache-pyc0 (3.12.16-r0)
+#6 2.985 (53/60) Installing pyc (3.12.16-r0)
+#6 2.985 (54/60) Installing python3-pyc (3.12.16-r0)
+#6 2.985 (55/60) Installing wireguard-tools-wg (1.0.20250521-r0)
+#6 3.108 (56/60) Installing bash (5.2.37-r0)
+#6 3.129 Executing bash-5.2.37-r0.post-install
+#6 3.132 (57/60) Installing openresolv (3.14.1-r0)
+#6 3.258 (58/60) Installing wireguard-tools-wg-quick (1.0.20250521-r0)
+#6 3.268 (59/60) Installing wireguard-go (0.0.20250515-r5)
+#6 3.413 (60/60) Installing wireguard-tools (1.0.20250521-r0)
+#6 3.423 Executing busybox-1.37.0-r20.trigger
+#6 3.428 OK: 69 MiB in 76 packages
+#6 DONE 4.2s
+
+#7 [3/3] COPY fixture.py /fixture.py
+#7 DONE 0.1s
+
+#8 exporting to image
+#8 exporting layers
+#8 exporting layers 0.3s done
+#8 writing image sha256:b424631dc86306a9082f08bd59e273051b26c9a575eea18385e0585c1b69191d done
+#8 naming to docker.io/library/chriscord-sprint-vpn-fixture:local 0.0s done
+#8 DONE 0.4s

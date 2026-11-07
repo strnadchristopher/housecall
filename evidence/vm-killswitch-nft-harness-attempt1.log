@@ -1,0 +1,74 @@
+PASS canary_ipv4_baseline
+FAIL canary_ipv6_baseline — curl: (7) Failed to connect to fd00:cc:ee::3 port 8080 after 451 ms: Could not connect to server
+server_routes: fd00:cc:ee::/64 dev eth0 proto kernel metric 256 pref medium
+fe80::/64 dev eth0 proto kernel metric 256 pref medium
+fe80::/64 dev wg0 proto kernel metric 256 pref medium
+
+server_addresses: 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 state UNKNOWN qlen 1000
+    inet6 ::1/128 scope host proto kernel_lo 
+       valid_lft forever preferred_lft forever
+2: wg0: <POINTOPOINT,MULTICAST,NOARP,UP,LOWER_UP> mtu 1420 state UNKNOWN qlen 500
+    inet6 fe80::172b:3238:8ca4:9cad/64 scope link stable-privacy proto kernel_ll 
+       valid_lft forever preferred_lft forever
+42: eth0@if43: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 state UP 
+    inet6 fd00:cc:ee::2/64 scope global nodad 
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:acff:fe1d:f002/64 scope link proto kernel_ll 
+       valid_lft forever preferred_lft forever
+
+canary_addresses: 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 state UNKNOWN qlen 1000
+    inet6 ::1/128 scope host proto kernel_lo 
+       valid_lft forever preferred_lft forever
+44: eth0@if45: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 state UP 
+    inet6 fd00:cc:ee::3/64 scope global nodad 
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:acff:fe1d:f003/64 scope link proto kernel_ll 
+       valid_lft forever preferred_lft forever
+
+canary_self: canary
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying [::1]:8080...
+* Connected to ::1 (::1) port 8080
+* using HTTP/1.x
+> GET / HTTP/1.1
+> Host: [::1]:8080
+> User-Agent: curl/8.14.1
+> Accept: */*
+> 
+* Request completely sent off
+* HTTP 1.0, assume close after body
+< HTTP/1.0 200 OK
+< Server: BaseHTTP/0.6 Python/3.12.16
+< Date: Sat, 07 Nov 2026 08:31:31 GMT
+< Content-Length: 7
+< 
+{ [7 bytes data]
+
+100     7  100     7    0     0   2689      0 --:--:-- --:--:-- --:--:--  3500
+* shutting down connection #0
+
+PASS vpn_up_http
+PASS vpn_up_dns
+PASS unhardened_gluetun_local_subnet_bypass_reproduced — exit=0; expected unsafe baseline
+PASS hardened_vpn_up_http
+PASS hardened_vpn_up_dns
+PASS hardened_vpn_up_direct_ipv4_blocked — exit=28
+PASS hardened_vpn_up_direct_ipv6_blocked — exit=28
+PASS nft_survives_iptables_output_flush — exit=28
+Last tunnel probe: curl: (28) Connection timed out after 2001 milliseconds
+FAIL nft_flush_vpn_still_works
+PASS tunnel_down_vpn_http — exit=28
+PASS tunnel_down_direct_ipv4 — exit=28
+PASS tunnel_down_direct_ipv6 — exit=28
+PASS tunnel_down_dns_ipv4 — exit=9
+PASS tunnel_down_dns_ipv6 — exit=9
+Last tunnel probe: curl: (28) Connection timed out after 2002 milliseconds
+FAIL vpn_restored_http
+PASS client_tunnel_removed_vpn_http — exit=28
+PASS client_tunnel_removed_direct_ipv4 — exit=28
+PASS client_tunnel_removed_direct_ipv6 — exit=28
+PASS client_tunnel_removed_dns_ipv4 — exit=9
+PASS client_tunnel_removed_dns_ipv6 — exit=9
+Cleaned only owned chriscord-sprint-vpn-b55f48d9 resources

@@ -1,0 +1,11 @@
+PASS IPv6 local positive baseline under UID47191
+table inet chriscord_vm_47191 {
+	chain output {
+		type filter hook output priority -200; policy accept;
+		meta skuid 47191 meta nfproto ipv4 oifname "tun0" accept
+		meta skuid 47191 drop
+	}
+}
+PASS IPv6 UID47191 blocked by shipping nft policy
+PASS IPv6 nft policy survives iptables OUTPUT flush
+PASS Other namespace UID unaffected

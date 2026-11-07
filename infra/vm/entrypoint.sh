@@ -4,8 +4,16 @@ set -eu
 # The overlay is persistent. Reset is an explicit offline operation, never a boot side effect.
 test -c /dev/kvm || { echo 'KVM unavailable' >&2; exit 1; }
 test -f /vm/base.qcow2 || { echo 'Missing administrator-prepared /vm/base.qcow2' >&2; exit 1; }
-# Refuse startup without a VPN tunnel. Runtime isolation relies on Gluetun firewall, not this check.
-ip link show tun0 >/dev/null 2>&1 || ip link show wg0 >/dev/null 2>&1 || { echo 'VPN tunnel unavailable' >&2; exit 1; }
+# Compose gates startup on successful nft policy installation in this exact namespace.
+test "$(id -u)" = 47191 || { echo 'QEMU must run as reserved UID 47191' >&2; exit 1; }
+test "$(cat /control/policy-namespace)" = "$(readlink /proc/self/ns/net)" || { echo 'Policy namespace mismatch' >&2; exit 1; }
+iface=${VM_TUNNEL_INTERFACE:-tun0}
+case "$iface" in tun0|wg0) ;; *) exit 1;; esac
+ip link show "$iface" >/dev/null || { echo 'VPN tunnel unavailable' >&2; exit 1; }
+# Literal resolv.conf is bind-mounted read-only; Docker loopback DNS would bypass the UID boundary.
+if grep -Eq '^[[:space:]]*nameserver[[:space:]]+(127\.|::1)' /etc/resolv.conf; then
+  echo 'Loopback DNS is forbidden for the VM' >&2; exit 1
+fi
 if [ ! -e /vm/session.qcow2 ]; then
   qemu-img create -f qcow2 -F qcow2 -b /vm/base.qcow2 /vm/session.qcow2
 fi

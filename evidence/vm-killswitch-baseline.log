@@ -1,0 +1,17 @@
+PASS canary_ipv4_baseline
+FAIL canary_ipv6_baseline
+PASS vpn_up_http
+PASS vpn_up_dns
+FAIL vpn_up_direct_canary_blocked — exit=0
+PASS tunnel_down_vpn_http — exit=28
+FAIL tunnel_down_direct_ipv4 — exit=0
+PASS tunnel_down_direct_ipv6 — exit=28
+FAIL tunnel_down_dns_ipv4 — exit=0
+PASS tunnel_down_dns_ipv6 — exit=9
+PASS vpn_restored_http
+PASS client_tunnel_removed_vpn_http — exit=28
+FAIL client_tunnel_removed_direct_ipv4 — exit=0
+PASS client_tunnel_removed_direct_ipv6 — exit=28
+FAIL client_tunnel_removed_dns_ipv4 — exit=0
+PASS client_tunnel_removed_dns_ipv6 — exit=9
+Cleaned only owned chriscord-sprint-vpn-509d498d resources

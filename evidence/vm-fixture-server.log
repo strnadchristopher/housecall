@@ -1,0 +1,68 @@
+HTTP_CANARY 10.99.0.2 "GET / HTTP/1.1" 200 -
+HTTP_CANARY 10.99.0.2 "GET / HTTP/1.1" 200 -
+HTTP_CANARY 10.99.0.2 "GET / HTTP/1.1" 200 -
+HTTP_CANARY 10.99.0.2 "GET / HTTP/1.1" 200 -
+┌──────────────────────────────────────────────────────┐
+│                                                      │
+│   Running wireguard-go is not required because this  │
+│   kernel has first class support for WireGuard. For  │
+│   information on installing the kernel module,       │
+│   please visit:                                      │
+│         https://www.wireguard.com/install/           │
+│                                                      │
+└──────────────────────────────────────────────────────┘
+dnsmasq[31]: started, version 2.91 cachesize 150
+dnsmasq[31]: DNS service limited to local subnets
+dnsmasq[31]: compile time options: IPv6 GNU-getopt no-DBus no-UBus no-i18n no-IDN DHCP DHCPv6 no-Lua TFTP no-conntrack ipset no-nftset auth no-DNSSEC loop-detect inotify dumpfile
+dnsmasq[31]: LOUD WARNING: listening on 198.18.0.2 may accept requests via interfaces other than lo
+dnsmasq[31]: LOUD WARNING: use --bind-dynamic rather than --bind-interfaces to avoid DNS amplification attacks via these interface(s)
+dnsmasq[31]: warning: no upstream servers configured
+dnsmasq[31]: LOUD WARNING: listening on 198.18.0.2 may accept requests via interfaces other than lo
+dnsmasq[31]: LOUD WARNING: use --bind-dynamic rather than --bind-interfaces to avoid DNS amplification attacks via these interface(s)
+dnsmasq[31]: cleared cache
+dnsmasq[31]: LOUD WARNING: listening on 198.18.0.2 may accept requests via interfaces other than lo
+dnsmasq[31]: LOUD WARNING: use --bind-dynamic rather than --bind-interfaces to avoid DNS amplification attacks via these interface(s)
+dnsmasq[31]: query[A] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-zc2o2zsgojvr.ipleak.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[AAAA] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-x126ckmjira8.ipleak.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[AAAA] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-94cypwz4kbqg.ipleak.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[AAAA] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-56vucpnat6do.ipleak.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[AAAA] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-zc2o2zsgojvr.ipleak.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[A] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-x126ckmjira8.ipleak.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[A] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-94cypwz4kbqg.ipleak.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[A] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-56vucpnat6do.ipleak.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[A] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-wldl7mx68l4f.ipleak.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[AAAA] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-wldl7mx68l4f.ipleak.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[A] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-94cypwz4kbqg.ipleak.net.dropbear-danio.ts.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[AAAA] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-94cypwz4kbqg.ipleak.net.dropbear-danio.ts.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[A] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-56vucpnat6do.ipleak.net.dropbear-danio.ts.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[AAAA] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-56vucpnat6do.ipleak.net.dropbear-danio.ts.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[A] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-zc2o2zsgojvr.ipleak.net.dropbear-danio.ts.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[AAAA] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-zc2o2zsgojvr.ipleak.net.dropbear-danio.ts.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[AAAA] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-x126ckmjira8.ipleak.net.dropbear-danio.ts.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[A] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-x126ckmjira8.ipleak.net.dropbear-danio.ts.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[A] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-wldl7mx68l4f.ipleak.net.dropbear-danio.ts.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[AAAA] miwv6oet86jjk21yty5gmh362r77fx88ymuxlsh4-wldl7mx68l4f.ipleak.net.dropbear-danio.ts.net from 10.99.0.2
+dnsmasq[31]: config error is REFUSED (EDE: not ready)
+dnsmasq[31]: query[A] fixture.test from 10.99.0.2
+dnsmasq[31]: config fixture.test is 198.18.0.2
+dnsmasq[31]: query[A] fixture.test from 10.99.0.2
+dnsmasq[31]: config fixture.test is 198.18.0.2
