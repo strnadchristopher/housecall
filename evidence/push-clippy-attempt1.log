@@ -1,0 +1,35 @@
+    Checking tokio-util v0.7.20
+    Checking equivalent v1.0.3
+    Checking hashbrown v0.17.1
+    Checking indexmap v2.14.2
+    Checking h2 v0.4.19
+    Checking hyper v1.12.0
+    Checking hyper-util v0.1.21
+    Checking tower-http v0.6.11
+    Checking hyper-rustls v0.27.10
+    Checking reqwest v0.12.28
+    Checking axum v0.8.9
+    Checking chriscord-sfu v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/sfu)
+    Checking chriscord-activities v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/activities)
+    Checking chriscord-server v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/server)
+error: manual implementation of `.is_multiple_of()`
+   --> server/src/push.rs:330:20
+    |
+330 |                 && token.len() % 2 == 0
+    |                    ^^^^^^^^^^^^^^^^^^^^ help: replace with: `token.len().is_multiple_of(2)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#manual_is_multiple_of
+    = note: `-D clippy::manual-is-multiple-of` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::manual_is_multiple_of)]`
+
+error: redundant closure
+   --> server/src/push.rs:525:22
+    |
+525 |                 .map(|n| Duration::from_secs(n))
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace the closure with the associated function itself: `Duration::from_secs`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#redundant_closure
+    = note: `-D clippy::redundant-closure` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::redundant_closure)]`
+
+error: could not compile `chriscord-server` (lib) due to 2 previous errors

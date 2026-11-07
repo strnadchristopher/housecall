@@ -1,0 +1,32 @@
+   Compiling tokio-util v0.7.20
+   Compiling hashbrown v0.17.1
+   Compiling equivalent v1.0.3
+   Compiling indexmap v2.14.2
+   Compiling h2 v0.4.19
+   Compiling hyper v1.12.0
+   Compiling hyper-util v0.1.21
+   Compiling tower-http v0.6.11
+   Compiling hyper-rustls v0.27.10
+   Compiling reqwest v0.12.28
+   Compiling axum v0.8.9
+   Compiling chriscord-sfu v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/sfu)
+   Compiling chriscord-activities v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/activities)
+   Compiling chriscord-server v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/server)
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+   --> server/src/push.rs:798:25
+    |
+798 |         let mut state = AppState::new(":memory:").unwrap();
+    |                         ^^^^^^^^^^^^^------------ argument #2 of type `&str` is missing
+    |
+note: associated function defined here
+   --> server/src/lib.rs:109:12
+    |
+109 |     pub fn new(database: &str, setup_token: &str) -> Result<Self, rusqlite::Error> {
+    |            ^^^                 -----------------
+help: provide the argument
+    |
+798 |         let mut state = AppState::new(":memory:", /* &str */).unwrap();
+    |                                                 ++++++++++++
+
+For more information about this error, try `rustc --explain E0061`.
+error: could not compile `chriscord-server` (lib test) due to 1 previous error
