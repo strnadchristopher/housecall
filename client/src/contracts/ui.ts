@@ -1,6 +1,6 @@
 export type Phase = 'loading' | 'ready' | 'empty' | 'error' | 'offline' | 'forbidden' | 'unavailable';
 export type ScreenId = 'setup' | 'invite' | 'login' | 'shell' | 'conversation' | 'composer' | 'thread' | 'search' | 'pins' | 'members' | 'direct-messages' | 'uploads' | 'media' | 'gifs' | 'voice' | 'activities' | 'plex' | 'dj' | 'vm' | 'gimme' | 'notifications' | 'settings' | 'devices' | 'invites-admin' | 'report' | 'reports-admin';
-export interface Field { name: string; label: string; type?: 'text' | 'password' | 'number' | 'checkbox'; value?: string; required?: boolean }
+export interface Field { name: string; label: string; type?: 'text' | 'password' | 'number' | 'checkbox' | 'file'; value?: string; required?: boolean }
 export interface Action { id: string; label: string; disabled?: boolean }
 export interface Item { id: string; text: string; actions?: Action[] }
 export interface Intent { screen: ScreenId; action: string; itemId?: string; values: Record<string, string | boolean> }

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Core application window only; no filesystem, shell, or remote IPC permissions.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

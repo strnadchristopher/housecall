@@ -1,0 +1,15 @@
+{
+  "fixture": "30 HTTP chat users; NOT voice/video",
+  "users": 30,
+  "messages": 300,
+  "events_verified": 9000,
+  "seconds": 3.47,
+  "request_ms": {
+    "p50": 282.96,
+    "p95": 707.64,
+    "max": 941.16
+  },
+  "server_peak_rss": "VmHWM:\t   49332 kB",
+  "binary_sha256": "0e230d13f1cebee4309a8d673892e6b51d62c8cf5d5e4459fcf283eb5360b3c1",
+  "conditions": "Debug binary; other builds/media fixture may run concurrently; no latency target claimed"
+}
