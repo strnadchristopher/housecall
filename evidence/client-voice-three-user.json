@@ -5,91 +5,166 @@
       "inbound": [
         {
           "kind": "audio",
-          "packetsReceived": 11,
-          "bytesReceived": 988,
-          "jitter": 0.01
+          "packetsReceived": 30,
+          "bytesReceived": 3217,
+          "jitter": 0.014
         },
         {
           "kind": "audio",
-          "packetsReceived": 39,
-          "bytesReceived": 3089,
-          "jitter": 0.017
+          "packetsReceived": 10,
+          "bytesReceived": 30,
+          "jitter": 0.009
+        },
+        {
+          "kind": "video",
+          "packetsReceived": 9,
+          "bytesReceived": 5024,
+          "framesDecoded": 8,
+          "jitter": 0.01
         },
         {
           "kind": "video",
           "packetsReceived": 2,
-          "bytesReceived": 1299,
+          "bytesReceived": 1045,
+          "framesDecoded": 2,
+          "jitter": 0.002
+        }
+      ],
+      "audioConfiguration": [
+        {
+          "encodings": [
+            {
+              "active": true,
+              "adaptivePtime": false,
+              "maxBitrate": 510000,
+              "networkPriority": "low",
+              "priority": "low"
+            }
+          ],
+          "settings": {
+            "autoGainControl": false,
+            "channelCount": 2,
+            "deviceId": "default",
+            "echoCancellation": false,
+            "groupId": "090dd201c7f7a65c1b1e503d6fbb107a094e70d5eb54fdb43ff7a14dae54edb6",
+            "latency": 0.01,
+            "noiseSuppression": false,
+            "sampleRate": 44100,
+            "sampleSize": 16,
+            "voiceIsolation": false
+          }
+        }
+      ],
+      "remoteMediaElements": 4
+    },
+    {
+      "inbound": [
+        {
+          "kind": "audio",
+          "packetsReceived": 6,
+          "bytesReceived": 962,
+          "jitter": 0.003
+        },
+        {
+          "kind": "audio",
+          "packetsReceived": 35,
+          "bytesReceived": 3040,
+          "jitter": 0.013
+        },
+        {
+          "kind": "video",
+          "packetsReceived": 12,
+          "bytesReceived": 3720,
+          "framesDecoded": 11,
+          "jitter": 0.01
+        },
+        {
+          "kind": "video",
+          "packetsReceived": 2,
+          "bytesReceived": 1045,
+          "framesDecoded": 2,
+          "jitter": 0.002
+        }
+      ],
+      "audioConfiguration": [
+        {
+          "encodings": [
+            {
+              "active": true,
+              "adaptivePtime": false,
+              "maxBitrate": 510000,
+              "networkPriority": "low",
+              "priority": "low"
+            }
+          ],
+          "settings": {
+            "autoGainControl": false,
+            "channelCount": 2,
+            "deviceId": "default",
+            "echoCancellation": false,
+            "groupId": "ff4dae4e599f73f3fc22cfdf900cebf4744339380348902d8a415a321c4bc3ce",
+            "latency": 0.01,
+            "noiseSuppression": false,
+            "sampleRate": 44100,
+            "sampleSize": 16,
+            "voiceIsolation": false
+          }
+        }
+      ],
+      "remoteMediaElements": 4
+    },
+    {
+      "inbound": [
+        {
+          "kind": "audio",
+          "packetsReceived": 8,
+          "bytesReceived": 24,
+          "jitter": 0.004
+        },
+        {
+          "kind": "audio",
+          "packetsReceived": 7,
+          "bytesReceived": 21,
+          "jitter": 0.003
+        },
+        {
+          "kind": "video",
+          "packetsReceived": 3,
+          "bytesReceived": 999,
           "framesDecoded": 1,
           "jitter": 0.002
         },
         {
           "kind": "video",
-          "packetsReceived": 16,
-          "bytesReceived": 10835,
-          "framesDecoded": 7,
-          "jitter": 0.012
-        }
-      ],
-      "remoteMediaElements": 4
-    },
-    {
-      "inbound": [
-        {
-          "kind": "audio",
-          "packetsReceived": 8,
-          "bytesReceived": 1865,
-          "jitter": 0.005
-        },
-        {
-          "kind": "audio",
-          "packetsReceived": 37,
-          "bytesReceived": 3046,
-          "jitter": 0.015
-        },
-        {
-          "kind": "video",
           "packetsReceived": 3,
-          "bytesReceived": 1765,
-          "framesDecoded": 3,
-          "jitter": 0.003
-        },
-        {
-          "kind": "video",
-          "packetsReceived": 15,
-          "bytesReceived": 11157,
-          "framesDecoded": 12,
-          "jitter": 0.007
+          "bytesReceived": 2288,
+          "framesDecoded": 1,
+          "jitter": 0.002
         }
       ],
-      "remoteMediaElements": 4
-    },
-    {
-      "inbound": [
+      "audioConfiguration": [
         {
-          "kind": "audio",
-          "packetsReceived": 9,
-          "bytesReceived": 27,
-          "jitter": 0.005
-        },
-        {
-          "kind": "audio",
-          "packetsReceived": 9,
-          "bytesReceived": 2621,
-          "jitter": 0.005
-        },
-        {
-          "kind": "video",
-          "packetsReceived": 8,
-          "bytesReceived": 5834,
-          "framesDecoded": 1,
-          "jitter": 0.005
-        },
-        {
-          "kind": "video",
-          "packetsReceived": 5,
-          "bytesReceived": 4268,
-          "framesDecoded": 2,
-          "jitter": 0.004
+          "encodings": [
+            {
+              "active": true,
+              "adaptivePtime": false,
+              "maxBitrate": 510000,
+              "networkPriority": "low",
+              "priority": "low"
+            }
+          ],
+          "settings": {
+            "autoGainControl": false,
+            "channelCount": 2,
+            "deviceId": "default",
+            "echoCancellation": false,
+            "groupId": "fc76d42fd4f60fb32dcc196c3c19b0cdd07f8502110a2ea410ec4bddbdf636b7",
+            "latency": 0.01,
+            "noiseSuppression": false,
+            "sampleRate": 44100,
+            "sampleSize": 16,
+            "voiceIsolation": false
+          }
         }
       ],
       "remoteMediaElements": 4

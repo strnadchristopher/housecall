@@ -4,7 +4,7 @@ Running 1 test using 1 worker
   ✘  1 [chromium] › tests/e2e/voice-load.spec.ts:42:1 › bounded thirty-peer real RTP load at 320x180 five fps (22.4s)
 
 
-  1) [chromium] › tests/e2e/voice-load.spec.ts:42:1 › bounded thirty-peer real RTP load at 320x180 five fps 
+  1) [chromium] › tests/e2e/voice-load.spec.ts:42:1 › bounded thirty-peer real RTP load at 320x180 five fps
 
     Error: Bound Chromium+SFU memory to 6 GiB
 
@@ -25,4 +25,4 @@ Running 1 test using 1 worker
     Error Context: test-results/voice-load-bounded-thirty--31ec9-TP-load-at-320x180-five-fps-chromium/error-context.md
 
   1 failed
-    [chromium] › tests/e2e/voice-load.spec.ts:42:1 › bounded thirty-peer real RTP load at 320x180 five fps 
+    [chromium] › tests/e2e/voice-load.spec.ts:42:1 › bounded thirty-peer real RTP load at 320x180 five fps

@@ -34,7 +34,8 @@ jobs:
       - run: npm ci --prefix client
       - run: npm run build --prefix client && npm test --prefix client
       - run: cargo build --locked
-      - run: cd client && npx playwright install --with-deps chromium && npm run e2e && npm run test:voice
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: cd client && npx playwright install --with-deps chromium && npm run e2e && npm run test:voice && node tests/run-plex.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -1,0 +1,29 @@
+{
+  "note": "Real browser HLS decoding through authenticated Rust gateway using a synthetic local Plex-compatible provider. No live Plex account/library, provider transcode or subtitle support claimed.",
+  "playing": [
+    2.907955,
+    2.976656,
+    2.916258
+  ],
+  "paused": [
+    {
+      "time": 3.172,
+      "width": 320,
+      "height": 180,
+      "frames": 54
+    },
+    {
+      "time": 3.172,
+      "width": 320,
+      "height": 180,
+      "frames": 62
+    },
+    {
+      "time": 3.172,
+      "width": 320,
+      "height": 180,
+      "frames": 55
+    }
+  ],
+  "seekSeconds": 6
+}

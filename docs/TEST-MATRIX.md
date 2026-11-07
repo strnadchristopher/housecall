@@ -16,8 +16,8 @@ Only evidence with a successful terminal result establishes a pass. Provisional 
 | Search/pin/react/edit/typing/read | API/client tests | full browser interactions per platform |
 | Giphy | fixed-origin parser/property tests | keyed fixture/live picker fetch and playback |
 | Markdown/embeds | inert markdown AST + public-IP DNS-pinned text previews/SSRF tests | Opus safe semantic renderer; remote image previews |
-| Voice/video/screenshare | 3-browser decoded Opus/VP8 via Rust SFU | <150ms LAN glass-to-glass, 30-peer media load |
-| Plex activity | clock/state tests + Plex fixture | browse and actual transcoded playback/subtitles across 3 clients |
+| Voice/video/screenshare | 3-browser Opus/VP8 + screen replacement; synthetic localhost median48ms/p95 71ms | physical LAN glass-to-glass; load passes5 peers but fails10, 30 unverified |
+| Plex activity | 3-browser real synthetic HLS decode, browse/play/pause/seek with <0.5s drift | live Plex transcoder/library/subtitles and native media support |
 | DJ activity | parser/queue/votes + HTTP/CLI adapters | actual matched source playback, banter between songs, supplied voice reference |
 | Shared VM | controller lease + built VM image + nft VPN namespace isolation | booted Debian, WebRTC capture/audio/control, guest-level VPN check, reset |
 | Gimme | v2 discovery/submission/job fixtures + explicit dry run | durable server job worker/channel status; no production calls in sprint |

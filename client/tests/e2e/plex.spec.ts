@@ -51,6 +51,7 @@ test("three live voice peers browse and synchronously play real HLS from a synth
       });
       contexts.push(context);
       const page = await context.newPage();
+      page.setDefaultTimeout(10000);
       await page.goto("/");
       await page.getByLabel("Username", { exact: true }).fill(username);
       await page.getByLabel("Password (at least 12 characters)").fill(password);
@@ -76,7 +77,7 @@ test("three live voice peers browse and synchronously play real HLS from a synth
       });
     }
     const host = contexts[0].pages()[0];
-    await host.getByRole("button", { name: "Activities", exact: true }).click();
+    await host.getByRole("button", { name: "Activity controls", exact: true }).click();
     await host
       .getByRole("button", { name: "Start plex control session", exact: true })
       .click();

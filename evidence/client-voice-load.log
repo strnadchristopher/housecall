@@ -4,7 +4,7 @@ Running 1 test using 1 worker
   ✘  1 [chromium] › tests/e2e/voice-load.spec.ts:51:1 › bounded thirty-peer real RTP load at 320x180 five fps (34.5s)
 
 
-  1) [chromium] › tests/e2e/voice-load.spec.ts:51:1 › bounded thirty-peer real RTP load at 320x180 five fps 
+  1) [chromium] › tests/e2e/voice-load.spec.ts:51:1 › bounded thirty-peer real RTP load at 320x180 five fps
 
     Error: 10 peers must each decode every other peer
 
@@ -24,5 +24,4 @@ Running 1 test using 1 worker
     Error Context: test-results/voice-load-bounded-thirty--31ec9-TP-load-at-320x180-five-fps-chromium/error-context.md
 
   1 failed
-    [chromium] › tests/e2e/voice-load.spec.ts:51:1 › bounded thirty-peer real RTP load at 320x180 five fps 
-�� tests/e2e/voice-load.spec.ts:42:1 › bounded thirty-peer real RTP load at 320x180 five fps 
+    [chromium] › tests/e2e/voice-load.spec.ts:51:1 › bounded thirty-peer real RTP load at 320x180 five fps
