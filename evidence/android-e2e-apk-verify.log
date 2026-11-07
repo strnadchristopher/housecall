@@ -1,0 +1,9 @@
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+c14d31715e69a6d4505bf220838ba89811a059778f9536f9f4fa429fd91bf933  client/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk

@@ -1,0 +1,9 @@
+{
+  "error": "TypeError: Failed to fetch",
+  "violations": [
+    {
+      "directive": "connect-src",
+      "uri": "http://127.0.0.1:3031/api/health"
+    }
+  ]
+}
