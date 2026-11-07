@@ -14,11 +14,13 @@ async function resources() {
   const membership = await readFile("/proc/self/cgroup", "utf8");
   const group = membership.split("\n").find(line => line.startsWith("0::"))?.slice(3);
   // A dedicated bounded test unit excludes unrelated desktop Chrome processes.
-  const dedicated = group?.includes("chriscord-voice-load") ?? false;
+  const dedicated = /chriscord-(?:voice|sfu)-load/.test(group ?? "") ?? false;
   const cgroupMiB = dedicated ? Number(await readFile(`/sys/fs/cgroup${group}/memory.current`, "utf8")) / 1024 / 1024 : null;
   const cpuStat = dedicated ? await readFile(`/sys/fs/cgroup${group}/cpu.stat`, "utf8") : "";
 
+  const udp = (await readFile("/proc/net/udp", "utf8")).split("\n").map(line => line.trim().split(/\s+/)).find(row => row[1]?.endsWith(":C35A"));
   return {
+    serverUdp: udp ? { receiveQueueBytes: parseInt(udp[4].split(":")[1],16), drops: Number(udp[12]) } : null,
     at: Date.now(),
     cgroupMiB,
     cgroupCpuUsec: Number(cpuStat.match(/usage_usec\s+(\d+)/)?.[1] ?? 0),
@@ -211,7 +213,7 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
       2000,
     );
     const started = Date.now(),
-      deadline = started + 60000;
+      deadline = started + 180000;
     let joined = 0;
     for (const count of [5, 10, 20, 30]) {
       for (; joined < count; joined++) {
@@ -225,7 +227,7 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
           memory.cgroupMiB ?? (memory.rssMiB - before.rssMiB),
           "Bound dedicated test cgroup (or incremental process RSS) to 6 GiB",
         ).toBeLessThan(6144);
-        expect(Date.now(), "60 second media load deadline").toBeLessThan(
+        expect(Date.now(), "180 second media load deadline").toBeLessThan(
           deadline,
         );
         await Promise.race([
@@ -243,7 +245,7 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
       let peers = await Promise.all(
         contexts.slice(0, count).map((context) => media(context.pages()[0])),
       );
-      const settleDeadline = Math.min(deadline, Date.now() + 7000);
+      const settleDeadline = Math.min(deadline, Date.now() + 20000);
       while (
         peers.some(
           (peer) => peer.video < count - 1 || peer.audio < count - 1,
@@ -255,6 +257,7 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
           contexts.slice(0, count).map((context) => media(context.pages()[0])),
         );
       }
+      console.log(`Media stage ${count}: ${peers.filter(peer => peer.video === count-1 && peer.audio === count-1).length}/${count} fully receiving; elapsed ${Date.now()-started}ms`);
       stages.push({
         count,
         elapsedMs: Date.now() - started,

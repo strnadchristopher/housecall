@@ -1,0 +1,27 @@
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/e2e/voice-load.spec.ts:51:1 › bounded thirty-peer real RTP load at 320x180 five fps (34.5s)
+
+
+  1) [chromium] › tests/e2e/voice-load.spec.ts:51:1 › bounded thirty-peer real RTP load at 320x180 five fps
+
+    Error: 10 peers must each decode every other peer
+
+    expect(received).toBeTruthy()
+
+    Received: false
+
+      206 |         ),
+      207 |         `${count} peers must each decode every other peer`,
+    > 208 |       ).toBeTruthy();
+          |         ^
+      209 |     }
+      210 |   } finally {
+      211 |     clearInterval(timer);
+        at /home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/voice-load.spec.ts:208:9
+
+    Error Context: test-results/voice-load-bounded-thirty--31ec9-TP-load-at-320x180-five-fps-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/e2e/voice-load.spec.ts:51:1 › bounded thirty-peer real RTP load at 320x180 five fps

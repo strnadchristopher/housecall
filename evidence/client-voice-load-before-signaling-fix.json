@@ -1,0 +1,261 @@
+{
+  "profile": {
+    "peers": 30,
+    "width": 320,
+    "height": 180,
+    "framesPerSecond": 5,
+    "opusTargetBps": 510000,
+    "loadDeadlineMs": 60000
+  },
+  "note": "Real Chromium fake-capture RTP through the Rust SFU at reduced video resolution/frame rate. Not a production 720p or physical glass-to-glass claim. Dedicated systemd cgroup memory/CPU excludes unrelated browsers; ps CPU is lifetime average and summed RSS includes background browsers/shared pages. The first failed attempt incorrectly applied an absolute summed-RSS guard to unrelated Chrome processes.",
+  "before": {
+    "at": 1794041379934,
+    "cgroupMiB": 564.96484375,
+    "cgroupCpuUsec": 8007375,
+    "rssMiB": 3082,
+    "cpuPercent": 105.5,
+    "availableMiB": 8300
+  },
+  "stages": [
+    {
+      "count": 5,
+      "elapsedMs": 2641,
+      "peers": [
+        {
+          "video": 4,
+          "audio": 4,
+          "frames": 21,
+          "bytes": 65066
+        },
+        {
+          "video": 4,
+          "audio": 4,
+          "frames": 22,
+          "bytes": 68573
+        },
+        {
+          "video": 4,
+          "audio": 4,
+          "frames": 19,
+          "bytes": 64674
+        },
+        {
+          "video": 4,
+          "audio": 4,
+          "frames": 16,
+          "bytes": 56101
+        },
+        {
+          "video": 4,
+          "audio": 4,
+          "frames": 10,
+          "bytes": 36966
+        }
+      ],
+      "resources": {
+        "at": 1794041404899,
+        "cgroupMiB": 1581.30859375,
+        "cgroupCpuUsec": 41028145,
+        "rssMiB": 7342,
+        "cpuPercent": 157.09999999999997,
+        "availableMiB": 7216
+      }
+    },
+    {
+      "count": 10,
+      "elapsedMs": 11465,
+      "peers": [
+        {
+          "video": 6,
+          "audio": 6,
+          "frames": 132,
+          "bytes": 644866
+        },
+        {
+          "video": 8,
+          "audio": 9,
+          "frames": 150,
+          "bytes": 745633
+        },
+        {
+          "video": 6,
+          "audio": 6,
+          "frames": 142,
+          "bytes": 636322
+        },
+        {
+          "video": 8,
+          "audio": 8,
+          "frames": 159,
+          "bytes": 768527
+        },
+        {
+          "video": 7,
+          "audio": 7,
+          "frames": 139,
+          "bytes": 655371
+        },
+        {
+          "video": 7,
+          "audio": 7,
+          "frames": 87,
+          "bytes": 565038
+        },
+        {
+          "video": 0,
+          "audio": 0,
+          "frames": 0,
+          "bytes": 0
+        },
+        {
+          "video": 8,
+          "audio": 9,
+          "frames": 71,
+          "bytes": 542180
+        },
+        {
+          "video": 8,
+          "audio": 8,
+          "frames": 33,
+          "bytes": 338911
+        },
+        {
+          "video": 0,
+          "audio": 0,
+          "frames": 0,
+          "bytes": 0
+        }
+      ],
+      "resources": {
+        "at": 1794041413735,
+        "cgroupMiB": 1760.82421875,
+        "cgroupCpuUsec": 63550823,
+        "rssMiB": 7678,
+        "cpuPercent": 172.30000000000007,
+        "availableMiB": 6949
+      }
+    }
+  ],
+  "samples": [
+    {
+      "at": 1794041402273,
+      "cgroupMiB": 1458.1015625,
+      "cgroupCpuUsec": 36802655,
+      "rssMiB": 6953,
+      "cpuPercent": 270.1000000000001,
+      "availableMiB": 7339
+    },
+    {
+      "at": 1794041402663,
+      "cgroupMiB": 1484.69921875,
+      "cgroupCpuUsec": 37079542,
+      "rssMiB": 7124,
+      "cpuPercent": 210.69999999999993,
+      "availableMiB": 7315
+    },
+    {
+      "at": 1794041402873,
+      "cgroupMiB": 1493.05078125,
+      "cgroupCpuUsec": 37276402,
+      "rssMiB": 7154,
+      "cpuPercent": 194.4,
+      "availableMiB": 7289
+    },
+    {
+      "at": 1794041403221,
+      "cgroupMiB": 1506.62890625,
+      "cgroupCpuUsec": 37719379,
+      "rssMiB": 7198,
+      "cpuPercent": 180.49999999999994,
+      "availableMiB": 7279
+    },
+    {
+      "at": 1794041403499,
+      "cgroupMiB": 1518.30078125,
+      "cgroupCpuUsec": 38250629,
+      "rssMiB": 7235,
+      "cpuPercent": 172.4,
+      "availableMiB": 7277
+    },
+    {
+      "at": 1794041404277,
+      "cgroupMiB": 1562.25390625,
+      "cgroupCpuUsec": 39848789,
+      "rssMiB": 7321,
+      "cpuPercent": 161.4,
+      "availableMiB": 7236
+    },
+    {
+      "at": 1794041404932,
+      "cgroupMiB": 1582.4453125,
+      "cgroupCpuUsec": 41100182,
+      "rssMiB": 7343,
+      "cpuPercent": 157.19999999999996,
+      "availableMiB": 7215
+    },
+    {
+      "at": 1794041405165,
+      "cgroupMiB": 1587.55078125,
+      "cgroupCpuUsec": 41569748,
+      "rssMiB": 7367,
+      "cpuPercent": 155.59999999999997,
+      "availableMiB": 7209
+    },
+    {
+      "at": 1794041405420,
+      "cgroupMiB": 1607.99609375,
+      "cgroupCpuUsec": 42268382,
+      "rssMiB": 7408,
+      "cpuPercent": 155.19999999999996,
+      "availableMiB": 7182
+    },
+    {
+      "at": 1794041405666,
+      "cgroupMiB": 1619.22265625,
+      "cgroupCpuUsec": 42832374,
+      "rssMiB": 7443,
+      "cpuPercent": 155.29999999999995,
+      "availableMiB": 7170
+    },
+    {
+      "at": 1794041405958,
+      "cgroupMiB": 1632.94921875,
+      "cgroupCpuUsec": 43602772,
+      "rssMiB": 7476,
+      "cpuPercent": 155.49999999999997,
+      "availableMiB": 7134
+    },
+    {
+      "at": 1794041406312,
+      "cgroupMiB": 1646.3359375,
+      "cgroupCpuUsec": 44531727,
+      "rssMiB": 7517,
+      "cpuPercent": 155.20000000000002,
+      "availableMiB": 7106
+    },
+    {
+      "at": 1794041408305,
+      "cgroupMiB": 1711.515625,
+      "cgroupCpuUsec": 49443573,
+      "rssMiB": 7615,
+      "cpuPercent": 157.6,
+      "availableMiB": 7043
+    },
+    {
+      "at": 1794041410369,
+      "cgroupMiB": 1753.3515625,
+      "cgroupCpuUsec": 54635658,
+      "rssMiB": 7670,
+      "cpuPercent": 163.39999999999998,
+      "availableMiB": 7012
+    },
+    {
+      "at": 1794041412311,
+      "cgroupMiB": 1766.94921875,
+      "cgroupCpuUsec": 59796869,
+      "rssMiB": 7683,
+      "cpuPercent": 168.6,
+      "availableMiB": 6974
+    }
+  ]
+}
