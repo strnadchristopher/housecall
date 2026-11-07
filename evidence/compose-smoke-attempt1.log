@@ -1,0 +1,38 @@
+ Network chriscord-sprint-compose_default  Creating
+ Network chriscord-sprint-compose_default  Created
+ Volume "chriscord-sprint-compose_app-data"  Creating
+ Volume "chriscord-sprint-compose_app-data"  Created
+ Volume "chriscord-sprint-compose_scan-socket"  Creating
+ Volume "chriscord-sprint-compose_scan-socket"  Created
+ Container chriscord-sprint-compose-scanner-1  Creating
+ Container chriscord-sprint-compose-app-1  Creating
+ Container chriscord-sprint-compose-scanner-1  Created
+ Container chriscord-sprint-compose-app-1  Created
+ Container chriscord-sprint-compose-scanner-1  Starting
+ Container chriscord-sprint-compose-app-1  Starting
+ Container chriscord-sprint-compose-scanner-1  Started
+ Container chriscord-sprint-compose-app-1  Started
+
+ Container chriscord-sprint-compose-app-1  Stopping
+ Container chriscord-sprint-compose-app-1  Stopped
+ Container chriscord-sprint-compose-app-1  Removing
+ Container chriscord-sprint-compose-app-1  Removed
+ Container chriscord-sprint-compose-scanner-1  Stopping
+ Container chriscord-sprint-compose-scanner-1  Stopped
+ Container chriscord-sprint-compose-scanner-1  Removing
+ Container chriscord-sprint-compose-scanner-1  Removed
+ Volume chriscord-sprint-compose_scan-socket  Removing
+ Volume chriscord-sprint-compose_app-data  Removing
+ Network chriscord-sprint-compose_default  Removing
+ Volume chriscord-sprint-compose_app-data  Removed
+ Volume chriscord-sprint-compose_scan-socket  Removed
+ Network chriscord-sprint-compose_default  Removed
+
+Traceback (most recent call last):
+  File "/home/christopher/GitHub/.worktrees/chriscord/sprint/scripts/test-compose.py", line 101, in <module>
+    if __name__=='__main__':main()
+                            ~~~~^^
+  File "/home/christopher/GitHub/.worktrees/chriscord/sprint/scripts/test-compose.py", line 73, in main
+    time.sleep(1)
+    ~~~~~~~~~~^^^
+KeyboardInterrupt

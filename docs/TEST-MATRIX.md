@@ -20,7 +20,7 @@ Only evidence with a successful terminal result establishes a pass. Provisional 
 | Plex activity | 3-browser real synthetic HLS decode, browse/play/pause/seek with <0.5s drift | live Plex transcoder/library/subtitles and native media support |
 | DJ activity | parser/queue/votes + HTTP/CLI adapters | actual matched source playback, banter between songs, supplied voice reference |
 | Shared VM | controller lease + built VM image + nft VPN namespace isolation | booted Debian, WebRTC capture/audio/control, guest-level VPN check, reset |
-| Gimme | v2 discovery/submission/job fixtures + explicit dry run | durable server job worker/channel status; no production calls in sprint |
+| Gimme | durable worker/idempotency/restart fixtures + 3-user dry-run channel status | live provider compatibility; no production calls in sprint |
 | Reports | consent/redaction and owner authorization tests | consented screenshot upload/display flow |
 | Compose | configuration validation | isolated container build/runtime health/readiness |
 | Desktop | patched Tauri Linux release + checksum, Windows/macOS CI | observed Windows/macOS CI success and real OS media permissions |

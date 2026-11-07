@@ -1,0 +1,10 @@
+[2Kapp-1  | [2m2026-11-07T09:04:35.898256Z[0m [32m INFO[0m [2mchriscord_server::voice[0m[2m:[0m private WebRTC SFU enabled [3maddress[0m[2m=[0m127.0.0.1:46131
+[2Kapp-1  | [2m2026-11-07T09:04:35.898412Z[0m [32m INFO[0m [2mchriscord_server[0m[2m:[0m Chriscord listening [3maddress[0m[2m=[0m0.0.0.0:3000
+[2Kscanner-1  | Starting Freshclamd
+[2Kscanner-1  | Starting ClamAV
+[2Kscanner-1  | 
+Socket for clamd not found yet, retrying (0/1800) ...ClamAV update process started at Sat Nov  7 09:04:35 2026
+[2Kscanner-1  | daily.cld database is up-to-date (version: 28176, sigs: 355854, f-level: 90, builder: svc.clamav-publisher)
+[2Kscanner-1  | main.cvd database is up-to-date (version: 63, sigs: 3287027, f-level: 90, builder: tomjudge)
+[2Kscanner-1  | bytecode.cvd database is up-to-date (version: 339, sigs: 80, f-level: 90, builder: nrandolp)
+[2Kscanner-1  | ERROR: Sat Nov  7 09:04:48 2026 -> LOCAL: Socket file /run/clamav/clamd.sock could not be bound: Permission denied

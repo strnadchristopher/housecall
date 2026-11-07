@@ -70,6 +70,13 @@ test("three private users: invitation, realtime mentions, unsend/retraction, edi
   const [owner, bob, carol] = await Promise.all(
     contexts.map((c) => c.newPage()),
   );
+  for (const [index, page] of [owner, bob, carol].entries()) {
+    page.setDefaultTimeout(15000);
+    page.on("response", response => {
+      if (response.status() >= 400)
+        console.log(`Fixture user ${index}: HTTP ${response.status()} ${new URL(response.url()).pathname}`);
+    });
+  }
   const authenticator = await contexts[1].newCDPSession(bob);
   await authenticator.send("WebAuthn.enable");
   await authenticator.send("WebAuthn.addVirtualAuthenticator", {

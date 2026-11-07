@@ -14,3 +14,7 @@ Owner: root engineering agent; Codex subagents have disjoint file ownership. No 
 ## Execution rules
 
 No more than two heavy compiles; Rust uses jobs=2, serialize native builds when memory is tight. Secrets never logged or committed. External-service tests use isolated fixtures. Record two failures of the same approach and move to another milestone. No skipped or mocked test presented as real deployment, media latency, push delivery, device, or VPN evidence.
+
+## Current acceptance order
+
+UI contract and tested private-chat/media/Plex/Gimme slices are committed. Complete installed-APK Android core flow, rebuild and verify corrected Compose image, then run SFU load diagnostics after all heavy jobs stop. Continue missing DJ media orchestration, booted VM capture/control, native push and platform gaps explicitly tracked in docs/TEST-MATRIX.md. SPRINT_DONE remains forbidden while any requirement is unverified.

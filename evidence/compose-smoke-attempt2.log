@@ -1,0 +1,77 @@
+ Network chriscord-sprint-compose_default  Creating
+ Network chriscord-sprint-compose_default  Created
+ Volume "chriscord-sprint-compose_app-data"  Creating
+ Volume "chriscord-sprint-compose_app-data"  Created
+ Volume "chriscord-sprint-compose_scan-socket"  Creating
+ Volume "chriscord-sprint-compose_scan-socket"  Created
+ Container chriscord-sprint-compose-scanner-1  Creating
+ Container chriscord-sprint-compose-app-1  Creating
+ Container chriscord-sprint-compose-scanner-1  Created
+ Container chriscord-sprint-compose-app-1  Created
+ Container chriscord-sprint-compose-scanner-1  Starting
+ Container chriscord-sprint-compose-app-1  Starting
+ Container chriscord-sprint-compose-scanner-1  Started
+ Container chriscord-sprint-compose-app-1  Started
+
+ Container chriscord-sprint-compose-app-1  Stopping
+ Container chriscord-sprint-compose-app-1  Stopped
+ Container chriscord-sprint-compose-app-1  Removing
+ Container chriscord-sprint-compose-app-1  Removed
+ Container chriscord-sprint-compose-scanner-1  Stopping
+ Container chriscord-sprint-compose-scanner-1  Stopped
+ Container chriscord-sprint-compose-scanner-1  Removing
+ Container chriscord-sprint-compose-scanner-1  Removed
+ Volume chriscord-sprint-compose_scan-socket  Removing
+ Volume chriscord-sprint-compose_app-data  Removing
+ Network chriscord-sprint-compose_default  Removing
+ Volume chriscord-sprint-compose_app-data  Removed
+ Volume chriscord-sprint-compose_scan-socket  Removed
+ Network chriscord-sprint-compose_default  Removed
+
+Traceback (most recent call last):
+  File "/home/christopher/GitHub/.worktrees/chriscord/sprint/scripts/test-compose.py", line 101, in <module>
+    if __name__=='__main__':main()
+                            ~~~~^^
+  File "/home/christopher/GitHub/.worktrees/chriscord/sprint/scripts/test-compose.py", line 73, in main
+    time.sleep(1)
+    ~~~~~~~~~~^^^
+KeyboardInterrupt
+ Container chriscord-sprint-compose-app-1  Stopping
+ Container chriscord-sprint-compose-app-1  Stopped
+ Container chriscord-sprint-compose-app-1  Removing
+ Container chriscord-sprint-compose-app-1  Removed
+ Container chriscord-sprint-compose-scanner-1  Stopping
+ Container chriscord-sprint-compose-scanner-1  Stopped
+ Container chriscord-sprint-compose-scanner-1  Removing
+ Container chriscord-sprint-compose-scanner-1  Removed
+ Container chriscord-sprint-compose-scanner-init-1  Stopping
+ Container chriscord-sprint-compose-scanner-init-1  Stopped
+ Container chriscord-sprint-compose-scanner-init-1  Removing
+ Container chriscord-sprint-compose-scanner-init-1  Removed
+ Volume chriscord-sprint-compose_scan-socket  Removing
+ Volume chriscord-sprint-compose_app-data  Removing
+ Network chriscord-sprint-compose_default  Removing
+ Volume chriscord-sprint-compose_scan-socket  Removed
+ Volume chriscord-sprint-compose_app-data  Removed
+ Network chriscord-sprint-compose_default  Removed
+
+Traceback (most recent call last):
+  File "/home/christopher/GitHub/.worktrees/chriscord/sprint/scripts/test-compose.py", line 101, in <module>
+    if __name__=='__main__':main()
+                            ~~~~^^
+  File "/home/christopher/GitHub/.worktrees/chriscord/sprint/scripts/test-compose.py", line 45, in main
+    result=cli('up','-d','--no-build','app','scanner');print(result.stdout,flush=True)
+  File "/home/christopher/GitHub/.worktrees/chriscord/sprint/scripts/test-compose.py", line 29, in cli
+    return subprocess.run(base+list(args),cwd=ROOT,env=clean_env,check=check,timeout=240,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 556, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 1222, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 2128, in _communicate
+    ready = selector.select(timeout)
+  File "/usr/lib/python3.13/selectors.py", line 398, in select
+    fd_event_list = self._selector.poll(timeout)
+KeyboardInterrupt

@@ -2,6 +2,9 @@ name: chriscord
 services:
   app:
     build: .
+    depends_on:
+      scanner:
+        condition: service_healthy
     restart: unless-stopped
     init: true
     ports:
@@ -40,8 +43,29 @@ services:
     cap_drop: [ALL]
     mem_limit: 1g
     pids_limit: 128
-  scanner:
+  scanner-init:
     image: clamav/clamav:1.4
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-ec", "chown 100:101 /scan && chmod 0755 /scan"]
+    volumes: ["scan-socket:/scan"]
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 32m
+    pids_limit: 16
+  scanner:
+    depends_on:
+      scanner-init:
+        condition: service_completed_successfully
+    image: clamav/clamav:1.4
+    healthcheck:
+      test: ["CMD", "clamdscan", "--ping", "1"]
+      interval: 10s
+      timeout: 3s
+      start_period: 180s
+      retries: 6
     volumes:
       - scan-socket:/run/clamav
       - scanner-db:/var/lib/clamav

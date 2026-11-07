@@ -26,7 +26,7 @@ def main():
     clean_env={k:v for k,v in os.environ.items() if not k.startswith(('CHRISCORD_','SFU_','PLEX_','GIMME_','GIPHY_','SWITCHBOARD_','APNS_','FCM_','GLUETUN_','VM_'))}
     checks=[]
     def cli(*args,check=True):
-        return subprocess.run(base+list(args),cwd=ROOT,env=clean_env,check=check,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+        return subprocess.run(base+list(args),cwd=ROOT,env=clean_env,check=check,timeout=240,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
     origin=f'http://127.0.0.1:{port}'
     def call(path,body=None,auth=None,method=None,extra=None,raw=False):
         headers={}
@@ -42,7 +42,7 @@ def main():
         checks.append({'check':name,'passed':bool(condition)})
         if not condition:raise AssertionError(name)
     try:
-        result=cli('up','-d','--no-build','app','scanner');print(result.stdout)
+        result=cli('up','-d','--no-build','app','scanner');print(result.stdout,flush=True)
         deadline=time.monotonic()+120
         while True:
             try:
