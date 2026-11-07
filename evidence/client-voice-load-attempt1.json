@@ -1,0 +1,26 @@
+{
+  "profile": {
+    "peers": 30,
+    "width": 320,
+    "height": 180,
+    "framesPerSecond": 5,
+    "opusTargetBps": 510000,
+    "loadDeadlineMs": 60000
+  },
+  "note": "Real Chromium fake-capture RTP through the Rust SFU at reduced video resolution/frame rate. Not a production 720p or physical glass-to-glass claim. CPU is ps lifetime average; summed RSS may double-count shared pages.",
+  "before": {
+    "at": 1794041330527,
+    "rssMiB": 3078,
+    "cpuPercent": 79.69999999999999,
+    "availableMiB": 8166
+  },
+  "stages": [],
+  "samples": [
+    {
+      "at": 1794041352583,
+      "rssMiB": 6821,
+      "cpuPercent": 262.70000000000005,
+      "availableMiB": 7291
+    }
+  ]
+}

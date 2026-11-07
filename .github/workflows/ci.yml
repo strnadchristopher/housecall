@@ -62,3 +62,31 @@ jobs:
         with:
           name: desktop-${{ matrix.os }}
           path: client/src-tauri/target/release/chriscord*
+
+  android:
+    runs-on: ubuntu-24.04
+    env:
+      CARGO_BUILD_JOBS: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - name: Install Android build tools
+        shell: bash
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> "$GITHUB_ENV"
+      - run: npm ci --prefix client
+      - run: cd client && npx tauri android build --target aarch64 --debug --apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-arm64-debug
+          path: client/src-tauri/gen/android/app/build/outputs/apk/**/*.apk

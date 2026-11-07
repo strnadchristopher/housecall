@@ -1,0 +1,2 @@
+Command: build-tools/36.0.0/apksigner verify app-universal-debug.apk
+Result: exit0; debug APK signature verifies.

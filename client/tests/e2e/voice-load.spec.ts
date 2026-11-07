@@ -11,8 +11,17 @@ async function resources() {
     .map((line) => line.trim().split(/\s+/))
     .filter((row) => /chrom|chriscord/.test(row[0]));
   const memory = await readFile("/proc/meminfo", "utf8");
+  const membership = await readFile("/proc/self/cgroup", "utf8");
+  const group = membership.split("\n").find(line => line.startsWith("0::"))?.slice(3);
+  // A dedicated bounded test unit excludes unrelated desktop Chrome processes.
+  const dedicated = group?.includes("chriscord-voice-load") ?? false;
+  const cgroupMiB = dedicated ? Number(await readFile(`/sys/fs/cgroup${group}/memory.current`, "utf8")) / 1024 / 1024 : null;
+  const cpuStat = dedicated ? await readFile(`/sys/fs/cgroup${group}/cpu.stat`, "utf8") : "";
+
   return {
     at: Date.now(),
+    cgroupMiB,
+    cgroupCpuUsec: Number(cpuStat.match(/usage_usec\s+(\d+)/)?.[1] ?? 0),
     rssMiB: Math.round(
       rows.reduce((sum, row) => sum + Number(row[1]), 0) / 1024,
     ),
@@ -152,8 +161,8 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
           "Abort before memory exhaustion",
         ).toBeGreaterThan(1536);
         expect(
-          memory.rssMiB,
-          "Bound Chromium+SFU memory to 6 GiB",
+          memory.cgroupMiB ?? (memory.rssMiB - before.rssMiB),
+          "Bound dedicated test cgroup (or incremental process RSS) to 6 GiB",
         ).toBeLessThan(6144);
         expect(Date.now(), "60 second media load deadline").toBeLessThan(
           deadline,
@@ -212,7 +221,7 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
             opusTargetBps: 510000,
             loadDeadlineMs: 60000,
           },
-          note: "Real Chromium fake-capture RTP through the Rust SFU at reduced video resolution/frame rate. Not a production 720p or physical glass-to-glass claim. CPU is ps lifetime average; summed RSS may double-count shared pages.",
+          note: "Real Chromium fake-capture RTP through the Rust SFU at reduced video resolution/frame rate. Not a production 720p or physical glass-to-glass claim. Dedicated systemd cgroup memory/CPU excludes unrelated browsers; ps CPU is lifetime average and summed RSS includes background browsers/shared pages. The first failed attempt incorrectly applied an absolute summed-RSS guard to unrelated Chrome processes.",
           before,
           stages,
           samples,

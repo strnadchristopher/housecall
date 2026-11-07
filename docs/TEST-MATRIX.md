@@ -24,7 +24,7 @@ Only evidence with a successful terminal result establishes a pass. Provisional 
 | Reports | consent/redaction and owner authorization tests | consented screenshot upload/display flow |
 | Compose | configuration validation | isolated container build/runtime health/readiness |
 | Desktop | patched Tauri Linux release + checksum, Windows/macOS CI | observed Windows/macOS CI success and real OS media permissions |
-| Android | local toolchain installed, APK build pending | emulator E2E; Romeo unavailable after 2 SSH attempts |
+| Android | ARM64 debug APK built and verified with checksum | emulator E2E; Romeo unavailable after 2 SSH attempts |
 | iOS | shared Tauri crate/mobile entry + Maya plan | generated Xcode project and build verification |
 | Security dependencies | cargo audit/deny and npm audit | recheck final lockfiles, no blanket advisory suppression |
 | UI contract/themes | UI_CONTRACT_READY and screen/flow contract | Opus presentation/theme implementation and Noah merge |
