@@ -16,3 +16,11 @@
 
 ## Evidence policy
 Evidence files contain commands, observed outcomes and fixture/live distinction. Do not store tokens, private content, production URLs with credentials, or full environment dumps.
+
+## Checkpoint: contract and encrypted media
+- UI contract committed c795860; marker committed 880c3dd. All required screen IDs, states and intent boundary enumerated. Generic semantic HTML fixture is functional; visuals remain Opus-owned.
+- Encrypted resumable store committed 6ec58da. Six security/property tests pass, one separately invoked >2 GiB fixture still running: evidence/media-tests.log and evidence/media-multigib.log. The fixture clean scanner is not real scanning evidence.
+- Compose configuration validates (`docker compose config --quiet`). Docker unprivileged socket access denied; sudo local daemon access works. No container runtime acceptance yet.
+- Linux native GTK/WebKit dependencies installed in bounded user-systemd job, evidence/native-deps.log. JDK installation running for local Android fallback.
+- Romeo SSH timed out twice with BatchMode and 10-second connection timeout; approach blocked. No third identical attempt. Build Android locally next; emulator on Romeo remains unverified.
+- API/client/activity code is in progress with separate agents; test logs are provisional until reviewed. No voice/SFU, live push, live activity playback, VM kill-switch, mobile E2E or platform build gate is complete.
