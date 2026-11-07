@@ -1,14 +1,10 @@
-
-> chriscord-client@0.1.0 e2e
-> playwright test
-
-[WebServer] (node:3035768) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (node:3043123) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
-[WebServer] (node:3035802) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (node:3043171) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
 
 Running 1 test using 1 worker
 
-  ✓  1 [chromium] › tests/e2e/chat.spec.ts:41:1 › three private users: invitation, realtime mentions, unsend/retraction, edits, replies, pins, DM isolation and revocation (29.0s)
+  ✓  1 [chromium] › tests/e2e/chat.spec.ts:41:1 › three private users: invitation, realtime mentions, unsend/retraction, edits, replies, pins, DM isolation and revocation (35.0s)
 
-  1 passed (37.8s)
+  1 passed (43.4s)

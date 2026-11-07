@@ -12,6 +12,7 @@ export interface Channel {
   id: string;
   name: string;
   kind: "channel" | "dm" | "group_dm";
+  server_id?: string | null;
 }
 export interface Device {
   id: string;
@@ -33,4 +34,14 @@ export interface Report {
   body: string;
   status: string;
   logs?: string | null;
+}
+export interface Server {
+  id: string;
+  name: string;
+  general_channel_id: string;
+}
+export interface Role {
+  id: string;
+  name: string;
+  member_ids: string[];
 }

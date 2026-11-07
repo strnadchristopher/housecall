@@ -37,6 +37,30 @@ export class Api {
   authenticate(session?: Session) {
     this.session = session;
   }
+  /** Native/HLS media gets auth headers without exposing credentials to media URLs or redirects. */
+  mediaRequest(url: string, init: RequestInit = {}): Request {
+    const base = this.origin || location.origin;
+    const target = new URL(url, base);
+    if (
+      target.origin !== new URL(base).origin ||
+      !target.pathname.startsWith("/api/") ||
+      target.username ||
+      target.password
+    )
+      throw new Error("Authenticated media must remain on this server");
+    const headers = new Headers(init.headers);
+    if (this.session) {
+      headers.set("Authorization", `Bearer ${this.session.token}`);
+      headers.set("X-Device-Key", this.session.device_key);
+    }
+    return new Request(target, {
+      ...init,
+      headers,
+      credentials: "omit",
+      cache: "no-store",
+      redirect: "error",
+    });
+  }
   async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     if (!path.startsWith("/api/") || path.includes("://"))
       throw new Error("API path required");

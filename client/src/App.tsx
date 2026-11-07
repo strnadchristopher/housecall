@@ -1,6 +1,9 @@
+import {markdownTokens} from "./data/markdown";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {VoiceSession,type VoiceStatus} from "./transport/voice";
-import {MediaTrack} from "./data/MediaTrack";
+import { VoiceSession, type VoiceStatus } from "./transport/voice";
+import { PlexMedia } from "./data/PlexMedia";
+import { MediaTrack } from "./data/MediaTrack";
+import { firstPreviewLink, previewLink, type LinkPreview } from "./data/embeds";
 import { Screen } from "./ui/Screen";
 import type { Intent, ScreenId, ScreenProps } from "./contracts/ui";
 import { useChriscord } from "./hooks/useChriscord";
@@ -8,19 +11,29 @@ import { registerPasskey } from "./transport/passkeys";
 import { ResumableUpload, type Upload } from "./transport/uploads";
 import {
   mentionedUsers,
+  mentionedRoles,
+  roleCandidates,
+  completeRole,
   mentionCandidates,
   completeMention,
 } from "./data/mentions";
 import type { Message } from "./state/messages";
-import type {User} from './data/types';
+import type { User, Server, Role } from "./data/types";
 /** Engineering adapter: data and intents only. Opus owns Screen and all presentation. */
 export function App() {
   const c = useChriscord();
-  const [voiceStatus,setVoiceStatus]=useState<VoiceStatus>({phase:"idle",streams:[],receivedBytes:0,decodedFrames:0});
-  const voice=useMemo(()=>new VoiceSession(c.api,setVoiceStatus),[c.api]);
-  const [muted,setMuted]=useState(false);
-  useEffect(()=>()=>voice.close(),[voice]);
-  useEffect(()=>{if(!c.auth)voice.close();},[c.auth,voice]);
+  const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>({
+    phase: "idle",
+    streams: [],
+    receivedBytes: 0,
+    decodedFrames: 0,
+  });
+  const voice = useMemo(() => new VoiceSession(c.api, setVoiceStatus), [c.api]);
+  const [muted, setMuted] = useState(false);
+  useEffect(() => () => voice.close(), [voice]);
+  useEffect(() => {
+    if (!c.auth) voice.close();
+  }, [c.auth, voice]);
   const initialToken =
     new URLSearchParams(location.hash.slice(1)).get("invite") ??
     new URLSearchParams(location.search).get("invite") ??
@@ -44,10 +57,78 @@ export function App() {
     username: "",
     server_origin: import.meta.env.VITE_API_ORIGIN ?? "",
   });
+  const [servers, setServers] = useState<Server[]>([]),
+    [roles, setRoles] = useState<Role[]>([]),
+    [serverId, setServerId] = useState("home");
+  const [preview, setPreview] = useState<LinkPreview>();
   const [gimmeResult, setGimmeResult] = useState("");
-  const [gifs, setGifs] = useState<{id:string;title:string;source_url:string}[]>([]);
-  const [attachments,setAttachments]=useState<string[]>([]);
+  const [gifs, setGifs] = useState<
+    { id: string; title: string; source_url: string }[]
+  >([]);
+  const [attachments, setAttachments] = useState<string[]>([]);
+  const [plexLibraries, setPlexLibraries] = useState<
+    { id: string; title: string; kind: string }[]
+  >([]);
+  const [plexItems, setPlexItems] = useState<
+    {
+      id: string;
+      title: string;
+      kind: string;
+      duration_ms: number;
+      subtitles: { id: string; language: string }[];
+    }[]
+  >([]);
+  const [plexManifest, setPlexManifest] = useState<string>(),
+    [plexError, setPlexError] = useState(""),
+    [plexSubtitles, setPlexSubtitles] = useState(false);
   const activity = c.activities[c.channel];
+  const plexMediaId =
+    activity?.kind === "plex" ? activity.playback.media_id : null;
+  useEffect(() => {
+    let cancelled = false;
+    setPlexManifest(undefined);
+    setPlexError("");
+    if (
+      plexMediaId &&
+      voiceStatus.phase === "live" &&
+      c.capabilities.plex === true
+    )
+      void c.api
+        .post<{ manifest_url: string }>(
+          `/api/channels/${c.channel}/plex/playback`,
+          { rating_key: plexMediaId },
+        )
+        .then((result) => {
+          if (!cancelled) setPlexManifest(result.manifest_url);
+        })
+        .catch((error) => {
+          if (!cancelled)
+            setPlexError(
+              error instanceof Error ? error.message : String(error),
+            );
+        });
+    return () => {
+      cancelled = true;
+    };
+  }, [plexMediaId, voiceStatus.phase, c.channel, c.api, c.capabilities.plex]);
+  const channelServer = c.channels.find(
+    (channel) => channel.id === c.channel,
+  )?.server_id;
+  useEffect(() => {
+    let cancelled = false;
+    if (channelServer) {
+      setServerId(channelServer);
+      void c.api
+        .get<{ roles: Role[] }>(`/api/servers/${channelServer}/roles`)
+        .then((result) => {
+          if (!cancelled) setRoles(result.roles);
+        })
+        .catch(() => {});
+    } else setRoles([]);
+    return () => {
+      cancelled = true;
+    };
+  }, [channelServer, c.api]);
   const userName = (id: string) =>
     c.members.find((m) => m.id === id)?.username ?? id;
   const intent = async (i: Intent) =>
@@ -110,6 +191,20 @@ export function App() {
           setView("conversation");
           return;
         }
+        if (
+          ["servers-admin", "channels-admin", "roles-admin"].includes(i.action)
+        ) {
+          const data = await c.api.get<{ servers: Server[] }>("/api/servers");
+          setServers(data.servers);
+          if (i.action === "roles-admin")
+            setRoles(
+              (
+                await c.api.get<{ roles: Role[] }>(
+                  `/api/servers/${serverId}/roles`,
+                )
+              ).roles,
+            );
+        }
         setView(i.action as ScreenId);
         if (i.action === "devices") await c.loadDevices();
         if (i.action === "reports-admin") await c.loadReports();
@@ -118,6 +213,53 @@ export function App() {
       }
       if (i.action === "back") {
         setView("conversation");
+        return;
+      }
+      if (i.screen === "servers-admin") {
+        if (i.action === "select" && id) {
+          setServerId(id);
+          const server = servers.find((s) => s.id === id);
+          if (server) {
+            await c.select(server.general_channel_id);
+            setView("conversation");
+          }
+          return;
+        }
+        await c.api.post("/api/servers", { name: String(v.name) });
+        setServers(
+          (await c.api.get<{ servers: Server[] }>("/api/servers")).servers,
+        );
+        await c.refresh();
+        return;
+      }
+      if (i.screen === "channels-admin") {
+        await c.api.post("/api/channels", {
+          name: String(v.name),
+          kind: "channel",
+          server_id: String(v.server_id) || serverId,
+          member_ids: String(v.member_ids)
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean),
+        });
+        await c.refresh();
+        setView("conversation");
+        return;
+      }
+      if (i.screen === "roles-admin") {
+        if (i.action === "delete" && id) await c.api.delete(`/api/roles/${id}`);
+        else if (v.user_id && v.role_id)
+          await c.api.post(`/api/roles/${v.role_id}/members`, {
+            user_id: String(v.user_id),
+          });
+        else
+          await c.api.post(`/api/servers/${serverId}/roles`, {
+            name: String(v.name),
+          });
+        setRoles(
+          (await c.api.get<{ roles: Role[] }>(`/api/servers/${serverId}/roles`))
+            .roles,
+        );
         return;
       }
       if (i.screen === "conversation") {
@@ -133,6 +275,14 @@ export function App() {
         }
         const m = c.messages.find((m) => m.id === id);
         if (!m) return;
+        if (i.action === "preview-link") {
+          const url = firstPreviewLink(m.body);
+          if (url) {
+            setPreview(await previewLink(c.api, url));
+            setView("media");
+          }
+          return;
+        }
         if (i.action === "unsend") {
           await c.api.delete(`/api/messages/${id}`);
           c.store.retract(m.id);
@@ -153,6 +303,14 @@ export function App() {
         return;
       }
       if (i.screen === "composer") {
+        if (i.action === "mention-role" && id) {
+          const role = roles.find((role) => `role-${role.id}` === id);
+          if (role) {
+            setDraft(completeRole(draft, role.name));
+            setFormEpoch((n) => n + 1);
+          }
+          return;
+        }
         if (i.action === "mention" && id) {
           const user = c.members.find((m) => m.id === id);
           if (user) {
@@ -169,8 +327,18 @@ export function App() {
           return;
         }
         const body = String(v.body);
-        const latestMembers=await c.api.get<{members:User[]}>('/api/members');
+        const latestMembers = await c.api.get<{ members: User[] }>(
+          "/api/members",
+        );
         const mention_ids = mentionedUsers(body, latestMembers.members);
+        const latestRoles = channelServer
+          ? (
+              await c.api.get<{ roles: Role[] }>(
+                `/api/servers/${channelServer}/roles`,
+              )
+            ).roles
+          : [];
+        const role_mention_ids = mentionedRoles(body, latestRoles);
         if (editing)
           await c.api.patch(`/api/messages/${editing.id}`, {
             body,
@@ -181,7 +349,8 @@ export function App() {
             body,
             reply_to: reply,
             mention_ids,
-            attachment_ids:attachments,
+            role_mention_ids,
+            attachment_ids: attachments,
           });
         setReply(null);
         setEditing(undefined);
@@ -194,7 +363,49 @@ export function App() {
         await c.refresh();
         return;
       }
+      if (i.screen === "plex") {
+        if (i.action === "library" && id)
+          setPlexItems(
+            (
+              await c.api.get<{ items: typeof plexItems }>(
+                `/api/channels/${c.channel}/plex/items?section=${encodeURIComponent(id)}&start=0`,
+              )
+            ).items,
+          );
+        if (i.action === "choose" && id && activity) {
+          const item = plexItems.find((item) => item.id === id);
+          if (item) {
+            await c.api.post(`/api/channels/${c.channel}/activity/commands`, {
+              expected_revision: activity.revision,
+              command: {
+                type: "select",
+                media_id: item.id,
+                duration_ms: item.duration_ms,
+              },
+            });
+            await c.loadActivity();
+            setView("activities");
+          }
+        }
+        return;
+      }
       if (i.screen === "activities") {
+        if (i.action === "browse-plex") {
+          setPlexLibraries(
+            (
+              await c.api.get<{ libraries: typeof plexLibraries }>(
+                `/api/channels/${c.channel}/plex/sections`,
+              )
+            ).libraries,
+          );
+          setPlexItems([]);
+          setView("plex");
+          return;
+        }
+        if (i.action === "subtitles") {
+          setPlexSubtitles((previous) => !previous);
+          return;
+        }
         if (i.action === "start") {
           await c.api.post(`/api/channels/${c.channel}/activity`, { kind: id });
         } else if (i.action === "stop") {
@@ -204,24 +415,59 @@ export function App() {
             expected_revision: activity.revision,
             command:
               i.action === "submit"
-                ? v.command==='select'?{type:'select',media_id:String(v.media_id),duration_ms:Number(v.duration_ms)}:v.command==='enqueue'?{type:'enqueue',track:{id:crypto.randomUUID(),title:String(v.title),source:String(v.source),duration_ms:Number(v.duration_ms),requested_by:''}}:v.command==='handoff'?{type:'handoff',user_id:String(v.user_id)}:{ type: "seek", position_ms: Number(v.position_ms) }
+                ? v.command === "select"
+                  ? {
+                      type: "select",
+                      media_id: String(v.media_id),
+                      duration_ms: Number(v.duration_ms),
+                    }
+                  : v.command === "enqueue"
+                    ? {
+                        type: "enqueue",
+                        track: {
+                          id: crypto.randomUUID(),
+                          title: String(v.title),
+                          source: String(v.source),
+                          duration_ms: Number(v.duration_ms),
+                          requested_by: "",
+                        },
+                      }
+                    : v.command === "handoff"
+                      ? { type: "handoff", user_id: String(v.user_id) }
+                      : { type: "seek", position_ms: Number(v.position_ms) }
                 : { type: i.action },
           });
         }
         await c.loadActivity();
         return;
       }
-      if(i.screen==='voice'){
-        if(i.action==='join')await voice.join(c.channel,true);
-        if(i.action==='leave')await voice.leave();
-        if(i.action==='share')await voice.screenShare();
-        if(i.action==='mute'){voice.mute(!muted);setMuted(!muted);}
-        if(i.action==='submit')await voice.setAudio(Number(v.bitrate),!!v.noise_suppression);
+      if (i.screen === "voice") {
+        if (i.action === "join") await voice.join(c.channel, true);
+        if (i.action === "leave") await voice.leave();
+        if (i.action === "share") await voice.screenShare();
+        if (i.action === "mute") {
+          voice.mute(!muted);
+          setMuted(!muted);
+        }
+        if (i.action === "submit")
+          await voice.setAudio(Number(v.bitrate), !!v.noise_suppression);
         return;
       }
       if (i.screen === "gifs") {
-        if(i.action==='choose'&&id){const gif=gifs.find(gif=>gif.id===id);if(gif){setDraft(previous=>`${previous} ${gif.source_url}`.trim());setFormEpoch(n=>n+1);setView('conversation');}return;}
-        const result=await c.api.get<{results:typeof gifs}>(`/api/giphy/search?q=${encodeURIComponent(String(v.query))}`);setGifs(result.results);return;
+        if (i.action === "choose" && id) {
+          const gif = gifs.find((gif) => gif.id === id);
+          if (gif) {
+            setDraft((previous) => `${previous} ${gif.source_url}`.trim());
+            setFormEpoch((n) => n + 1);
+            setView("conversation");
+          }
+          return;
+        }
+        const result = await c.api.get<{ results: typeof gifs }>(
+          `/api/giphy/search?q=${encodeURIComponent(String(v.query))}`,
+        );
+        setGifs(result.results);
+        return;
       }
       if (i.screen === "gimme") {
         const result = await c.api.post(
@@ -235,7 +481,11 @@ export function App() {
         return;
       }
       if (i.screen === "uploads") {
-        if(i.action==='attach'&&upload?.status==='ready'){setAttachments(previous=>[...new Set([...previous,upload.id])]);setView('conversation');return;}
+        if (i.action === "attach" && upload?.status === "ready") {
+          setAttachments((previous) => [...new Set([...previous, upload.id])]);
+          setView("conversation");
+          return;
+        }
         if (i.action === "pause") {
           uploader.pause();
           return;
@@ -254,6 +504,7 @@ export function App() {
       if (i.screen === "invites-admin") {
         const issued = await c.api.post<{ token: string }>("/api/invites", {
           expires_in_seconds: Number(v.expires_in_seconds),
+          server_id: serverId,
         });
         setIssued(
           `${location.origin}/#invite=${encodeURIComponent(issued.token)}`,
@@ -330,7 +581,14 @@ export function App() {
     <Screen
       key={key}
       {...props}
-      actions={[...(props.actions??[]),...(c.auth&&props.id===view&&!['shell','conversation','composer'].includes(props.id)?[{id:'back',label:'Back to conversation'}]:[])]}
+      actions={[
+        ...(props.actions ?? []),
+        ...(c.auth &&
+        props.id === view &&
+        !["shell", "conversation", "composer"].includes(props.id)
+          ? [{ id: "back", label: "Back to conversation" }]
+          : []),
+      ]}
       busy={props.id === "uploads" ? false : c.busy}
       error={c.error || undefined}
       onIntent={intent}
@@ -429,6 +687,13 @@ export function App() {
     })),
     actions: [
       { id: "direct-messages", label: "New DM" },
+      { id: "servers-admin", label: "Servers" },
+      ...(c.auth.user.is_owner
+        ? [
+            { id: "channels-admin", label: "Create channel" },
+            { id: "roles-admin", label: "Manage roles" },
+          ]
+        : []),
       { id: "members", label: "Members" },
       { id: "search", label: "Search" },
       { id: "pins", label: "Pins" },
@@ -438,7 +703,7 @@ export function App() {
       { id: "settings", label: "Capabilities" },
       { id: "uploads", label: "Upload file" },
       { id: "gifs", label: "Giphy picker" },
-      {id:"voice",label:"Voice and video"},
+      { id: "voice", label: "Voice and video" },
       { id: "activities", label: "Activity controls" },
       { id: "gimme", label: "Gimme request (dry run)" },
       ...(c.auth.user.is_owner
@@ -468,9 +733,13 @@ export function App() {
             })),
             ...c.messages.map((m) => ({
               id: m.id,
+              richText: markdownTokens(m.body),
               text: `${userName(m.author_id)}: ${m.body}${m.reply_to ? " (reply)" : ""}${m.pinned ? " (pinned)" : ""}${(m.reactions ?? []).map((r) => ` ${r.emoji}`).join("")}`,
               actions: [
                 { id: "reply", label: "Reply" },
+                ...(firstPreviewLink(m.body)
+                  ? [{ id: "preview-link", label: "Preview link" }]
+                  : []),
                 { id: "react", label: "React 👍" },
                 { id: "pin", label: m.pinned ? "Unpin" : "Pin" },
                 ...(m.author_id === c.auth!.user.id
@@ -495,11 +764,20 @@ export function App() {
             fields: [
               { name: "body", label: "Message", value: draft, required: true },
             ],
-            items: mentionCandidates(draft, c.members).map((m) => ({
-              id: m.id,
-              text: `@${m.username}`,
-              actions: [{ id: "mention", label: `Mention ${m.username}` }],
-            })),
+            items: [
+              ...mentionCandidates(draft, c.members).map((m) => ({
+                id: m.id,
+                text: `@${m.username}`,
+                actions: [{ id: "mention", label: `Mention ${m.username}` }],
+              })),
+              ...roleCandidates(draft, roles).map((role) => ({
+                id: `role-${role.id}`,
+                text: `@${role.name} (role)`,
+                actions: [
+                  { id: "mention-role", label: `Mention role ${role.name}` },
+                ],
+              })),
+            ],
             submitLabel: editing ? "Save edit" : "Send",
             actions:
               reply || editing ? [{ id: "cancel", label: "Cancel" }] : [],
@@ -595,6 +873,68 @@ export function App() {
       })),
       actions: [{ id: "enable", label: "Enable desktop notifications" }],
     });
+  else if (view === "servers-admin")
+    content = screen({
+      id: view,
+      title: "Servers",
+      ...common,
+      fields: c.auth.user.is_owner
+        ? [{ name: "name", label: "New server name", required: true }]
+        : undefined,
+      submitLabel: "Create server",
+      items: servers.map((server) => ({
+        id: server.id,
+        text: `${server.name}: ${server.id}`,
+        actions: [{ id: "select", label: `Open server ${server.name}` }],
+      })),
+    });
+  else if (view === "channels-admin")
+    content = screen({
+      id: view,
+      title: "Create channel",
+      ...common,
+      fields: [
+        { name: "name", label: "Channel name", required: true },
+        { name: "server_id", label: "Server ID", value: serverId },
+        { name: "member_ids", label: "Channel member IDs (comma-separated)" },
+      ],
+      submitLabel: "Create channel",
+      items: c.members.map((member) => ({
+        id: member.id,
+        text: `${member.username}: ${member.id}`,
+      })),
+    });
+  else if (view === "roles-admin")
+    content = screen({
+      id: view,
+      title: `Roles for ${serverId}`,
+      ...common,
+      fields: [
+        { name: "name", label: "New role name" },
+        { name: "role_id", label: "Existing role ID (to assign)" },
+        { name: "user_id", label: "Member ID (to assign)" },
+      ],
+      submitLabel: "Create role or assign member",
+      items: roles.map((role) => ({
+        id: role.id,
+        text: `${role.name}: ${role.id} (${role.member_ids.length} members)`,
+        actions: [{ id: "delete", label: "Delete role" }],
+      })),
+    });
+  else if (view === "media")
+    content = screen({
+      id: view,
+      title: "Link preview (requested by you)",
+      ...common,
+      items: preview
+        ? [
+            { id: "host", text: preview.hostname },
+            { id: "title", text: preview.title },
+            { id: "description", text: preview.description },
+            { id: "url", text: preview.url },
+          ]
+        : [],
+    });
   else if (view === "report")
     content = screen({
       id: view,
@@ -612,18 +952,46 @@ export function App() {
       ],
       submitLabel: "Submit report",
     });
+  else if (view === "plex")
+    content = screen({
+      id: view,
+      title: "Plex library",
+      ...common,
+      items: [
+        ...plexLibraries.map((library) => ({
+          id: library.id,
+          text: library.title,
+          actions: [{ id: "library", label: "Browse library" }],
+        })),
+        ...plexItems.map((item) => ({
+          id: item.id,
+          text: `${item.title} (${item.kind})`,
+          actions: [
+            {
+              id: "choose",
+              label: "Watch together",
+              disabled: activity?.host !== c.auth!.user.id,
+            },
+          ],
+        })),
+      ],
+    });
   else if (view === "activities")
     content = screen({
       id: view,
-      title: "Activity control state — provider playback unavailable",
+      title:
+        activity?.kind === "plex" && c.capabilities.plex === true
+          ? "Plex watch party"
+          : "Activity control state — provider playback unavailable",
       ...common,
       items: activity
         ? [
             {
               id: "snapshot",
-              text: `${activity.kind} revision ${activity.revision}; ${activity.playback.playing ? "playing" : "paused"}; position ${activity.playback.position_ms}; controller ${activity.controller?userName(activity.controller.user_id):'none'}`,
+              text: `${activity.kind} revision ${activity.revision}; ${activity.playback.playing ? "playing" : "paused"}; position ${activity.playback.position_ms}; controller ${activity.controller ? userName(activity.controller.user_id) : "none"}`,
             },
             ...activity.queue.map((t) => ({ id: t.id, text: t.title })),
+            ...(plexError ? [{ id: "plex-error", text: plexError }] : []),
           ]
         : ["plex", "dj", "vm"].map((kind) => ({
             id: kind,
@@ -632,12 +1000,26 @@ export function App() {
           })),
       fields: activity
         ? [
-            {name:'command',label:'Control command (select, enqueue, seek, handoff)',value:activity.kind==='plex'?'select':activity.kind==='dj'?'enqueue':'handoff'},
-            {name:'media_id',label:'Plex item ID'},
-            {name:'duration_ms',label:'Duration in milliseconds',type:'number',value:'60000'},
-            {name:'title',label:'Track title'},
-            {name:'source',label:'Track link'},
-            {name:'user_id',label:'Handoff user ID'},
+            {
+              name: "command",
+              label: "Control command (select, enqueue, seek, handoff)",
+              value:
+                activity.kind === "plex"
+                  ? "select"
+                  : activity.kind === "dj"
+                    ? "enqueue"
+                    : "handoff",
+            },
+            { name: "media_id", label: "Plex item ID" },
+            {
+              name: "duration_ms",
+              label: "Duration in milliseconds",
+              type: "number",
+              value: "60000",
+            },
+            { name: "title", label: "Track title" },
+            { name: "source", label: "Track link" },
+            { name: "user_id", label: "Handoff user ID" },
             {
               name: "position_ms",
               label: "Seek position in milliseconds",
@@ -648,9 +1030,24 @@ export function App() {
       submitLabel: "Apply control command",
       actions: activity
         ? [
+            {
+              id: "browse-plex",
+              label: "Browse Plex library",
+              disabled:
+                activity.kind !== "plex" || c.capabilities.plex !== true,
+            },
+            {
+              id: "subtitles",
+              label: plexSubtitles ? "Hide subtitles" : "Show subtitles",
+              disabled: activity.kind !== "plex" || !plexManifest,
+            },
             { id: "play", label: "Play" },
             { id: "pause", label: "Pause" },
-            {id:'vote_skip',label:'Vote to skip',disabled:activity.kind!=='dj'},
+            {
+              id: "vote_skip",
+              label: "Vote to skip",
+              disabled: activity.kind !== "dj",
+            },
             {
               id: "request_control",
               label: "Request VM control",
@@ -664,8 +1061,88 @@ export function App() {
           ]
         : [],
     });
-  else if(view==='voice')content=<>{screen({id:view,title:'Voice and video',phase:voiceStatus.phase==='failed'?'error':voiceStatus.phase==='connecting'?'loading':'ready',items:[{id:'status',text:`${voiceStatus.phase}; received ${voiceStatus.receivedBytes} bytes; decoded ${voiceStatus.decodedFrames} frames${voiceStatus.error?`; ${voiceStatus.error}`:''}`}],fields:[{name:'bitrate',label:'Opus target bitrate',type:'number',value:'510000'},{name:'noise_suppression',label:'Noise suppression (optional)',type:'checkbox'}],submitLabel:'Apply audio preferences',actions:[{id:'join',label:'Join with microphone and camera',disabled:voiceStatus.phase==='live'||voiceStatus.phase==='connecting'},{id:'leave',label:'Leave voice',disabled:voiceStatus.phase==='idle'},{id:'share',label:'Share screen',disabled:voiceStatus.phase!=='live'},{id:'mute',label:muted?'Unmute':'Mute',disabled:voiceStatus.phase!=='live'}]})}{voiceStatus.streams.map(stream=><MediaTrack key={stream.id} stream={stream}/>)}</>;
-  else if(view==='gifs')content=screen({id:view,title:'Powered by GIPHY',phase:c.capabilities.giphy===true?'ready':'unavailable',fields:c.capabilities.giphy===true?[{name:'query',label:'Search GIFs',required:true}]:undefined,items:c.capabilities.giphy===true?gifs.map(gif=>({id:gif.id,text:gif.title,actions:[{id:'choose',label:'Choose GIF'}]})):[{id:'unavailable',text:'The server has no Giphy API key configured.'}]});
+  else if (view === "voice")
+    content = (
+      <>
+        {screen({
+          id: view,
+          title: "Voice and video",
+          phase:
+            voiceStatus.phase === "failed"
+              ? "error"
+              : voiceStatus.phase === "connecting"
+                ? "loading"
+                : "ready",
+          items: [
+            {
+              id: "status",
+              text: `${voiceStatus.phase}; received ${voiceStatus.receivedBytes} bytes; decoded ${voiceStatus.decodedFrames} frames${voiceStatus.error ? `; ${voiceStatus.error}` : ""}`,
+            },
+          ],
+          fields: [
+            {
+              name: "bitrate",
+              label: "Opus target bitrate",
+              type: "number",
+              value: "510000",
+            },
+            {
+              name: "noise_suppression",
+              label: "Noise suppression (optional)",
+              type: "checkbox",
+            },
+          ],
+          submitLabel: "Apply audio preferences",
+          actions: [
+            {
+              id: "join",
+              label: "Join with microphone and camera",
+              disabled:
+                voiceStatus.phase === "live" ||
+                voiceStatus.phase === "connecting",
+            },
+            {
+              id: "leave",
+              label: "Leave voice",
+              disabled: voiceStatus.phase === "idle",
+            },
+            {
+              id: "share",
+              label: "Share screen (replaces camera; microphone audio)",
+              disabled: voiceStatus.phase !== "live",
+            },
+            {
+              id: "mute",
+              label: muted ? "Unmute" : "Mute",
+              disabled: voiceStatus.phase !== "live",
+            },
+          ],
+        })}
+      </>
+    );
+  else if (view === "gifs")
+    content = screen({
+      id: view,
+      title: "Powered by GIPHY",
+      phase: c.capabilities.giphy === true ? "ready" : "unavailable",
+      fields:
+        c.capabilities.giphy === true
+          ? [{ name: "query", label: "Search GIFs", required: true }]
+          : undefined,
+      items:
+        c.capabilities.giphy === true
+          ? gifs.map((gif) => ({
+              id: gif.id,
+              text: gif.title,
+              actions: [{ id: "choose", label: "Choose GIF" }],
+            }))
+          : [
+              {
+                id: "unavailable",
+                text: "The server has no Giphy API key configured.",
+              },
+            ],
+    });
   else if (view === "gimme")
     content = screen({
       id: view,
@@ -693,7 +1170,14 @@ export function App() {
             },
           ]
         : [],
-      actions: [{ id: "pause", label: "Pause" },{id:'attach',label:'Attach to message',disabled:upload?.status!=='ready'}],
+      actions: [
+        { id: "pause", label: "Pause" },
+        {
+          id: "attach",
+          label: "Attach to message",
+          disabled: upload?.status !== "ready",
+        },
+      ],
     });
   else if (view === "settings")
     content = screen({
@@ -753,6 +1237,18 @@ export function App() {
     >
       {shell}
       {content}
+      {voiceStatus.streams.map((stream) => (
+        <MediaTrack key={stream.id} stream={stream} />
+      ))}
+      {plexManifest && activity?.kind === "plex" && (
+        <PlexMedia
+          api={c.api}
+          manifest={plexManifest}
+          snapshot={activity}
+          subtitles={plexSubtitles}
+          onError={setPlexError}
+        />
+      )}
     </div>
   );
 }

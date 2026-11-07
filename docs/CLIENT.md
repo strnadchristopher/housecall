@@ -8,7 +8,7 @@ Authentication sessions and device secrets live only in memory; reload requires 
 
 The currently wired slice includes WebAuthn registration and sign-in, first-run setup, invite redemption, password sign-in, owner invite issuance, chunked upload/pause/resume/quarantine and attachment selection, conversation listing, messages, edits with revision, replies, user mention completion, reactions, pins, search, DMs/group DMs, consented text reports, report resolution, device revocation, and one-second durable event polling. Server events trigger authorized refetches. Unsend installs a permanent in-memory tombstone and closes matching browser notification handles. Tombstones beat late responses and out-of-order edits. No cached message is displayed across a reload. This is actual browser notification closure while the process runs, not a claim of background APNs/FCM delivery or offline operating-system alert erasure.
 
-Native secure credential storage, background push, dedicated thread views, role/everyone mention completion, rich markdown/embed rendering, provider playback (Plex/DJ/VM), theme implementation, screenshot reporting and native invite deep links remain unimplemented. Browser voice transport now includes microphone/camera, optional screen share, incoming tracks, target stereo/fullband 510 kbps, optional noise suppression, mute, and counters; actual SFU interoperability and latency remain pending until browser evidence below. Activity panels synchronize server control state and clearly label provider playback unavailable. Gimme exposes dry-run preview only. Giphy results retain attribution and select a link into the composer when a server key is present. The contract inventory is broader than this completed slice. No placeholder is acceptance evidence.
+Native secure credential storage, background push, dedicated thread views, everyone mention completion, formatted markdown rendering, DJ/VM provider playback, theme implementation, screenshot reporting and native invite deep links remain unimplemented. Browser voice includes microphone/camera, screen replacement, incoming tracks, target stereo/fullband 510 kbps, optional noise suppression, mute, and counters; actual SFU interoperability is verified below, while physical latency remains unmeasured. Plex provider integration is being verified separately; unavailable activity providers remain explicitly labeled. Gimme exposes dry-run preview only. Giphy results retain attribution and select a link into the composer when a server key is present. The contract inventory is broader than this completed slice. No placeholder is acceptance evidence.
 
 ## Tests and evidence
 
@@ -23,3 +23,46 @@ Maya iOS validation: install a development-signed build; exercise invite → ser
 ## Contract changes for root handoff
 
 Append to UI-CONTRACT changelog: login/setup/invite fields include optional `server_origin`; device secret storage is currently memory-only. Generic field types add `file` for functional upload selection. Voice stream binding lives in the engineering MediaTrack adapter, using an unstyled browser media element, with no custom visuals. Generic composer receives mention-candidate items with `mention` intent and `itemId=user.id`; engineering collects draft input and throttles typing transport. Message item actions are reply/react/pin/edit/unsend. Search/pins reuse current channel; all list/query content filters durable deletion tombstones. Native/background capabilities remain unavailable and are not advertised as shipped.
+
+## Verified checkpoints
+
+- `evidence/client-build.txt`: TypeScript check and production Vite bundle succeeded.
+- `evidence/client-unit.txt`: 13 unit tests pass, including real File slice pause/resume offsets and Opus SDP parameters.
+- `evidence/client-e2e.txt`: real backend, three isolated Chromium users, 35.0-second scenario / 43.4 seconds including fixture startup. Core behaviors above passed. This duration covers the whole test; it is not a native onboarding or media latency measurement.
+- `evidence/client-chat.png` and `evidence/client-devices.png`: synthetic signed-in data only; no invite, session or device secrets.
+- `evidence/client-npm-audit.json`: no npm advisories at this checkpoint.
+- `evidence/client-android-init.txt`: Android project generation succeeded. `evidence/client-android-gradle.txt`: generated Gradle 9.6.1 starts on local Java 21.
+
+`npm run test:voice` launches a separate SFU-enabled fixture. The core activity suite intentionally runs with SFU disabled to test the labeled control-state prototype; a configured SFU additionally requires connected voice membership. Voice tests use actual browser capture and RTP, with fake capture devices; neither success nor RTT represents physical glass-to-glass latency. Screen sharing replaces the camera sender and retains microphone audio. Simultaneous camera plus screen and captured system audio are not implemented in this slice.
+
+Additional contract intents: `servers-admin`, `channels-admin`, and `roles-admin` use the same unstyled Screen contract. Servers can be selected/created; channels take explicit member IDs (an empty list creates an owner-only private channel); roles can be created, assigned to an existing member, or deleted. Role mentions are supplied as `role_mention_ids`, and the server determines current authorized recipients.
+
+## Additional verified client transport work
+
+The three-browser SFU test now passes against the actual Rust server: each browser receives two Opus audio streams with packets and decodes two VP8 video streams. See `evidence/client-voice-three-user.json` and `evidence/client-voice-e2e.txt`. Capture devices are Chromium's synthetic devices. This proves transport/decoding, not physical camera-to-display latency, achieved 510 kbps audio, native media permissions, or 30-user capacity. Screen sharing replaces the camera track and preserves microphone audio; simultaneous camera/screen and system audio remain unimplemented.
+
+Explicit link preview requests render sanitized text from the server. Markdown is parsed into inert semantic nodes (`data/markdown.ts`); HTML and images never execute/fetch in this layer. The Opus presentation layer still needs to consume those nodes to render formatted markdown. Roles support multiword names, longest-name matching, and autocomplete; generic server/channel/role administration uses the existing Screen contract.
+
+`tests/e2e/voice-load.spec.ts` provisions 30 separate browser contexts, then ramps real SFU media through 5/10/20/30 peers. Run `CHRISCORD_TEST_LOAD=1 npm run test:voice` after builds finish. It uses 320×180 at 5 fps, default 510000-bit Opus target, a 60-second media phase, a 6 GiB summed Chromium/SFU RSS guard and a 1.5 GiB available-memory guard. Results go to `evidence/client-voice-load.json`; a harness existing is not a passing load result. CPU samples use process lifetime averages and summed RSS can count shared pages twice.
+
+Plex HLS uses hls.js FetchLoader with authenticated requests restricted to the configured API origin, credentials omitted, and redirects rejected. Provider credentials never enter URLs or browser state. MediaSource support is required; browsers without it report an explicit limitation. Native HLS cannot attach bearer/device headers and is intentionally not used as an insecure fallback. The media binding follows authoritative activity timestamps, adjusts drift above 350 ms, and handles play/pause and available HLS subtitles. Provider/browser integration evidence is still pending.
+
+## Native verification and Maya handoff
+
+Linux release compilation succeeded, then a second release compilation with the root-owned GLib safety backport succeeded in 4m29s (`evidence/client-native-linux-patched.txt`). Artifact SHA256 is in `evidence/client-artifact-sha256.txt`. Neither compilation proves WebKit media permissions or Linux desktop notifications. Android generated Gradle project is committed under `src-tauri/gen/android`; local.properties, build caches, APK outputs, and signing keys are excluded. It targets API35 because the installed official SDK repository did not provide the generated template's API37 request. ARM64 debug APK compilation is pending as of this entry.
+
+Android declares CAMERA, RECORD_AUDIO, and MODIFY_AUDIO_SETTINGS with optional microphone/camera hardware. The pinned Wry source (`wry-0.57.1/src/android/kotlin/RustWebChromeClient.kt`) maps WebView audio/video permission requests to those Android permissions, calls the Activity runtime permission callback, and only grants capture when it succeeds. Actual grant/deny/revoke behavior needs emulator/device validation. No blanket native permission grant was added.
+
+The Linux Tauri CLI does not expose an `ios` subcommand. No Xcode project or iOS build is claimed from this machine. The shared Rust library has Tauri's mobile entry point; `Info.ios.plist` supplies camera/microphone/local-network usage descriptions. On Maya, with Xcode and command-line tools selected:
+
+```sh
+cd client
+npm ci
+rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+npm run tauri -- ios init
+npm run tauri -- ios build --target aarch64-sim --debug
+```
+
+Use the generated project in Xcode for Christopher's development team and device signing; never commit a provisioning profile, certificate, or key. Verify simulator compilation, then a device install with setup/invite, passkey, camera/microphone grant and denial, background/reconnect, local-network prompt, media playback/subtitles, large-file selection, and notification unsend/retraction. APNs integration remains unavailable until the actual push implementation and credentials exist. Record build logs/device versions under `evidence/`; a source/config handoff is not an iOS passing build.
+
+Native passkey parity is not established by browser WebAuthn tests. A bundled Tauri origin is different from the configured website RP origin; Android Credential Manager/digital asset links and Apple's associated-domain native passkey handoff are not implemented. Password fallback is the present native authentication path. Do not count a successful browser virtual-authenticator test as Android/iOS passkey acceptance. Native invite deep-link registration and APNs/FCM delivery/retraction are also outstanding.

@@ -125,5 +125,73 @@ it("resumes at the server byte offset after interruption without repeating compl
   expect(offsets).toEqual(["0", "4194304"]);
   expect(current.status).toBe("quarantined");
 });
-import {opusFullband} from '../src/transport/voice';
-it('requests fullband stereo maximum Opus bitrate without changing other codecs',()=>{const sdp='a=rtpmap:111 opus/48000/2\r\na=fmtp:111 minptime=10;stereo=0;maxaveragebitrate=64000\r\na=rtpmap:96 VP8/90000\r\n';const next=opusFullband(sdp);expect(next).toContain('maxaveragebitrate=510000');expect(next).toContain('stereo=1');expect(next).not.toContain('stereo=0');expect(next).toContain('VP8/90000');expect(next).toContain('minptime=10');});
+import { opusFullband } from "../src/transport/voice";
+it("requests fullband stereo maximum Opus bitrate without changing other codecs", () => {
+  const sdp =
+    "a=rtpmap:111 opus/48000/2\r\na=fmtp:111 minptime=10;stereo=0;maxaveragebitrate=64000\r\na=rtpmap:96 VP8/90000\r\n";
+  const next = opusFullband(sdp);
+  expect(next).toContain("maxaveragebitrate=510000");
+  expect(next).toContain("stereo=1");
+  expect(next).not.toContain("stereo=0");
+  expect(next).toContain("VP8/90000");
+  expect(next).toContain("minptime=10");
+});
+import { firstPreviewLink } from "../src/data/embeds";
+it("link previews are explicit HTTPS candidates only", () => {
+  expect(firstPreviewLink("hello https://example.com/path.")).toBe(
+    "https://example.com/path",
+  );
+  expect(
+    firstPreviewLink("javascript:alert(1) http://example.com"),
+  ).toBeUndefined();
+});
+import { markdownTokens } from "../src/data/markdown";
+it("markdown produces inert data, strips image fetching and unsafe links, preserves formatting", () => {
+  const ast = markdownTokens(
+    "**hello** <script>alert(1)</script>\n\n[x](javascript:alert(1)) ![alt](https://tracker.example/x)",
+  );
+  const serialized = JSON.stringify(ast);
+  expect(serialized).toContain('"kind":"strong"');
+  expect(serialized).not.toContain('"href":"javascript:');
+  expect(serialized).not.toContain("tracker.example");
+  expect(serialized).toContain('"kind":"text","text":"<script>"');
+  expect(
+    markdownTokens("[safe](https://example.com)")[0].children?.[0].href,
+  ).toBe("https://example.com/");
+});
+
+import { Api as MediaApi } from "../src/transport/api";
+it("media requests keep device credentials on the configured API origin and reject redirects", () => {
+  const api = new MediaApi("https://chriscord.example");
+  api.authenticate({ token: "fixture-token", device_key: "fixture-device" });
+  const request = api.mediaRequest(
+    "/api/channels/general/plex/resources/opaque",
+  );
+  expect(request.headers.get("X-Device-Key")).toBe("fixture-device");
+  expect(request.redirect).toBe("error");
+  expect(request.credentials).toBe("omit");
+  expect(() =>
+    api.mediaRequest("https://tracker.example/api/fragment"),
+  ).toThrow();
+  expect(() => api.mediaRequest("/api/../tracker")).toThrow();
+});
+
+import {
+  mentionedRoles,
+  roleCandidates,
+  completeRole,
+} from "../src/data/mentions";
+it("roles with spaces are autocompleted and matched as exact names", () => {
+  const roles = [
+    { id: "movie", name: "Movie Night" },
+    { id: "short", name: "Movie" },
+  ];
+  expect(
+    roleCandidates("hello @Movie N", roles).map((role) => role.id),
+  ).toEqual(["movie"]);
+  expect(completeRole("hello @Movie N", "Movie Night")).toBe(
+    "hello @Movie Night ",
+  );
+  expect(mentionedRoles("hello @Movie Night!", roles)).toEqual(["movie"]);
+  expect(mentionedRoles("@Movie Nights", roles)).not.toContain("movie");
+});
