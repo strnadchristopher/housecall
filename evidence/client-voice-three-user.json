@@ -1,0 +1,98 @@
+{
+  "note": "Actual RTP from Chromium fake capture devices. Does not measure physical glass-to-glass latency.",
+  "peers": [
+    {
+      "inbound": [
+        {
+          "kind": "audio",
+          "packetsReceived": 11,
+          "bytesReceived": 988,
+          "jitter": 0.01
+        },
+        {
+          "kind": "audio",
+          "packetsReceived": 39,
+          "bytesReceived": 3089,
+          "jitter": 0.017
+        },
+        {
+          "kind": "video",
+          "packetsReceived": 2,
+          "bytesReceived": 1299,
+          "framesDecoded": 1,
+          "jitter": 0.002
+        },
+        {
+          "kind": "video",
+          "packetsReceived": 16,
+          "bytesReceived": 10835,
+          "framesDecoded": 7,
+          "jitter": 0.012
+        }
+      ],
+      "remoteMediaElements": 4
+    },
+    {
+      "inbound": [
+        {
+          "kind": "audio",
+          "packetsReceived": 8,
+          "bytesReceived": 1865,
+          "jitter": 0.005
+        },
+        {
+          "kind": "audio",
+          "packetsReceived": 37,
+          "bytesReceived": 3046,
+          "jitter": 0.015
+        },
+        {
+          "kind": "video",
+          "packetsReceived": 3,
+          "bytesReceived": 1765,
+          "framesDecoded": 3,
+          "jitter": 0.003
+        },
+        {
+          "kind": "video",
+          "packetsReceived": 15,
+          "bytesReceived": 11157,
+          "framesDecoded": 12,
+          "jitter": 0.007
+        }
+      ],
+      "remoteMediaElements": 4
+    },
+    {
+      "inbound": [
+        {
+          "kind": "audio",
+          "packetsReceived": 9,
+          "bytesReceived": 27,
+          "jitter": 0.005
+        },
+        {
+          "kind": "audio",
+          "packetsReceived": 9,
+          "bytesReceived": 2621,
+          "jitter": 0.005
+        },
+        {
+          "kind": "video",
+          "packetsReceived": 8,
+          "bytesReceived": 5834,
+          "framesDecoded": 1,
+          "jitter": 0.005
+        },
+        {
+          "kind": "video",
+          "packetsReceived": 5,
+          "bytesReceived": 4268,
+          "framesDecoded": 2,
+          "jitter": 0.004
+        }
+      ],
+      "remoteMediaElements": 4
+    }
+  ]
+}

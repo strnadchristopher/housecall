@@ -1,0 +1,24 @@
+   Compiling chriscord-sfu v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/sfu)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.69s
+     Running unittests src/lib.rs (crates/sfu/target/debug/deps/chriscord_sfu-5b0c7f5196f9d396)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/transport.rs (crates/sfu/target/debug/deps/transport-eafad74664c54c57)
+
+running 2 tests
+proptest: FileFailurePersistence::SourceParallel set, but failed to find lib.rs or main.rs
+real UDP SFU counters: [{"peer_id":0,"user_id":"alice","connected":true,"received_frames":28,"forwarded_frames":52,"forwarded_bytes":4160},{"peer_id":1,"user_id":"bob","connected":true,"received_frames":28,"forwarded_frames":50,"forwarded_bytes":4000},{"peer_id":2,"user_id":"cara","connected":true,"received_frames":28,"forwarded_frames":50,"forwarded_bytes":4000}]
+test sdp_json_parser_never_panics ... ok
+test three_peers_forward_encrypted_udp_media_room_isolation_and_revocation ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.82s
+
+   Doc-tests chriscord_sfu
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

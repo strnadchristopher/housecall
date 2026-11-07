@@ -1,0 +1,8 @@
+The RTC forwarding, track negotiation and keyframe handling in src/peer.rs derive
+from str0m's examples/chat.rs at commit
+8e0067cca6a45ae4ea0532148d08a3d803d29841 (2026-11-07 checkout).
+Original authors: Martin Algesten, Hugo Tunius, Davide Bertola.
+Upstream: https://github.com/algesten/str0m
+Used under the MIT license reproduced in LICENSE-STR0M-MIT.
+Chriscord adds authenticated room/session isolation, revocation rechecks,
+resource bounds, graceful failures, control APIs and counters.
