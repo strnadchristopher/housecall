@@ -31,8 +31,9 @@ Caddy eventually terminates HTTPS at the chosen origin and proxies to the loopba
 | GIMME_DRY_RUN | must remain true for development | no production mutation authorized |
 | SWITCHBOARD_URL / SWITCHBOARD_API_KEY | local banter chat completion endpoint | role:chat, X-Inference-Task: chriscord.dj |
 | DJ_TTS_COMMAND / DJ_REFERENCE_AUDIO | local synthesizer and explicit reference | see DJ-REFERENCE.md; placeholder until supplied |
-| APNS_KEY_PATH / APNS_KEY_ID / APNS_TEAM_ID / APNS_TOPIC | mounted local signing credential/identifiers | native push not yet implemented |
-| FCM_CREDENTIALS_PATH | mounted local FCM credential | native push not yet implemented |
+| PUSH_ENABLED / PUSH_TOKEN_KEY | opt-in worker and separate32-byte hex token-encryption key | default disabled; server provider tests and native bridges tracked separately |
+| APNS_PRIVATE_KEY_PEM / APNS_KEY_ID / APNS_TEAM_ID / APNS_TOPIC / APNS_SANDBOX | env-provided P-256 signing credential/identifiers; sandbox false by default | APNs provider; native registration/background receipt pending |
+| FCM_SERVICE_ACCOUNT_JSON | env-provided service-account JSON with RSA private key | FCM HTTP v1 provider; native registration/background receipt pending |
 | GLUETUN_CONTAINER | existing VPN namespace name | optional VM profile, no fallback |
 | VM_MEMORY_MB / VM_CPUS | bounded guest resources | optional VM profile |
 | VM_KVM_GID / VM_TUNNEL_INTERFACE | host KVM group / tun0 or wg0 | reserve UID47191 in shared Gluetun namespace; literal resolver in infra/vm/resolv.conf |

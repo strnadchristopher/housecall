@@ -10,7 +10,7 @@ Only evidence with a successful terminal result establishes a pass. Provisional 
 | Every-route authorization | automatic91-pair route inventory + module access tests | cross-user behavior tests for new features |
 | CSP/no trackers | headers assertion, source dependency audit | rendered app network review on each native platform |
 | Chat + DMs | 3-user Playwright, API security tests | native/browser parity; complete thread subscription UX |
-| Unsend | server purge and client tombstone tests | APNs/FCM native retraction under OS constraints |
+| Unsend | server purge/client tombstones;9APNs/FCM outbox fixture tests incl in-flight-unsend race, retries/restart | native token registration/OS receipt and retraction under background/offline constraints |
 | Large resumable media | media property, >2GiB process-interrupted fixture and real browser2GiB aborted-PATCH/resume39.62s | real scanner limit handling (large file remains quarantined), disk-full |
 | Media transcode/thumb/stream | actual FFmpeg fMP4/JPEG + authenticated browser MSE playback before full buffering, access/unsend checks | seek outside retained buffer, native WebView decoding, seek-dependent source formats |
 | Search/pin/react/edit/typing/read | API/client tests | full browser interactions per platform |

@@ -6,6 +6,7 @@ pub mod giphy;
 pub mod media;
 pub mod passkeys;
 pub mod plex;
+pub mod push;
 pub mod servers;
 pub mod transcode;
 pub mod voice;
@@ -91,6 +92,7 @@ pub struct AppState {
     pub plex: Option<Arc<plex::Gateway>>,
     pub gimme: Arc<gimme::Worker>,
     pub dj: Option<Arc<dj::Player>>,
+    pub push: Arc<push::Worker>,
 }
 #[derive(Clone, Serialize, Debug)]
 pub struct User {
@@ -128,6 +130,7 @@ impl AppState {
         activities::init(&db)?;
         gimme::init(&db)?;
         dj::init(&db)?;
+        push::init(&db)?;
         Ok(Self {
             db: Arc::new(Mutex::new(db)),
             setup_hash: hash(setup_token),
@@ -143,6 +146,7 @@ impl AppState {
             plex: None,
             gimme: gimme::Worker::dry_run(),
             dj: None,
+            push: push::Worker::disabled(),
         })
     }
     fn limited(&self, key: String, max: u32) -> bool {
@@ -186,6 +190,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .merge(giphy::routes())
         .merge(gimme::routes())
         .merge(dj::routes())
+        .merge(push::routes())
         .merge(passkeys::private_routes())
         .merge(activities::routes())
         .route("/me", get(me))
@@ -859,6 +864,7 @@ async fn send_message(
                 "INSERT INTO notifications VALUES(?,?,?,?,?)",
                 params![secret(), uid, id, cid, now()],
             )?;
+            push::enqueue_alert(&tx, uid, &id, &cid)?;
         }
     }
     emit(&tx, &cid, "message.created", json!({"message_id":id}))?;
@@ -925,6 +931,7 @@ async fn unsend(
         }
     }
     tx.execute("UPDATE messages SET reply_to=NULL WHERE reply_to=?", [&id])?;
+    push::enqueue_retract(&tx, &id, &cid)?;
     tx.execute("DELETE FROM messages WHERE id=?", [&id])?;
     tx.execute("DELETE FROM reads WHERE message_id=?", [&id])?;
     emit(

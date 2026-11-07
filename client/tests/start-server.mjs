@@ -13,7 +13,7 @@ const binary =
 const child = spawn(binary, [], {
   stdio: "inherit",
   env: {
-    ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(CHRISCORD_|SFU_|PLEX_|GIMME_|GIPHY_|SWITCHBOARD_|DJ_|SPOTIFY_|YT_DLP_)/.test(key))),
+    ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(CHRISCORD_|SFU_|PLEX_|GIMME_|GIPHY_|SWITCHBOARD_|PUSH_|APNS_|FCM_|DJ_|SPOTIFY_|YT_DLP_)/.test(key))),
     GIMME_DRY_RUN: "true",
     DJ_ENABLED: "false",
     ...((process.env.CHRISCORD_TEST_REPORTS === "1" || process.env.CHRISCORD_TEST_UPLOAD_VIDEO === "1")

@@ -33,8 +33,14 @@ services:
       DJ_ENABLED: ${DJ_ENABLED:-false}
       DJ_TMPFS_DIR: /tmp/chriscord-dj
       SPOTIFY_ACCESS_TOKEN: ${SPOTIFY_ACCESS_TOKEN:-}
-      APNS_KEY_PATH: ${APNS_KEY_PATH:-}
-      FCM_CREDENTIALS_PATH: ${FCM_CREDENTIALS_PATH:-}
+      PUSH_ENABLED: ${PUSH_ENABLED:-false}
+      PUSH_TOKEN_KEY: ${PUSH_TOKEN_KEY:-}
+      APNS_PRIVATE_KEY_PEM: ${APNS_PRIVATE_KEY_PEM:-}
+      APNS_KEY_ID: ${APNS_KEY_ID:-}
+      APNS_TEAM_ID: ${APNS_TEAM_ID:-}
+      APNS_TOPIC: ${APNS_TOPIC:-}
+      APNS_SANDBOX: ${APNS_SANDBOX:-false}
+      FCM_SERVICE_ACCOUNT_JSON: ${FCM_SERVICE_ACCOUNT_JSON:-}
     volumes:
       - app-data:/data
       - scan-socket:/scan:ro

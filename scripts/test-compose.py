@@ -23,7 +23,7 @@ def main():
     override=RUNTIME/'override.yaml'
     override.write_text('volumes:\n  scanner-db:\n    external: true\n    name: chriscord-sprint-scanner_scanner-db\n')
     base=['sudo','-n','docker','--host','unix:///var/run/docker.sock','compose','--env-file',str(envfile),'-p',PROJECT,'-f',str(ROOT/'compose.yaml'),'-f',str(override)]
-    clean_env={k:v for k,v in os.environ.items() if not k.startswith(('CHRISCORD_','SFU_','PLEX_','GIMME_','GIPHY_','SWITCHBOARD_','APNS_','FCM_','GLUETUN_','VM_','DJ_','SPOTIFY_','YT_DLP_'))}
+    clean_env={k:v for k,v in os.environ.items() if not k.startswith(('CHRISCORD_','SFU_','PLEX_','GIMME_','GIPHY_','SWITCHBOARD_','PUSH_','APNS_','FCM_','GLUETUN_','VM_','DJ_','SPOTIFY_','YT_DLP_'))}
     checks=[]
     completed=False
     def checkpoint():
