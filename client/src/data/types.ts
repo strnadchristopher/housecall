@@ -34,6 +34,7 @@ export interface Report {
   body: string;
   status: string;
   logs?: string | null;
+  screenshot_id?: string | null;
 }
 export interface Server {
   id: string;

@@ -1,8 +1,10 @@
 import { gimmeStatusText } from "./data/gimme";
+import { submitReport, reportScreenshot } from "./transport/reports";
 import {markdownTokens} from "./data/markdown";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { VoiceSession, type VoiceStatus } from "./transport/voice";
 import { PlexMedia } from "./data/PlexMedia";
+import { DjMedia } from "./data/DjMedia";
 import { MediaTrack } from "./data/MediaTrack";
 import { firstPreviewLink, previewLink, type LinkPreview } from "./data/embeds";
 import { Screen } from "./ui/Screen";
@@ -47,6 +49,8 @@ export function App() {
     [results, setResults] = useState<Message[]>([]),
     [formEpoch, setFormEpoch] = useState(0);
   const file = useRef<File | undefined>(undefined);
+  const screenshotFile = useRef<File | undefined>(undefined);
+  useEffect(() => { screenshotFile.current = undefined; }, [c.auth?.user.id]);
   const [upload, setUpload] = useState<Upload>();
   const uploader = useMemo(
     () => new ResumableUpload(c.api, setUpload),
@@ -84,6 +88,20 @@ export function App() {
     [plexError, setPlexError] = useState(""),
     [plexSubtitles, setPlexSubtitles] = useState(false);
   const activity = c.activities[c.channel];
+  const [djAudio, setDjAudio] = useState<string>();
+  const [djError, setDjError] = useState("");
+  const [djResults, setDjResults] = useState<{ title: string; source: string; duration_ms: number }[]>([]);
+  const djTrackId = activity?.kind === "dj" ? activity.playback.media_id : null;
+  useEffect(() => {
+    let cancelled = false;
+    setDjAudio(undefined);
+    setDjError("");
+    if (djTrackId && voiceStatus.phase === "live" && c.capabilities.dj === true)
+      void c.api.get<{ track: { id: string; audio_url: string } | null }>(`/api/channels/${c.channel}/dj/playback`)
+        .then(result => { if (!cancelled && result.track?.id === djTrackId) setDjAudio(result.track.audio_url); })
+        .catch(error => { if (!cancelled) setDjError(error instanceof Error ? error.message : String(error)); });
+    return () => { cancelled = true; };
+  }, [djTrackId, voiceStatus.phase, c.channel, c.api, c.capabilities.dj]);
   const plexMediaId =
     activity?.kind === "plex" ? activity.playback.media_id : null;
   useEffect(() => {
@@ -207,6 +225,7 @@ export function App() {
               ).roles,
             );
         }
+        if (i.action === "report") screenshotFile.current = undefined;
         setView(i.action as ScreenId);
         if (i.action === "devices") await c.loadDevices();
         if (i.action === "reports-admin") await c.loadReports();
@@ -391,7 +410,19 @@ export function App() {
         }
         return;
       }
+      if (i.screen === "dj") {
+        if (i.action === "choose" && id) {
+          const result = djResults[Number(id)];
+          if (result) await c.api.post(`/api/channels/${c.channel}/dj/queue`, { query: result.source });
+          await c.loadActivity();
+          setView("activities");
+        } else if (i.action === "submit") {
+          setDjResults((await c.api.post<{ results: typeof djResults }>(`/api/channels/${c.channel}/dj/search`, { query: String(v.query) })).results);
+        }
+        return;
+      }
       if (i.screen === "activities") {
+        if (i.action === "browse-dj") { setDjResults([]); setView("dj"); return; }
         if (i.action === "browse-plex") {
           setPlexLibraries(
             (
@@ -412,6 +443,8 @@ export function App() {
           await c.api.post(`/api/channels/${c.channel}/activity`, { kind: id });
         } else if (i.action === "stop") {
           await c.api.delete(`/api/channels/${c.channel}/activity`);
+        } else if (activity?.kind === "dj" && c.capabilities.dj === true && i.action === "submit" && v.command === "enqueue") {
+          await c.api.post(`/api/channels/${c.channel}/dj/queue`, { query: String(v.source || v.title) });
         } else if (activity) {
           await c.api.post(`/api/channels/${c.channel}/activity/commands`, {
             expected_revision: activity.revision,
@@ -560,18 +593,29 @@ export function App() {
         return;
       }
       if (i.screen === "report") {
-        await c.api.post("/api/reports", {
+        await submitReport(c.api, c.channel, {
           kind: v.feature ? "feature" : "bug",
           body: String(v.body),
-          logs: v.logs_consent ? String(v.logs) : null,
-          logs_consent: !!v.logs_consent,
-          screenshot_id: null,
-          screenshot_consent: false,
+          logs: String(v.logs ?? ""),
+          logsConsent: !!v.logs_consent,
+          screenshot: screenshotFile.current,
+          screenshotConsent: !!v.screenshot_consent,
         });
+        screenshotFile.current = undefined;
         setView("conversation");
         return;
       }
       if (i.screen === "reports-admin" && id) {
+        if (i.action === "screenshot") {
+          const blob = await reportScreenshot(c.api, id, AbortSignal.timeout(30000));
+          const objectUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = objectUrl;
+          link.download = `report-screenshot.${blob.type === "image/png" ? "png" : blob.type === "image/jpeg" ? "jpg" : "webp"}`;
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+          return;
+        }
         await c.api.patch(`/api/reports/${id}`, { status: "resolved" });
         await c.loadReports();
         return;
@@ -957,6 +1001,8 @@ export function App() {
           label: "I consent to sending the logs above",
           type: "checkbox",
         },
+        { name: "report_screenshot", label: "Optional screenshot (PNG, JPEG or WebP)", type: "file" },
+        { name: "screenshot_consent", label: "I consent to sending the selected screenshot", type: "checkbox" },
       ],
       submitLabel: "Submit report",
     });
@@ -984,12 +1030,20 @@ export function App() {
         })),
       ],
     });
+  else if (view === "dj")
+    content = screen({ id: view, title: "DJ Steve Forever — synthetic placeholder voice", ...common,
+      fields: [{ name: "query", label: "Song search or YouTube, SoundCloud, Spotify link", required: true }],
+      submitLabel: "Search songs",
+      items: djResults.map((track, index) => ({ id: String(index), text: `${track.title} (${Math.round(track.duration_ms / 1000)} seconds)`, actions: [{ id: "choose", label: "Prepare and queue" }] })),
+    });
   else if (view === "activities")
     content = screen({
       id: view,
       title:
         activity?.kind === "plex" && c.capabilities.plex === true
           ? "Plex watch party"
+          : activity?.kind === "dj" && c.capabilities.dj === true
+            ? "DJ Steve Forever — synthetic voice"
           : "Activity control state — provider playback unavailable",
       ...common,
       items: activity
@@ -1000,6 +1054,7 @@ export function App() {
             },
             ...activity.queue.map((t) => ({ id: t.id, text: t.title })),
             ...(plexError ? [{ id: "plex-error", text: plexError }] : []),
+            ...(djError ? [{ id: "dj-error", text: djError }] : []),
           ]
         : ["plex", "dj", "vm"].map((kind) => ({
             id: kind,
@@ -1038,6 +1093,7 @@ export function App() {
       submitLabel: "Apply control command",
       actions: activity
         ? [
+            { id: "browse-dj", label: "Search songs", disabled: activity.kind !== "dj" || c.capabilities.dj !== true },
             {
               id: "browse-plex",
               label: "Browse Plex library",
@@ -1204,8 +1260,9 @@ export function App() {
       ...common,
       items: c.reports.map((r) => ({
         id: r.id,
-        text: `${r.kind}: ${r.body} (${r.status})`,
+        text: `${r.kind}: ${r.body} (${r.status})${r.logs ? ` — Consented logs: ${r.logs}` : ""}`,
         actions: [
+          ...(r.screenshot_id ? [{ id: "screenshot", label: "Download screenshot" }] : []),
           {
             id: "resolve",
             label: "Resolve",
@@ -1219,6 +1276,10 @@ export function App() {
       onInput={(event) => {
         const target = event.target;
         if (target instanceof HTMLInputElement && target.type === "file") {
+          if (target.name === "report_screenshot") {
+            screenshotFile.current = target.files?.[0];
+            return;
+          }
           file.current = target.files?.[0];
           if (
             upload &&
@@ -1257,6 +1318,7 @@ export function App() {
           onError={setPlexError}
         />
       )}
+      {djAudio && activity?.kind === "dj" && <DjMedia api={c.api} path={djAudio} channel={c.channel} snapshot={activity} onError={setDjError} />}
     </div>
   );
 }

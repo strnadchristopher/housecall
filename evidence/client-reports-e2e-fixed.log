@@ -1,0 +1,35 @@
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/e2e/reports.spec.ts:4:1 › consented scanned screenshot and redacted logs are available only to owner (8.9s)
+
+
+  1) [chromium] › tests/e2e/reports.spec.ts:4:1 › consented scanned screenshot and redacted logs are available only to owner 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByTestId('screen-reports-admin')
+    Expected substring: "normal fixture log"
+    Received string:    "Reportsreadybug: Fixture screenshot report (open) — Consented logs: [redacted sensitive log line]Download screenshotResolveBack to conversation"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" getByTestId('screen-reports-admin') with timeout 5000ms
+      - waiting for getByTestId('screen-reports-admin')
+        14 × locator resolved to <section aria-busy="false" data-testid="screen-reports-admin">…</section>
+           - unexpected value "Reportsreadybug: Fixture screenshot report (open) — Consented logs: [redacted sensitive log line]Download screenshotResolveBack to conversation"
+
+
+      45 |     const admin = page.getByTestId("screen-reports-admin");
+      46 |     await expect(admin).toContainText("Fixture screenshot report");
+    > 47 |     await expect(admin).toContainText("normal fixture log");
+         |                         ^
+      48 |     await expect(admin).not.toContainText("fixture-secret");
+      49 |     const downloading = page.waitForEvent("download");
+      50 |     await page.getByRole("button", { name: "Download screenshot", exact: true }).click();
+        at /home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/reports.spec.ts:47:25
+
+    Error Context: test-results/reports-consented-scanned--b2309-are-available-only-to-owner-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/e2e/reports.spec.ts:4:1 › consented scanned screenshot and redacted logs are available only to owner 

@@ -21,7 +21,7 @@ Only evidence with a successful terminal result establishes a pass. Provisional 
 | DJ activity | encrypted local intro+song, route authorization,3-browser decode/sync/skip fixtures | live matched providers, supplied voice reference, progressive start |
 | Shared VM | controller lease + built VM image + nft VPN namespace isolation | booted Debian, WebRTC capture/audio/control, guest-level VPN check, reset |
 | Gimme | durable worker/idempotency/restart fixtures + 3-user dry-run channel status | live provider compatibility; no production calls in sprint |
-| Reports | consent/redaction and owner authorization tests | consented screenshot upload/display flow |
+| Reports | realClamAV3.9s browser consent/upload/owner-only download/resolve + API authorization | native screenshot/log capture consent, Opus presentation |
 | Compose | built image and corrected isolated startup/small-scan checks | completed runtime receipt, multi-GiB browser, final source image |
 | Desktop | patched Tauri Linux release + checksum, Windows/macOS CI | observed Windows/macOS CI success and real OS media permissions |
 | Android | ARM64 APK/signature + installed WebView invite/chat/unsend/revoke E2E | quiet core emulator rerun passes with no ANR; native passkeys/push/media, physical device; Romeo unavailable |

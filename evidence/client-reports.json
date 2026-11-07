@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "scanner": "Real local ClamAV",
+  "checks": [
+    "no screenshot upload before consent",
+    "encrypted scanned screenshot attachment",
+    "redacted consented logs",
+    "owner-only report and screenshot access",
+    "byte-exact authenticated screenshot download",
+    "owner resolves report"
+  ]
+}
