@@ -1,0 +1,6 @@
+Rust verification snapshot: backend DJ plus bounded SFU UDP batching.
+server-dj-sfu-final-check.log: initial clippy failure in DJ test fixture (while-let and lexical MutexGuard scope); corrected without suppressions.
+server-dj-sfu-final-fixed.log: rustfmt/clippy pass, 42 server tests pass, one manual DJ browser fixture ignored here (separate passing receipt). Runner stopped after detecting standalone crate tests creating a duplicate target cache; no failing test.
+server-dj-sfu-remaining-check.log: shared target cache; 24 activities tests and five SFU tests pass, server build succeeds, client build and13 client tests pass, cargo audit with warnings denied and cargo deny pass.
+server-dj-audit-deny.log: initial audit launcher did not include repository-local tool path; corrected in remaining-check runner.
+Later uploaded-video client work is covered by its own browser/typecheck receipts, not this snapshot.

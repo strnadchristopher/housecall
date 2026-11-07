@@ -1,0 +1,6 @@
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › tests/e2e/upload-video.spec.ts:8:1 › scanned upload transcodes, streams to a member before full buffering, and unsend removes playback (23.4s)
+
+  1 passed (28.8s)

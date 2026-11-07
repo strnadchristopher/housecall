@@ -2,7 +2,9 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch:
-    process.env.CHRISCORD_TEST_REPORTS === "1"
+    process.env.CHRISCORD_TEST_UPLOAD_VIDEO === "1"
+      ? "**/upload-video.spec.ts"
+      : process.env.CHRISCORD_TEST_REPORTS === "1"
       ? "**/reports.spec.ts"
       : process.env.CHRISCORD_TEST_PLEX === "1"
       ? "**/plex.spec.ts"

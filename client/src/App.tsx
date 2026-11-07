@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { VoiceSession, type VoiceStatus } from "./transport/voice";
 import { PlexMedia } from "./data/PlexMedia";
 import { DjMedia } from "./data/DjMedia";
+import { UploadedMedia } from "./data/UploadedMedia";
 import { MediaTrack } from "./data/MediaTrack";
 import { firstPreviewLink, previewLink, type LinkPreview } from "./data/embeds";
 import { Screen } from "./ui/Screen";
@@ -50,8 +51,29 @@ export function App() {
     [formEpoch, setFormEpoch] = useState(0);
   const file = useRef<File | undefined>(undefined);
   const screenshotFile = useRef<File | undefined>(undefined);
-  useEffect(() => { screenshotFile.current = undefined; }, [c.auth?.user.id]);
+  useEffect(() => {
+    screenshotFile.current = undefined; file.current = undefined;
+    setUpload(undefined); setDerivation(undefined); setPlayingUpload(undefined);
+    setUploadPlaybackError(""); setAttachments([]);
+  }, [c.auth?.user.id]);
   const [upload, setUpload] = useState<Upload>();
+  const [derivation, setDerivation] = useState<{ id: string; status: string; error?: string }>();
+  const [playingUpload, setPlayingUpload] = useState<{ message: string; attachment: string; path: string }>();
+  const [uploadPlaybackError, setUploadPlaybackError] = useState("");
+  useEffect(() => {
+    if (playingUpload && !c.messages.some(m => m.id === playingUpload.message && m.attachments?.some(a => a.id === playingUpload.attachment && a.video_path === playingUpload.path)))
+      setPlayingUpload(undefined);
+  }, [c.messages, playingUpload]);
+  useEffect(() => {
+    if (!derivation || !["queued", "running"].includes(derivation.status)) return;
+    const controller = new AbortController();
+    const timer = setInterval(() => {
+      void c.api.get<typeof derivation>(`/api/media-jobs/${derivation.id}`, controller.signal)
+        .then(value => { if (!controller.signal.aborted) setDerivation(value); })
+        .catch(error => { if (!controller.signal.aborted) setDerivation({ id: derivation.id, status: "failed", error: String(error) }); });
+    }, 1000);
+    return () => { controller.abort(); clearInterval(timer); };
+  }, [derivation?.id, derivation?.status, c.api]);
   const uploader = useMemo(
     () => new ResumableUpload(c.api, setUpload),
     [c.api],
@@ -284,6 +306,7 @@ export function App() {
         return;
       }
       if (i.screen === "conversation") {
+        if (i.action === "close-video") { setPlayingUpload(undefined); return; }
         if (i.action === "read") {
           const last = c.messages.at(-1);
           if (last) {
@@ -296,6 +319,11 @@ export function App() {
         }
         const m = c.messages.find((m) => m.id === id);
         if (!m) return;
+        if (i.action.startsWith("play-attachment:")) {
+          const attachment = m.attachments?.find(a => a.id === i.action.slice("play-attachment:".length));
+          if (attachment?.video_path) { setUploadPlaybackError(""); setPlayingUpload({ message: m.id, attachment: attachment.id, path: attachment.video_path }); }
+          return;
+        }
         if (i.action === "preview-link") {
           const url = firstPreviewLink(m.body);
           if (url) {
@@ -521,6 +549,10 @@ export function App() {
         return;
       }
       if (i.screen === "uploads") {
+        if (i.action === "derive" && upload?.status === "ready") {
+          setDerivation(await c.api.post(`/api/uploads/${upload.id}/derive`, {}));
+          return;
+        }
         if (i.action === "attach" && upload?.status === "ready") {
           setAttachments((previous) => [...new Set([...previous, upload.id])]);
           setView("conversation");
@@ -776,7 +808,7 @@ export function App() {
             c.channels.find((ch) => ch.id === c.channel)?.name ??
             "Conversation",
           ...common,
-          actions: [{ id: "read", label: "Mark read" }],
+          actions: [{ id: "read", label: "Mark read" }, ...(playingUpload ? [{ id: "close-video", label: "Close video" }] : [])],
           items: [
             ...c.typers.map((id) => ({
               id: `typing-${id}`,
@@ -787,6 +819,7 @@ export function App() {
               richText: markdownTokens(m.body),
               text: `${userName(m.author_id)}: ${m.body}${m.reply_to ? " (reply)" : ""}${m.pinned ? " (pinned)" : ""}${(m.reactions ?? []).map((r) => ` ${r.emoji}`).join("")}`,
               actions: [
+                ...(m.attachments ?? []).filter(a => a.video_path).map(a => ({ id: `play-attachment:${a.id}`, label: `Play ${a.filename}` })),
                 { id: "reply", label: "Reply" },
                 ...(firstPreviewLink(m.body)
                   ? [{ id: "preview-link", label: "Preview link" }]
@@ -802,6 +835,7 @@ export function App() {
               ],
             })),
             ...c.gimmeRequests.map(request => ({ id: `gimme-${request.id}`, text: `${request.request.query}: ${gimmeStatusText(request)}` })),
+            ...(uploadPlaybackError ? [{ id: "upload-playback-error", text: uploadPlaybackError }] : []),
           ],
         })}
         {screen(
@@ -1230,12 +1264,13 @@ export function App() {
         ? [
             {
               id: upload.id,
-              text: `${upload.filename}: ${upload.offset}/${upload.length} bytes (${upload.status})`,
+              text: `${upload.filename}: ${upload.offset}/${upload.length} bytes (${upload.status})${derivation ? ` — Video: ${derivation.status}${derivation.error ? ` (${derivation.error})` : ""}` : ""}`,
             },
           ]
         : [],
       actions: [
         { id: "pause", label: "Pause" },
+        { id: "derive", label: "Prepare video and thumbnail", disabled: upload?.status !== "ready" || (derivation !== undefined && ["queued", "running"].includes(derivation.status)) },
         {
           id: "attach",
           label: "Attach to message",
@@ -1287,7 +1322,7 @@ export function App() {
             (file.current.name !== upload.filename ||
               String(file.current.size) !== upload.length)
           )
-            setUpload(undefined);
+            { setUpload(undefined); setDerivation(undefined); }
         }
         if (
           target instanceof HTMLInputElement &&
@@ -1306,6 +1341,7 @@ export function App() {
     >
       {shell}
       {content}
+      {view === "conversation" && playingUpload && <UploadedMedia api={c.api} path={playingUpload.path} onError={setUploadPlaybackError} />}
       {voiceStatus.streams.map((stream) => (
         <MediaTrack key={stream.id} stream={stream} />
       ))}

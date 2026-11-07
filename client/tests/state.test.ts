@@ -195,3 +195,28 @@ it("roles with spaces are autocompleted and matched as exact names", () => {
   expect(mentionedRoles("hello @Movie Night!", roles)).toEqual(["movie"]);
   expect(mentionedRoles("@Movie Nights", roles)).not.toContain("movie");
 });
+
+import { initializationMime } from "../src/transport/video";
+describe("bounded video initialization", () => {
+  it("rejects zero, extended and oversized boxes; waits for incomplete headers", () => {
+    expect(initializationMime(new Uint8Array([0, 0, 0]))).toBeUndefined();
+    for (const size of [0, 1, 7, 1048577, 0xffffffff]) {
+      const bytes = new Uint8Array(8); new DataView(bytes.buffer).setUint32(0, size);
+      expect(() => initializationMime(bytes)).toThrow();
+    }
+    const incomplete = new Uint8Array(8); new DataView(incomplete.buffer).setUint32(0, 24);
+    expect(initializationMime(incomplete)).toBeUndefined();
+    expect(() => initializationMime(new Uint8Array(1048577))).toThrow();
+  });
+  it("terminates on deterministic malformed byte inputs and emits no arbitrary MIME text", () => {
+    let seed = 17;
+    for (let length = 0; length < 512; length++) {
+      const bytes = new Uint8Array(length);
+      for (let i = 0; i < length; i++) { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; bytes[i] = seed >>> 24; }
+      try {
+        const mime = initializationMime(bytes);
+        if (mime) expect(mime).toMatch(/^video\/mp4; codecs="avc1\.[0-9a-f]{6}(, mp4a\.40\.2)?"$/);
+      } catch (error) { expect(error).toBeInstanceOf(Error); }
+    }
+  });
+});

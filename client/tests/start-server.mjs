@@ -16,7 +16,7 @@ const child = spawn(binary, [], {
     ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(CHRISCORD_|SFU_|PLEX_|GIMME_|GIPHY_|SWITCHBOARD_|DJ_|SPOTIFY_|YT_DLP_)/.test(key))),
     GIMME_DRY_RUN: "true",
     DJ_ENABLED: "false",
-    ...(process.env.CHRISCORD_TEST_REPORTS === "1"
+    ...((process.env.CHRISCORD_TEST_REPORTS === "1" || process.env.CHRISCORD_TEST_UPLOAD_VIDEO === "1")
       ? { CHRISCORD_CLAMD_SOCKET: resolve("../.runtime/scan/clamd.sock") }
       : {}),
     CHRISCORD_BIND: "127.0.0.1:3031",

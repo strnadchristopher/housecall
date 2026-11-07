@@ -1,0 +1,1042 @@
+   Compiling chriscord-activities v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/activities)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.58s
+     Running unittests src/lib.rs (target/debug/deps/chriscord_activities-36674029bd505c75)
+
+running 4 tests
+test dj::playback_tests::cdn_policy_rejects_private_hosts_redirect_tricks_and_special_addresses ... ok
+test dj::playback_tests::oversized_declared_audio_is_rejected_before_creating_a_cache_file ... ok
+test dj::playback_tests::downloader_streams_only_pinned_fixture_origin_and_never_follows_redirects ... ok
+test dj::playback_tests::resolver_process_uses_explicit_local_runtime_and_disables_remote_components ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/domain.rs (target/debug/deps/domain-6e6d9ca6127ad090)
+
+running 10 tests
+test departing_host_transfers_and_commands_cannot_cross_activity_kinds ... ok
+test malformed_protocol_fields_are_rejected ... ok
+test membership_revision_and_host_permissions_are_transactional ... ok
+test dj_queue_majority_vote_deduplication_ownership_and_timer ... ok
+test rejects_ssrf_url_and_cli_injection_sources ... ok
+test three_client_watch_party_sync_pause_seek_and_reconnect ... ok
+test vm_control_lease_handoff_expiry_revocation ... ok
+test playback_position_is_bounded ... ok
+test parser_never_panics_and_normalized_sources_roundtrip ... ok
+test protocol_parser_never_panics ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.54s
+
+     Running tests/plex_hls.rs (target/debug/deps/plex_hls-1712ce224b69bc25)
+
+running 4 tests
+test all_hls_uri_forms_are_local_and_credentials_stay_server_side ... ok
+test origin_path_redirect_style_and_attribute_ssrf_rejected ... ok
+test resource_fixture_preserves_range_strips_query_token_and_refuses_redirect ... ok
+test arbitrary_manifest_input_never_panics ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.17s
+
+     Running tests/providers.rs (target/debug/deps/providers-c0ff0463dee61069)
+
+running 6 tests
+test gimme_poll_url_ssrf_and_terminal_outcomes ... ok
+test gimme_dry_run_discovery_idempotency_and_no_network ... ok
+test switchboard_exact_model_and_task_header_on_loopback_fixture ... ok
+test bounded_metadata_rejects_content_length_and_chunked_overflow ... ok
+test plex_browse_token_header_and_sanitized_dtos_fixture ... ok
+test gimme_async_protocol_loopback_fixture_202_is_not_completion ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests chriscord_activities
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling chriscord-sfu v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/sfu)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.73s
+     Running unittests src/lib.rs (target/debug/deps/chriscord_sfu-5b0c7f5196f9d396)
+
+running 3 tests
+test peer::tests::signaling_backpressure_deadline_and_size_are_bounded ... ok
+test peer::tests::signaling_backpressure_preserves_payload_then_sends_once_without_spinning ... ok
+test diagnostic_tests::disconnect_history_is_bounded_expires_and_is_room_scoped ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests/transport.rs (target/debug/deps/transport-eafad74664c54c57)
+
+running 2 tests
+test sdp_json_parser_never_panics ... ok
+test three_peers_forward_encrypted_udp_media_room_isolation_and_revocation ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.77s
+
+   Doc-tests chriscord_sfu
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling chriscord-sfu v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/sfu)
+   Compiling chriscord-activities v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/activities)
+   Compiling chriscord-server v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/server)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 25.28s
+
+> chriscord-client@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v6.4.5 building for production...
+transforming...
+✓ 67 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                  0.28 kB │ gzip:   0.22 kB
+dist/assets/index-DlzUyPCn.js  333.52 kB │ gzip: 103.50 kB
+dist/assets/plex-CDx5LMjQ.js   600.31 kB │ gzip: 187.09 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 4.54s
+
+> chriscord-client@0.1.0 test
+> vitest run tests/state.test.ts
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/home/christopher/GitHub/.worktrees/chriscord/sprint/client[39m
+
+ [32m✓[39m tests/state.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 140[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m13 passed[39m[22m[90m (13)[39m
+[2m   Start at [22m 03:35:00
+[2m   Duration [22m 748ms[2m (transform 185ms, setup 0ms, import 250ms, tests 140ms, environment 0ms)[22m
+
+    Fetching advisory database from `https://github.com/RustSec/advisory-db.git`
+      Loaded 1422 security advisories (from /home/christopher/.cargo/advisory-db)
+    Updating crates.io index
+    Scanning Cargo.lock for vulnerabilities (314 crate dependencies)
+warning[license-not-encountered]: license was not encountered
+  ┌─ /home/christopher/GitHub/.worktrees/chriscord/sprint/deny.toml:5:89
+  │
+5 │ allow = ["MIT", "Apache-2.0", "Unicode-3.0", "BSD-3-Clause", "ISC", "Zlib", "MPL-2.0", "CC0-1.0", "CDLA-Permissive-2.0"]
+  │                                                                                         ━━━━━━━ unmatched license allowance
+
+warning[duplicate]: found 3 duplicate entries for crate 'base64'
+   ┌─ /home/christopher/GitHub/.worktrees/chriscord/sprint/Cargo.lock:13:1
+   │  
+13 │ ╭ base64 0.21.7 registry+https://github.com/rust-lang/crates.io-index
+14 │ │ base64 0.22.1 registry+https://github.com/rust-lang/crates.io-index
+15 │ │ base64 0.23.1 registry+https://github.com/rust-lang/crates.io-index
+   │ ╰───────────────────────────────────────────────────────────────────┘ lock entries
+   │  
+   ├ base64 v0.21.7
+     ├── base64urlsafedata v0.5.5
+     │   ├── webauthn-attestation-ca v0.5.5
+     │   │   └── webauthn-rs-core v0.5.5
+     │   │       └── webauthn-rs v0.5.5
+     │   │           └── chriscord-server v0.1.0
+     │   ├── webauthn-rs v0.5.5 (*)
+     │   ├── webauthn-rs-core v0.5.5 (*)
+     │   └── webauthn-rs-proto v0.5.5
+     │       └── webauthn-rs-core v0.5.5 (*)
+     ├── webauthn-rs-core v0.5.5 (*)
+     └── webauthn-rs-proto v0.5.5 (*)
+   ├ base64 v0.22.1
+     └── reqwest v0.12.28
+         ├── chriscord-activities v0.1.0
+         │   └── chriscord-server v0.1.0
+         └── chriscord-server v0.1.0 (*)
+   ├ base64 v0.23.1
+     └── hyper-util v0.1.21
+         ├── axum v0.8.9
+         │   └── chriscord-server v0.1.0
+         ├── hyper-rustls v0.27.10
+         │   └── reqwest v0.12.28
+         │       ├── chriscord-activities v0.1.0
+         │       │   └── chriscord-server v0.1.0 (*)
+         │       └── chriscord-server v0.1.0 (*)
+         └── reqwest v0.12.28 (*)
+
+warning[duplicate]: found 2 duplicate entries for crate 'cpufeatures'
+   ┌─ /home/christopher/GitHub/.worktrees/chriscord/sprint/Cargo.lock:35:1
+   │  
+35 │ ╭ cpufeatures 0.2.17 registry+https://github.com/rust-lang/crates.io-index
+36 │ │ cpufeatures 0.3.1 registry+https://github.com/rust-lang/crates.io-index
+   │ ╰───────────────────────────────────────────────────────────────────────┘ lock entries
+   │  
+   ├ cpufeatures v0.2.17
+     ├── aes v0.8.4
+     │   └── aes-gcm v0.10.3
+     │       └── chriscord-media v0.1.0
+     │           └── chriscord-server v0.1.0
+     ├── argon2 v0.5.3
+     │   └── chriscord-server v0.1.0 (*)
+     ├── polyval v0.6.2
+     │   └── ghash v0.5.1
+     │       └── aes-gcm v0.10.3 (*)
+     └── sha2 v0.10.9
+         └── chriscord-server v0.1.0 (*)
+   ├ cpufeatures v0.3.1
+     └── chacha20 v0.10.2
+         ├── proptest v1.12.0
+         │   └── (dev) chriscord-server v0.1.0
+         └── rand v0.10.3
+             ├── dimpl v0.9.0
+             │   ├── str0m v0.25.0
+             │   │   ├── (dev) chriscord-server v0.1.0 (*)
+             │   │   └── chriscord-sfu v0.1.0
+             │   │       └── chriscord-server v0.1.0 (*)
+             │   └── str0m-proto v0.8.0
+             │       ├── is v0.12.0
+             │       │   └── str0m v0.25.0 (*)
+             │       ├── str0m v0.25.0 (*)
+             │       └── str0m-openssl v0.7.0
+             │           └── str0m v0.25.0 (*)
+             └── proptest v1.12.0 (*)
+
+warning[duplicate]: found 3 duplicate entries for crate 'getrandom'
+   ┌─ /home/christopher/GitHub/.worktrees/chriscord/sprint/Cargo.lock:74:1
+   │  
+74 │ ╭ getrandom 0.2.17 registry+https://github.com/rust-lang/crates.io-index
+75 │ │ getrandom 0.3.4 registry+https://github.com/rust-lang/crates.io-index
+76 │ │ getrandom 0.4.3 registry+https://github.com/rust-lang/crates.io-index
+   │ ╰─────────────────────────────────────────────────────────────────────┘ lock entries
+   │  
+   ├ getrandom v0.2.17
+     ├── rand_core v0.6.4
+     │   ├── crypto-common v0.1.7
+     │   │   ├── aead v0.5.2
+     │   │   │   └── aes-gcm v0.10.3
+     │   │   │       └── chriscord-media v0.1.0
+     │   │   │           └── chriscord-server v0.1.0
+     │   │   ├── cipher v0.4.4
+     │   │   │   ├── aes v0.8.4
+     │   │   │   │   └── aes-gcm v0.10.3 (*)
+     │   │   │   ├── aes-gcm v0.10.3 (*)
+     │   │   │   └── ctr v0.9.2
+     │   │   │       └── aes-gcm v0.10.3 (*)
+     │   │   ├── digest v0.10.7
+     │   │   │   ├── blake2 v0.10.6
+     │   │   │   │   └── argon2 v0.5.3
+     │   │   │   │       └── chriscord-server v0.1.0 (*)
+     │   │   │   └── sha2 v0.10.9
+     │   │   │       └── chriscord-server v0.1.0 (*)
+     │   │   └── universal-hash v0.5.1
+     │   │       └── polyval v0.6.2
+     │   │           └── ghash v0.5.1
+     │   │               └── aes-gcm v0.10.3 (*)
+     │   ├── password-hash v0.5.0
+     │   │   └── argon2 v0.5.3 (*)
+     │   ├── rand v0.8.8
+     │   │   ├── chriscord-media v0.1.0 (*)
+     │   │   └── chriscord-server v0.1.0 (*)
+     │   └── rand_chacha v0.3.1
+     │       └── rand v0.8.8 (*)
+     └── ring v0.17.14
+         ├── rustls v0.23.46
+         │   ├── hyper-rustls v0.27.10
+         │   │   └── reqwest v0.12.28
+         │   │       ├── chriscord-activities v0.1.0
+         │   │       │   └── chriscord-server v0.1.0 (*)
+         │   │       └── chriscord-server v0.1.0 (*)
+         │   ├── reqwest v0.12.28 (*)
+         │   └── tokio-rustls v0.26.6
+         │       ├── hyper-rustls v0.27.10 (*)
+         │       └── reqwest v0.12.28 (*)
+         └── rustls-webpki v0.103.16
+             └── rustls v0.23.46 (*)
+   ├ getrandom v0.3.4
+     └── rand_core v0.9.5
+         ├── rand v0.9.5
+         │   ├── sctp-proto v0.10.8
+         │   │   └── str0m v0.25.0
+         │   │       ├── (dev) chriscord-server v0.1.0
+         │   │       └── chriscord-sfu v0.1.0
+         │   │           └── chriscord-server v0.1.0 (*)
+         │   └── webauthn-rs-core v0.5.5
+         │       └── webauthn-rs v0.5.5
+         │           └── chriscord-server v0.1.0 (*)
+         └── rand_chacha v0.9.0
+             ├── rand v0.9.5 (*)
+             └── webauthn-rs-core v0.5.5 (*)
+   ├ getrandom v0.4.3
+     ├── rand v0.10.3
+     │   ├── dimpl v0.9.0
+     │   │   ├── str0m v0.25.0
+     │   │   │   ├── (dev) chriscord-server v0.1.0
+     │   │   │   └── chriscord-sfu v0.1.0
+     │   │   │       └── chriscord-server v0.1.0 (*)
+     │   │   └── str0m-proto v0.8.0
+     │   │       ├── is v0.12.0
+     │   │       │   └── str0m v0.25.0 (*)
+     │   │       ├── str0m v0.25.0 (*)
+     │   │       └── str0m-openssl v0.7.0
+     │   │           └── str0m v0.25.0 (*)
+     │   └── proptest v1.12.0
+     │       └── (dev) chriscord-server v0.1.0 (*)
+     ├── tempfile v3.27.0
+     │   ├── (dev) chriscord-server v0.1.0 (*)
+     │   ├── proptest v1.12.0 (*)
+     │   └── rusty-fork v0.3.1
+     │       └── proptest v1.12.0 (*)
+     └── uuid v1.29.1
+         ├── chriscord-media v0.1.0
+         │   └── chriscord-server v0.1.0 (*)
+         ├── chriscord-server v0.1.0 (*)
+         ├── webauthn-attestation-ca v0.5.5
+         │   └── webauthn-rs-core v0.5.5
+         │       └── webauthn-rs v0.5.5
+         │           └── chriscord-server v0.1.0 (*)
+         ├── webauthn-rs v0.5.5 (*)
+         └── webauthn-rs-core v0.5.5 (*)
+
+warning[duplicate]: found 2 duplicate entries for crate 'nom'
+    ┌─ /home/christopher/GitHub/.worktrees/chriscord/sprint/Cargo.lock:121:1
+    │  
+121 │ ╭ nom 7.1.3 registry+https://github.com/rust-lang/crates.io-index
+122 │ │ nom 8.0.0 registry+https://github.com/rust-lang/crates.io-index
+    │ ╰───────────────────────────────────────────────────────────────┘ lock entries
+    │  
+    ├ nom v7.1.3
+      ├── asn1-rs v0.6.2
+      │   ├── der-parser v9.0.0
+      │   │   ├── webauthn-rs-core v0.5.5
+      │   │   │   └── webauthn-rs v0.5.5
+      │   │   │       └── chriscord-server v0.1.0
+      │   │   └── x509-parser v0.16.0
+      │   │       └── webauthn-rs-core v0.5.5 (*)
+      │   ├── oid-registry v0.7.1
+      │   │   └── x509-parser v0.16.0 (*)
+      │   └── x509-parser v0.16.0 (*)
+      ├── der-parser v9.0.0 (*)
+      ├── rusticata-macros v4.1.0
+      │   ├── asn1-rs v0.6.2 (*)
+      │   ├── der-parser v9.0.0 (*)
+      │   └── x509-parser v0.16.0 (*)
+      ├── webauthn-rs-core v0.5.5 (*)
+      └── x509-parser v0.16.0 (*)
+    ├ nom v8.0.0
+      └── dimpl v0.9.0
+          ├── str0m v0.25.0
+          │   ├── (dev) chriscord-server v0.1.0
+          │   └── chriscord-sfu v0.1.0
+          │       └── chriscord-server v0.1.0 (*)
+          └── str0m-proto v0.8.0
+              ├── is v0.12.0
+              │   └── str0m v0.25.0 (*)
+              ├── str0m v0.25.0 (*)
+              └── str0m-openssl v0.7.0
+                  └── str0m v0.25.0 (*)
+
+warning[duplicate]: found 2 duplicate entries for crate 'r-efi'
+    ┌─ /home/christopher/GitHub/.worktrees/chriscord/sprint/Cargo.lock:155:1
+    │  
+155 │ ╭ r-efi 5.3.0 registry+https://github.com/rust-lang/crates.io-index
+156 │ │ r-efi 6.0.0 registry+https://github.com/rust-lang/crates.io-index
+    │ ╰─────────────────────────────────────────────────────────────────┘ lock entries
+    │  
+    ├ r-efi v5.3.0
+      └── getrandom v0.3.4
+          └── rand_core v0.9.5
+              ├── rand v0.9.5
+              │   ├── sctp-proto v0.10.8
+              │   │   └── str0m v0.25.0
+              │   │       ├── (dev) chriscord-server v0.1.0
+              │   │       └── chriscord-sfu v0.1.0
+              │   │           └── chriscord-server v0.1.0 (*)
+              │   └── webauthn-rs-core v0.5.5
+              │       └── webauthn-rs v0.5.5
+              │           └── chriscord-server v0.1.0 (*)
+              └── rand_chacha v0.9.0
+                  ├── rand v0.9.5 (*)
+                  └── webauthn-rs-core v0.5.5 (*)
+    ├ r-efi v6.0.0
+      └── getrandom v0.4.3
+          ├── rand v0.10.3
+          │   ├── dimpl v0.9.0
+          │   │   ├── str0m v0.25.0
+          │   │   │   ├── (dev) chriscord-server v0.1.0
+          │   │   │   └── chriscord-sfu v0.1.0
+          │   │   │       └── chriscord-server v0.1.0 (*)
+          │   │   └── str0m-proto v0.8.0
+          │   │       ├── is v0.12.0
+          │   │       │   └── str0m v0.25.0 (*)
+          │   │       ├── str0m v0.25.0 (*)
+          │   │       └── str0m-openssl v0.7.0
+          │   │           └── str0m v0.25.0 (*)
+          │   └── proptest v1.12.0
+          │       └── (dev) chriscord-server v0.1.0 (*)
+          ├── tempfile v3.27.0
+          │   ├── (dev) chriscord-server v0.1.0 (*)
+          │   ├── proptest v1.12.0 (*)
+          │   └── rusty-fork v0.3.1
+          │       └── proptest v1.12.0 (*)
+          └── uuid v1.29.1
+              ├── chriscord-media v0.1.0
+              │   └── chriscord-server v0.1.0 (*)
+              ├── chriscord-server v0.1.0 (*)
+              ├── webauthn-attestation-ca v0.5.5
+              │   └── webauthn-rs-core v0.5.5
+              │       └── webauthn-rs v0.5.5
+              │           └── chriscord-server v0.1.0 (*)
+              ├── webauthn-rs v0.5.5 (*)
+              └── webauthn-rs-core v0.5.5 (*)
+
+warning[duplicate]: found 3 duplicate entries for crate 'rand'
+    ┌─ /home/christopher/GitHub/.worktrees/chriscord/sprint/Cargo.lock:157:1
+    │  
+157 │ ╭ rand 0.8.8 registry+https://github.com/rust-lang/crates.io-index
+158 │ │ rand 0.9.5 registry+https://github.com/rust-lang/crates.io-index
+159 │ │ rand 0.10.3 registry+https://github.com/rust-lang/crates.io-index
+    │ ╰─────────────────────────────────────────────────────────────────┘ lock entries
+    │  
+    ├ rand v0.8.8
+      ├── chriscord-media v0.1.0
+      │   └── chriscord-server v0.1.0
+      └── chriscord-server v0.1.0 (*)
+    ├ rand v0.9.5
+      ├── sctp-proto v0.10.8
+      │   └── str0m v0.25.0
+      │       ├── (dev) chriscord-server v0.1.0
+      │       └── chriscord-sfu v0.1.0
+      │           └── chriscord-server v0.1.0 (*)
+      └── webauthn-rs-core v0.5.5
+          └── webauthn-rs v0.5.5
+              └── chriscord-server v0.1.0 (*)
+    ├ rand v0.10.3
+      ├── dimpl v0.9.0
+      │   ├── str0m v0.25.0
+      │   │   ├── (dev) chriscord-server v0.1.0
+      │   │   └── chriscord-sfu v0.1.0
+      │   │       └── chriscord-server v0.1.0 (*)
+      │   └── str0m-proto v0.8.0
+      │       ├── is v0.12.0
+      │       │   └── str0m v0.25.0 (*)
+      │       ├── str0m v0.25.0 (*)
+      │       └── str0m-openssl v0.7.0
+      │           └── str0m v0.25.0 (*)
+      └── proptest v1.12.0
+          └── (dev) chriscord-server v0.1.0 (*)
+
+warning[duplicate]: found 2 duplicate entries for crate 'rand_chacha'
+    ┌─ /home/christopher/GitHub/.worktrees/chriscord/sprint/Cargo.lock:160:1
+    │  
+160 │ ╭ rand_chacha 0.3.1 registry+https://github.com/rust-lang/crates.io-index
+161 │ │ rand_chacha 0.9.0 registry+https://github.com/rust-lang/crates.io-index
+    │ ╰───────────────────────────────────────────────────────────────────────┘ lock entries
+    │  
+    ├ rand_chacha v0.3.1
+      └── rand v0.8.8
+          ├── chriscord-media v0.1.0
+          │   └── chriscord-server v0.1.0
+          └── chriscord-server v0.1.0 (*)
+    ├ rand_chacha v0.9.0
+      ├── rand v0.9.5
+      │   ├── sctp-proto v0.10.8
+      │   │   └── str0m v0.25.0
+      │   │       ├── (dev) chriscord-server v0.1.0
+      │   │       └── chriscord-sfu v0.1.0
+      │   │           └── chriscord-server v0.1.0 (*)
+      │   └── webauthn-rs-core v0.5.5
+      │       └── webauthn-rs v0.5.5
+      │           └── chriscord-server v0.1.0 (*)
+      └── webauthn-rs-core v0.5.5 (*)
+
+warning[duplicate]: found 3 duplicate entries for crate 'rand_core'
+    ┌─ /home/christopher/GitHub/.worktrees/chriscord/sprint/Cargo.lock:162:1
+    │  
+162 │ ╭ rand_core 0.6.4 registry+https://github.com/rust-lang/crates.io-index
+163 │ │ rand_core 0.9.5 registry+https://github.com/rust-lang/crates.io-index
+164 │ │ rand_core 0.10.1 registry+https://github.com/rust-lang/crates.io-index
+    │ ╰──────────────────────────────────────────────────────────────────────┘ lock entries
+    │  
+    ├ rand_core v0.6.4
+      ├── crypto-common v0.1.7
+      │   ├── aead v0.5.2
+      │   │   └── aes-gcm v0.10.3
+      │   │       └── chriscord-media v0.1.0
+      │   │           └── chriscord-server v0.1.0
+      │   ├── cipher v0.4.4
+      │   │   ├── aes v0.8.4
+      │   │   │   └── aes-gcm v0.10.3 (*)
+      │   │   ├── aes-gcm v0.10.3 (*)
+      │   │   └── ctr v0.9.2
+      │   │       └── aes-gcm v0.10.3 (*)
+      │   ├── digest v0.10.7
+      │   │   ├── blake2 v0.10.6
+      │   │   │   └── argon2 v0.5.3
+      │   │   │       └── chriscord-server v0.1.0 (*)
+      │   │   └── sha2 v0.10.9
+      │   │       └── chriscord-server v0.1.0 (*)
+      │   └── universal-hash v0.5.1
+      │       └── polyval v0.6.2
+      │           └── ghash v0.5.1
+      │               └── aes-gcm v0.10.3 (*)
+      ├── password-hash v0.5.0
+      │   └── argon2 v0.5.3 (*)
+      ├── rand v0.8.8
+      │   ├── chriscord-media v0.1.0 (*)
+      │   └── chriscord-server v0.1.0 (*)
+      └── rand_chacha v0.3.1
+          └── rand v0.8.8 (*)
+    ├ rand_core v0.9.5
+      ├── rand v0.9.5
+      │   ├── sctp-proto v0.10.8
+      │   │   └── str0m v0.25.0
+      │   │       ├── (dev) chriscord-server v0.1.0
+      │   │       └── chriscord-sfu v0.1.0
+      │   │           └── chriscord-server v0.1.0 (*)
+      │   └── webauthn-rs-core v0.5.5
+      │       └── webauthn-rs v0.5.5
+      │           └── chriscord-server v0.1.0 (*)
+      └── rand_chacha v0.9.0
+          ├── rand v0.9.5 (*)
+          └── webauthn-rs-core v0.5.5 (*)
+    ├ rand_core v0.10.1
+      ├── chacha20 v0.10.2
+      │   ├── proptest v1.12.0
+      │   │   └── (dev) chriscord-server v0.1.0
+      │   └── rand v0.10.3
+      │       ├── dimpl v0.9.0
+      │       │   ├── str0m v0.25.0
+      │       │   │   ├── (dev) chriscord-server v0.1.0 (*)
+      │       │   │   └── chriscord-sfu v0.1.0
+      │       │   │       └── chriscord-server v0.1.0 (*)
+      │       │   └── str0m-proto v0.8.0
+      │       │       ├── is v0.12.0
+      │       │       │   └── str0m v0.25.0 (*)
+      │       │       ├── str0m v0.25.0 (*)
+      │       │       └── str0m-openssl v0.7.0
+      │       │           └── str0m v0.25.0 (*)
+      │       └── proptest v1.12.0 (*)
+      ├── getrandom v0.4.3
+      │   ├── rand v0.10.3 (*)
+      │   ├── tempfile v3.27.0
+      │   │   ├── (dev) chriscord-server v0.1.0 (*)
+      │   │   ├── proptest v1.12.0 (*)
+      │   │   └── rusty-fork v0.3.1
+      │   │       └── proptest v1.12.0 (*)
+      │   └── uuid v1.29.1
+      │       ├── chriscord-media v0.1.0
+      │       │   └── chriscord-server v0.1.0 (*)
+      │       ├── chriscord-server v0.1.0 (*)
+      │       ├── webauthn-attestation-ca v0.5.5
+      │       │   └── webauthn-rs-core v0.5.5
+      │       │       └── webauthn-rs v0.5.5
+      │       │           └── chriscord-server v0.1.0 (*)
+      │       ├── webauthn-rs v0.5.5 (*)
+      │       └── webauthn-rs-core v0.5.5 (*)
+      ├── rand v0.10.3 (*)
+      └── rand_xorshift v0.5.0
+          └── proptest v1.12.0 (*)
+
+warning[duplicate]: found 2 duplicate entries for crate 'syn'
+    ┌─ /home/christopher/GitHub/.worktrees/chriscord/sprint/Cargo.lock:209:1
+    │  
+209 │ ╭ syn 2.0.119 registry+https://github.com/rust-lang/crates.io-index
+210 │ │ syn 3.0.9 registry+https://github.com/rust-lang/crates.io-index
+    │ ╰───────────────────────────────────────────────────────────────┘ lock entries
+    │  
+    ├ syn v2.0.119
+      ├── asn1-rs-derive v0.5.1
+      │   └── asn1-rs v0.6.2
+      │       ├── der-parser v9.0.0
+      │       │   ├── webauthn-rs-core v0.5.5
+      │       │   │   └── webauthn-rs v0.5.5
+      │       │   │       └── chriscord-server v0.1.0
+      │       │   └── x509-parser v0.16.0
+      │       │       └── webauthn-rs-core v0.5.5 (*)
+      │       ├── oid-registry v0.7.1
+      │       │   └── x509-parser v0.16.0 (*)
+      │       └── x509-parser v0.16.0 (*)
+      ├── asn1-rs-impl v0.2.0
+      │   └── asn1-rs v0.6.2 (*)
+      ├── derive_more-impl v2.1.1
+      │   └── derive_more v2.1.1
+      │       └── selectors v0.41.0
+      │           └── scraper v0.29.0
+      │               └── chriscord-server v0.1.0 (*)
+      ├── openssl-macros v0.1.1
+      │   └── openssl v0.10.82
+      │       ├── str0m-openssl v0.7.0
+      │       │   └── str0m v0.25.0
+      │       │       ├── (dev) chriscord-server v0.1.0 (*)
+      │       │       └── chriscord-sfu v0.1.0
+      │       │           └── chriscord-server v0.1.0 (*)
+      │       ├── str0m-proto v0.8.0
+      │       │   ├── is v0.12.0
+      │       │   │   └── str0m v0.25.0 (*)
+      │       │   ├── str0m v0.25.0 (*)
+      │       │   └── str0m-openssl v0.7.0 (*)
+      │       ├── webauthn-attestation-ca v0.5.5
+      │       │   └── webauthn-rs-core v0.5.5 (*)
+      │       └── webauthn-rs-core v0.5.5 (*)
+      ├── phf_macros v0.14.0
+      │   └── phf v0.14.0
+      │       ├── cssparser v0.38.0
+      │       │   ├── scraper v0.29.0 (*)
+      │       │   └── selectors v0.41.0 (*)
+      │       └── web_atoms v0.3.0
+      │           └── markup5ever v0.40.0
+      │               └── html5ever v0.40.1
+      │                   └── scraper v0.29.0 (*)
+      ├── synstructure v0.13.2
+      │   └── asn1-rs-derive v0.5.1 (*)
+      ├── thiserror-impl v1.0.69
+      │   └── thiserror v1.0.69
+      │       ├── asn1-rs v0.6.2 (*)
+      │       ├── webauthn-rs-core v0.5.5 (*)
+      │       └── x509-parser v0.16.0 (*)
+      ├── tracing-attributes v0.1.31
+      │   └── tracing v0.1.44
+      │       ├── axum v0.8.9
+      │       │   └── chriscord-server v0.1.0 (*)
+      │       ├── axum-core v0.5.6
+      │       │   └── axum v0.8.9 (*)
+      │       ├── chriscord-server v0.1.0 (*)
+      │       ├── chriscord-sfu v0.1.0 (*)
+      │       ├── hyper-util v0.1.21
+      │       │   ├── axum v0.8.9 (*)
+      │       │   ├── hyper-rustls v0.27.10
+      │       │   │   └── reqwest v0.12.28
+      │       │   │       ├── chriscord-activities v0.1.0
+      │       │   │       │   └── chriscord-server v0.1.0 (*)
+      │       │   │       └── chriscord-server v0.1.0 (*)
+      │       │   └── reqwest v0.12.28 (*)
+      │       ├── is v0.12.0 (*)
+      │       ├── str0m v0.25.0 (*)
+      │       ├── str0m-openssl v0.7.0 (*)
+      │       ├── tower v0.5.3
+      │       │   ├── axum v0.8.9 (*)
+      │       │   ├── (dev) chriscord-server v0.1.0 (*)
+      │       │   ├── reqwest v0.12.28 (*)
+      │       │   └── tower-http v0.6.11
+      │       │       ├── chriscord-server v0.1.0 (*)
+      │       │       └── reqwest v0.12.28 (*)
+      │       ├── webauthn-attestation-ca v0.5.5 (*)
+      │       ├── webauthn-rs v0.5.5 (*)
+      │       └── webauthn-rs-core v0.5.5 (*)
+      └── zerocopy-derive v0.8.63
+          └── zerocopy v0.8.63
+              ├── half v2.7.1
+              │   └── serde_cbor_2 v0.13.0
+              │       └── webauthn-rs-core v0.5.5 (*)
+              └── ppv-lite86 v0.2.21
+                  ├── rand_chacha v0.3.1
+                  │   └── rand v0.8.8
+                  │       ├── chriscord-media v0.1.0
+                  │       │   └── chriscord-server v0.1.0 (*)
+                  │       └── chriscord-server v0.1.0 (*)
+                  └── rand_chacha v0.9.0
+                      ├── rand v0.9.5
+                      │   ├── sctp-proto v0.10.8
+                      │   │   └── str0m v0.25.0 (*)
+                      │   └── webauthn-rs-core v0.5.5 (*)
+                      └── webauthn-rs-core v0.5.5 (*)
+    ├ syn v3.0.9
+      ├── cssparser-macros v0.7.1
+      │   └── cssparser v0.38.0
+      │       ├── scraper v0.29.0
+      │       │   └── chriscord-server v0.1.0
+      │       └── selectors v0.41.0
+      │           └── scraper v0.29.0 (*)
+      ├── displaydoc v0.2.7
+      │   ├── asn1-rs v0.6.2
+      │   │   ├── der-parser v9.0.0
+      │   │   │   ├── webauthn-rs-core v0.5.5
+      │   │   │   │   └── webauthn-rs v0.5.5
+      │   │   │   │       └── chriscord-server v0.1.0 (*)
+      │   │   │   └── x509-parser v0.16.0
+      │   │   │       └── webauthn-rs-core v0.5.5 (*)
+      │   │   ├── oid-registry v0.7.1
+      │   │   │   └── x509-parser v0.16.0 (*)
+      │   │   └── x509-parser v0.16.0 (*)
+      │   ├── der-parser v9.0.0 (*)
+      │   ├── icu_collections v2.4.0
+      │   │   ├── icu_normalizer v2.4.0
+      │   │   │   └── idna_adapter v1.2.2
+      │   │   │       └── idna v1.1.0
+      │   │   │           └── url v2.5.8
+      │   │   │               ├── chriscord-activities v0.1.0
+      │   │   │               │   └── chriscord-server v0.1.0 (*)
+      │   │   │               ├── chriscord-server v0.1.0 (*)
+      │   │   │               ├── reqwest v0.12.28
+      │   │   │               │   ├── chriscord-activities v0.1.0 (*)
+      │   │   │               │   └── chriscord-server v0.1.0 (*)
+      │   │   │               ├── tower-http v0.6.11
+      │   │   │               │   ├── chriscord-server v0.1.0 (*)
+      │   │   │               │   └── reqwest v0.12.28 (*)
+      │   │   │               ├── webauthn-rs v0.5.5 (*)
+      │   │   │               ├── webauthn-rs-core v0.5.5 (*)
+      │   │   │               └── webauthn-rs-proto v0.5.5
+      │   │   │                   └── webauthn-rs-core v0.5.5 (*)
+      │   │   └── icu_properties v2.4.0
+      │   │       └── idna_adapter v1.2.2 (*)
+      │   ├── icu_locale_core v2.4.0
+      │   │   ├── icu_properties v2.4.0 (*)
+      │   │   └── icu_provider v2.4.0
+      │   │       ├── icu_normalizer v2.4.0 (*)
+      │   │       └── icu_properties v2.4.0 (*)
+      │   ├── icu_properties v2.4.0 (*)
+      │   ├── icu_provider v2.4.0 (*)
+      │   ├── tinystr v0.8.5
+      │   │   └── icu_locale_core v2.4.0 (*)
+      │   └── zerotrie v0.2.5
+      │       ├── icu_properties v2.4.0 (*)
+      │       └── icu_provider v2.4.0 (*)
+      ├── futures-macro v0.3.34
+      │   └── futures-util v0.3.34
+      │       ├── axum v0.8.9
+      │       │   └── chriscord-server v0.1.0 (*)
+      │       ├── hyper-util v0.1.21
+      │       │   ├── axum v0.8.9 (*)
+      │       │   ├── hyper-rustls v0.27.10
+      │       │   │   └── reqwest v0.12.28 (*)
+      │       │   └── reqwest v0.12.28 (*)
+      │       ├── js-sys v0.3.107
+      │       │   ├── reqwest v0.12.28 (*)
+      │       │   ├── wasm-bindgen-futures v0.4.80
+      │       │   │   ├── reqwest v0.12.28 (*)
+      │       │   │   └── wasm-streams v0.4.2
+      │       │   │       └── reqwest v0.12.28 (*)
+      │       │   ├── wasm-streams v0.4.2 (*)
+      │       │   └── web-sys v0.3.107
+      │       │       ├── reqwest v0.12.28 (*)
+      │       │       └── wasm-streams v0.4.2 (*)
+      │       ├── reqwest v0.12.28 (*)
+      │       ├── tower v0.5.3
+      │       │   ├── axum v0.8.9 (*)
+      │       │   ├── (dev) chriscord-server v0.1.0 (*)
+      │       │   ├── reqwest v0.12.28 (*)
+      │       │   └── tower-http v0.6.11 (*)
+      │       ├── tower-http v0.6.11 (*)
+      │       └── wasm-streams v0.4.2 (*)
+      ├── serde_derive v1.0.229
+      │   ├── serde v1.0.229
+      │   │   ├── base64urlsafedata v0.5.5
+      │   │   │   ├── webauthn-attestation-ca v0.5.5
+      │   │   │   │   └── webauthn-rs-core v0.5.5 (*)
+      │   │   │   ├── webauthn-rs v0.5.5 (*)
+      │   │   │   ├── webauthn-rs-core v0.5.5 (*)
+      │   │   │   └── webauthn-rs-proto v0.5.5 (*)
+      │   │   ├── chriscord-activities v0.1.0 (*)
+      │   │   ├── chriscord-media v0.1.0
+      │   │   │   └── chriscord-server v0.1.0 (*)
+      │   │   ├── chriscord-server v0.1.0 (*)
+      │   │   ├── chriscord-sfu v0.1.0
+      │   │   │   └── chriscord-server v0.1.0 (*)
+      │   │   ├── is v0.12.0
+      │   │   │   └── str0m v0.25.0
+      │   │   │       ├── (dev) chriscord-server v0.1.0 (*)
+      │   │   │       └── chriscord-sfu v0.1.0 (*)
+      │   │   ├── reqwest v0.12.28 (*)
+      │   │   ├── serde_cbor_2 v0.13.0
+      │   │   │   └── webauthn-rs-core v0.5.5 (*)
+      │   │   ├── serde_urlencoded v0.7.1
+      │   │   │   ├── axum v0.8.9 (*)
+      │   │   │   └── reqwest v0.12.28 (*)
+      │   │   ├── str0m v0.25.0 (*)
+      │   │   ├── str0m-proto v0.8.0
+      │   │   │   ├── is v0.12.0 (*)
+      │   │   │   ├── str0m v0.25.0 (*)
+      │   │   │   └── str0m-openssl v0.7.0
+      │   │   │       └── str0m v0.25.0 (*)
+      │   │   ├── url v2.5.8 (*)
+      │   │   ├── webauthn-attestation-ca v0.5.5 (*)
+      │   │   ├── webauthn-rs v0.5.5 (*)
+      │   │   ├── webauthn-rs-core v0.5.5 (*)
+      │   │   └── webauthn-rs-proto v0.5.5 (*)
+      │   └── url v2.5.8 (*)
+      ├── synstructure v0.14.0
+      │   ├── yoke-derive v0.8.4
+      │   │   └── yoke v0.8.4
+      │   │       ├── icu_collections v2.4.0 (*)
+      │   │       ├── icu_provider v2.4.0 (*)
+      │   │       ├── zerotrie v0.2.5 (*)
+      │   │       └── zerovec v0.11.9
+      │   │           ├── icu_collections v2.4.0 (*)
+      │   │           ├── icu_locale_core v2.4.0 (*)
+      │   │           ├── icu_normalizer v2.4.0 (*)
+      │   │           ├── icu_properties v2.4.0 (*)
+      │   │           ├── icu_provider v2.4.0 (*)
+      │   │           ├── potential_utf v0.1.6
+      │   │           │   └── icu_collections v2.4.0 (*)
+      │   │           └── tinystr v0.8.5 (*)
+      │   └── zerofrom-derive v0.1.8
+      │       └── zerofrom v0.1.8
+      │           ├── icu_collections v2.4.0 (*)
+      │           ├── icu_provider v2.4.0 (*)
+      │           ├── yoke v0.8.4 (*)
+      │           ├── zerotrie v0.2.5 (*)
+      │           └── zerovec v0.11.9 (*)
+      ├── thiserror-impl v2.0.21
+      │   └── thiserror v2.0.21
+      │       ├── chriscord-activities v0.1.0 (*)
+      │       ├── chriscord-media v0.1.0 (*)
+      │       ├── chriscord-sfu v0.1.0 (*)
+      │       └── sctp-proto v0.10.8
+      │           └── str0m v0.25.0 (*)
+      ├── tokio-macros v2.7.2
+      │   └── tokio v1.54.1
+      │       ├── axum v0.8.9 (*)
+      │       ├── chriscord-activities v0.1.0 (*)
+      │       ├── chriscord-server v0.1.0 (*)
+      │       ├── chriscord-sfu v0.1.0 (*)
+      │       ├── hyper v1.12.0
+      │       │   ├── axum v0.8.9 (*)
+      │       │   ├── hyper-rustls v0.27.10 (*)
+      │       │   ├── hyper-util v0.1.21 (*)
+      │       │   └── reqwest v0.12.28 (*)
+      │       ├── hyper-rustls v0.27.10 (*)
+      │       ├── hyper-util v0.1.21 (*)
+      │       ├── reqwest v0.12.28 (*)
+      │       ├── tokio-rustls v0.26.6
+      │       │   ├── hyper-rustls v0.27.10 (*)
+      │       │   └── reqwest v0.12.28 (*)
+      │       ├── tokio-stream v0.1.19
+      │       │   └── chriscord-server v0.1.0 (*)
+      │       ├── tokio-util v0.7.20
+      │       │   ├── reqwest v0.12.28 (*)
+      │       │   └── tower-http v0.6.11 (*)
+      │       ├── tower v0.5.3 (*)
+      │       ├── tower-http v0.6.11 (*)
+      │       └── wasm-bindgen-futures v0.4.80 (*)
+      ├── wasm-bindgen-macro-support v0.2.130
+      │   └── wasm-bindgen-macro v0.2.130
+      │       └── wasm-bindgen v0.2.130
+      │           ├── js-sys v0.3.107 (*)
+      │           ├── reqwest v0.12.28 (*)
+      │           ├── wasm-bindgen-futures v0.4.80 (*)
+      │           ├── wasm-streams v0.4.2 (*)
+      │           └── web-sys v0.3.107 (*)
+      ├── yoke-derive v0.8.4 (*)
+      ├── zerofrom-derive v0.1.8 (*)
+      └── zerovec-derive v0.11.7
+          └── zerovec v0.11.9 (*)
+
+warning[duplicate]: found 2 duplicate entries for crate 'synstructure'
+    ┌─ /home/christopher/GitHub/.worktrees/chriscord/sprint/Cargo.lock:212:1
+    │  
+212 │ ╭ synstructure 0.13.2 registry+https://github.com/rust-lang/crates.io-index
+213 │ │ synstructure 0.14.0 registry+https://github.com/rust-lang/crates.io-index
+    │ ╰─────────────────────────────────────────────────────────────────────────┘ lock entries
+    │  
+    ├ synstructure v0.13.2
+      └── asn1-rs-derive v0.5.1
+          └── asn1-rs v0.6.2
+              ├── der-parser v9.0.0
+              │   ├── webauthn-rs-core v0.5.5
+              │   │   └── webauthn-rs v0.5.5
+              │   │       └── chriscord-server v0.1.0
+              │   └── x509-parser v0.16.0
+              │       └── webauthn-rs-core v0.5.5 (*)
+              ├── oid-registry v0.7.1
+              │   └── x509-parser v0.16.0 (*)
+              └── x509-parser v0.16.0 (*)
+    ├ synstructure v0.14.0
+      ├── yoke-derive v0.8.4
+      │   └── yoke v0.8.4
+      │       ├── icu_collections v2.4.0
+      │       │   ├── icu_normalizer v2.4.0
+      │       │   │   └── idna_adapter v1.2.2
+      │       │   │       └── idna v1.1.0
+      │       │   │           └── url v2.5.8
+      │       │   │               ├── chriscord-activities v0.1.0
+      │       │   │               │   └── chriscord-server v0.1.0
+      │       │   │               ├── chriscord-server v0.1.0 (*)
+      │       │   │               ├── reqwest v0.12.28
+      │       │   │               │   ├── chriscord-activities v0.1.0 (*)
+      │       │   │               │   └── chriscord-server v0.1.0 (*)
+      │       │   │               ├── tower-http v0.6.11
+      │       │   │               │   ├── chriscord-server v0.1.0 (*)
+      │       │   │               │   └── reqwest v0.12.28 (*)
+      │       │   │               ├── webauthn-rs v0.5.5
+      │       │   │               │   └── chriscord-server v0.1.0 (*)
+      │       │   │               ├── webauthn-rs-core v0.5.5
+      │       │   │               │   └── webauthn-rs v0.5.5 (*)
+      │       │   │               └── webauthn-rs-proto v0.5.5
+      │       │   │                   └── webauthn-rs-core v0.5.5 (*)
+      │       │   └── icu_properties v2.4.0
+      │       │       └── idna_adapter v1.2.2 (*)
+      │       ├── icu_provider v2.4.0
+      │       │   ├── icu_normalizer v2.4.0 (*)
+      │       │   └── icu_properties v2.4.0 (*)
+      │       ├── zerotrie v0.2.5
+      │       │   ├── icu_properties v2.4.0 (*)
+      │       │   └── icu_provider v2.4.0 (*)
+      │       └── zerovec v0.11.9
+      │           ├── icu_collections v2.4.0 (*)
+      │           ├── icu_locale_core v2.4.0
+      │           │   ├── icu_properties v2.4.0 (*)
+      │           │   └── icu_provider v2.4.0 (*)
+      │           ├── icu_normalizer v2.4.0 (*)
+      │           ├── icu_properties v2.4.0 (*)
+      │           ├── icu_provider v2.4.0 (*)
+      │           ├── potential_utf v0.1.6
+      │           │   └── icu_collections v2.4.0 (*)
+      │           └── tinystr v0.8.5
+      │               └── icu_locale_core v2.4.0 (*)
+      └── zerofrom-derive v0.1.8
+          └── zerofrom v0.1.8
+              ├── icu_collections v2.4.0 (*)
+              ├── icu_provider v2.4.0 (*)
+              ├── yoke v0.8.4 (*)
+              ├── zerotrie v0.2.5 (*)
+              └── zerovec v0.11.9 (*)
+
+warning[duplicate]: found 2 duplicate entries for crate 'thiserror'
+    ┌─ /home/christopher/GitHub/.worktrees/chriscord/sprint/Cargo.lock:216:1
+    │  
+216 │ ╭ thiserror 1.0.69 registry+https://github.com/rust-lang/crates.io-index
+217 │ │ thiserror 2.0.21 registry+https://github.com/rust-lang/crates.io-index
+    │ ╰──────────────────────────────────────────────────────────────────────┘ lock entries
+    │  
+    ├ thiserror v1.0.69
+      ├── asn1-rs v0.6.2
+      │   ├── der-parser v9.0.0
+      │   │   ├── webauthn-rs-core v0.5.5
+      │   │   │   └── webauthn-rs v0.5.5
+      │   │   │       └── chriscord-server v0.1.0
+      │   │   └── x509-parser v0.16.0
+      │   │       └── webauthn-rs-core v0.5.5 (*)
+      │   ├── oid-registry v0.7.1
+      │   │   └── x509-parser v0.16.0 (*)
+      │   └── x509-parser v0.16.0 (*)
+      ├── webauthn-rs-core v0.5.5 (*)
+      └── x509-parser v0.16.0 (*)
+    ├ thiserror v2.0.21
+      ├── chriscord-activities v0.1.0
+      │   └── chriscord-server v0.1.0
+      ├── chriscord-media v0.1.0
+      │   └── chriscord-server v0.1.0 (*)
+      ├── chriscord-sfu v0.1.0
+      │   └── chriscord-server v0.1.0 (*)
+      └── sctp-proto v0.10.8
+          └── str0m v0.25.0
+              ├── (dev) chriscord-server v0.1.0 (*)
+              └── chriscord-sfu v0.1.0 (*)
+
+warning[duplicate]: found 2 duplicate entries for crate 'thiserror-impl'
+    ┌─ /home/christopher/GitHub/.worktrees/chriscord/sprint/Cargo.lock:218:1
+    │  
+218 │ ╭ thiserror-impl 1.0.69 registry+https://github.com/rust-lang/crates.io-index
+219 │ │ thiserror-impl 2.0.21 registry+https://github.com/rust-lang/crates.io-index
+    │ ╰───────────────────────────────────────────────────────────────────────────┘ lock entries
+    │  
+    ├ thiserror-impl v1.0.69
+      └── thiserror v1.0.69
+          ├── asn1-rs v0.6.2
+          │   ├── der-parser v9.0.0
+          │   │   ├── webauthn-rs-core v0.5.5
+          │   │   │   └── webauthn-rs v0.5.5
+          │   │   │       └── chriscord-server v0.1.0
+          │   │   └── x509-parser v0.16.0
+          │   │       └── webauthn-rs-core v0.5.5 (*)
+          │   ├── oid-registry v0.7.1
+          │   │   └── x509-parser v0.16.0 (*)
+          │   └── x509-parser v0.16.0 (*)
+          ├── webauthn-rs-core v0.5.5 (*)
+          └── x509-parser v0.16.0 (*)
+    ├ thiserror-impl v2.0.21
+      └── thiserror v2.0.21
+          ├── chriscord-activities v0.1.0
+          │   └── chriscord-server v0.1.0
+          ├── chriscord-media v0.1.0
+          │   └── chriscord-server v0.1.0 (*)
+          ├── chriscord-sfu v0.1.0
+          │   └── chriscord-server v0.1.0 (*)
+          └── sctp-proto v0.10.8
+              └── str0m v0.25.0
+                  ├── (dev) chriscord-server v0.1.0 (*)
+                  └── chriscord-sfu v0.1.0 (*)
+
+warning[duplicate]: found 2 duplicate entries for crate 'windows-sys'
+    ┌─ /home/christopher/GitHub/.worktrees/chriscord/sprint/Cargo.lock:271:1
+    │  
+271 │ ╭ windows-sys 0.52.0 registry+https://github.com/rust-lang/crates.io-index
+272 │ │ windows-sys 0.61.2 registry+https://github.com/rust-lang/crates.io-index
+    │ ╰────────────────────────────────────────────────────────────────────────┘ lock entries
+    │  
+    ├ windows-sys v0.52.0
+      └── ring v0.17.14
+          ├── rustls v0.23.46
+          │   ├── hyper-rustls v0.27.10
+          │   │   └── reqwest v0.12.28
+          │   │       ├── chriscord-activities v0.1.0
+          │   │       │   └── chriscord-server v0.1.0
+          │   │       └── chriscord-server v0.1.0 (*)
+          │   ├── reqwest v0.12.28 (*)
+          │   └── tokio-rustls v0.26.6
+          │       ├── hyper-rustls v0.27.10 (*)
+          │       └── reqwest v0.12.28 (*)
+          └── rustls-webpki v0.103.16
+              └── rustls v0.23.46 (*)
+    ├ windows-sys v0.61.2
+      ├── errno v0.3.14
+      │   ├── rustix v1.1.6
+      │   │   └── tempfile v3.27.0
+      │   │       ├── (dev) chriscord-server v0.1.0
+      │   │       ├── proptest v1.12.0
+      │   │       │   └── (dev) chriscord-server v0.1.0 (*)
+      │   │       └── rusty-fork v0.3.1
+      │   │           └── proptest v1.12.0 (*)
+      │   └── signal-hook-registry v1.4.8
+      │       └── tokio v1.54.1
+      │           ├── axum v0.8.9
+      │           │   └── chriscord-server v0.1.0 (*)
+      │           ├── chriscord-activities v0.1.0
+      │           │   └── chriscord-server v0.1.0 (*)
+      │           ├── chriscord-server v0.1.0 (*)
+      │           ├── chriscord-sfu v0.1.0
+      │           │   └── chriscord-server v0.1.0 (*)
+      │           ├── hyper v1.12.0
+      │           │   ├── axum v0.8.9 (*)
+      │           │   ├── hyper-rustls v0.27.10
+      │           │   │   └── reqwest v0.12.28
+      │           │   │       ├── chriscord-activities v0.1.0 (*)
+      │           │   │       └── chriscord-server v0.1.0 (*)
+      │           │   ├── hyper-util v0.1.21
+      │           │   │   ├── axum v0.8.9 (*)
+      │           │   │   ├── hyper-rustls v0.27.10 (*)
+      │           │   │   └── reqwest v0.12.28 (*)
+      │           │   └── reqwest v0.12.28 (*)
+      │           ├── hyper-rustls v0.27.10 (*)
+      │           ├── hyper-util v0.1.21 (*)
+      │           ├── reqwest v0.12.28 (*)
+      │           ├── tokio-rustls v0.26.6
+      │           │   ├── hyper-rustls v0.27.10 (*)
+      │           │   └── reqwest v0.12.28 (*)
+      │           ├── tokio-stream v0.1.19
+      │           │   └── chriscord-server v0.1.0 (*)
+      │           ├── tokio-util v0.7.20
+      │           │   ├── reqwest v0.12.28 (*)
+      │           │   └── tower-http v0.6.11
+      │           │       ├── chriscord-server v0.1.0 (*)
+      │           │       └── reqwest v0.12.28 (*)
+      │           ├── tower v0.5.3
+      │           │   ├── axum v0.8.9 (*)
+      │           │   ├── (dev) chriscord-server v0.1.0 (*)
+      │           │   ├── reqwest v0.12.28 (*)
+      │           │   └── tower-http v0.6.11 (*)
+      │           ├── tower-http v0.6.11 (*)
+      │           └── wasm-bindgen-futures v0.4.80
+      │               ├── reqwest v0.12.28 (*)
+      │               └── wasm-streams v0.4.2
+      │                   └── reqwest v0.12.28 (*)
+      ├── mio v1.2.4
+      │   └── tokio v1.54.1 (*)
+      ├── nu-ansi-term v0.50.3
+      │   └── tracing-subscriber v0.3.23
+      │       └── chriscord-server v0.1.0 (*)
+      ├── rustix v1.1.6 (*)
+      ├── socket2 v0.6.5
+      │   ├── hyper-util v0.1.21 (*)
+      │   └── tokio v1.54.1 (*)
+      ├── tempfile v3.27.0 (*)
+      └── tokio v1.54.1 (*)
+
+advisories ok, bans ok, licenses ok, sources ok

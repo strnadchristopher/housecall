@@ -1,0 +1,26 @@
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/e2e/upload-video.spec.ts:8:1 › scanned upload transcodes, streams to a member before full buffering, and unsend removes playback (21.4s)
+
+
+  1) [chromium] › tests/e2e/upload-video.spec.ts:8:1 › scanned upload transcodes, streams to a member before full buffering, and unsend removes playback 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 404
+    Received: 409
+
+      57 |     await a.getByRole("button", { name: "Unsend", exact: true }).click();
+      58 |     await expect(video).toHaveCount(0);
+    > 59 |     expect((await request.get(attachment.video_path, { headers: headers(friend) })).status()).toBe(404);
+         |                                                                                               ^
+      60 |     await writeFile("../evidence/client-upload-video.json", JSON.stringify({ passed: true, sourceSeconds: 60, decodedBeforeFullBuffer: state, checks: ["real ClamAV upload", "real FFmpeg encrypted video+thumbnail", "authenticated MSE decode before full buffering", "cross-user and anonymous denial", "thumbnail content type", "unsend stops client and deletes derivative"], limitations: "Retains ten seconds behind and about thirty ahead; seeking outside buffered media and native WebView support remain unverified." }, null, 2) + "\n");
+      61 |   } finally { for (const context of contexts) await context.close(); await rm(directory, { recursive: true, force: true }); }
+      62 | });
+        at /home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/upload-video.spec.ts:59:95
+
+    Error Context: test-results/upload-video-scanned-uploa-6729e-and-unsend-removes-playback-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/e2e/upload-video.spec.ts:8:1 › scanned upload transcodes, streams to a member before full buffering, and unsend removes playback 
