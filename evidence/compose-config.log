@@ -1,0 +1,3 @@
+Command: docker compose config --quiet
+Result: exit0 with synthetic local .env secrets; rendered secret-bearing config intentionally not logged.
+No Shiva deployment. Local scanner fixture project: chriscord-sprint-scanner (not production compose runtime proof).

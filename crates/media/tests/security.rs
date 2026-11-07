@@ -241,3 +241,49 @@ fn clamd_protocol_accepts_only_definitive_clean_response() {
         worker.join().unwrap();
     }
 }
+
+#[cfg(unix)]
+#[test]
+#[ignore = "requires isolated live clamd fixture via CHRISCORD_TEST_CLAMD_SOCKET"]
+fn live_clamd_releases_clean_and_quarantines_eicar() {
+    let socket = std::env::var("CHRISCORD_TEST_CLAMD_SOCKET").expect("set isolated scanner socket");
+    let scanner = ClamdScanner {
+        socket: socket.into(),
+        timeout: std::time::Duration::from_secs(30),
+    };
+    let tmp = tempfile::tempdir().unwrap();
+    let store = Store::new(tmp.path(), [45; 32]).unwrap();
+    let clean = b"Chriscord clean scanner fixture.";
+    let upload = store
+        .create("fixture", "channel", "clean.txt", clean.len() as u64)
+        .unwrap();
+    store.append(upload.id, "fixture", 0, clean).unwrap();
+    assert_eq!(
+        store
+            .finalize(upload.id, "fixture", &scanner)
+            .unwrap()
+            .status,
+        Status::Ready
+    );
+    let eicar = b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
+    let upload = store
+        .create(
+            "fixture",
+            "channel",
+            "antivirus-test.txt",
+            eicar.len() as u64,
+        )
+        .unwrap();
+    store.append(upload.id, "fixture", 0, eicar).unwrap();
+    assert!(matches!(
+        store.finalize(upload.id, "fixture", &scanner),
+        Err(Error::Quarantined)
+    ));
+    assert!(matches!(
+        store.read_range(upload.id, 0, eicar.len() as u64),
+        Err(Error::Quarantined)
+    ));
+    println!(
+        "Live ClamAV: clean encrypted upload released; EICAR test string remains quarantined and unreadable."
+    );
+}

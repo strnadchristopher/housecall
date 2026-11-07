@@ -37,7 +37,7 @@ Do not put service secrets into client environment variables or Vite-prefixed va
 
 ## Uploads
 
-Resumable uploads use bounded encrypted chunks with 64-bit total lengths. A stopped client resumes from the server's committed offset. There is no product total-length cap. Storage exhaustion is an error, not successful completion. Files remain quarantined until scanning is complete. The optional `scanning` compose profile uses ClamAV and a shared Unix socket; its internal size limits mean huge-file scanning acceptance remains open. Never use the test clean scanner in production. No plaintext media spool is written to persistent disk.
+Resumable uploads use bounded encrypted chunks with 64-bit total lengths. A stopped client resumes from the server's committed offset. There is no product total-length cap. Storage exhaustion is an error, not successful completion. Files remain quarantined until scanning is complete. The scanner compose service uses ClamAV and a shared Unix socket; its internal size limits mean huge-file scanning acceptance remains open. Never use the test clean scanner in production. No plaintext media spool is written to persistent disk.
 
 ## Platforms
 
@@ -46,3 +46,5 @@ The Tauri client project shares the web transport/state layer. Linux needs WebKi
 ## Testing
 
 Run `cargo test --workspace`, `cargo test --manifest-path crates/media/Cargo.toml`, `cargo test --manifest-path crates/activities/Cargo.toml`, and client scripts in package.json. The explicitly ignored media `multi_gib_interrupted_upload` test writes >2 GiB and must be invoked with `-- --ignored --nocapture` separately. Its scanner drains fixture bytes; it proves storage/resume/integrity, not malware detection. Evidence retains this distinction. No keys are printed into logs.
+
+Native dependency note: patches/glib contains the exact upstream pointer-mutability safety correction required by Tauri's GTK3 dependency graph. See patches/README.md and evidence/client-cargo-audit.log. Version-only auditing still reports the old upstream version; the patch must be checked and the native target rebuilt before release. No global advisory suppressions are applied.

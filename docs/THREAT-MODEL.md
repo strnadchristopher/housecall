@@ -43,3 +43,7 @@ No service is deployed by this sprint. Keep test instances bound to loopback, us
 ## Recovery and operations
 
 Back up SQLite using its online backup mechanism and encrypted media together with separately protected encryption keys. Test restoration on a disposable instance. Revocation must invalidate live realtime sessions as well as future HTTP requests. Retain only non-sensitive audit metadata; never log bearer/device/invite credentials, passwords, TTS reference audio or service tokens. Configure Caddy TLS and trusted forwarding explicitly; do not trust arbitrary X-Forwarded-For values. Disk exhaustion must return a recoverable error without advancing upload offsets. Keep all external integrations disabled unless credentials and policy are intentionally configured.
+
+## Native dependency review
+
+RUSTSEC-2024-0429 is a concrete pointer-mutability defect in the GTK3 graph's glib0.18.5. The exact upstream correction is vendored in patches/glib; release requires its optimized regression and rebuilt native artifact. Version metadata alone still triggers the warning, which remains visible. RUSTSEC-2024-0370 (proc-macro-error unmaintained) remains a native dependency maintenance risk. See patches/README.md; do not interpret cargo audit's default exit0 with warnings as a clean native dependency bill of health.
