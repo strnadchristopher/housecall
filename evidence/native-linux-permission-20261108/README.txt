@@ -1,0 +1,1 @@
+The Linux Tauri release binary was launched under Xvfb with a temporary test page and the production permission handler. Clicking the explicit “Join microphone check” action invoked getUserMedia({audio:true, video:false}); the page showed a live audio track. The test stopped the track after eight seconds. The screenshot records the successful capture.

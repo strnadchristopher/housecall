@@ -67,6 +67,7 @@ export function VoiceScreen(props: ScreenProps) {
   const status = props.items?.find(i => i.id === 'status');
   const v = status ? parseVoice(status.text) : { phase: 'idle' };
   const join = find(props.actions, 'join');
+  const joinAudio = find(props.actions, 'join-audio');
   const leave = find(props.actions, 'leave');
   const share = find(props.actions, 'share');
   const mute = find(props.actions, 'mute');
@@ -106,7 +107,7 @@ export function VoiceScreen(props: ScreenProps) {
           : (
             <div className="cc-stage__empty">
               <p className="cc-display">{v.phase === 'live' ? 'You are in. Nobody else is sending yet.' : v.phase === 'connecting' ? 'Connecting to the room' : v.phase === 'failed' ? 'The call did not connect' : 'Nobody is talking yet'}</p>
-              <p>{v.phase === 'idle' ? 'Join to send your microphone and camera. Screen share replaces your camera while it runs.' : v.phase === 'failed' ? (v.error ?? 'Check microphone and camera permission, then join again.') : ''}</p>
+              <p>{v.phase === 'idle' ? 'Joining grants microphone access, and camera access if you choose video. Your devices send only during a call. Screen share replaces your camera while it runs.' : v.phase === 'failed' ? (v.error ?? 'Check microphone and camera permission, then join again.') : ''}</p>
             </div>
           )}
       </div>
@@ -115,7 +116,12 @@ export function VoiceScreen(props: ScreenProps) {
         {/* Controls that do not apply right now are left out rather than shown dead. */}
         {join && !join.disabled && (
           <button type="button" className="cc-btn cc-btn--primary cc-btn--l" disabled={props.busy} aria-label={join.label} onClick={() => void emit('join')}>
-            <Icon name="voice" size={19} /><span>Join</span>
+            <Icon name="voice" size={19} /><span>Video</span>
+          </button>
+        )}
+        {joinAudio && !joinAudio.disabled && (
+          <button type="button" className="cc-btn cc-btn--primary cc-btn--l" disabled={props.busy} aria-label={joinAudio.label} onClick={() => void emit('join-audio')}>
+            <Icon name="mic" size={19} /><span>Audio only</span>
           </button>
         )}
         {mute && !mute.disabled && (

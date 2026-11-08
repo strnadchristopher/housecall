@@ -24,6 +24,8 @@
 - Linux Tauri gate and AppImage/DEB packaging passed. Bundles: `client/src-tauri/target/release/bundle/appimage/Chriscord_0.1.0_amd64.AppImage` (105 MB) and `client/src-tauri/target/release/bundle/deb/Chriscord_0.1.0_amd64.deb` (3.1 MB).
 - Launched the AppImage with Xvfb and a disposable XDG profile; the Chriscord window reached the sign-in screen and showed the production server URL. Screenshot: `evidence/native-linux-launch-20261108T042955/login.png`.
 
+- Review follow-up (2026-11-08): Linux Tauri now grants only microphone/camera requests from the packaged `tauri://localhost` origin (and `http://localhost:1420` in debug); other origins and permission kinds are denied. The call screen now offers microphone-only join and explains that joining grants capture for the call. Checks: permission unit tests 2/2; client unit tests 35/35; chat Playwright 1/1; production frontend build and Linux AppImage rebuild passed. A release-config Linux client under Xvfb ran a temporary explicit-click audio-only probe; `getUserMedia` returned a live track, stopped after eight seconds. [Capture screenshot](../evidence/native-linux-permission-20261108/mic-capture.png) and [test note](../evidence/native-linux-permission-20261108/README.txt).
+
 ## Deployment values for Noah
 
 Set `CHRISCORD_SETUP_TOKEN` (remove after first-owner setup), `CHRISCORD_MEDIA_KEY` (32-byte hex key), `CHRISCORD_DATA_DIR`, `LO_PROXY_NETWORK` (`lo-proxy`), `CHRISCORD_ORIGIN`, `CHRISCORD_PUBLIC_URL`, `RESEND_API_KEY`, `CHRISCORD_MAIL_FROM`, `SFU_HOST_BIND` (`0.0.0.0`), `SFU_PORT` (`50000`), and `SFU_PUBLIC_IP`. The scanner uses ClamAV over a shared Unix socket.

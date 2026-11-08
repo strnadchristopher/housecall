@@ -104,6 +104,11 @@ test("three private users: invitation, realtime mentions, unsend/retraction, edi
   await owner.getByLabel("Password (at least 12 characters)").fill(password);
   await owner.getByRole("button", { name: "Initialize", exact: true }).click();
   await expect(owner.getByTestId("screen-composer")).toBeVisible();
+  await owner.getByRole("button", { name: "Voice and video", exact: true }).click();
+  await expect(owner.getByRole("button", { name: "Join with microphone and camera" })).toBeVisible();
+  await expect(owner.getByRole("button", { name: "Join with microphone only" })).toBeVisible();
+  await expect(owner.getByTestId("screen-voice")).toContainText("Joining grants microphone access");
+  await owner.getByRole("button", { name: "Back to conversation" }).click();
   const bobInvite = await invite(owner);
   await accept(bob, bobInvite, "bob");
   await accept(carol, await invite(owner), "carol");
