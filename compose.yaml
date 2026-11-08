@@ -10,18 +10,28 @@ services:
     ports:
       - "127.0.0.1:${CHRISCORD_PORT:-4317}:3000"
       - "${SFU_HOST_BIND:-127.0.0.1}:${SFU_PORT:-50000}:${SFU_PORT:-50000}/udp"
+    networks:
+      lo-proxy:
+        aliases: [chriscord]
     environment:
       CHRISCORD_BIND: 0.0.0.0:3000
       CHRISCORD_DATABASE: /data/chriscord.sqlite
       CHRISCORD_STATIC_DIR: /app/client
       CHRISCORD_SETUP_TOKEN: ${CHRISCORD_SETUP_TOKEN:?Set a random bootstrap token in .env}
-      CHRISCORD_ORIGIN: ${CHRISCORD_ORIGIN:-http://localhost:4317}
+      CHRISCORD_ORIGIN: ${CHRISCORD_ORIGIN:-https://chriscord.littleobelisk.com}
+      CHRISCORD_PUBLIC_URL: ${CHRISCORD_PUBLIC_URL:-https://chriscord.littleobelisk.com}
+      CHRISCORD_MAIL_FROM: ${CHRISCORD_MAIL_FROM:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
       CHRISCORD_MEDIA_DIR: /data/media
       CHRISCORD_MEDIA_KEY: ${CHRISCORD_MEDIA_KEY:?Set a random 32-byte hex media encryption key in .env}
       CHRISCORD_CLAMD_SOCKET: /scan/clamd.sock
+      CHRISCORD_MEDIA_SCANNER: ${CHRISCORD_MEDIA_SCANNER:-clamav}
+      CHRISCORD_FSANALYZE: ${CHRISCORD_FSANALYZE:-}
+      CHRISCORD_SCAN_TIMEOUT_SECONDS: ${CHRISCORD_SCAN_TIMEOUT_SECONDS:-300}
       SFU_BIND: 0.0.0.0:${SFU_PORT:-50000}
       SFU_PUBLIC_IP: ${SFU_PUBLIC_IP:-127.0.0.1}
       CHRISCORD_CLIENT_ORIGINS: ${CHRISCORD_CLIENT_ORIGINS:-}
+      CHRISCORD_ANDROID_PASSKEY_ORIGINS: ${CHRISCORD_ANDROID_PASSKEY_ORIGINS:-}
       GIPHY_API_KEY: ${GIPHY_API_KEY:-}
       PLEX_URL: ${PLEX_URL:-}
       PLEX_TOKEN: ${PLEX_TOKEN:-}
@@ -42,7 +52,7 @@ services:
       APNS_SANDBOX: ${APNS_SANDBOX:-false}
       FCM_SERVICE_ACCOUNT_JSON: ${FCM_SERVICE_ACCOUNT_JSON:-}
     volumes:
-      - app-data:/data
+      - ${CHRISCORD_DATA_DIR:-./data}:/data
       - scan-socket:/scan:ro
     read_only: true
     tmpfs:
@@ -79,7 +89,11 @@ services:
       - scan-socket:/run/clamav
       - scanner-db:/var/lib/clamav
       - ./infra/clamd.conf:/etc/clamav/clamd.conf:ro
-    mem_limit: 2g
+    # INSTREAM spools plaintext internally; it must never use the writable disk layer.
+    tmpfs:
+      - /tmp:size=2304m,mode=1777
+    mem_limit: 4g
+    memswap_limit: 4g
     pids_limit: 128
   vm-policy:
     profiles: [vm]
@@ -131,8 +145,11 @@ services:
     mem_limit: 3g
     pids_limit: 128
 volumes:
-  app-data:
   scan-socket:
   scanner-db:
   vm-disk:
   vm-control:
+networks:
+  lo-proxy:
+    external: true
+    name: ${LO_PROXY_NETWORK:-lo-proxy}

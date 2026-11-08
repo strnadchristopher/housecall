@@ -1,0 +1,35 @@
+    Finished `release` profile [optimized] target(s) in 0.37s
+
+> chriscord-client@0.1.0 e2e
+> playwright test
+
+[WebServer] (node:1249620) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:1249638) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/e2e/chat.spec.ts:44:1 › three private users: invitation, realtime mentions, unsend/retraction, edits, replies, pins, DM isolation and revocation (29.6s)
+
+
+  1) [chromium] › tests/e2e/chat.spec.ts:44:1 › three private users: invitation, realtime mentions, unsend/retraction, edits, replies, pins, DM isolation and revocation 
+
+    TimeoutError: locator.setInputFiles: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for getByLabel('File', { exact: true })
+
+
+      197 |   await owner.getByRole('button',{name:'Gimme request (dry run)',exact:true}).click();await owner.getByLabel('Movie or show').fill('Arrival 2016');await owner.getByRole('button',{name:'Preview request'}).click();await expect(owner.getByTestId('screen-gimme')).toContainText('Preview saved — no provider request sent');await owner.getByRole('button',{name:'Back to conversation'}).click();
+      198 |   for (const page of [owner, bob, carol]) await expect(page.getByTestId('screen-conversation')).toContainText('Arrival 2016: Preview saved — no provider request sent');
+    > 199 |   await owner.getByRole('button',{name:'Upload file',exact:true}).click();await owner.getByLabel('File',{exact:true}).setInputFiles({name:'upload-fixture.bin',mimeType:'application/octet-stream',buffer:Buffer.alloc(5*1024*1024,23)});await owner.getByRole('button',{name:'Upload',exact:true}).click();await expect(owner.getByTestId('screen-uploads')).toContainText('5242880/5242880 bytes (quarantined)',{timeout:30000});await expect(owner.getByRole('button',{name:'Attach to message'})).toBeDisabled();await owner.getByRole('button',{name:'Back to conversation'}).click();
+          |                                                                           ^
+      200 |   await owner.getByRole("button", { name: "New DM" }).click();
+      201 |   const memberText = await owner
+      202 |     .getByTestId("screen-direct-messages")
+        at /home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/chat.spec.ts:199:75
+
+    Error Context: test-results/chat-three-private-users-i-235a3-DM-isolation-and-revocation-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/e2e/chat.spec.ts:44:1 › three private users: invitation, realtime mentions, unsend/retraction, edits, replies, pins, DM isolation and revocation 

@@ -1,0 +1,28 @@
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/e2e/chat.spec.ts:41:1 › three private users: invitation, realtime mentions, unsend/retraction, edits, replies, pins, DM isolation and revocation (2.0m)
+
+
+  1) [chromium] › tests/e2e/chat.spec.ts:41:1 › three private users: invitation, realtime mentions, unsend/retraction, edits, replies, pins, DM isolation and revocation 
+
+    Test timeout of 120000ms exceeded.
+
+    Error: locator.click: Test ended.
+    Call log:
+      - waiting for getByRole('button', { name: 'Start vm control session' })
+
+
+      199 |   await owner.getByRole('button',{name:'Apply control command'}).click();
+      200 |   for(const page of [bob,carol])await expect(page.getByTestId('screen-activities')).toContainText('Queue fixture');
+    > 201 |   await owner.getByRole('button',{name:'Stop activity',exact:true}).click();await owner.getByRole('button',{name:'Start vm control session'}).click();
+          |                                                                                                                                               ^
+      202 |   await bob.getByRole('button',{name:'Request VM control'}).click();
+      203 |   for(const page of [owner,carol])await expect(page.getByTestId('screen-activities')).toContainText('controller bob');
+      204 |   await owner.getByRole('button',{name:'Stop activity',exact:true}).click();
+        at /home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/chat.spec.ts:201:143
+
+    Error Context: test-results/chat-three-private-users-i-235a3-DM-isolation-and-revocation-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/e2e/chat.spec.ts:41:1 › three private users: invitation, realtime mentions, unsend/retraction, edits, replies, pins, DM isolation and revocation 

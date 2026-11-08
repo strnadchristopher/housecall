@@ -1,0 +1,45 @@
+{
+  "scope": "Focused legacy decoder-error follow-up. No Rust/browser/native execution. Prior full48-client-test receipt retained.",
+  "source_sha256": {
+    "client/src/transport/dj.ts": "88f35114f6b8c0c45db766798e738a6298411f39b1765a34d4ed517006e366d3",
+    "client/tests/media-streaming.test.ts": "f4e461d1a0beb9f808bfaa08fa89e79b58a86825d885bd43d95c36bf07dd237a"
+  },
+  "owned_source_unchanged": true,
+  "results": [
+    {
+      "command": [
+        "client/node_modules/.bin/vitest",
+        "run",
+        "client/tests/media-streaming.test.ts",
+        "--maxWorkers=1"
+      ],
+      "exit": 0,
+      "seconds": 5.027,
+      "log": "/home/christopher/GitHub/.worktrees/chriscord/sprint/evidence/media-legacy-error-20261108T024731Z-648000b2/0.log"
+    },
+    {
+      "command": [
+        "client/node_modules/.bin/tsc",
+        "--noEmit",
+        "--project",
+        "client/tsconfig.json"
+      ],
+      "exit": 0,
+      "seconds": 6.981,
+      "log": "/home/christopher/GitHub/.worktrees/chriscord/sprint/evidence/media-legacy-error-20261108T024731Z-648000b2/1.log"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "client/src/transport/dj.ts",
+        "client/tests/media-streaming.test.ts"
+      ],
+      "exit": 0,
+      "seconds": 0.004,
+      "log": "/home/christopher/GitHub/.worktrees/chriscord/sprint/evidence/media-legacy-error-20261108T024731Z-648000b2/2.log"
+    }
+  ]
+}

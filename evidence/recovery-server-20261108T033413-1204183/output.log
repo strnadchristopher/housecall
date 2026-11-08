@@ -1,0 +1,470 @@
+   Compiling libc v0.2.191
+   Compiling cfg-if v1.0.5
+   Compiling version_check v0.9.5
+   Compiling generic-array v0.14.7
+   Compiling getrandom v0.2.17
+   Compiling rand_core v0.6.4
+   Compiling typenum v1.20.1
+   Compiling crypto-common v0.1.7
+   Compiling proc-macro2 v1.0.107
+   Compiling rand_core v0.10.1
+   Compiling getrandom v0.4.3
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling serde_core v1.0.229
+   Compiling zerocopy v0.8.63
+   Compiling syn v3.0.9
+   Compiling inout v0.1.4
+   Compiling subtle v2.6.1
+   Compiling cpufeatures v0.2.17
+   Compiling rustix v1.1.6
+   Compiling universal-hash v0.5.1
+   Compiling cipher v0.4.4
+   Compiling bitflags v2.13.2
+   Compiling linux-raw-sys v0.12.1
+   Compiling opaque-debug v0.3.1
+   Compiling zmij v1.0.23
+   Compiling autocfg v1.5.1
+   Compiling num-traits v0.2.19
+   Compiling polyval v0.6.2
+   Compiling ppv-lite86 v0.2.21
+   Compiling thiserror v2.0.21
+   Compiling fastrand v2.5.0
+   Compiling serde_json v1.0.154
+   Compiling serde v1.0.229
+   Compiling once_cell v1.21.4
+   Compiling tempfile v3.27.0
+   Compiling rand_chacha v0.3.1
+   Compiling ghash v0.5.1
+   Compiling ctr v0.9.2
+   Compiling aes v0.8.4
+   Compiling serde_derive v1.0.229
+   Compiling thiserror-impl v2.0.21
+   Compiling aead v0.5.2
+   Compiling wait-timeout v0.2.1
+   Compiling quick-error v1.2.3
+   Compiling fnv v1.0.7
+   Compiling memchr v2.8.3
+   Compiling itoa v1.0.18
+   Compiling bit-vec v0.10.1
+   Compiling cpufeatures v0.3.1
+   Compiling chacha20 v0.10.2
+   Compiling bit-set v0.11.1
+   Compiling rusty-fork v0.3.1
+   Compiling aes-gcm v0.10.3
+   Compiling rand v0.8.8
+   Compiling uuid v1.29.1
+   Compiling rand v0.10.3
+   Compiling rand_xorshift v0.5.0
+   Compiling core_detect v1.0.0
+   Compiling unarray v0.1.4
+   Compiling regex-syntax v0.8.11
+   Compiling proptest v1.12.0
+   Compiling chriscord-media v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/media)
+    Finished `test` profile [unoptimized] target(s) in 33.89s
+     Running unittests src/lib.rs (target/debug/deps/chriscord_media-a81ddeca9d75fd1c)
+
+running 1 test
+test scan::tests::protocol_limits_are_incomplete_and_unknown_rejections_never_become_detections ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/scan_reports.rs (target/debug/deps/scan_reports-80b79424729f40af)
+
+running 4 tests
+test source_read_failure_is_not_reported_as_a_scanner_outage ... ok
+test old_ready_metadata_is_not_given_an_invented_scan_receipt ... ok
+test stale_clean_attempt_cannot_overwrite_newer_detected_verdict ... ok
+test classified_outcomes_persist_without_changing_quarantine_or_range_gates ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+     Running tests/security.rs (target/debug/deps/security-2935a6116f4817a8)
+
+running 10 tests
+test live_clamd_releases_clean_and_quarantines_eicar ... ignored, requires isolated live clamd fixture via CHRISCORD_TEST_CLAMD_SOCKET
+test clamd_protocol_accepts_only_definitive_clean_response ... ok
+test multi_gib_interrupted_upload ... ignored, explicit large fixture: writes and reads >2 GiB, run separately
+test malformed_and_overflow_uploads_fail_closed ... ok
+test ciphertext_tamper_is_detected_before_output ... ok
+test resume_large_fixture_after_process_interrupt ... ignored, continues the exact owned disk fixture after an actual process interruption
+test range_parser_never_panics_and_success_is_bounded ... ok
+test zero_length_and_range_edge_cases ... ok
+test resume_encryption_ranges_and_access ... ok
+test arbitrary_bytes_roundtrip ... ok
+
+test result: ok. 7 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 4.45s
+
+     Running tests/whole_object.rs (target/debug/deps/whole_object-91615f440a0cd765)
+
+running 7 tests
+test concurrent_scan_is_rejected_without_queueing_another_process ... ok
+test source_integrity_failure_and_missing_executable_fail_closed ... ok
+test successful_whole_object_scan_preserves_store_release_contract ... ok
+test whole_stream_and_fixed_private_arguments_are_required ... ok
+test clean_exit_without_consuming_even_small_source_is_rejected ... ok
+test detections_errors_and_unknown_exits_keep_original_quarantined ... ok
+test bounded_output_and_runtime_fail_closed_without_deadlock ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.33s
+
+   Doc-tests chriscord_media
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling syn v3.0.9
+   Compiling find-msvc-tools v0.1.15
+   Compiling shlex v2.0.1
+   Compiling once_cell v1.21.4
+   Compiling cc v1.11.1
+   Compiling pkg-config v0.3.34
+   Compiling vcpkg v0.2.15
+   Compiling openssl-sys v0.9.118
+   Compiling syn v2.0.119
+   Compiling getrandom v0.3.4
+   Compiling rand v0.10.3
+   Compiling log v0.4.35
+   Compiling deranged v0.5.9
+   Compiling powerfmt v0.2.1
+   Compiling openssl v0.10.82
+   Compiling time-core v0.1.9
+   Compiling num-conv v0.2.2
+   Compiling foreign-types-shared v0.1.1
+   Compiling foreign-types v0.3.2
+   Compiling time v0.3.55
+   Compiling nom v8.0.0
+   Compiling openssl-macros v0.1.1
+   Compiling serde_derive v1.0.229
+   Compiling subtle v2.6.1
+   Compiling pin-project-lite v0.2.17
+   Compiling arrayvec v0.7.8
+   Compiling dimpl v0.9.0
+   Compiling serde v1.0.229
+   Compiling rand_core v0.9.5
+   Compiling tracing-attributes v0.1.31
+   Compiling tracing-core v0.1.36
+   Compiling base64ct v1.8.3
+   Compiling crc-catalog v2.5.0
+   Compiling crc v3.4.0
+   Compiling str0m-proto v0.8.0
+   Compiling tracing v0.1.44
+   Compiling rand_chacha v0.9.0
+   Compiling thiserror-impl v2.0.21
+   Compiling bytes v1.12.1
+   Compiling thiserror v2.0.21
+   Compiling rand v0.9.5
+   Compiling slab v0.4.12
+   Compiling rustc-hash v2.1.3
+   Compiling sctp-proto v0.10.8
+   Compiling tempfile v3.27.0
+   Compiling combine v4.6.9
+   Compiling str0m-openssl v0.7.0
+   Compiling is v0.12.0
+   Compiling tokio-macros v2.7.2
+   Compiling rusty-fork v0.3.1
+   Compiling tokio v1.54.1
+   Compiling str0m v0.25.0
+   Compiling proptest v1.12.0
+   Compiling chriscord-sfu v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/sfu)
+    Finished `test` profile [unoptimized] target(s) in 59.85s
+     Running unittests src/lib.rs (target/debug/deps/chriscord_sfu-ece7062e61972ea8)
+
+running 5 tests
+test peer::tests::signaling_backpressure_deadline_and_size_are_bounded ... ok
+test peer::tests::signaling_backpressure_preserves_payload_then_sends_once_without_spinning ... ok
+test peer::tests::publisher_never_subscribes_to_existing_or_new_user_tracks ... ok
+test diagnostic_tests::ingress_is_bounded_counts_overflow_and_stops_without_a_packet ... ok
+test diagnostic_tests::disconnect_history_is_bounded_expires_and_is_room_scoped ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running tests/transport.rs (target/debug/deps/transport-0342da40191a1462)
+
+running 2 tests
+test sdp_json_parser_never_panics ... ok
+test three_peers_forward_encrypted_udp_media_room_isolation_and_revocation ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.76s
+
+   Doc-tests chriscord_sfu
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling syn v3.0.9
+   Compiling syn v2.0.119
+   Compiling smallvec v1.16.5
+   Compiling log v0.4.35
+   Compiling memchr v2.8.3
+   Compiling serde_core v1.0.229
+   Compiling synstructure v0.14.0
+   Compiling parking_lot_core v0.9.12
+   Compiling stable_deref_trait v1.2.1
+   Compiling scopeguard v1.2.0
+   Compiling lock_api v0.4.14
+   Compiling zerofrom-derive v0.1.8
+   Compiling tracing-core v0.1.36
+   Compiling displaydoc v0.2.7
+   Compiling zerofrom v0.1.8
+   Compiling parking_lot v0.12.5
+   Compiling yoke-derive v0.8.4
+   Compiling serde_derive v1.0.229
+   Compiling serde v1.0.229
+   Compiling yoke v0.8.4
+   Compiling tracing-attributes v0.1.31
+   Compiling tracing v0.1.44
+   Compiling zerovec-derive v0.11.7
+   Compiling zerovec v0.11.9
+   Compiling futures-core v0.3.34
+   Compiling errno v0.3.14
+   Compiling siphasher v1.0.4
+   Compiling zerocopy v0.8.63
+   Compiling phf_shared v0.14.0
+   Compiling signal-hook-registry v1.4.8
+   Compiling zerocopy-derive v0.8.63
+   Compiling tokio-macros v2.7.2
+   Compiling mio v1.2.4
+   Compiling socket2 v0.6.5
+   Compiling time-macros v0.2.32
+   Compiling tokio v1.54.1
+   Compiling tinystr v0.8.5
+   Compiling crypto-common v0.1.7
+   Compiling writeable v0.6.4
+   Compiling utf_types v1.0.0
+   Compiling litemap v0.8.3
+   Compiling fastrand v2.5.0
+   Compiling phf_generator v0.14.0
+   Compiling time v0.3.55
+   Compiling icu_locale_core v2.4.0
+   Compiling utf8_iter v1.1.0
+   Compiling potential_utf v0.1.6
+   Compiling zerotrie v0.2.5
+   Compiling icu_properties_data v2.4.0
+   Compiling icu_normalizer_data v2.4.0
+   Compiling percent-encoding v2.3.2
+   Compiling num-traits v0.2.19
+   Compiling icu_provider v2.4.0
+   Compiling icu_collections v2.4.0
+   Compiling http v1.5.0
+   Compiling ppv-lite86 v0.2.21
+   Compiling serde_json v1.0.154
+   Compiling icu_normalizer v2.4.0
+   Compiling icu_properties v2.4.0
+   Compiling http-body v1.1.0
+   Compiling form_urlencoded v1.2.2
+   Compiling ring v0.17.14
+   Compiling openssl-macros v0.1.1
+   Compiling futures-sink v0.3.34
+   Compiling tokio-util v0.7.20
+   Compiling openssl v0.10.82
+   Compiling idna_adapter v1.2.2
+   Compiling thiserror v1.0.69
+   Compiling futures-task v0.3.34
+   Compiling minimal-lexical v0.2.1
+   Compiling tower-service v0.3.3
+   Compiling hashbrown v0.17.1
+   Compiling equivalent v1.0.3
+   Compiling httparse v1.10.1
+   Compiling zeroize v1.9.1
+   Compiling rustls-pki-types v1.15.1
+   Compiling indexmap v2.14.2
+   Compiling nom v7.1.3
+   Compiling futures-util v0.3.34
+   Compiling idna v1.1.0
+   Compiling phf_macros v0.14.0
+   Compiling thiserror-impl v1.0.69
+   Compiling synstructure v0.13.2
+   Compiling untrusted v0.9.0
+   Compiling base64ct v1.8.3
+   Compiling atomic-waker v1.1.2
+   Compiling httpdate v1.0.3
+   Compiling try-lock v0.2.5
+   Compiling new_debug_unreachable v1.0.6
+   Compiling want v0.3.2
+   Compiling h2 v0.4.19
+   Compiling asn1-rs-derive v0.5.1
+   Compiling phf v0.14.0
+   Compiling url v2.5.8
+   Compiling rand_chacha v0.9.0
+   Compiling rusticata-macros v4.1.0
+   Compiling phf_codegen v0.14.0
+   Compiling string_cache_codegen v0.11.2
+   Compiling sync_wrapper v1.0.2
+   Compiling futures-channel v0.3.34
+   Compiling nom v8.0.0
+   Compiling asn1-rs-impl v0.2.0
+   Compiling thiserror-impl v2.0.21
+   Compiling rustls v0.23.46
+   Compiling unicase v2.10.0
+   Compiling mime v0.3.18
+   Compiling tower-layer v0.3.3
+   Compiling precomputed-hash v0.1.1
+   Compiling mime_guess v2.0.5
+   Compiling dimpl v0.9.0
+   Compiling thiserror v2.0.21
+   Compiling asn1-rs v0.6.2
+   Compiling hyper v1.12.0
+   Compiling web_atoms v0.3.0
+   Compiling rand v0.9.5
+   Compiling rustls-webpki v0.103.16
+   Compiling http-body-util v0.1.5
+   Compiling num-integer v0.1.47
+   Compiling base64 v0.21.7
+   Compiling lazy_static v1.5.1
+   Compiling base64 v0.23.1
+   Compiling pastey v0.1.1
+   Compiling oid-registry v0.7.1
+   Compiling ipnet v2.12.2
+   Compiling hyper-util v0.1.21
+   Compiling base64urlsafedata v0.5.5
+   Compiling cipher v0.4.4
+   Compiling num-bigint v0.4.8
+   Compiling str0m-proto v0.8.0
+   Compiling string_cache v0.11.0
+   Compiling tower v0.5.3
+   Compiling universal-hash v0.5.1
+   Compiling uuid v1.29.1
+   Compiling block-buffer v0.10.4
+   Compiling webauthn-attestation-ca v0.5.5
+   Compiling ryu v1.0.23
+   Compiling dtoa v1.0.11
+   Compiling dtoa-short v0.3.5
+   Compiling polyval v0.6.2
+   Compiling serde_urlencoded v0.7.1
+   Compiling digest v0.10.7
+   Compiling tokio-rustls v0.26.6
+   Compiling der-parser v9.0.0
+   Compiling tendril v0.5.1
+   Compiling webpki-roots v1.0.11
+   Compiling half v2.7.1
+   Compiling libsqlite3-sys v0.35.0
+   Compiling derive_more-impl v2.1.1
+   Compiling cssparser-macros v0.7.1
+   Compiling foldhash v0.1.5
+   Compiling data-encoding v2.11.1
+   Compiling http-range-header v0.4.2
+   Compiling webauthn-rs-core v0.5.5
+   Compiling tower-http v0.6.11
+   Compiling x509-parser v0.16.0
+   Compiling hashbrown v0.15.5
+   Compiling cssparser v0.38.0
+   Compiling derive_more v2.1.1
+   Compiling serde_cbor_2 v0.13.0
+   Compiling hyper-rustls v0.27.10
+   Compiling markup5ever v0.40.0
+   Compiling ghash v0.5.1
+   Compiling str0m-openssl v0.7.0
+   Compiling is v0.12.0
+   Compiling ctr v0.9.2
+   Compiling aes v0.8.4
+   Compiling webauthn-rs-proto v0.5.5
+   Compiling sctp-proto v0.10.8
+   Compiling rand_chacha v0.3.1
+   Compiling aead v0.5.2
+   Compiling combine v4.6.9
+   Compiling servo_arc v0.5.0
+   Compiling base64 v0.22.1
+   Compiling unicode-width v0.2.3
+   Compiling hex v0.4.3
+   Compiling getopts v0.2.24
+   Compiling reqwest v0.12.28
+   Compiling selectors v0.41.0
+   Compiling str0m v0.25.0
+   Compiling aes-gcm v0.10.3
+   Compiling rand v0.8.8
+   Compiling html5ever v0.40.1
+   Compiling hashlink v0.10.0
+   Compiling blake2 v0.10.6
+   Compiling sharded-slab v0.1.7
+   Compiling axum-core v0.5.6
+   Compiling password-hash v0.5.0
+   Compiling tracing-log v0.2.0
+   Compiling serde_path_to_error v0.1.20
+   Compiling thread_local v1.1.10
+   Compiling nu-ansi-term v0.50.3
+   Compiling ego-tree v0.11.1
+   Compiling fallible-iterator v0.3.0
+   Compiling fallible-streaming-iterator v0.1.9
+   Compiling matchit v0.8.4
+   Compiling axum v0.8.9
+   Compiling rusqlite v0.37.0
+   Compiling scraper v0.29.0
+   Compiling tracing-subscriber v0.3.23
+   Compiling argon2 v0.5.3
+   Compiling chriscord-media v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/media)
+   Compiling chriscord-sfu v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/sfu)
+   Compiling chriscord-activities v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/activities)
+   Compiling webauthn-rs v0.5.5
+   Compiling sha2 v0.10.9
+   Compiling tokio-stream v0.1.19
+   Compiling proptest v1.12.0
+   Compiling chriscord-server v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/server)
+error[E0255]: the name `Query` is defined multiple times
+   --> server/src/dj.rs:434:1
+    |
+  6 |     extract::{Path, Query, State},
+    |                     ----- previous import of the type `Query` here
+...
+434 | struct Query {
+    | ^^^^^^^^^^^^ `Query` redefined here
+    |
+    = note: `Query` must be defined only once in the type namespace of this module
+help: you can use `as` to change the binding name of the import
+    |
+  6 |     extract::{Path, Query as OtherQuery, State},
+    |                           +++++++++++++
+
+error[E0107]: missing generics for struct `axum::extract::Query`
+   --> server/src/dj.rs:434:8
+    |
+434 | struct Query {
+    |        ^^^^^ expected 1 generic argument
+    |
+note: struct defined here, with 1 generic parameter: `T`
+   --> /home/christopher/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-0.8.9/src/extract/query.rs:51:12
+    |
+ 51 | pub struct Query<T>(pub T);
+    |            ^^^^^ -
+help: add missing generic argument
+    |
+434 | struct Query<T> {
+    |             +++
+
+error[E0107]: missing generics for struct `axum::extract::Query`
+   --> server/src/dj.rs:441:23
+    |
+441 |     Json(input): Json<Query>,
+    |                       ^^^^^ expected 1 generic argument
+    |
+note: struct defined here, with 1 generic parameter: `T`
+   --> /home/christopher/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-0.8.9/src/extract/query.rs:51:12
+    |
+ 51 | pub struct Query<T>(pub T);
+    |            ^^^^^ -
+help: add missing generic argument
+    |
+441 |     Json(input): Json<Query<T>>,
+    |                            +++
+
+error[E0107]: missing generics for struct `axum::extract::Query`
+   --> server/src/dj.rs:454:23
+    |
+454 |     Json(input): Json<Query>,
+    |                       ^^^^^ expected 1 generic argument
+    |
+note: struct defined here, with 1 generic parameter: `T`
+   --> /home/christopher/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/axum-0.8.9/src/extract/query.rs:51:12
+    |
+ 51 | pub struct Query<T>(pub T);
+    |            ^^^^^ -
+help: add missing generic argument
+    |
+454 |     Json(input): Json<Query<T>>,
+    |                            +++
+
+Some errors have detailed explanations: E0107, E0255.
+For more information about an error, try `rustc --explain E0107`.
+error: could not compile `chriscord-server` (lib) due to 4 previous errors

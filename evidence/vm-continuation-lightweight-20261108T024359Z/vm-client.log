@@ -1,0 +1,9 @@
+
+ RUN  v4.1.12 /home/christopher/GitHub/.worktrees/chriscord/sprint/client
+
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  20:44:01
+   Duration  406ms (transform 73ms, setup 0ms, import 93ms, tests 13ms, environment 0ms)
+

@@ -4,7 +4,7 @@
       "/usr/bin/node",
       "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/node_modules/@playwright/test/cli.js",
       "test",
-      "voice.spec.ts"
+      "voice-load.spec.ts"
     ],
     "configFile": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/playwright.config.ts",
     "rootDir": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e",
@@ -34,7 +34,7 @@
         "testDir": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e",
         "testIgnore": [],
         "testMatch": [
-          "**/voice.spec.ts"
+          "**/voice-load.spec.ts"
         ],
         "timeout": 120000
       }
@@ -53,7 +53,7 @@
         "testDir": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e",
         "snapshotDir": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e",
         "testIgnore": [],
-        "testMatch": "**/voice.spec.ts",
+        "testMatch": "**/voice-load.spec.ts",
         "timeout": 120000,
         "use": {
           "baseURL": "http://localhost:1420",
@@ -100,18 +100,18 @@
   },
   "suites": [
     {
-      "title": "voice.spec.ts",
-      "file": "voice.spec.ts",
+      "title": "voice-load.spec.ts",
+      "file": "voice-load.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [
         {
-          "title": "three browsers exchange real fake-device audio/video through the Rust SFU",
-          "ok": true,
+          "title": "bounded thirty-peer real RTP load at 320x180 five fps",
+          "ok": false,
           "tags": [],
           "tests": [
             {
-              "timeout": 120000,
+              "timeout": 240000,
               "annotations": [],
               "expectedStatus": "passed",
               "projectId": "chromium",
@@ -120,23 +120,63 @@
                 {
                   "workerIndex": 0,
                   "parallelIndex": 0,
-                  "status": "passed",
-                  "duration": 7179,
-                  "errors": [],
-                  "stdout": [],
+                  "status": "failed",
+                  "duration": 50574,
+                  "error": {
+                    "message": "Error: 20 peers must each decode every other peer\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m",
+                    "stack": "Error: 20 peers must each decode every other peer\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m\n    at /home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/voice-load.spec.ts:281:9",
+                    "location": {
+                      "file": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/voice-load.spec.ts",
+                      "column": 9,
+                      "line": 281
+                    },
+                    "snippet": "  279 |         ),\n  280 |         `${count} peers must each decode every other peer`,\n> 281 |       ).toBeTruthy();\n      |         ^\n  282 |       if (count === 30) {\n  283 |         for (let sample = 0; sample < 4; sample++) {\n  284 |           const previous = peers;"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/voice-load.spec.ts",
+                        "column": 9,
+                        "line": 281
+                      },
+                      "message": "Error: 20 peers must each decode every other peer\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m\n\n  279 |         ),\n  280 |         `${count} peers must each decode every other peer`,\n> 281 |       ).toBeTruthy();\n      |         ^\n  282 |       if (count === 30) {\n  283 |         for (let sample = 0; sample < 4; sample++) {\n  284 |           const previous = peers;\n    at /home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/voice-load.spec.ts:281:9"
+                    }
+                  ],
+                  "stdout": [
+                    {
+                      "text": "Media stage 5: 5/5 fully receiving; elapsed 2413ms\n"
+                    },
+                    {
+                      "text": "Media stage 10: 10/10 fully receiving; elapsed 6299ms\n"
+                    },
+                    {
+                      "text": "Media stage 20: 0/20 fully receiving; elapsed 38274ms\n"
+                    }
+                  ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-11-07T08:30:26.334Z",
+                  "startTime": "2026-11-07T09:45:14.554Z",
                   "annotations": [],
-                  "attachments": []
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/test-results/voice-load-bounded-thirty--31ec9-TP-load-at-320x180-five-fps-chromium/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/voice-load.spec.ts",
+                    "column": 9,
+                    "line": 281
+                  }
                 }
               ],
-              "status": "expected"
+              "status": "unexpected"
             }
           ],
-          "id": "4f8e77fcf9b309101475-954b3438cb1367898cee",
-          "file": "voice.spec.ts",
-          "line": 4,
+          "id": "17703d64af4143ee15bc-03a23f16bfa2d8078850",
+          "file": "voice-load.spec.ts",
+          "line": 90,
           "column": 1
         }
       ]
@@ -144,11 +184,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-11-07T08:30:21.738Z",
-    "duration": 12021.262999999999,
-    "expected": 1,
+    "startTime": "2026-11-07T09:45:10.894Z",
+    "duration": 54558.376000000004,
+    "expected": 0,
     "skipped": 0,
-    "unexpected": 0,
+    "unexpected": 1,
     "flaky": 0
   }
 }

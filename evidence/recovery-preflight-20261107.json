@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-11-08T00:37:51.760739+00:00",
+  "base_sha": "ebe92bd01c09baf03c537401e6bf3159860d62d6",
+  "branch": "sprint",
+  "worktree": "/home/christopher/GitHub/.worktrees/chriscord/sprint",
+  "model": "gpt-6-astra",
+  "reasoning_effort": "high",
+  "provider": "OpenAI via requested ChatGPT subscription",
+  "auth_observed": "codex login status: Logged in using ChatGPT",
+  "tier": "collaboration tool advertised priority; billing route not independently proven",
+  "owner": "/root/engineering_recovery",
+  "ui_protected": "client/src/ui/**",
+  "publishing_remote": null,
+  "free_space_GiB": 25,
+  "retained_dirty_evidence": [
+    "evidence/client-playwright.json",
+    "evidence/client-voice-load.json"
+  ],
+  "limits": "No push/deploy, no API fallback; serial heavy.lock; >=12 GiB free"
+}

@@ -1,0 +1,153 @@
+{
+  "config": {
+    "argv": [
+      "/usr/bin/node",
+      "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/node_modules/.bin/playwright",
+      "test"
+    ],
+    "configFile": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/playwright.config.ts",
+    "rootDir": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/chat.spec.ts"
+        ],
+        "timeout": 120000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "chromium",
+        "testDir": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e",
+        "snapshotDir": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e",
+        "testIgnore": [],
+        "testMatch": "**/chat.spec.ts",
+        "timeout": 120000,
+        "use": {
+          "baseURL": "http://localhost:1420",
+          "trace": "off",
+          "screenshot": "off",
+          "browserName": "chromium",
+          "launchOptions": {
+            "args": [
+              "--use-fake-device-for-media-stream",
+              "--use-fake-ui-for-media-stream",
+              "--autoplay-policy=no-user-gesture-required"
+            ]
+          }
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "chromium"
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/home/christopher/GitHub/.worktrees/chriscord/sprint/evidence/recovery-chat-browser-20261108T040115-1255912/playwright.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.65.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "chat.spec.ts",
+      "file": "chat.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "three private users: invitation, realtime mentions, unsend/retraction, edits, replies, pins, DM isolation and revocation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 21793,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-08T04:01:25.086Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "6dac514d5d837ca37b9e-c288a096cda077413081",
+          "file": "chat.spec.ts",
+          "line": 44,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-08T04:01:19.148Z",
+    "duration": 28316.260000000002,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

@@ -1,0 +1,183 @@
+{
+  "config": {
+    "argv": [
+      "/usr/bin/node",
+      "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/node_modules/.bin/playwright",
+      "test"
+    ],
+    "configFile": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/playwright.config.ts",
+    "rootDir": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/chat.spec.ts"
+        ],
+        "timeout": 120000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "chromium",
+        "testDir": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e",
+        "snapshotDir": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e",
+        "testIgnore": [],
+        "testMatch": "**/chat.spec.ts",
+        "timeout": 120000,
+        "use": {
+          "baseURL": "http://localhost:1420",
+          "trace": "off",
+          "screenshot": "off",
+          "browserName": "chromium",
+          "launchOptions": {
+            "args": [
+              "--use-fake-device-for-media-stream",
+              "--use-fake-ui-for-media-stream",
+              "--autoplay-policy=no-user-gesture-required"
+            ]
+          }
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "chromium"
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/home/christopher/GitHub/.worktrees/chriscord/sprint/evidence/recovery-chat-browser-20261108T035701-1248517/playwright.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.65.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "chat.spec.ts",
+      "file": "chat.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "three private users: invitation, realtime mentions, unsend/retraction, edits, replies, pins, DM isolation and revocation",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 19156,
+                  "error": {
+                    "message": "TimeoutError: locator.fill: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByLabel('Username', { exact: true })\u001b[22m\n",
+                    "stack": "TimeoutError: locator.fill: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByLabel('Username', { exact: true })\u001b[22m\n\n    at accept (/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/chat.spec.ts:5:54)\n    at /home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/chat.spec.ts:108:3",
+                    "location": {
+                      "file": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/chat.spec.ts",
+                      "column": 54,
+                      "line": 5
+                    },
+                    "snippet": " \u001b[90m 3 |\u001b[39m \u001b[36masync\u001b[39m \u001b[36mfunction\u001b[39m accept(page\u001b[33m:\u001b[39m \u001b[33mPage\u001b[39m\u001b[33m,\u001b[39m link\u001b[33m:\u001b[39m string\u001b[33m,\u001b[39m name\u001b[33m:\u001b[39m string) {\n \u001b[90m 4 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(link)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 5 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByLabel(\u001b[32m\"Username\"\u001b[39m\u001b[33m,\u001b[39m { exact\u001b[33m:\u001b[39m \u001b[36mtrue\u001b[39m })\u001b[33m.\u001b[39mfill(name)\u001b[33m;\u001b[39m\n \u001b[90m   |\u001b[39m                                                      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 6 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByLabel(\u001b[32m\"Password (at least 12 characters)\"\u001b[39m)\u001b[33m.\u001b[39mfill(password)\u001b[33m;\u001b[39m\n \u001b[90m 7 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByRole(\u001b[32m\"button\"\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[32m\"Join\"\u001b[39m\u001b[33m,\u001b[39m exact\u001b[33m:\u001b[39m \u001b[36mtrue\u001b[39m })\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m 8 |\u001b[39m   \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByTestId(\u001b[32m\"screen-composer\"\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/chat.spec.ts",
+                        "column": 54,
+                        "line": 5
+                      },
+                      "message": "TimeoutError: locator.fill: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByLabel('Username', { exact: true })\u001b[22m\n\n\n  3 | async function accept(page: Page, link: string, name: string) {\n  4 |   await page.goto(link);\n> 5 |   await page.getByLabel(\"Username\", { exact: true }).fill(name);\n    |                                                      ^\n  6 |   await page.getByLabel(\"Password (at least 12 characters)\").fill(password);\n  7 |   await page.getByRole(\"button\", { name: \"Join\", exact: true }).click();\n  8 |   await expect(page.getByTestId(\"screen-composer\")).toBeVisible();\n    at accept (/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/chat.spec.ts:5:54)\n    at /home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/chat.spec.ts:108:3"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-08T03:57:09.822Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/test-results/chat-three-private-users-i-235a3-DM-isolation-and-revocation-chromium/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/tests/e2e/chat.spec.ts",
+                    "column": 54,
+                    "line": 5
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "6dac514d5d837ca37b9e-c288a096cda077413081",
+          "file": "chat.spec.ts",
+          "line": 44,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-08T03:57:04.254Z",
+    "duration": 25709.233999999997,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

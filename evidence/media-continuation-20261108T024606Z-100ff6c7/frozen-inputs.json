@@ -1,0 +1,15 @@
+{
+  "against": "evidence/recovery-vm-frozen-paths-20261108T022913Z.json",
+  "unchanged": true,
+  "checks": {
+    "scripts/recovery-source-manifest.py": true,
+    "scripts/recovery-bound.py": true,
+    "scripts/recovery-check.sh": true,
+    "client/package.json": true,
+    "client/playwright.config.ts": true,
+    "client/tests/start-server.mjs": true,
+    "client/tests/run-voice.mjs": true,
+    "client/tests/e2e/voice-load.spec.ts": true,
+    "target/release/chriscord-server": true
+  }
+}

@@ -1,0 +1,35 @@
+    Checking chriscord-sfu v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/sfu)
+    Checking chriscord-activities v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/activities)
+    Checking chriscord-server v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/server)
+error: this loop could be written as a `while let` loop
+   --> server/src/dj.rs:872:21
+    |
+872 | /                     loop {
+873 | |                         let Ok(n) = socket.read(&mut buf) else {
+874 | |                             break;
+875 | |                         };
+...   |
+897 | |                     }
+    | |_____________________^ help: try: `while let Ok(n) = socket.read(&mut buf) { .. }`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#while_let_loop
+    = note: `-D clippy::while-let-loop` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::while_let_loop)]`
+
+error: this `MutexGuard` is held across an await point
+    --> server/src/dj.rs:1377:13
+     |
+1377 |         let seen = provider.seen.lock().unwrap();
+     |             ^^^^
+     |
+     = help: consider using an async-aware `Mutex` type or ensuring the `MutexGuard` is dropped before calling `await`
+note: these are all the await points this lock is held through
+    --> server/src/dj.rs:1421:14
+     |
+1421 |             .await
+     |              ^^^^^
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#await_holding_lock
+     = note: `-D clippy::await-holding-lock` implied by `-D warnings`
+     = help: to override `-D warnings` add `#[allow(clippy::await_holding_lock)]`
+
+error: could not compile `chriscord-server` (lib test) due to 2 previous errors

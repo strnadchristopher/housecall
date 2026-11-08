@@ -1,0 +1,7 @@
+{
+  "before_fix": true,
+  "acknowledged_retractions": 100,
+  "new_pending_alert_visible": false,
+  "query_from": "server/src/push.rs:events",
+  "fixture": "isolated SQLite, exact shipping SELECT; not native delivery"
+}

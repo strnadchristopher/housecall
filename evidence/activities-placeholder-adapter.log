@@ -1,0 +1,4 @@
+   Compiling chriscord-activities v0.1.0 (/home/christopher/GitHub/.worktrees/chriscord/sprint/crates/activities)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.17s
+     Running `crates/activities/target/debug/examples/tts_smoke /tmp/chriscord-placeholder-adapter.wav`
+Local placeholder synthesis produced a validated WAV

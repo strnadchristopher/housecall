@@ -18,3 +18,7 @@ No more than two heavy compiles; Rust uses jobs=2, serialize native builds when 
 ## Current acceptance order
 
 UI contract and tested private-chat/media/Plex/Gimme slices are committed. Installed-APK core Android follow-up passes without ANR. DJ three-browser, report screenshot, uploaded-video and post-DJ backend gates pass. Booted Debian VM VPN/input/persistence checks pass; app WebRTC capture/control integration remains. Complete optimized SFU load diagnostics and corrected large-file Compose harness, then native push/passkeys and platform gaps tracked in docs/TEST-MATRIX.md. SPRINT_DONE remains forbidden while any requirement is unverified.
+
+## Recovery checkpoint ordering — 2026-11-08
+
+Preserve every milestone above. Current recovery execution uses ONE compiler/heavy lane under the pre-existing shared lock, incremental disabled and12GiB free disk floor, superseding earlier jobs=2 guidance. Integrated UI plus35 client tests/TypeScript/Vite and11 policy tests pass; Rust/Kotlin/VM publisher source remains uncompiled. Read docs/TEST-MATRIX.md and RECOVERY-HANDOFF.json for current evidence classes. Next host measurement is the retained optimized SFU phase binary, then a measured source fix and30-peer acceptance. Independently implement safe app-driven snapshot reset and the real desktop-guest/three-viewer media fixture; they remain source work. Exact source-bound build/native/Compose/engine preflight commands are in PARENT-ACTIONS.md. Do not infer final acceptance from historical binaries, source reviews, mocks or metadata.

@@ -1,0 +1,13 @@
+
+> chriscord-client@0.1.0 test
+> vitest run tests/state.test.ts tests/native-auth.test.ts tests/voice-lifecycle.test.ts --maxWorkers=1
+
+
+ RUN  v4.1.12 /home/christopher/GitHub/.worktrees/chriscord/sprint/client
+
+
+ Test Files  3 passed (3)
+      Tests  35 passed (35)
+   Start at  20:18:54
+   Duration  1.67s (transform 300ms, setup 0ms, import 421ms, tests 359ms, environment 1ms)
+

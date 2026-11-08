@@ -1,0 +1,18 @@
+{
+  "python_ast_paths": [
+    "infra/vm/media/policy.py",
+    "infra/vm/media/network.py",
+    "infra/vm/media/relay.py",
+    "infra/vm/media/test_media.py",
+    "infra/vm/media/publisher.py",
+    "scripts/recovery-source-manifest.py",
+    "scripts/recovery-bound.py",
+    "scripts/test-whole-object-engine.py",
+    "scripts/test-vm-guest.py",
+    "scripts/test-compose.py"
+  ],
+  "shell_syntax": "passed",
+  "free_disk_bytes": 24460316672,
+  "protected_diff_empty": true,
+  "scope": "syntax and preservation only; no Python engine/container/native execution"
+}

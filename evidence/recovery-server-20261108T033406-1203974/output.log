@@ -1,0 +1,16 @@
+Diff in /home/christopher/GitHub/.worktrees/chriscord/sprint/server/src/lib.rs:4:
+ pub mod gimme;
+ pub mod giphy;
+ pub mod media;
++pub(crate) mod media_index;
+ pub mod passkeys;
+ pub mod plex;
+ pub mod push;
+Diff in /home/christopher/GitHub/.worktrees/chriscord/sprint/server/src/lib.rs:12:
+ pub mod vm;
+ pub mod vm_media;
+ pub mod vm_reset;
+-pub(crate) mod media_index;
+ pub mod voice;
+ use argon2::{
+     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},

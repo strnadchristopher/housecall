@@ -1,0 +1,5 @@
+{
+  "path": "scripts/test-whole-object-engine.py",
+  "python_ast": "passed",
+  "scope": "syntax only; no fixture or engine execution"
+}

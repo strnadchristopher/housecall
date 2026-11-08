@@ -1,0 +1,11 @@
+{
+  "scripts/recovery-source-manifest.py": "f744fdbddbe92819516d7e239191d1a2dc076aeec8f43ba12785009bf4ad844e",
+  "scripts/recovery-bound.py": "7cd3875e98118874851589736d541868c32ae6d312c32e317933a5272be61285",
+  "scripts/recovery-check.sh": "c75586fa622419a8ffaf1c6b74a2e2da089fa842870a43e5b7fd3411d506ccf0",
+  "client/package.json": "393f09ef4b5b03cfdda96b4b3e0cb7f145095646238a18c231dfa948dd272a8f",
+  "client/playwright.config.ts": "cbe3bd3d00496e04d2e940ff24899019649f4f5f1262f1b3cf1c6a9c743d4a63",
+  "client/tests/start-server.mjs": "2dea38ee1cbc70a192fcccd47bc4f1f961d01266153ade8c08777e0c2e644e1d",
+  "client/tests/run-voice.mjs": "07a8e737cee7cee1f4b6f5878ef02dcc2e5dd14556888200a49f151a7d38e0cf",
+  "client/tests/e2e/voice-load.spec.ts": "d11c38604a4617caa75bd267bbcf28e496501faa9d979f7e6f81651a99265d9e",
+  "target/release/chriscord-server": "bdb0bf5155c02f1c5bce40965ebe300f877557ddac73c9da9306f14ad4a8efe2"
+}

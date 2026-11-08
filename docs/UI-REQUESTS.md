@@ -88,3 +88,14 @@ Report creation silently drops logs without consent. That is correct, and the UI
 
 1. Expose invite metadata (inviter, expiry) on the `invite` screen. The UI has room for "Christopher invited you, link expires in 6 hours".
 2. Native passkey support. On the invite screen, the UI already shows "Sign in with passkey" only as a secondary option.
+
+
+## Recovery engineering handoff — native, message data and voice inputs
+
+Engineering supplied optional structured `Item.message`, `Item.channel`, `Item.activity`, `Item.queue` and `ScreenProps.attachments` in contracts/ui.ts; existing text/labels remain compatible. Exact mention IDs, grouped reactions, visible-conversation replies and filename/removal data are available. Opus adoption remains required.
+
+Voice adds `join-audio` and `refresh-devices` action descriptors plus `ScreenProps.voice.inputs`/`selected`. Emit `select-inputs` with `values.microphone` and `values.camera` device IDs before joining; existing `join` still requests camera+microphone and `join-audio` explicitly requests microphone only. Enumeration does not prompt for permission and labels may be blank. Current VoiceScreen hardcodes its actions and renders only bitrate/noise controls, so it does not yet expose these new contracts. Please render the audio-only action and device selection; do not infer actual device availability from configuration. Six transport lifecycle regressions pass; physical/native capture remains a separate gate.
+
+VM input is available through `vm` intents `key`, `pointer`, `click` documented in VM.md. No VM media stream is advertised; capture/audio/reset integration remains open. Native authentication/invitation and background-notification permission/error states use existing intents/errors with device verification limits in NATIVE-AUTH.md and NATIVE-PUSH.md.
+
+Recovery v16 clarification: VM start/stop media actions are supplied only for VM activities and are rendered by the existing generic Page action contract. Do not treat these two descriptors as awaiting implementation; their real-server behavior remains unverified. Optional `vm` metadata binds SFU source IDs to received stream IDs for future Opus-owned source staging. Audio-only/input-device controls, structured message metadata adoption and VM pointer/keyboard presentation still need presentational integration. Safe app-driven snapshot reset remains backend/source work as well as a UI flow; it is not a completed control hidden by the UI.

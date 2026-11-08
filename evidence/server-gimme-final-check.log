@@ -1,0 +1,17 @@
+Diff in /home/christopher/GitHub/.worktrees/chriscord/sprint/server/src/activities.rs:37:
+             get(snapshot).post(start).delete(stop),
+         )
+         .route("/channels/{id}/activity/commands", post(command))
+-
+ }
+ fn domain(e: chriscord_activities::Error) -> ApiError {
+     use chriscord_activities::Error::*;
+Diff in /home/christopher/GitHub/.worktrees/chriscord/sprint/server/src/lib.rs:1:
+ pub mod activities;
+ pub mod embeds;
+-pub mod giphy;
+ pub mod gimme;
++pub mod giphy;
+ pub mod media;
+ pub mod passkeys;
+ pub mod plex;

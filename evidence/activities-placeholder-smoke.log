@@ -1,0 +1,3 @@
+Real local espeak-ng placeholder synthesis: PASS
+channels= 1 sample_rate= 22050 sample_width_bytes= 2 frames= 103517 duration_seconds= 4.695 file_bytes= 207078
+Invoked exact executable arguments used by PlaceholderTts; Rust adapter execution follows when compile slot frees. No network speech API used.

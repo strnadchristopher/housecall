@@ -1,0 +1,13 @@
+
+> chriscord-client@0.1.0 test
+> vitest run tests/state.test.ts
+
+
+ RUN  v4.1.12 /home/christopher/GitHub/.worktrees/chriscord/sprint/client
+
+
+ Test Files  1 passed (1)
+      Tests  17 passed (17)
+   Start at  19:43:41
+   Duration  748ms (transform 213ms, setup 0ms, import 280ms, tests 162ms, environment 0ms)
+

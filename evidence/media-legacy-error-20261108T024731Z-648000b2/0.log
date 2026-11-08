@@ -1,0 +1,9 @@
+
+ RUN  v4.1.12 /home/christopher/GitHub/.worktrees/chriscord/sprint
+
+
+ Test Files  1 passed (1)
+      Tests  14 passed (14)
+   Start at  20:47:32
+   Duration  4.20s (transform 179ms, setup 0ms, import 212ms, tests 3.68s, environment 0ms)
+

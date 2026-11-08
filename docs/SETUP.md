@@ -42,7 +42,9 @@ Do not put service secrets into client environment variables or Vite-prefixed va
 
 ## Uploads
 
-Resumable uploads use bounded encrypted chunks with 64-bit total lengths. A stopped client resumes from the server's committed offset. There is no product total-length cap. Storage exhaustion is an error, not successful completion. Files remain quarantined until scanning is complete. The scanner compose service uses ClamAV and a shared Unix socket; its internal size limits mean huge-file scanning acceptance remains open. Never use the test clean scanner in production. No plaintext media spool is written to persistent disk.
+Resumable uploads use bounded encrypted chunks with 64-bit total lengths. A stopped client resumes from the server's committed offset. There is no product total-length cap. Storage exhaustion is an error, not successful completion. Files remain quarantined until scanning is complete. The default scanner compose service uses ClamAV and a shared Unix socket; its internal size limits mean huge-file scanning acceptance remains open. Never use the test clean scanner in production. ClamAV internally spools INSTREAM plaintext: Compose now mounts its explicit `/tmp` scratch on a bounded 2304 MiB tmpfs and gives the scanner a 4 GiB memory limit with one scan worker. Equal `memswap_limit` disables container swap on supported Docker hosts; verify the effective cgroup swap limit is zero before accepting media-at-rest protection. A full scratch volume or scan resource limit keeps the source quarantined. These settings still require fresh Compose runtime verification. The app's encrypted media store never creates a persistent plaintext spool.
+
+`CHRISCORD_MEDIA_SCANNER` selects `clamav` (default) or the explicitly provisioned `withsecure` whole-object adapter. Unknown engines, missing executables, or invalid `CHRISCORD_SCAN_TIMEOUT_SECONDS` fail startup; no engine fallback releases media. The stock Compose image does not contain the licensed WithSecure runtime, so selecting it alone is not provisioning. See [whole-object scanner setup and pending acceptance](WHOLE-OBJECT-SCANNER.md).
 
 ## Platforms
 

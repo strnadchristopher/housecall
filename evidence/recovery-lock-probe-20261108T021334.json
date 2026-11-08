@@ -1,0 +1,10 @@
+{
+  "at": "2026-11-08T02:13:34.379598+00:00",
+  "open_mode": "O_RDONLY",
+  "operation": "LOCK_EX|LOCK_NB",
+  "disk_free_bytes": 24465559552,
+  "opened": true,
+  "acquired": false,
+  "errno": 11,
+  "error": "Resource temporarily unavailable"
+}
