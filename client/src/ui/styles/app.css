@@ -173,3 +173,8 @@
   .cc-page__body { padding: 16px 18px 32px; }
   [data-tip]::after { display: none !important; }
 }
+
+/* Desktop self-update notice */
+.cc-updater { position: fixed; right: 16px; bottom: 16px; z-index: 1000; width: min(440px, calc(100vw - 32px)); }
+.cc-updater .cc-banner { box-shadow: inset 0 0 0 1px var(--cc-edge), 0 12px 32px rgb(0 0 0 / 0.28); }
+.cc-updater__actions { display: inline-flex; gap: 6px; flex-shrink: 0; }

@@ -1,6 +1,6 @@
 [package]
 name = "chriscord-client"
-version = "0.1.0"
+version = "0.1.1"
 description = "Private Chriscord client"
 edition = "2021"
 publish = false
@@ -12,6 +12,10 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 serde_json = "1"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 
 # Exact upstream safety backport; see ../../patches/README.md.
 [patch.crates-io]

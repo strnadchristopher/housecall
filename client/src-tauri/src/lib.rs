@@ -18,6 +18,10 @@ pub fn run() {
             native_push::native_push,
             native_auth::native_auth
         ]);
+    #[cfg(desktop)]
+    let builder = builder
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init());
     builder
         .run(tauri::generate_context!())
         .expect("Chriscord application failed to start");

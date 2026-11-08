@@ -53,6 +53,7 @@ services:
       FCM_SERVICE_ACCOUNT_JSON: ${FCM_SERVICE_ACCOUNT_JSON:-}
     volumes:
       - ${CHRISCORD_DATA_DIR:-./data}:/data
+      - ${CHRISCORD_UPDATES_DIR:-./updates}:/app/client/updates:ro
       - scan-socket:/scan:ro
     read_only: true
     tmpfs:
