@@ -1,0 +1,74 @@
+{
+  "persona": "Rosa, 61, phone only (Pixel 7 emulation)",
+  "base": "http://127.0.0.1:1522",
+  "log": [
+    {
+      "task": "T1 join from invite link",
+      "ok": true,
+      "taps": 3,
+      "ms": 2312,
+      "note": "landed in: general",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      ]
+    },
+    {
+      "task": "T2 say something in movie-night",
+      "ok": true,
+      "taps": 4,
+      "ms": 1291,
+      "note": "",
+      "consoleErrors": []
+    },
+    {
+      "task": "T3 reply to maya",
+      "ok": true,
+      "taps": 3,
+      "ms": 1055,
+      "note": "",
+      "consoleErrors": []
+    },
+    {
+      "task": "T4 unsend a mistake (touch)",
+      "ok": false,
+      "taps": 2,
+      "ms": 8568,
+      "note": "TimeoutError: locator.click: Timeout 8000ms exceeded.",
+      "consoleErrors": []
+    },
+    {
+      "task": "T5 get to the call from a chat",
+      "ok": true,
+      "taps": 2,
+      "ms": 1430,
+      "note": "had to open the drawer: no call button in the chat header",
+      "consoleErrors": []
+    },
+    {
+      "task": "T6 start a watch party",
+      "ok": false,
+      "taps": 3,
+      "ms": 9388,
+      "note": "TimeoutError: locator.click: Timeout 8000ms exceeded.",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "task": "T7 report that sound is broken",
+      "ok": true,
+      "taps": 3,
+      "ms": 1487,
+      "note": "sent without consent prompt (logs dropped by server?)",
+      "consoleErrors": []
+    },
+    {
+      "task": "T8 find the way back to chat",
+      "ok": false,
+      "taps": 1,
+      "ms": 8366,
+      "note": "TimeoutError: locator.click: Timeout 8000ms exceeded.",
+      "consoleErrors": []
+    }
+  ]
+}

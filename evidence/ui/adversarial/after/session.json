@@ -1,0 +1,72 @@
+{
+  "persona": "Rosa, 61, phone only (Pixel 7 emulation)",
+  "base": "http://127.0.0.1:1522",
+  "log": [
+    {
+      "task": "T1 join from invite link",
+      "ok": true,
+      "taps": 3,
+      "ms": 2377,
+      "note": "landed in: general",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      ]
+    },
+    {
+      "task": "T2 say something in movie-night",
+      "ok": true,
+      "taps": 4,
+      "ms": 1252,
+      "note": "",
+      "consoleErrors": []
+    },
+    {
+      "task": "T3 reply to maya",
+      "ok": true,
+      "taps": 3,
+      "ms": 1165,
+      "note": "",
+      "consoleErrors": []
+    },
+    {
+      "task": "T4 unsend a mistake (touch)",
+      "ok": true,
+      "taps": 4,
+      "ms": 2550,
+      "note": "first tap only asked: true; confirm removed it: true",
+      "consoleErrors": []
+    },
+    {
+      "task": "T5 get to the call from a chat",
+      "ok": true,
+      "taps": 1,
+      "ms": 451,
+      "note": "call button in chat header",
+      "consoleErrors": []
+    },
+    {
+      "task": "T6 start a watch party",
+      "ok": true,
+      "taps": 1,
+      "ms": 958,
+      "note": "stop disabled for a guest: true; reason shown: true; control desk open on phone: false",
+      "consoleErrors": []
+    },
+    {
+      "task": "T7 report that sound is broken",
+      "ok": true,
+      "taps": 3,
+      "ms": 1853,
+      "note": "warning shown before submit: true; sent; transport dropped the unconsented logs as designed",
+      "consoleErrors": []
+    },
+    {
+      "task": "T8 find the way back to chat from a settings page",
+      "ok": true,
+      "taps": 3,
+      "ms": 1841,
+      "note": "",
+      "consoleErrors": []
+    }
+  ]
+}

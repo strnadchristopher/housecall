@@ -1,25 +1,70 @@
-import type { FormEvent } from 'react';
-import type { ScreenProps } from '../contracts/ui';
+import type { ComponentType } from 'react';
+import type { ScreenId, ScreenProps } from '../contracts/ui';
+import './styles/index.css';
+import { ContractForm, ItemList, Page } from './contract';
+import { ConversationScreen } from './chat/Conversation';
+import { ComposerScreen } from './chat/Composer';
+import { OnboardingScreen } from './Onboarding';
+import { ShellScreen } from './Shell';
+import { ActivitiesScreen } from './screens/Activities';
+import { DjScreen, GifsScreen, GimmeScreen, LinkPreviewScreen, PlexScreen, ReportScreen, ReportsAdminScreen, UploadsScreen } from './screens/Media';
+import {
+  ChannelsAdminScreen, DevicesScreen, DirectMessagesScreen, InvitesAdminScreen, MembersScreen, NotificationsScreen,
+  RolesAdminScreen, SearchScreen, ServersAdminScreen, useView,
+} from './screens/People';
+import { SettingsScreen } from './screens/Settings';
+import { VoiceScreen } from './screens/Voice';
+import { bootUi } from './store';
 
-/** Unstyled contract fixture. Visual and interaction design belongs to Opus. */
+bootUi();
+
+const SCREENS: Partial<Record<ScreenId, ComponentType<ScreenProps>>> = {
+  setup: OnboardingScreen,
+  invite: OnboardingScreen,
+  login: OnboardingScreen,
+  shell: ShellScreen,
+  conversation: ConversationScreen,
+  composer: ComposerScreen,
+  search: SearchScreen,
+  pins: SearchScreen,
+  members: MembersScreen,
+  'direct-messages': DirectMessagesScreen,
+  uploads: UploadsScreen,
+  media: LinkPreviewScreen,
+  gifs: GifsScreen,
+  voice: VoiceScreen,
+  activities: ActivitiesScreen,
+  plex: PlexScreen,
+  dj: DjScreen,
+  gimme: GimmeScreen,
+  notifications: NotificationsScreen,
+  settings: SettingsScreen,
+  devices: DevicesScreen,
+  'invites-admin': InvitesAdminScreen,
+  report: ReportScreen,
+  'reports-admin': ReportsAdminScreen,
+  'servers-admin': ServersAdminScreen,
+  'channels-admin': ChannelsAdminScreen,
+  'roles-admin': RolesAdminScreen,
+};
+
+/**
+ * The contract entry point (client/src/contracts/ui.ts). App.tsx renders every
+ * screen through this one component; it dispatches to the designed screen for
+ * props.id. Unknown screens get a designed generic page, so a new contract
+ * screen still works before it has bespoke design.
+ */
 export function Screen(props: ScreenProps) {
-  const emit = (action: string, itemId?: string, values: Record<string, string | boolean> = {}) => props.onIntent({ screen: props.id, action, itemId, values });
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const values: Record<string, string | boolean> = {};
-    for (const field of props.fields ?? []) values[field.name] = field.type === 'checkbox' ? data.has(field.name) : String(data.get(field.name) ?? '');
-    void emit('submit', undefined, values);
-  }
-  return <section data-testid={`screen-${props.id}`} aria-busy={props.busy}>
-    <h1>{props.title}</h1>
-    <p role="status">{props.phase}</p>
-    {props.error && <p role="alert">{props.error}</p>}
-    {props.fields && <form onSubmit={submit}>
-      {props.fields.map(field => <label key={field.name}>{field.label}<input name={field.name} type={field.type ?? 'text'} defaultValue={field.value} required={field.required} disabled={props.busy} /></label>)}
-      <button disabled={props.busy} type="submit">{props.submitLabel ?? 'Submit'}</button>
-    </form>}
-    <ul>{props.items?.map(item => <li key={item.id} data-item-id={item.id}>{item.text}{item.actions?.map(action => <button key={action.id} disabled={props.busy || action.disabled} onClick={() => void emit(action.id, item.id)}>{action.label}</button>)}</li>)}</ul>
-    {props.actions?.map(action => <button key={action.id} disabled={props.busy || action.disabled} onClick={() => void emit(action.id)}>{action.label}</button>)}
-  </section>;
+  const Designed = SCREENS[props.id] ?? GenericScreen;
+  return <Designed {...props} />;
+}
+
+export function GenericScreen(props: ScreenProps) {
+  useView(props.id);
+  return (
+    <Page props={props}>
+      {props.fields?.length ? <ContractForm props={props} /> : null}
+      <ItemList props={props} className="cc-rows" />
+    </Page>
+  );
 }

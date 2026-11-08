@@ -1,0 +1,58 @@
+[
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "plex",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/plex.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "direct-messages",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/direct-messages.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "voice-idle",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/voice-idle.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "call-dock",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/call-dock.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "chat-offline",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/chat-offline.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "reports-admin",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/reports-admin.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "invites-admin",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/invites-admin.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "devices",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/devices.png",
+    "errors": []
+  }
+]

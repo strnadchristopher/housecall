@@ -1,0 +1,11 @@
+
+Running 6 tests using 1 worker
+
+  ✓  1 [desktop] › src/ui/workbench/ui.spec.ts:28:1 › wrong password shows an alert and keeps the form (1.0s)
+  ✓  2 [desktop] › src/ui/workbench/ui.spec.ts:38:1 › chat: send, mention autocomplete, reply, pin, edit, unsend, react (3.0s)
+  ✓  3 [desktop] › src/ui/workbench/ui.spec.ts:79:1 › composer /gimme routes to the Gimme intent, not a message (1.3s)
+  ✓  4 [desktop] › src/ui/workbench/ui.spec.ts:91:1 › navigation, theme switching, activity control, report, devices (3.9s)
+  ✓  5 [desktop] › src/ui/workbench/ui.spec.ts:129:1 › every visible control has an accessible name (2.1s)
+  ✓  6 [phone] › src/ui/workbench/ui.spec.ts:146:1 › @phone drawer navigation, tabs and composer (4.5s)
+
+  6 passed (20.9s)

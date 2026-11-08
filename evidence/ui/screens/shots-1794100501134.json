@@ -1,0 +1,730 @@
+[
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "login",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/login.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "login-error",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/login-error.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "invite",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/invite.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "invite-expired",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/invite-expired.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "setup",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/setup.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "chat",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/chat.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "chat-mention",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/chat-mention.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "chat-reply",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/chat-reply.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "chat-edit",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/chat-edit.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "chat-empty",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/chat-empty.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "chat-offline",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/chat-offline.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "chat-error",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/chat-error.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "chat-video",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/chat-video.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "chat-drawer",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/chat-drawer.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "chat-member",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/chat-member.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "voice-idle",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/voice-idle.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "voice-connecting",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/voice-connecting.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "voice-live",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/voice-live.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "voice-muted",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/voice-muted.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "voice-failed",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/voice-failed.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "call-dock",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/call-dock.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "activities",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/activities.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "activity-plex",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/activity-plex.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "activity-dj",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/activity-dj.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "activity-vm",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/activity-vm.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "activity-error",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/activity-error.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "plex",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/plex.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "plex-guest",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/plex-guest.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "dj",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/dj.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "gifs-off",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/gifs-off.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "gifs",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/gifs.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "gimme",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/gimme.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "uploads-empty",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/uploads-empty.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "uploads-progress",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/uploads-progress.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "uploads-quarantined",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/uploads-quarantined.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "uploads-video",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/uploads-video.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "report",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/report.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "report-error",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/report-error.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "reports-admin",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/reports-admin.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "devices",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/devices.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "notifications",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/notifications.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "notifications-empty",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/notifications-empty.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "settings",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/settings.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "invites-admin",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/invites-admin.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "direct-messages",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/direct-messages.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "members",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/members.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "search",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/search.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "pins-empty",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/pins-empty.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "servers-admin",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/servers-admin.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "channels-admin",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/channels-admin.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "roles-admin",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/roles-admin.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "media",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/media.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "login",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/login.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "login-error",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/login-error.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "invite",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/invite.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "invite-expired",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/invite-expired.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "setup",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/setup.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "chat",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/chat.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "chat-mention",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/chat-mention.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "chat-reply",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/chat-reply.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "chat-edit",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/chat-edit.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "chat-empty",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/chat-empty.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "chat-offline",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/chat-offline.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "chat-error",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/chat-error.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "chat-video",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/chat-video.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "chat-drawer",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/chat-drawer.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "chat-member",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/chat-member.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "voice-idle",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/voice-idle.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "voice-connecting",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/voice-connecting.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "voice-live",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/voice-live.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "voice-muted",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/voice-muted.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "voice-failed",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/voice-failed.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "call-dock",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/call-dock.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "activities",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/activities.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "activity-plex",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/activity-plex.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "activity-dj",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/activity-dj.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "activity-vm",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/activity-vm.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "activity-error",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/activity-error.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "plex",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/plex.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "plex-guest",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/plex-guest.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "dj",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/dj.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "gifs-off",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/gifs-off.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "gifs",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/gifs.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "gimme",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/gimme.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "uploads-empty",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/uploads-empty.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "uploads-progress",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/uploads-progress.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "uploads-quarantined",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/uploads-quarantined.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "uploads-video",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/uploads-video.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "report",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/report.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "report-error",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/report-error.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "reports-admin",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/reports-admin.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "devices",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/devices.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "notifications",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/notifications.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "notifications-empty",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/notifications-empty.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "settings",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/settings.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "invites-admin",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/invites-admin.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "direct-messages",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/direct-messages.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "members",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/members.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "search",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/search.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "pins-empty",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/pins-empty.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "servers-admin",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/servers-admin.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "channels-admin",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/channels-admin.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "roles-admin",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/roles-admin.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "mobile",
+    "scene": "media",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/mobile/media.png",
+    "errors": []
+  }
+]

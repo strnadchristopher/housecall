@@ -1,0 +1,44 @@
+[
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "login",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/login.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "chat",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/chat.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "chat-mention",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/chat-mention.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "voice-live",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/voice-live.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "activity-plex",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/activity-plex.png",
+    "errors": []
+  },
+  {
+    "theme": "basalt",
+    "viewport": "desktop",
+    "scene": "settings",
+    "file": "/home/christopher/GitHub/.worktrees/chriscord/ui/evidence/ui/screens/basalt/desktop/settings.png",
+    "errors": []
+  }
+]
