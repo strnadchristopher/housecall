@@ -17,6 +17,7 @@
   },
   "bundle": {
     "active": true,
+    "macOS": { "infoPlist": "Info.macos.plist" },
     "targets": ["deb", "appimage"],
     "icon": [
       "icons/32x32.png",

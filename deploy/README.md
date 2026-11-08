@@ -5,7 +5,7 @@ This package builds from the repository root with `docker build -t chriscord:loc
 ## Prepare
 
 1. Ensure the Caddy container is attached to the existing Docker network `lo-proxy`.
-2. Copy `deploy/.env.example` to `.env`, set `CHRISCORD_SETUP_TOKEN` and `CHRISCORD_MEDIA_KEY` to independent random 32-byte hex values, and set `SFU_PUBLIC_IP` to Shiva's numeric public IPv4 address. For example, generate each secret with `openssl rand -hex 32`.
+2. Copy `deploy/.env.example` to `.env`, set `CHRISCORD_SETUP_TOKEN` and `CHRISCORD_MEDIA_KEY` to independent random 32-byte hex values, and set `SFU_PUBLIC_IP` to Shiva's numeric public IPv4 address. For example, generate each secret with `openssl rand -hex 32`. Keep `CHRISCORD_CLIENT_ORIGINS` set to the listed Tauri origins so packaged clients can call the API.
 3. Set `RESEND_API_KEY` and `CHRISCORD_MAIL_FROM` to the verified Resend sender when email invitations are ready. If the API key is empty, the server logs each invitation link for development; it does not send email.
 4. Create the bind-mounted data directory and make it writable by the container's UID 10001:
 
@@ -14,7 +14,7 @@ This package builds from the repository root with `docker build -t chriscord:loc
    chmod 600 .env
    ```
 
-`CHRISCORD_ORIGIN` and `CHRISCORD_PUBLIC_URL` must match `https://chriscord.littleobelisk.com`. The setup token initializes the first owner once through `/api/setup`; later requests are rejected after the first account exists. Keep it private and remove it from `.env` after setup.
+`CHRISCORD_ORIGIN` and `CHRISCORD_PUBLIC_URL` must match `https://chriscord.littleobelisk.com`. The setup token initializes the first owner once through `/api/setup`; later requests are rejected after the first account exists. Keep it private and remove it from `.env` after setup. The app starts without a setup token once initialized.
 
 ## Start and proxy
 
@@ -35,6 +35,7 @@ The SQLite database and encrypted media use the `CHRISCORD_DATA_DIR` bind mount.
 | Variable | Purpose |
 | --- | --- |
 | `CHRISCORD_SETUP_TOKEN` | One-time first-owner bootstrap token; remove after setup |
+| `CHRISCORD_CLIENT_ORIGINS` | Comma-separated Tauri app origins allowed to call the API; defaults cover macOS/Linux and Windows/Android |
 | `CHRISCORD_MEDIA_KEY` | 32-byte hex key for encrypted uploads; back it up securely |
 | `CHRISCORD_DATA_DIR` | Host bind mount for SQLite and encrypted media |
 | `CHRISCORD_ORIGIN` | Canonical HTTPS origin used by passkeys |

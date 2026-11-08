@@ -83,7 +83,7 @@ fn hash(v: &str) -> String {
 #[derive(Clone)]
 pub struct AppState {
     pub db: Arc<Mutex<Connection>>,
-    setup_hash: String,
+    setup_hash: Option<String>,
     limits: Arc<Mutex<HashMap<String, (i64, u32)>>>,
     pub public_auth_limit: u32,
     pub auth_slots: Arc<tokio::sync::Semaphore>,
@@ -190,6 +190,12 @@ pub struct Principal {
 }
 impl AppState {
     pub fn new(database: &str, setup_token: &str) -> Result<Self, rusqlite::Error> {
+        Self::new_with_setup_token(database, Some(setup_token))
+    }
+    pub fn new_with_setup_token(
+        database: &str,
+        setup_token: Option<&str>,
+    ) -> Result<Self, rusqlite::Error> {
         let db = Connection::open(database)?;
         db.execute_batch("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
  CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,username TEXT UNIQUE NOT NULL,password TEXT NOT NULL,is_owner INTEGER NOT NULL DEFAULT 0);
@@ -217,7 +223,7 @@ impl AppState {
         push::init(&db)?;
         Ok(Self {
             db: Arc::new(Mutex::new(db)),
-            setup_hash: hash(setup_token),
+            setup_hash: setup_token.map(hash),
             limits: Default::default(),
             public_auth_limit: 40,
             auth_slots: Arc::new(tokio::sync::Semaphore::new(2)),
@@ -486,7 +492,15 @@ struct Setup {
     device_name: String,
 }
 async fn setup(State(s): State<AppState>, Json(v): Json<Setup>) -> ApiResult<Value> {
-    if hash(&v.setup_token) != s.setup_hash {
+    if s.db
+        .lock()
+        .unwrap()
+        .query_row("SELECT COUNT(*) FROM users", [], |r| r.get::<_, i64>(0))?
+        > 0
+    {
+        return Err(conflict("already initialized"));
+    }
+    if s.setup_hash.as_deref() != Some(hash(&v.setup_token).as_str()) {
         return Err(forbidden());
     }
     credentials(&v.username, &v.password, &v.device_name)?;

@@ -14,7 +14,7 @@ import { firstPreviewLink, previewLink, type LinkPreview } from "./data/embeds";
 import { Screen } from "./ui/Screen";
 import type { Intent, ScreenId, ScreenProps } from "./contracts/ui";
 import { useChriscord } from "./hooks/useChriscord";
-import { registerPasskey } from "./transport/passkeys";
+import { isDesktopTauri, registerPasskey } from "./transport/passkeys";
 import { subscribeInviteLinks, type InviteLink } from "./transport/deepLinks";
 import { ResumableUpload, uploadScanMessage, type Upload } from "./transport/uploads";
 import {
@@ -30,6 +30,7 @@ import type { User, Server, Role } from "./data/types";
 /** Engineering adapter: data and intents only. Opus owns Screen and all presentation. */
 export function App() {
   const c = useChriscord();
+  const desktopPasskeysUnavailable = isDesktopTauri();
   const [nativePush, setNativePush] = useState<NativePushStatus>();
   useEffect(() => {
     let cancelled = false;
@@ -885,7 +886,11 @@ export function App() {
                   ? "Join"
                   : "Sign in",
             actions: [
-              { id: "passkey", label: "Sign in with passkey" },
+              ...(view === "login" ? [{
+                id: "passkey",
+                label: desktopPasskeysUnavailable ? "Passkeys coming soon on desktop" : "Sign in with passkey",
+                disabled: desktopPasskeysUnavailable,
+              }] : []),
               { id: "login", label: "Sign in" },
               { id: "invite", label: "Use invitation" },
               { id: "setup", label: "First-run setup" },
@@ -1089,7 +1094,7 @@ export function App() {
         {
           id: "passkey",
           label: "Add passkey",
-          disabled: c.capabilities.passkeys !== true,
+          disabled: desktopPasskeysUnavailable || c.capabilities.passkeys !== true,
         },
       ],
       items: c.devices.map((d) => ({

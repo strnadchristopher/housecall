@@ -101,6 +101,82 @@ async fn all_private_endpoints_reject_unauthenticated() {
         )
     }
 }
+
+#[tokio::test]
+async fn desktop_origins_pass_cors_preflight() {
+    let mut state = AppState::new(":memory:", SETUP).unwrap();
+    state.client_origins = ["tauri://localhost", "http://tauri.localhost"]
+        .into_iter()
+        .map(|origin| origin.parse().unwrap())
+        .collect();
+    let api = app(state, None);
+    for origin in ["tauri://localhost", "http://tauri.localhost"] {
+        let response = api
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("OPTIONS")
+                    .uri("/api/login")
+                    .header("origin", origin)
+                    .header("access-control-request-method", "POST")
+                    .header("access-control-request-headers", "content-type")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            response
+                .headers()
+                .get("access-control-allow-origin")
+                .unwrap(),
+            origin
+        );
+    }
+    let response = api
+        .oneshot(
+            Request::builder()
+                .method("OPTIONS")
+                .uri("/api/login")
+                .header("origin", "https://unlisted.example")
+                .header("access-control-request-method", "POST")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert!(!response
+        .headers()
+        .contains_key("access-control-allow-origin"));
+}
+
+#[tokio::test]
+async fn initialized_server_restarts_without_setup_token() {
+    let directory = tempfile::tempdir().unwrap();
+    let database = directory.path().join("chriscord.sqlite");
+    let first = AppState::new(database.to_str().unwrap(), SETUP).unwrap();
+    let first_api = app(first, None);
+    let (status, owner) = call(&first_api, "POST", "/api/setup", None,
+        json!({"setup_token":SETUP,"username":"owner","password":"test-password-long","device_name":"test"})).await;
+    assert_eq!(status, StatusCode::OK);
+    drop(first_api);
+
+    let restarted = AppState::new_with_setup_token(database.to_str().unwrap(), None).unwrap();
+    let api = app(restarted, None);
+    let (status, response) = call(&api, "POST", "/api/setup", None,
+        json!({"setup_token":"anything","username":"attacker","password":"test-password-long","device_name":"test"})).await;
+    assert_eq!(status, StatusCode::CONFLICT, "{response}");
+    let (status, _) = call(
+        &api,
+        "POST",
+        "/api/login",
+        None,
+        json!({"username":"owner","password":"test-password-long","device_name":"test"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(owner["token"].is_string());
+}
 #[tokio::test]
 async fn membership_and_owner_authorization_matrix() {
     let (api, _, a, b, c) = fixture().await;

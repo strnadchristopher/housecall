@@ -2,9 +2,10 @@ use chriscord_server::{app, AppState, InviteMailConfig};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
-    let token =
-        std::env::var("CHRISCORD_SETUP_TOKEN").map_err(|_| "CHRISCORD_SETUP_TOKEN must be set")?;
-    if token.len() < 32 {
+    let token = std::env::var("CHRISCORD_SETUP_TOKEN")
+        .ok()
+        .filter(|token| !token.is_empty());
+    if token.as_ref().is_some_and(|token| token.len() < 32) {
         return Err("CHRISCORD_SETUP_TOKEN must have at least 32 characters".into());
     }
     let database =
@@ -34,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .open(&database)?;
         file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
     }
-    let mut state = AppState::new(&database, &token)?;
+    let mut state = AppState::new_with_setup_token(&database, token.as_deref())?;
     state.invite_mail =
         std::sync::Arc::new(InviteMailConfig::from_env().map_err(std::io::Error::other)?);
     if let Ok(origins) = std::env::var("CHRISCORD_CLIENT_ORIGINS") {

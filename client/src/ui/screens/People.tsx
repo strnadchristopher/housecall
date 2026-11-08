@@ -209,7 +209,7 @@ export function DevicesScreen(props: ScreenProps) {
           <Icon name="fingerprint" size={28} className="cc-passkey__glyph" />
           <div>
             <h2>Passkeys</h2>
-            <p>{passkey.disabled ? 'Passkeys are coming soon on this server.' : 'Use your fingerprint, face or device PIN instead of a password next time.'}</p>
+            <p>{passkey.disabled ? 'Passkeys are coming soon in this client or on this server.' : 'Use your fingerprint, face or device PIN instead of a password next time.'}</p>
           </div>
           <ActionButton action={passkey} emit={emit} busy={props.busy} icon="plus" variant="primary" />
         </div>

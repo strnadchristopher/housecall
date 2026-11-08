@@ -28,6 +28,9 @@ function nativeInvoke(): Invoke | undefined {
   return typeof window === "undefined" ? undefined :
     (window as unknown as { __TAURI_INTERNALS__?: { invoke: Invoke } }).__TAURI_INTERNALS__?.invoke;
 }
+export function isDesktopTauri(): boolean {
+  return !!nativeInvoke() && typeof navigator !== "undefined" && !/Android/i.test(navigator.userAgent);
+}
 async function nativeCall<T>(call: Invoke, action: string, payload: Record<string, unknown> = {}): Promise<T> {
   try { return await call<T>("native_auth", { action, payload }); }
   catch (error) {
