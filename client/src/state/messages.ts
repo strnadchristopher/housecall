@@ -4,6 +4,8 @@ export interface Message {
   author_id: string;
   body: string;
   created_at: number;
+  edited_at?: number | null;
+  mention_ids?: string[];
   revision?: number;
   reply_to?: string | null;
   pinned?: boolean;

@@ -1,7 +1,7 @@
 //! Bounded CPU media derivation. Plaintext exists only in memory and FFmpeg pipes.
 use crate::{bad, member, missing, ApiError, ApiResult, AppState, Principal};
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{header, HeaderMap, StatusCode},
     response::Response,
     routing::{get, post},
@@ -81,6 +81,7 @@ pub fn routes() -> Router<AppState> {
         .route("/uploads/{id}/derive", post(start))
         .route("/media-jobs/{id}", get(status))
         .route("/media-jobs/{id}/video", get(video))
+        .route("/media-jobs/{id}/video/seek", get(seek))
         .route("/media-jobs/{id}/thumbnail", get(thumbnail))
 }
 fn unavailable() -> ApiError {
@@ -160,6 +161,55 @@ async fn video(
 ) -> Result<Response, ApiError> {
     derived(s, p, id, headers, false).await
 }
+async fn seek(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(id): Path<String>,
+    Query(query): Query<crate::media_index::Query>,
+) -> ApiResult<crate::media_index::Window> {
+    let output = authorized_output(&s, &p, &id, false)?;
+    let store = s.media.clone().ok_or_else(unavailable)?;
+    let uid = Uuid::parse_str(&output).map_err(|_| bad("invalid stored derivative"))?;
+    let meta = store.metadata(uid)?;
+    let window = crate::media_index::lookup(store, meta, query).await?;
+    // Index reads run off-thread. Recheck after I/O just as a new range request
+    // does, so unsend/revocation during lookup cannot return stale metadata.
+    authorized_output(&s, &p, &id, false)?;
+    Ok(Json(window))
+}
+fn authorized_output(
+    s: &AppState,
+    p: &Principal,
+    id: &str,
+    thumbnail: bool,
+) -> Result<String, ApiError> {
+    let db = s.db.lock().unwrap();
+    let active: bool = db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sessions WHERE id=? AND user_id=? AND expires_at>?)",
+        params![p.session_id, p.user.id, crate::now()],
+        |r| r.get(0),
+    )?;
+    if !active {
+        return Err(crate::unauthorized());
+    }
+    let row = job(&db, id)?;
+    member(&db, &p.user.id, row["channel_id"].as_str().unwrap())?;
+    if row["status"] != "ready" {
+        return Err(ApiError(
+            StatusCode::CONFLICT,
+            "media derivation is not ready",
+        ));
+    }
+    Ok(db.query_row(
+        if thumbnail {
+            "SELECT thumbnail_id FROM media_jobs WHERE id=?"
+        } else {
+            "SELECT video_id FROM media_jobs WHERE id=?"
+        },
+        [id],
+        |r| r.get::<_, String>(0),
+    )?)
+}
 async fn thumbnail(
     State(s): State<AppState>,
     Extension(p): Extension<Principal>,
@@ -175,26 +225,7 @@ async fn derived(
     headers: HeaderMap,
     thumbnail: bool,
 ) -> Result<Response, ApiError> {
-    let output = {
-        let db = s.db.lock().unwrap();
-        let row = job(&db, &id)?;
-        member(&db, &p.user.id, row["channel_id"].as_str().unwrap())?;
-        if row["status"] != "ready" {
-            return Err(ApiError(
-                StatusCode::CONFLICT,
-                "media derivation is not ready",
-            ));
-        }
-        db.query_row(
-            if thumbnail {
-                "SELECT thumbnail_id FROM media_jobs WHERE id=?"
-            } else {
-                "SELECT video_id FROM media_jobs WHERE id=?"
-            },
-            [&id],
-            |r| r.get::<_, String>(0),
-        )?
-    };
+    let output = authorized_output(&s, &p, &id, thumbnail)?;
     let store = s.media.clone().ok_or_else(unavailable)?;
     let uid = Uuid::parse_str(&output).map_err(|_| bad("invalid stored derivative"))?;
     let meta = store.metadata(uid)?;
@@ -430,6 +461,8 @@ async fn derive_one(
             "scale=w='min(1920,iw)':h='min(1080,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2",
             "-g",
             "60",
+            "-force_key_frames",
+            "expr:gte(t,n_forced*2)",
             "-c:a",
             "aac",
             "-b:a",

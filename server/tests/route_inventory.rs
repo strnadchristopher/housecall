@@ -12,6 +12,7 @@ use tower::ServiceExt;
 
 fn inventory() -> BTreeSet<(String, String)> {
     let mut routes = BTreeSet::new();
+    let mut local_peer_routes = BTreeSet::new();
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
     for file in std::fs::read_dir(root).unwrap() {
         let path = file.unwrap().path();
@@ -64,9 +65,15 @@ fn inventory() -> BTreeSet<(String, String)> {
             for method in ["get", "post", "patch", "delete", "put", "head", "options"] {
                 if methods.contains(&format!("{method}(")) {
                     found = true;
-                    routes.insert((method.to_uppercase(), format!("/api{path}")));
-                    if method == "get" {
-                        routes.insert(("HEAD".into(), format!("/api{path}")));
+                    if path.starts_with("/v1/vm-publisher/") {
+                        // These routes are served only on the private Unix socket and
+                        // authenticate the connecting process with SO_PEERCRED.
+                        local_peer_routes.insert((method.to_uppercase(), path.to_owned()));
+                    } else {
+                        routes.insert((method.to_uppercase(), format!("/api{path}")));
+                        if method == "get" {
+                            routes.insert(("HEAD".into(), format!("/api{path}")));
+                        }
                     }
                 }
             }
@@ -74,6 +81,11 @@ fn inventory() -> BTreeSet<(String, String)> {
         }
     }
     assert!(routes.len() > 65, "inventory unexpectedly shrank");
+    assert_eq!(
+        local_peer_routes.len(),
+        4,
+        "local peer route inventory changed"
+    );
     routes
 }
 async fn request(

@@ -1,6 +1,7 @@
+import { clearNativePush, reconcileNativePush } from "../transport/nativePush";
 import type { GimmeRequestStatus } from "../data/gimme";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { authenticatePasskey } from "../transport/passkeys";
+import { authenticatePasskey, cancelNativePasskey } from "../transport/passkeys";
 import { Api, ApiError } from "../transport/api";
 import { NotificationReconciler } from "../transport/notifications";
 import type { NotificationRecord } from "../transport/notifications";
@@ -42,7 +43,7 @@ export function useChriscord() {
     selected = useRef(channel),
     generation = useRef(0);
   selected.current = channel;
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     generation.current++;
     api.authenticate();
     setAuth(undefined);
@@ -60,6 +61,9 @@ export function useChriscord() {
     setTypers([]);
     notifications.clear();
     cursor.current = 0;
+    // Clear the WebView immediately even if native cleanup fails. A subsequent
+    // login must successfully clear the old background grant before replacing it.
+    await Promise.all([cancelNativePasskey(), clearNativePush()]);
   }, [api, store, notifications, typingStore]);
   const refresh = useCallback(
     async (id = selected.current) => {
@@ -99,7 +103,9 @@ export function useChriscord() {
         await fn();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Request failed");
-        if (e instanceof ApiError && e.status === 401) logout();
+        if (e instanceof ApiError && e.status === 401) {
+          try { await logout(); } catch (cleanup) { setError(String(cleanup)); }
+        }
       } finally {
         setBusy(false);
       }
@@ -121,6 +127,8 @@ export function useChriscord() {
     path: string,
     values: Record<string, unknown>,
   ) => {
+    await cancelNativePasskey();
+    await clearNativePush();
     const { server_origin, ...credentials } = values;
     api.configure(String(server_origin ?? ""));
     await establish(
@@ -131,6 +139,7 @@ export function useChriscord() {
     );
   };
   const passkeyLogin = async (username: string, origin: string) => {
+    await clearNativePush();
     api.configure(origin);
     await establish(await authenticatePasskey(api, username));
   };
@@ -171,6 +180,8 @@ export function useChriscord() {
             notifications.retract(id);
           }
         }
+        if (result.events.some(e => e.kind === "message.deleted" || e.kind === "message.created"))
+          void reconcileNativePush().catch(error => setError(String(error)));
         cursor.current = result.cursor;
         setTypers(
           typingStore
@@ -182,8 +193,10 @@ export function useChriscord() {
       } catch (e) {
         if (stop) return;
         if (e instanceof ApiError && e.status === 401) {
-          logout();
-          setError("This device session was revoked. Sign in again.");
+          try {
+            await logout();
+            setError("This device session was revoked. Sign in again.");
+          } catch (cleanup) { setError(`Session revoked; native notification cleanup failed: ${String(cleanup)}`); }
           return;
         }
         setOnline(false);

@@ -2,6 +2,29 @@ import { describe, it, expect, vi } from "vitest";
 import { MessageStore } from "../src/state/messages";
 import { NotificationReconciler } from "../src/transport/notifications";
 import { Api } from "../src/transport/api";
+import { clearNativePush } from "../src/transport/nativePush";
+import { messageDetails } from "../src/data/messageView";
+it("structured message metadata uses exact mentions and hides unavailable reply content", () => {
+  const message = { id: "m", channel_id: "c", author_id: "author", created_at: 1,
+    body: "Fake: @current (pinned)", mention_ids: ["current-other"], reply_to: "hidden",
+    reactions: [{ emoji: "👍", user_id: "current" }, { emoji: "👍", user_id: "friend" }] };
+  const result = messageDetails(message, "current", id => id, [
+    { ...message, id: "hidden", channel_id: "private", body: "must not leak" },
+  ]);
+  expect(result.mentionsMe).toBe(false);
+  expect(result.pinned).toBe(false);
+  expect(result.replyTo).toBeNull();
+  expect(result.reactions).toEqual([{ emoji: "👍", count: 2, mine: true }]);
+});
+it("preserves real Tauri string rejection messages across native cleanup", async () => {
+  vi.stubGlobal("window", { __TAURI_INTERNALS__: { invoke: async (_command: string, args: {action: string}) => {
+    if (args.action === "status") return { supported: true };
+    throw "Background notification cleanup failed; try again before switching accounts";
+  } } });
+  try {
+    await expect(clearNativePush()).rejects.toThrow("Background notification cleanup failed; try again before switching accounts");
+  } finally { vi.unstubAllGlobals(); }
+});
 const message = {
   id: "m1",
   channel_id: "c1",

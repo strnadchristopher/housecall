@@ -1,0 +1,4 @@
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends libguestfs-tools qemu-utils linux-image-amd64 ca-certificates && rm -rf /var/lib/apt/lists/*
+ENV LIBGUESTFS_BACKEND=direct
+ENTRYPOINT ["virt-customize"]

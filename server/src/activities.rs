@@ -57,7 +57,7 @@ fn roster(db: &Connection, channel: &str) -> Result<BTreeSet<String>, ApiError> 
         .collect::<rusqlite::Result<BTreeSet<String>>>()?;
     Ok(rows)
 }
-async fn active_roster(
+pub(crate) async fn active_roster(
     s: &AppState,
     p: &Principal,
     channel: &str,
@@ -73,9 +73,18 @@ async fn active_roster(
         .stats(channel.to_owned(), p.session_id.clone())
         .await
         .map_err(|_| ApiError(StatusCode::FORBIDDEN, "join voice before using an activity"))?;
+    if !peers
+        .iter()
+        .any(|peer| peer.current_session && peer.connected && !peer.publisher)
+    {
+        return Err(ApiError(
+            StatusCode::FORBIDDEN,
+            "this device's voice transport is not connected",
+        ));
+    }
     let members: BTreeSet<String> = peers
         .into_iter()
-        .filter(|peer| peer.connected)
+        .filter(|peer| peer.connected && !peer.publisher)
         .map(|peer| peer.user_id)
         .collect();
     if !members.contains(&p.user.id) {
@@ -153,6 +162,7 @@ async fn start(
     Path(channel): Path<String>,
     Json(input): Json<Start>,
 ) -> ApiResult<Value> {
+    let _vm_operation = s.vm_operations.lock().await;
     let active = active_roster(&s, &p, &channel).await?;
     let mut db = s.db.lock().unwrap();
     let tx = db.transaction()?;
@@ -224,6 +234,7 @@ async fn command(
     Path(channel): Path<String>,
     Json(input): Json<ActivityCommand>,
 ) -> ApiResult<Value> {
+    let _vm_operation = s.vm_operations.lock().await;
     let active = active_roster(&s, &p, &channel).await?;
     let mut db = s.db.lock().unwrap();
     let tx = db.transaction()?;
@@ -248,6 +259,7 @@ async fn stop(
     Extension(p): Extension<Principal>,
     Path(channel): Path<String>,
 ) -> ApiResult<Value> {
+    let _vm_operation = s.vm_operations.lock().await;
     let active = active_roster(&s, &p, &channel).await?;
     let mut db = s.db.lock().unwrap();
     let tx = db.transaction()?;
@@ -269,6 +281,7 @@ async fn stop(
     )?;
     tx.commit()?;
     drop(db);
+    s.vm_media.invalidate(&channel);
     if let Some(gateway) = &s.plex {
         gateway.stop_channel(&channel);
     }

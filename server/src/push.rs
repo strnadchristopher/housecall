@@ -419,7 +419,7 @@ async fn unregister(
 }
 async fn events(State(s): State<AppState>, Extension(p): Extension<Principal>) -> ApiResult<Value> {
     let db = s.db.lock().unwrap();
-    let mut q=db.prepare("SELECT e.id,e.message_id,e.channel_id,e.kind,e.state,e.attempts,e.last_error,e.updated_at FROM push_events e JOIN push_devices d ON d.id=e.device_id WHERE d.session_id=?1 AND d.user_id=?2 ORDER BY CASE e.kind WHEN 'retract' THEN 0 ELSE 1 END,e.updated_at DESC,e.id LIMIT 101")?;
+    let mut q=db.prepare("SELECT e.id,e.message_id,e.channel_id,e.kind,e.state,e.attempts,e.last_error,e.updated_at FROM push_events e JOIN push_devices d ON d.id=e.device_id WHERE d.session_id=?1 AND d.user_id=?2 ORDER BY CASE e.state WHEN 'acknowledged' THEN 1 ELSE 0 END,CASE e.kind WHEN 'retract' THEN 0 ELSE 1 END,e.updated_at DESC,e.id LIMIT 101")?;
     let mut rows=q.query_map(params![p.session_id,p.user.id],|r|{let kind:String=r.get(3)?;let state:String=r.get(4)?;Ok(json!({"id":r.get::<_,String>(0)?,"message_id":r.get::<_,String>(1)?,"channel_id":r.get::<_,String>(2)?,"kind":kind,"epoch":if kind=="retract" {1}else{0},"state":state,"attempts":r.get::<_,i64>(5)?,"error":r.get::<_,Option<String>>(6)?,"updated_at":r.get::<_,i64>(7)?,"retraction_pending":kind=="retract"&&state!="acknowledged"}))})?.collect::<rusqlite::Result<Vec<_>>>()?;
     let history_truncated = rows.len() > 100;
     rows.truncate(100);
@@ -1303,6 +1303,45 @@ mod tests {
         assert_eq!(body["events"][0]["kind"], "retract");
         assert_eq!(body["history_truncated"], true);
         assert_eq!(body["reconciliation_required"], true);
+    }
+    #[tokio::test]
+    async fn acknowledged_history_cannot_starve_pending_native_events() {
+        let mut s = seed(":memory:");
+        s.push = worker(Kind::Apns, "http://127.0.0.1:9/");
+        register_bob(&s, Kind::Apns).await;
+        {
+            let db = s.db.lock().unwrap();
+            let device: String = db
+                .query_row("SELECT id FROM push_devices", [], |r| r.get(0))
+                .unwrap();
+            for n in 0..101 {
+                insert_event(&db, &device, "bob", &format!("old-{n}"), "room", "retract").unwrap();
+            }
+            db.execute("UPDATE push_events SET state='acknowledged'", [])
+                .unwrap();
+            insert_event(&db, &device, "bob", "new-retract", "room", "retract").unwrap();
+        }
+        let message_id = message(&s).await;
+        let pending = states(&s).await;
+        assert_eq!(pending["events"][0]["message_id"], "new-retract");
+        assert_eq!(pending["events"][1]["message_id"], message_id);
+        assert_eq!(pending["history_truncated"], true);
+        for event in pending["events"].as_array().unwrap().iter().take(2) {
+            assert_eq!(
+                call(
+                    &s,
+                    Some('b'),
+                    "POST",
+                    &format!("/api/push/events/{}/ack", event["id"].as_str().unwrap()),
+                    json!({})
+                )
+                .await
+                .0,
+                StatusCode::OK
+            );
+        }
+        let next_message = message(&s).await;
+        assert_eq!(states(&s).await["events"][0]["message_id"], next_message);
     }
     #[tokio::test]
     async fn apns_accept_unsend_and_ack_keep_tombstone_pending_until_device_applies_it() {

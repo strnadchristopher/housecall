@@ -54,7 +54,7 @@ async fn join(api: &Router, owner: &Value, name: &str) -> Value {
         "POST",
         "/api/invites",
         Some(owner),
-        json!({"expires_in_seconds":3600}),
+        json!({"email":"fixture@example.test","expires_in_seconds":3600}),
     )
     .await;
     assert_eq!(s, StatusCode::OK);
@@ -186,7 +186,11 @@ async fn membership_and_owner_authorization_matrix() {
         StatusCode::FORBIDDEN
     );
     for (method, path, body) in [
-        ("POST", "/api/invites", json!({"expires_in_seconds":60})),
+        (
+            "POST",
+            "/api/invites",
+            json!({"email":"fixture@example.test","expires_in_seconds":60}),
+        ),
         (
             "POST",
             "/api/channels",
@@ -305,7 +309,7 @@ async fn invite_single_use_race_expiry_and_transaction_rollback() {
         "POST",
         "/api/invites",
         Some(&a),
-        json!({"expires_in_seconds":60}),
+        json!({"email":"fixture@example.test","expires_in_seconds":60}),
     )
     .await;
     let body = |name| json!({"token":invite["token"],"username":name,"password":"test-password-long","device_name":"test"});
@@ -331,7 +335,7 @@ async fn invite_single_use_race_expiry_and_transaction_rollback() {
         "POST",
         "/api/invites",
         Some(&a),
-        json!({"expires_in_seconds":60}),
+        json!({"email":"fixture@example.test","expires_in_seconds":60}),
     )
     .await;
     let body = |name| json!({"token":invite["token"],"username":name,"password":"test-password-long","device_name":"test"});
@@ -352,7 +356,7 @@ async fn invite_single_use_race_expiry_and_transaction_rollback() {
         "POST",
         "/api/invites",
         Some(&a),
-        json!({"expires_in_seconds":60}),
+        json!({"email":"fixture@example.test","expires_in_seconds":60}),
     )
     .await;
     state
@@ -552,6 +556,36 @@ async fn rate_limits_and_no_remote_embed_fetch() {
     assert!(m["body"].as_str().unwrap().contains("169.254"));
     assert!(m.get("embed").is_none());
 }
+#[tokio::test]
+async fn login_and_invite_accept_rate_limits_are_independent() {
+    let mut state = AppState::new(":memory:", SETUP).unwrap();
+    state.public_auth_limit = 1;
+    let api = app(state, None);
+    let login = json!({"username":"bad","password":"short","device_name":"test"});
+    assert_eq!(
+        call(&api, "POST", "/api/login", None, login.clone())
+            .await
+            .0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        call(&api, "POST", "/api/login", None, login).await.0,
+        StatusCode::TOO_MANY_REQUESTS
+    );
+    let accept = json!({"token":"bad","username":"friend","password":"test-password-long","device_name":"test"});
+    assert_ne!(
+        call(&api, "POST", "/api/invites/accept", None, accept.clone())
+            .await
+            .0,
+        StatusCode::TOO_MANY_REQUESTS
+    );
+    assert_eq!(
+        call(&api, "POST", "/api/invites/accept", None, accept)
+            .await
+            .0,
+        StatusCode::TOO_MANY_REQUESTS
+    );
+}
 proptest::proptest! {#[test]fn username_parser_is_total(s in ".{0,512}"){let valid=chriscord_server::valid_username(&s);if valid{proptest::prop_assert!((2..=32).contains(&s.len()));proptest::prop_assert!(s.is_ascii());}let redacted=chriscord_server::redact_logs(&s);proptest::prop_assert!(redacted.len()<=s.len()+40);}}
 
 #[tokio::test]
@@ -561,6 +595,7 @@ async fn owner_invite_and_user_session_revocation() {
         ("GET", "/api/invites"),
         ("DELETE", "/api/invites/id"),
         ("DELETE", "/api/users/id/sessions"),
+        ("POST", "/api/users/id/disable"),
     ] {
         assert_eq!(
             call(&api, method, path, Some(&b), json!({})).await.0,
@@ -572,9 +607,12 @@ async fn owner_invite_and_user_session_revocation() {
         "POST",
         "/api/invites",
         Some(&a),
-        json!({"expires_in_seconds":60}),
+        json!({"email":"fixture@example.test","expires_in_seconds":60}),
     )
     .await;
+    assert_eq!(invite["email"], "fixture@example.test");
+    assert_eq!(invite["email_sent"], false);
+    assert!(invite["token"].as_str().is_some());
     let (_, list) = call(&api, "GET", "/api/invites", Some(&a), json!({})).await;
     assert!(!list.to_string().contains(invite["token"].as_str().unwrap()));
     assert_eq!(
@@ -604,6 +642,40 @@ async fn owner_invite_and_user_session_revocation() {
     );
     assert_eq!(
         call(&api, "GET", "/api/me", Some(&b), json!({})).await.0,
+        StatusCode::UNAUTHORIZED
+    );
+}
+
+#[tokio::test]
+async fn disabling_an_account_revokes_every_session_and_blocks_login() {
+    let (api, _, owner, member, _) = fixture().await;
+    let user_id = member["user"]["id"].as_str().unwrap();
+    let (status, result) = call(
+        &api,
+        "POST",
+        &format!("/api/users/{user_id}/disable"),
+        Some(&owner),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(result["sessions_revoked"], 1);
+    assert_eq!(
+        call(&api, "GET", "/api/me", Some(&member), json!({}))
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        call(
+            &api,
+            "POST",
+            "/api/login",
+            None,
+            json!({"username":"alice","password":"test-password-long","device_name":"test"})
+        )
+        .await
+        .0,
         StatusCode::UNAUTHORIZED
     );
 }
@@ -828,7 +900,7 @@ async fn server_namespaces_role_mentions_and_threads_are_scoped() {
         "POST",
         "/api/invites",
         Some(&owner),
-        json!({"expires_in_seconds":60,"server_id":sid}),
+        json!({"email":"fixture@example.test","expires_in_seconds":60,"server_id":sid}),
     )
     .await;
     let(status,dave)=call(&api,"POST","/api/invites/accept",None,json!({"token":invite["token"],"username":"dave","password":"test-password-long","device_name":"test"})).await;

@@ -1,0 +1,5 @@
+# Dedicated daemon; never load default.pa, hardware, TCP, tunnel, or discovery modules.
+load-module module-null-sink sink_name=vm_output rate=48000 channels=2 channel_map=front-left,front-right
+load-module module-native-protocol-unix socket=/audio/native auth-anonymous=no auth-cookie-enabled=no auth-group-enable=yes auth-group=vmmedia
+set-default-sink vm_output
+set-default-source vm_output.monitor

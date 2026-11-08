@@ -1,4 +1,7 @@
 # Add project specific ProGuard rules here.
+-keep class com.littleobelisk.chriscord.NativePushPlugin { *; }
+-keep class com.littleobelisk.chriscord.NativeAuthPlugin { *; }
+-keep class com.littleobelisk.chriscord.PushWorker { public <init>(...); }
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.
 #

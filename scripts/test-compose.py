@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Exercise only the disposable chriscord-sprint-compose project, never the default deployment."""
 from pathlib import Path
-import hashlib,json,os,secrets,socket,subprocess,time,urllib.error,urllib.request
+import shutil
+import hashlib,json,os,secrets,signal,socket,subprocess,time,urllib.error,urllib.request
 ROOT=Path(__file__).resolve().parents[1]
 PROJECT='chriscord-sprint-compose'
 RUNTIME=ROOT/'.runtime'/'compose-fixture'
@@ -9,6 +10,7 @@ EVIDENCE=ROOT/'evidence'/'compose-runtime.json'
 
 def main():
     RUNTIME.mkdir(parents=True,exist_ok=True)
+    data_dir=RUNTIME/f'data-{os.getpid()}'
     with socket.socket() as sock:
         sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
     with socket.socket(socket.AF_INET,socket.SOCK_DGRAM) as sock:
@@ -17,19 +19,21 @@ def main():
     envfile=RUNTIME/'fixture.env'
     fd=os.open(envfile,os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
     with os.fdopen(fd,'w') as f:
-        f.write(f'CHRISCORD_SETUP_TOKEN={token}\nCHRISCORD_MEDIA_KEY={secrets.token_hex(32)}\nCHRISCORD_PORT={port}\nCHRISCORD_ORIGIN=http://localhost:{port}\nSFU_PORT={udp}\n')
+        f.write(f'CHRISCORD_SETUP_TOKEN={token}\nCHRISCORD_MEDIA_KEY={secrets.token_hex(32)}\nCHRISCORD_PORT={port}\nCHRISCORD_ORIGIN=http://localhost:{port}\nCHRISCORD_PUBLIC_URL=http://localhost:{port}\nSFU_PORT={udp}\nLO_PROXY_NETWORK={PROJECT}-proxy\nCHRISCORD_DATA_DIR={data_dir}\n')
     # Reuse only the signature cache created by our earlier isolated scanner test.
     # Its original scanner must be stopped before this runner starts.
     override=RUNTIME/'override.yaml'
     override.write_text('volumes:\n  scanner-db:\n    external: true\n    name: chriscord-sprint-scanner_scanner-db\n')
     base=['sudo','-n','docker','--host','unix:///var/run/docker.sock','compose','--env-file',str(envfile),'-p',PROJECT,'-f',str(ROOT/'compose.yaml'),'-f',str(override)]
-    clean_env={k:v for k,v in os.environ.items() if not k.startswith(('CHRISCORD_','SFU_','PLEX_','GIMME_','GIPHY_','SWITCHBOARD_','PUSH_','APNS_','FCM_','GLUETUN_','VM_','DJ_','SPOTIFY_','YT_DLP_'))}
+    docker=['sudo','-n','docker','--host','unix:///var/run/docker.sock']
+    clean_env={k:v for k,v in os.environ.items() if not k.startswith(('CHRISCORD_','SFU_','PLEX_','GIMME_','GIPHY_','SWITCHBOARD_','PUSH_','APNS_','FCM_','GLUETUN_','VM_','DJ_','SPOTIFY_','YT_DLP_','RESEND_'))}
     checks=[]
     completed=False
+    proxy_network_created=False
     def checkpoint():
         EVIDENCE.write_text(json.dumps({'project':PROJECT,'completed':completed,'checks':checks,'note':'Isolated local Docker fixture; no Shiva deployment. Synthetic credentials never logged.'},indent=2)+'\n')
-    def cli(*args,check=True):
-        return subprocess.run(base+list(args),cwd=ROOT,env=clean_env,check=check,timeout=240,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+    def cli(*args,check=True,timeout=240):
+        return subprocess.run(base+list(args),cwd=ROOT,env=clean_env,check=check,timeout=timeout,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
     origin=f'http://127.0.0.1:{port}'
     def call(path,body=None,auth=None,method=None,extra=None,raw=False):
         headers={}
@@ -46,6 +50,8 @@ def main():
         checkpoint()
         if not condition:raise AssertionError(name)
     try:
+        subprocess.run(docker+['network','create',PROJECT+'-proxy'],cwd=ROOT,env=clean_env,check=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+        proxy_network_created=True
         result=cli('up','-d','--no-build','app','scanner');print(result.stdout,flush=True)
         deadline=time.monotonic()+120
         while True:
@@ -59,7 +65,7 @@ def main():
         _,owner,_=call('/api/setup',{'setup_token':token,'username':'container_owner','password':'synthetic long password 123','device_name':'container fixture'})
         verify('first run owner',bool(owner and owner.get('token')))
         verify('setup cannot repeat',call('/api/setup',{'setup_token':token,'username':'other','password':'synthetic long password 123','device_name':'x'})[0]==409)
-        _,invite,_=call('/api/invites',{'expires_in_seconds':300},owner)
+        _,invite,_=call('/api/invites',{'email':'fixture@example.test','expires_in_seconds':300},owner)
         payload={'token':invite['token'],'username':'container_friend','password':'synthetic long password 123','device_name':'container fixture'}
         _,friend,_=call('/api/invites/accept',payload)
         verify('single-use invitation',bool(friend and friend.get('token')) and call('/api/invites/accept',payload)[0]>=400)
@@ -96,11 +102,27 @@ def main():
             verify('browser multi-GiB interrupted resume',result.returncode==0)
         completed=True
     finally:
-        logs=cli('logs','--no-color',check=False).stdout
-        (ROOT/'evidence'/'compose-container.log').write_text(logs)
-        checkpoint()
-        cleanup=cli('down','--volumes','--remove-orphans',check=False)
-        print(cleanup.stdout)
-        envfile.unlink(missing_ok=True)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        try:
+            try:
+                logs=cli('logs','--no-color',check=False,timeout=10).stdout
+                (ROOT/'evidence'/'compose-container.log').write_text(logs)
+            except Exception as error:
+                print('Fixture log collection failed: '+type(error).__name__,flush=True)
+            checkpoint()
+        finally:
+            try:
+                cleanup=cli('down','--volumes','--remove-orphans',check=False,timeout=60)
+                print(cleanup.stdout)
+                if cleanup.returncode: raise RuntimeError('Owned compose cleanup failed; inspect fixture project')
+            finally:
+                if proxy_network_created:
+                    subprocess.run(docker+['network','rm',PROJECT+'-proxy'],cwd=ROOT,env=clean_env,check=False,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+                if data_dir.exists(): shutil.rmtree(data_dir)
+                envfile.unlink(missing_ok=True)
     print(f'PASS {len(checks)} isolated compose checks; {EVIDENCE.relative_to(ROOT)}')
-if __name__=='__main__':main()
+if __name__=='__main__':
+    def interrupted(_signal, _frame):
+        raise TimeoutError('Owned fixture interrupted; cleaning its Compose project')
+    signal.signal(signal.SIGTERM, interrupted)
+    main()

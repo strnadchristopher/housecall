@@ -19,7 +19,9 @@ try {
  await expect(page.getByTestId('screen-login')).toBeVisible();
  const started=performance.now();
  await page.getByRole('button',{name:'Use invitation',exact:true}).click();
- await page.getByLabel('Server URL (blank for this server)').fill(origin);
+ const serverField=page.getByLabel('Server URL (blank for this server)');
+ if(!await serverField.isVisible()) await page.getByText('Connecting from the desktop or phone app?',{exact:true}).click();
+ await serverField.fill(origin);
  await page.getByLabel('Invite token').fill(invitation.token);
  await page.getByLabel('Username',{exact:true}).fill('android_friend');
  await page.getByLabel('Password (at least 12 characters)').fill(password);

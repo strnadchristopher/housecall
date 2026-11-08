@@ -1,0 +1,10 @@
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends pulseaudio pulseaudio-utils \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 47191 vmmedia \
+    && useradd --uid 47193 --gid 47191 --no-create-home --home-dir /tmp audio
+COPY pulse.pa /etc/pulse/private.pa
+COPY pulse.conf /etc/pulse/daemon.conf
+USER 47193:47191
+ENV HOME=/tmp XDG_RUNTIME_DIR=/tmp/pulse-runtime
+ENTRYPOINT ["/usr/bin/pulseaudio", "--daemonize=no", "--use-pid-file=no", "--exit-idle-time=-1", "--disallow-exit", "--disallow-module-loading", "-n", "--file=/etc/pulse/private.pa", "--log-level=error"]

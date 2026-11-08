@@ -46,7 +46,8 @@ fn store(s: &AppState) -> Result<Arc<chriscord_media::Store>, ApiError> {
     ))
 }
 fn dto(m: Upload) -> Value {
-    json!({"id":m.id,"channel_id":m.channel_id,"filename":m.filename,"length":m.length.to_string(),"offset":m.offset.to_string(),"status":m.status})
+    let scan = m.scan.as_ref().map(|report| json!({"attempt_id":report.attempt_id,"engine":report.engine,"verdict":report.verdict,"reason":report.reason,"coverage":report.coverage,"bytes_consumed":report.bytes_consumed.to_string(),"finished_at_ms":report.finished_at_ms}));
+    json!({"id":m.id,"channel_id":m.channel_id,"filename":m.filename,"length":m.length.to_string(),"offset":m.offset.to_string(),"status":m.status,"scan":scan})
 }
 async fn blocking<T: Send + 'static>(
     f: impl FnOnce() -> Result<T, Error> + Send + 'static,

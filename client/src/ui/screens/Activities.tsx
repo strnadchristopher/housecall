@@ -35,7 +35,7 @@ export function ActivitiesScreen(props: ScreenProps) {
   const kind = snap?.kind ?? '';
   const meta = KINDS[kind];
   /** App titles the screen this way when the server syncs state but has no playback provider. */
-  const controlOnly = /provider playback unavailable/i.test(props.title);
+  const controlOnly = /provider playback unavailable|coming soon/i.test(props.title);
 
   const btn = (act: Action | undefined, icon: IconName, opts: { text?: string; variant?: string; big?: boolean } = {}) => act && (
     <button type="button" className={cx('cc-btn', `cc-btn--${opts.variant ?? 'raised'}`, opts.big && 'cc-btn--l')} disabled={props.busy || act.disabled}

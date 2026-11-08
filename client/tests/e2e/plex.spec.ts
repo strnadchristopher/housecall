@@ -31,7 +31,7 @@ test("three live voice peers browse and synchronously play real HLS from a synth
       const invitation = await (
         await request.post("/api/invites", {
           headers,
-          data: { expires_in_seconds: 3600 },
+          data: { email: "fixture@example.test", expires_in_seconds: 3600 },
         })
       ).json();
       expect(

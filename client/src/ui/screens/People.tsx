@@ -209,7 +209,7 @@ export function DevicesScreen(props: ScreenProps) {
           <Icon name="fingerprint" size={28} className="cc-passkey__glyph" />
           <div>
             <h2>Passkeys</h2>
-            <p>{passkey.disabled ? 'This server has no passkey support turned on.' : 'Use your fingerprint, face or device PIN instead of a password next time.'}</p>
+            <p>{passkey.disabled ? 'Passkeys are coming soon on this server.' : 'Use your fingerprint, face or device PIN instead of a password next time.'}</p>
           </div>
           <ActionButton action={passkey} emit={emit} busy={props.busy} icon="plus" variant="primary" />
         </div>
@@ -271,7 +271,7 @@ export function InvitesAdminScreen(props: ScreenProps) {
   const issued = props.items?.find(i => i.id === 'issued');
   useEffect(() => setCopied(false), [issued?.text]);
   return (
-    <Page props={props} icon="key" subtitle="Each link works once, for one person, until it expires. Nobody can sign up without one.">
+    <Page props={props} icon="key" subtitle="Send a single-use invitation to a friend's email. Nobody can sign up without one.">
       <div className="cc-invite">
         <div className="cc-presets cc-presets--row" role="group" aria-label="Expires after">
           {EXPIRY.map(e => (
@@ -288,17 +288,19 @@ export function InvitesAdminScreen(props: ScreenProps) {
       </div>
       {issued && (
         <section className="cc-issued" aria-labelledby="cc-issued-h">
-          <h2 id="cc-issued-h" className="cc-section-title">Send this link to one person</h2>
+          <h2 id="cc-issued-h" className="cc-section-title">Invitation delivery</h2>
           <ul>
             <li data-item-id={issued.id} className="cc-issued__link">
               <code className="cc-mono">{issued.text}</code>
-              <button type="button" className={cx('cc-ibtn', copied && 'is-active')} aria-label={copied ? 'Copied' : 'Copy invitation link'} data-tip={copied ? 'Copied' : 'Copy'}
-                onClick={() => { void navigator.clipboard?.writeText(issued.text).then(() => setCopied(true)).catch(() => {}); }}>
-                <Icon name={copied ? 'check' : 'copy'} size={18} />
-              </button>
+              {issued.text.startsWith('https://') || issued.text.startsWith('http://') ? (
+                <button type="button" className={cx('cc-ibtn', copied && 'is-active')} aria-label={copied ? 'Copied' : 'Copy invitation link'} data-tip={copied ? 'Copied' : 'Copy'}
+                  onClick={() => { void navigator.clipboard?.writeText(issued.text).then(() => setCopied(true)).catch(() => {}); }}>
+                  <Icon name={copied ? 'check' : 'copy'} size={18} />
+                </button>
+              ) : null}
             </li>
           </ul>
-          <p className="cc-muted">It is shown once. The invite token sits after the # so it never reaches server logs.</p>
+          <p className="cc-muted">Each invitation works once and expires within seven days. The link token stays after the # so it never reaches server logs.</p>
         </section>
       )}
     </Page>

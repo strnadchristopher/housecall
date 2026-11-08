@@ -3,7 +3,7 @@
 use crate::{activities, emit, member, now, ApiError, ApiResult, AppState, Principal};
 use axum::{
     body::{Body, Bytes},
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{header, HeaderMap, StatusCode},
     response::Response,
     routing::{get, post},
@@ -141,7 +141,7 @@ impl Player {
         }
         let metadata = self
             .store
-            .create(OWNER, channel, "dj-track.ogg", u64::MAX)
+            .create(OWNER, channel, "dj-track.mp4", u64::MAX)
             .map_err(ApiError::from)?;
         let asset = Uuid::new_v4().to_string();
         {
@@ -178,7 +178,7 @@ impl Player {
         let mut command = tokio::process::Command::new(&self.ffmpeg);
         command.args(["-nostdin", "-hide_banner", "-loglevel", "error", "-threads", "1", "-protocol_whitelist", "file,pipe", "-format_whitelist", "matroska,webm,mov,mp3,ogg,wav,aac,flac", "-probesize", "1048576", "-analyzeduration", "3000000", "-i"]).arg(intro)
             .args(["-protocol_whitelist", "file,pipe", "-format_whitelist", "matroska,webm,mov,mp3,ogg,wav,aac,flac", "-probesize", "1048576", "-analyzeduration", "3000000", "-i"]).arg(song)
-            .args(["-filter_complex_threads", "1", "-filter_complex", "[0:a]aformat=sample_rates=48000:channel_layouts=stereo[a0];[1:a]aformat=sample_rates=48000:channel_layouts=stereo[a1];[a0][a1]concat=n=2:v=0:a=1[out]", "-map", "[out]", "-c:a", "libopus", "-b:a", "510k", "-vbr", "on", "-f", "ogg", "pipe:1"])
+            .args(["-filter_complex_threads", "1", "-filter_complex", "[0:a]aformat=sample_rates=48000:channel_layouts=stereo[a0];[1:a]aformat=sample_rates=48000:channel_layouts=stereo[a1];[a0][a1]concat=n=2:v=0:a=1[out]", "-map", "[out]", "-c:a", "libopus", "-b:a", "510k", "-vbr", "on", "-movflags", "+frag_keyframe+empty_moov+default_base_moof", "-frag_duration", "2000000", "-f", "mp4", "pipe:1"])
             .stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null()).kill_on_drop(true);
         let mut child = command.spawn().map_err(|_| unavailable())?;
         let result = tokio::time::timeout(Duration::from_secs(180), async {
@@ -377,6 +377,7 @@ pub fn routes() -> Router<AppState> {
         .route("/channels/{id}/dj/queue", post(enqueue))
         .route("/channels/{id}/dj/playback", get(playback))
         .route("/channels/{id}/dj/audio/{track}", get(audio))
+        .route("/channels/{id}/dj/audio/{track}/seek", get(seek))
 }
 fn player(s: &AppState) -> Result<Arc<Player>, ApiError> {
     s.dj.clone().ok_or(ApiError(
@@ -430,14 +431,14 @@ async fn authorize(s: &AppState, p: &Principal, channel: &str) -> Result<Snapsho
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Query {
+struct TrackQuery {
     query: String,
 }
 async fn search(
     State(s): State<AppState>,
     Extension(p): Extension<Principal>,
     Path(channel): Path<String>,
-    Json(input): Json<Query>,
+    Json(input): Json<TrackQuery>,
 ) -> ApiResult<Value> {
     authorize(&s, &p, &channel).await?;
     let player = player(&s)?;
@@ -450,7 +451,7 @@ async fn enqueue(
     State(s): State<AppState>,
     Extension(p): Extension<Principal>,
     Path(channel): Path<String>,
-    Json(input): Json<Query>,
+    Json(input): Json<TrackQuery>,
 ) -> ApiResult<Value> {
     authorize(&s, &p, &channel).await?;
     let player = player(&s)?;
@@ -589,6 +590,51 @@ async fn playback(
     let value = descriptor(&s.db.lock().unwrap(), &channel, &snapshot)?;
     Ok(Json(value))
 }
+async fn seek(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path((channel, track)): Path<(String, String)>,
+    Query(query): Query<crate::media_index::Query>,
+) -> ApiResult<crate::media_index::Window> {
+    let snapshot = authorize(&s, &p, &channel).await?;
+    if snapshot.playback.media_id.as_ref() != Some(&track) {
+        return Err(ApiError(StatusCode::NOT_FOUND, "DJ audio is not current"));
+    }
+    let player = player(&s)?;
+    let _permit = player
+        .streams
+        .clone()
+        .try_acquire_owned()
+        .map_err(|_| busy())?;
+    let id: String =
+        s.db.lock()
+            .unwrap()
+            .query_row(
+                "SELECT media_id FROM dj_assets WHERE id=?1 AND channel_id=?2 AND state='ready'",
+                params![track, channel],
+                |r| r.get(0),
+            )
+            .optional()?
+            .ok_or(ApiError(StatusCode::NOT_FOUND, "DJ audio unavailable"))?;
+    let id = Uuid::parse_str(&id).map_err(|_| unavailable())?;
+    let metadata = player.store.metadata(id)?;
+    // Preserve already-scanned ready queues created before the MP4 upgrade.
+    // New tracks never use this compatibility path.
+    if metadata.filename == "dj-track.ogg" {
+        return Err(ApiError(StatusCode::CONFLICT, "legacy_dj_ogg"));
+    }
+    let window = crate::media_index::lookup(player.store.clone(), metadata, query).await?;
+    if authorize(&s, &p, &channel)
+        .await?
+        .playback
+        .media_id
+        .as_ref()
+        != Some(&track)
+    {
+        return Err(ApiError(StatusCode::NOT_FOUND, "DJ audio is not current"));
+    }
+    Ok(Json(window))
+}
 async fn audio(
     State(s): State<AppState>,
     Extension(p): Extension<Principal>,
@@ -617,6 +663,11 @@ async fn audio(
             .ok_or(ApiError(StatusCode::NOT_FOUND, "DJ audio unavailable"))?;
     let id = Uuid::parse_str(&id).map_err(|_| unavailable())?;
     let metadata = player.store.metadata(id).map_err(ApiError::from)?;
+    let content_type = if metadata.filename == "dj-track.ogg" {
+        "audio/ogg"
+    } else {
+        "audio/mp4"
+    };
     let range = headers.get(header::RANGE);
     let (start, end) = if let Some(range) = range {
         chriscord_media::parse_range(
@@ -676,7 +727,7 @@ async fn audio(
         } else {
             StatusCode::OK
         })
-        .header(header::CONTENT_TYPE, "audio/ogg")
+        .header(header::CONTENT_TYPE, content_type)
         .header(header::CONTENT_DISPOSITION, "inline")
         .header(header::ACCEPT_RANGES, "bytes")
         .header(header::CONTENT_LENGTH, (end - start).to_string())
@@ -811,8 +862,8 @@ mod tests {
         fn scan(&self, input: &mut dyn Read) -> std::io::Result<()> {
             let mut bytes = Vec::new();
             input.read_to_end(&mut bytes)?;
-            if !bytes.starts_with(b"OggS") {
-                return Err(std::io::Error::other("fixture expects Ogg"));
+            if bytes.get(4..8) != Some(b"ftyp".as_slice()) {
+                return Err(std::io::Error::other("fixture expects MP4"));
             }
             Ok(())
         }
@@ -1128,6 +1179,7 @@ mod tests {
             ("POST", "/api/channels/room/dj/queue"),
             ("GET", "/api/channels/room/dj/playback"),
             ("GET", "/api/channels/room/dj/audio/unknown"),
+            ("GET", "/api/channels/room/dj/audio/unknown/seek"),
         ] {
             assert_eq!(
                 call(&state, None, method, path, json!({"query":"fixture"}), None)
@@ -1272,6 +1324,17 @@ mod tests {
                     .unwrap(),
             );
             let url = descriptor["track"]["audio_url"].as_str().unwrap();
+            let seek_path = format!("{url}/seek?time=1");
+            let seek = json_call(&state, actor, "GET", &seek_path, json!(null)).await;
+            assert!(seek["duration"].as_f64().unwrap() > 1.0);
+            assert!(!seek["fragments"].as_array().unwrap().is_empty());
+            assert_eq!(
+                call(&state, Some('d'), "GET", &seek_path, json!(null), None)
+                    .await
+                    .0,
+                StatusCode::FORBIDDEN
+            );
+
             let (status, bytes) = call(
                 &state,
                 Some(actor),
@@ -1283,7 +1346,7 @@ mod tests {
             .await;
             assert_eq!(status, StatusCode::PARTIAL_CONTENT);
             assert_eq!(bytes.len(), 64);
-            assert!(bytes.starts_with(b"OggS"));
+            assert_eq!(bytes.get(4..8), Some(b"ftyp".as_slice()));
             assert_eq!(
                 call(&state, Some('d'), "GET", url, json!(null), None)
                     .await
@@ -1302,7 +1365,7 @@ mod tests {
             None,
         )
         .await;
-        let audio = scratch.path().join("decoded-fixture.ogg");
+        let audio = scratch.path().join("decoded-fixture.mp4");
         std::fs::write(&audio, &bytes).unwrap();
         assert!(
             probe_duration(FsPath::new("ffprobe"), &audio)
@@ -1397,7 +1460,7 @@ mod tests {
                 let path = chunk.unwrap().path();
                 if path.extension().is_some_and(|ext| ext == "chunk") {
                     let encrypted = std::fs::read(path).unwrap();
-                    assert!(!encrypted.starts_with(b"OggS"));
+                    assert_ne!(encrypted.get(4..8), Some(b"ftyp".as_slice()));
                 }
             }
         }
@@ -1420,6 +1483,32 @@ mod tests {
             .0,
             StatusCode::UNAUTHORIZED
         );
+        assert_eq!(
+            call(
+                &state,
+                Some('b'),
+                "GET",
+                &format!("/api/channels/room/dj/audio/{first_id}/seek"),
+                json!(null),
+                None
+            )
+            .await
+            .0,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            call(
+                &state,
+                Some('a'),
+                "GET",
+                &format!("/api/channels/room/dj/audio/{first_id}/seek"),
+                json!(null),
+                None
+            )
+            .await
+            .0,
+            StatusCode::NOT_FOUND
+        );
         println!("DJ fixture:3 actual UDP voice connections;2 local espeak introductions+FFmpeg Opus songs;loopback-only Switchboard/CDN;fixture scanner;encrypted cache;authenticated64-byte range and complete audio probe;sharedvotes/naturaladvance;no live providers");
     }
     #[tokio::test]
@@ -1427,7 +1516,7 @@ mod tests {
     async fn three_browsers_decode_and_synchronize_dj_fixture() {
         use std::future::IntoFuture;
         use tokio::io::AsyncWriteExt;
-        let provider = Fixture::with_song_seconds(20);
+        let provider = Fixture::with_song_seconds(90);
         let cache = tempfile::tempdir().unwrap();
         let scratch = tempfile::tempdir_in("/dev/shm").unwrap();
         let mut state = state();
@@ -1456,8 +1545,8 @@ mod tests {
             streams: Arc::new(tokio::sync::Semaphore::new(32)),
             generations: Mutex::new(HashMap::new()),
             fixture: Some(ResolvedTrack {
-                title: "Twenty second fixture tone".into(),
-                duration_ms: 20_000,
+                title: "Ninety second fixture tone".into(),
+                duration_ms: 90_000,
                 source: "https://www.youtube.com/watch?v=aaaaaaaaaaa".into(),
                 stream_url: format!("{}audio", provider.origin),
             }),
@@ -1467,8 +1556,9 @@ mod tests {
         let api =
             tokio::spawn(axum::serve(listener, crate::app(state.clone(), None)).into_future());
         let root = FsPath::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+        let run = Uuid::new_v4().to_string();
         let log =
-            std::fs::File::create(root.join("evidence/activities-dj-browser-vite.log")).unwrap();
+            std::fs::File::create(root.join(format!("evidence/media-dj-vite-{run}.log"))).unwrap();
         let mut vite = tokio::process::Command::new("node")
             .arg("node_modules/vite/bin/vite.js")
             .args(["--host", "127.0.0.1", "--port", "1424", "--strictPort"])
@@ -1490,6 +1580,10 @@ mod tests {
         }
         let mut browser = tokio::process::Command::new("node")
             .arg(root.join("server/tests/dj-browser.mjs"))
+            .env(
+                "CHRISCORD_DJ_RECEIPT",
+                root.join(format!("evidence/media-dj-browser-{run}.json")),
+            )
             .current_dir(root)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())

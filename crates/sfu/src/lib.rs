@@ -45,6 +45,10 @@ pub struct Stats {
     pub peer_id: u64,
     pub user_id: String,
     pub connected: bool,
+    /// Trusted application capture source; never an interactive member.
+    pub publisher: bool,
+    /// Whether this peer belongs to the authenticated session requesting this snapshot.
+    pub current_session: bool,
     pub received_frames: u64,
     pub forwarded_frames: u64,
     pub forwarded_bytes: u64,
@@ -68,6 +72,9 @@ pub struct PeerDiagnostics {
     pub outgoing_waiting: usize,
     pub outgoing_negotiating: usize,
     pub pending_offer_ms: Option<u64>,
+    pub output_maintenance_us: u64,
+    pub output_protocol_us: u64,
+    pub output_calls: u64,
     pub signaling_queued_bytes: usize,
     pub signaling_backpressure: u64,
     pub signaling_sent: u64,
@@ -92,6 +99,12 @@ pub struct WorkerDiagnostics {
     pub ingress_dropped: u64,
     pub max_ingress_age_us: u64,
     pub max_propagation_batch: usize,
+    pub iterations: u64,
+    pub control_us: u64,
+    pub output_us: u64,
+    pub propagation_us: u64,
+    pub receive_us: u64,
+    pub timers_us: u64,
 }
 struct ClosedPeer {
     room: String,
@@ -137,6 +150,7 @@ enum Control {
         user: String,
         session: String,
         offer: SdpOffer,
+        publisher: bool,
         reply: oneshot::Sender<Result<Joined>>,
     },
     Leave {
@@ -180,6 +194,27 @@ impl Sfu {
         session: String,
         offer: SdpOffer,
     ) -> Result<Joined> {
+        self.join_role(room, user, session, offer, false).await
+    }
+    /// Embedding application only: the normal HTTP join handler never selects this role.
+    /// One capture source may coexist with thirty people and receives no room media.
+    pub async fn join_publisher(
+        &self,
+        room: String,
+        user: String,
+        session: String,
+        offer: SdpOffer,
+    ) -> Result<Joined> {
+        self.join_role(room, user, session, offer, true).await
+    }
+    async fn join_role(
+        &self,
+        room: String,
+        user: String,
+        session: String,
+        offer: SdpOffer,
+        publisher: bool,
+    ) -> Result<Joined> {
         validate_offer(&offer)?;
         let (reply, rx) = oneshot::channel();
         self.tx
@@ -188,6 +223,7 @@ impl Sfu {
                 user,
                 session,
                 offer,
+                publisher,
                 reply,
             })
             .map_err(|_| Error::Busy)?;
@@ -354,6 +390,7 @@ fn run(
                     user,
                     session,
                     offer,
+                    publisher,
                     reply,
                 }) => {
                     if reply.is_closed() {
@@ -363,7 +400,13 @@ fn run(
                         let _ = reply.send(Err(Error::Forbidden));
                         continue;
                     }
-                    if clients.len() >= 30 && !clients.iter().any(|c| c.session == session) {
+                    let capacity = if publisher { 1 } else { 30 };
+                    if clients
+                        .iter()
+                        .filter(|c| c.publisher == publisher && c.session != session)
+                        .count()
+                        >= capacity
+                    {
                         let _ = reply.send(Err(Error::Busy));
                         continue;
                     }
@@ -389,6 +432,7 @@ fn run(
                         continue;
                     };
                     let mut client = Client::new(rtc, room, user, session);
+                    client.publisher = publisher;
                     peer::introduce(&mut client, &clients);
                     let peer_id = client.id.0;
                     clients.push(client);
@@ -433,6 +477,8 @@ fn run(
                             peer_id: c.id.0,
                             user_id: c.user.clone(),
                             connected: c.connected,
+                            publisher: c.publisher,
+                            current_session: c.session == session,
                             received_frames: c.received_frames,
                             forwarded_frames: c.forwarded_frames,
                             forwarded_bytes: c.forwarded_bytes,
@@ -451,6 +497,8 @@ fn run(
                 Err(mpsc::TryRecvError::Disconnected) => return,
             }
         }
+        worker.control_us += iteration_at.elapsed().as_micros() as u64;
+        let output_at = Instant::now();
         let mut deadline = Instant::now() + Duration::from_millis(10);
         for client in &mut clients {
             let mut outputs = 0;
@@ -470,10 +518,13 @@ fn run(
             }
             worker.max_output_batch = worker.max_output_batch.max(outputs);
         }
+        worker.output_us += output_at.elapsed().as_micros() as u64;
+        let propagation_at = Instant::now();
         worker.max_propagation_batch = worker.max_propagation_batch.max(queued.len());
         while let Some(event) = queued.pop_front() {
             peer::propagate(&event, &mut clients);
         }
+        worker.propagation_us += propagation_at.elapsed().as_micros() as u64;
         let timeout = deadline
             .saturating_duration_since(Instant::now())
             .clamp(Duration::from_millis(1), Duration::from_millis(10));
@@ -512,6 +563,7 @@ fn run(
                     client.handle_input(input);
                 }
             }
+            worker.receive_us += at.elapsed().as_micros() as u64;
             if batch_at.elapsed() >= Duration::from_millis(1) {
                 break;
             }
@@ -521,6 +573,8 @@ fn run(
         for client in &mut clients {
             client.handle_input(Input::Timeout(now));
         }
+        worker.timers_us += now.elapsed().as_micros() as u64;
+        worker.iterations += 1;
         worker.max_iteration_us = worker
             .max_iteration_us
             .max(iteration_at.elapsed().as_micros() as u64);

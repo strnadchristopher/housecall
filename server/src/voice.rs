@@ -25,10 +25,14 @@ pub fn configure(state: &mut AppState) -> Result<(), String> {
             let bind = bind.parse().map_err(|_| "invalid SFU_BIND")?;
             let public = public.parse().map_err(|_| "invalid SFU_PUBLIC_IP")?;
             let db = state.db.clone();
+            let publisher = state.vm_media.clone();
             let authorize: chriscord_sfu::Authorize = Arc::new(move |room, user, session| {
                 let Ok(db) = db.lock() else {
                     return false;
                 };
+                if publisher.authorize(&db, room, user, session) {
+                    return true;
+                }
                 db.query_row("SELECT EXISTS(SELECT 1 FROM sessions s JOIN members m ON m.user_id=s.user_id WHERE s.id=?1 AND s.user_id=?2 AND s.expires_at>?3 AND m.channel_id=?4)", params![session, user, now(), room], |r| r.get::<_, bool>(0)).unwrap_or(false)
             });
             let sfu =

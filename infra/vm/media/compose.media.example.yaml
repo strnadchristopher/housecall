@@ -1,0 +1,45 @@
+# Integration reference, not a standalone deployment. The root compose owns wiring.
+# Prepare mount directories with the ownership in docs/VM-MEDIA.md first.
+services:
+  vm-audio:
+    build:
+      context: .
+      dockerfile: Dockerfile.audio
+    network_mode: none
+    user: "47193:47191"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: ["/tmp:rw,nosuid,nodev,noexec,size=16m,mode=1777"]
+    volumes:
+      - /run/chriscord/vm-audio:/audio
+    mem_limit: 128m
+    pids_limit: 32
+    restart: unless-stopped
+
+  vm-publisher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Deliberately not the guest/gluetun, host, or app network namespace.
+    networks: [vm-media-egress]
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN, SETUID, SETGID, SETPCAP]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: ["/tmp:rw,nosuid,nodev,noexec,size=64m,mode=1777"]
+    environment:
+      VM_MEDIA_APP_UID: ${VM_MEDIA_APP_UID:?numeric app Unix-socket owner UID required}
+      VM_MEDIA_SFU_IP: ${VM_MEDIA_SFU_IP:?numeric reachable SFU candidate IP required}
+      VM_MEDIA_SFU_PORT: ${VM_MEDIA_SFU_PORT:-50000}
+    volumes:
+      - /run/chriscord/vm-display:/display:ro
+      - /run/chriscord/vm-audio:/audio:ro
+      - /run/chriscord/vm-signaling:/signaling:ro
+    mem_limit: 768m
+    cpus: 2
+    pids_limit: 128
+    restart: unless-stopped
+
+networks:
+  vm-media-egress: {}

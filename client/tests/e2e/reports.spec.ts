@@ -6,7 +6,7 @@ test("consented scanned screenshot and redacted logs are available only to owner
   const password = "synthetic report password 123";
   const headers = (s: { token: string; device_key: string }) => ({ Authorization: `Bearer ${s.token}`, "X-Device-Key": s.device_key });
   const owner = await (await request.post("/api/setup", { data: { username: "report_owner", password, setup_token: "test-setup-token-at-least-32-characters", device_name: "report fixture" } })).json();
-  const invitation = await (await request.post("/api/invites", { headers: headers(owner), data: { expires_in_seconds: 300 } })).json();
+  const invitation = await (await request.post("/api/invites", { headers: headers(owner), data: { email: "fixture@example.test", expires_in_seconds: 300 } })).json();
   const friend = await (await request.post("/api/invites/accept", { data: { token: invitation.token, username: "report_friend", password, device_name: "report fixture" } })).json();
   const context = await browser.newContext();
   const page = await context.newPage();

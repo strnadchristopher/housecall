@@ -36,7 +36,7 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
       const invitation = await (
         await request.post("/api/invites", {
           headers,
-          data: { expires_in_seconds: 3600 },
+          data: { email: "fixture@example.test", expires_in_seconds: 3600 },
         })
       ).json();
       expect(

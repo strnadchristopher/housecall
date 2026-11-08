@@ -2,7 +2,9 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch:
-    process.env.CHRISCORD_TEST_UPLOAD_VIDEO === "1"
+    process.env.CHRISCORD_TEST_NATIVE_PUSH === "1"
+      ? "**/native-push.spec.ts"
+      : process.env.CHRISCORD_TEST_UPLOAD_VIDEO === "1"
       ? "**/upload-video.spec.ts"
       : process.env.CHRISCORD_TEST_REPORTS === "1"
       ? "**/reports.spec.ts"
@@ -18,7 +20,7 @@ export default defineConfig({
   timeout: 120000,
   reporter: [
     ["list"],
-    ["json", { outputFile: "../evidence/client-playwright.json" }],
+    ["json", { outputFile: process.env.CHRISCORD_TEST_RECEIPT ?? "../evidence/client-playwright.json" }],
   ],
   use: {
     baseURL: "http://localhost:1420",

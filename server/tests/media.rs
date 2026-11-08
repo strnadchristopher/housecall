@@ -94,7 +94,7 @@ async fn encrypted_upload_http_resume_ownership_quarantine_range_and_limits() {
         "POST",
         "/api/invites",
         Some(&a),
-        json!({"expires_in_seconds":60}),
+        json!({"email":"fixture@example.test","expires_in_seconds":60}),
     )
     .await;
     let(_,b)=json_req(&api,"POST","/api/invites/accept",None,json!({"token":i["token"],"username":"outsider","password":"password-long-enough","device_name":"test"})).await;

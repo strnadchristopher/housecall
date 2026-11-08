@@ -4,11 +4,15 @@ pub mod embeds;
 pub mod gimme;
 pub mod giphy;
 pub mod media;
+pub(crate) mod media_index;
 pub mod passkeys;
 pub mod plex;
 pub mod push;
 pub mod servers;
 pub mod transcode;
+pub mod vm;
+pub mod vm_media;
+pub mod vm_reset;
 pub mod voice;
 use argon2::{
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
@@ -93,6 +97,85 @@ pub struct AppState {
     pub gimme: Arc<gimme::Worker>,
     pub dj: Option<Arc<dj::Player>>,
     pub push: Arc<push::Worker>,
+    pub vm: Option<Arc<vm::Gateway>>,
+    pub vm_media: Arc<vm_media::Publisher>,
+    pub vm_operations: Arc<tokio::sync::Mutex<()>>,
+    pub invite_mail: Arc<InviteMailConfig>,
+}
+#[derive(Clone)]
+pub struct InviteMailConfig {
+    api_key: Option<String>,
+    mail_from: Option<String>,
+    public_url: String,
+}
+impl InviteMailConfig {
+    pub fn from_env() -> Result<Self, String> {
+        let api_key = std::env::var("RESEND_API_KEY")
+            .ok()
+            .filter(|value| !value.is_empty());
+        let mail_from = std::env::var("CHRISCORD_MAIL_FROM")
+            .ok()
+            .filter(|value| !value.is_empty());
+        if api_key.is_some() && mail_from.is_none() {
+            return Err("CHRISCORD_MAIL_FROM is required when RESEND_API_KEY is set".into());
+        }
+        let public_url = std::env::var("CHRISCORD_PUBLIC_URL")
+            .unwrap_or_else(|_| "https://chriscord.littleobelisk.com".into());
+        let parsed =
+            reqwest::Url::parse(&public_url).map_err(|_| "invalid CHRISCORD_PUBLIC_URL")?;
+        if !matches!(parsed.scheme(), "http" | "https")
+            || parsed.host_str().is_none()
+            || !parsed.username().is_empty()
+            || parsed.password().is_some()
+            || parsed.query().is_some()
+            || parsed.fragment().is_some()
+            || !matches!(parsed.path(), "" | "/")
+        {
+            return Err("CHRISCORD_PUBLIC_URL must be an HTTP(S) origin".into());
+        }
+        Ok(Self {
+            api_key,
+            mail_from,
+            public_url: parsed.origin().ascii_serialization(),
+        })
+    }
+
+    async fn send_invite(&self, email: &str, token: &str) -> Result<bool, String> {
+        let link = format!("{}/#invite={token}", self.public_url);
+        let Some(api_key) = self.api_key.as_deref() else {
+            tracing::info!(invite_link = %link, "invite link (development mode; no RESEND_API_KEY configured)");
+            return Ok(false);
+        };
+        let html_link = link
+            .replace('&', "&amp;")
+            .replace('"', "&quot;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;");
+        let response = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .map_err(|_| "mail client unavailable")?
+            .post("https://api.resend.com/emails")
+            .bearer_auth(api_key)
+            .json(&json!({
+                "from": self.mail_from.as_deref().expect("validated sender"),
+                "to": [email],
+                "subject": "Your Chriscord invitation",
+                "html": format!("<p>Christopher invited you to Chriscord. This link works once and expires in seven days.</p><p><a href=\"{html_link}\">Accept your invitation</a></p><p>If you did not expect this, you can ignore this email.</p>"),
+                "text": format!("Christopher invited you to Chriscord. This link works once and expires in seven days:\n\n{link}\n\nIf you did not expect this, you can ignore this email.")
+            }))
+            .send()
+            .await
+            .map_err(|_| "mail delivery failed")?;
+        if !response.status().is_success() {
+            return Err(format!(
+                "Resend returned HTTP {}",
+                response.status().as_u16()
+            ));
+        }
+        Ok(true)
+    }
 }
 #[derive(Clone, Serialize, Debug)]
 pub struct User {
@@ -128,6 +211,7 @@ impl AppState {
         servers::init(&db)?;
         passkeys::init(&db)?;
         activities::init(&db)?;
+        vm_reset::init(&db)?;
         gimme::init(&db)?;
         dj::init(&db)?;
         push::init(&db)?;
@@ -147,6 +231,14 @@ impl AppState {
             gimme: gimme::Worker::dry_run(),
             dj: None,
             push: push::Worker::disabled(),
+            vm: None,
+            vm_media: Default::default(),
+            vm_operations: Default::default(),
+            invite_mail: Arc::new(InviteMailConfig {
+                api_key: None,
+                mail_from: None,
+                public_url: "http://localhost:1420".into(),
+            }),
         })
     }
     fn limited(&self, key: String, max: u32) -> bool {
@@ -185,6 +277,9 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .merge(plex::routes())
         .merge(transcode::routes())
         .merge(voice::routes())
+        .merge(vm::routes())
+        .merge(vm_media::routes())
+        .merge(vm_reset::routes())
         .merge(servers::routes())
         .merge(media::routes())
         .merge(giphy::routes())
@@ -197,6 +292,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .route("/invites", get(invites).post(invite))
         .route("/invites/{id}", delete(revoke_invite))
         .route("/users/{id}/sessions", delete(revoke_user_sessions))
+        .route("/users/{id}/disable", post(disable_user))
         .route("/devices", get(devices))
         .route("/devices/{id}", delete(revoke))
         .route("/channels", get(channels).post(create_channel))
@@ -248,7 +344,12 @@ async fn public_limit(
     req: axum::extract::Request,
     next: Next,
 ) -> Result<Response, ApiError> {
-    if s.limited("public".into(), s.public_auth_limit) {
+    let route = match req.uri().path().rsplit('/').next().unwrap_or_default() {
+        "login" => "login",
+        "accept" => "invite-accept",
+        _ => "public",
+    };
+    if s.limited(format!("public:{route}"), s.public_auth_limit) {
         return Err(ApiError(StatusCode::TOO_MANY_REQUESTS, "try again later"));
     }
     Ok(next.run(req).await)
@@ -266,7 +367,7 @@ pub fn identify(s: &AppState, h: &HeaderMap) -> Result<Principal, ApiError> {
         .filter(|v| v.len() == 64)
         .ok_or_else(unauthorized)?;
     let db = s.db.lock().unwrap();
-    db.query_row("SELECT u.id,u.username,u.is_owner,s.id FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.device_hash=? AND s.expires_at>?",params![hash(token),hash(device),now()],|r|Ok(Principal{user:User{id:r.get(0)?,username:r.get(1)?,is_owner:r.get(2)?},session_id:r.get(3)?})).optional()?.ok_or_else(unauthorized)
+    db.query_row("SELECT u.id,u.username,u.is_owner,s.id FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.device_hash=? AND s.expires_at>? AND u.disabled=0",params![hash(token),hash(device),now()],|r|Ok(Principal{user:User{id:r.get(0)?,username:r.get(1)?,is_owner:r.get(2)?},session_id:r.get(3)?})).optional()?.ok_or_else(unauthorized)
 }
 async fn authenticate(
     State(s): State<AppState>,
@@ -322,6 +423,26 @@ fn credentials(username: &str, password: &str, device: &str) -> Result<(), ApiEr
         return Err(bad("invalid username, password or device name"));
     }
     Ok(())
+}
+fn valid_email(email: &str) -> bool {
+    if email.len() > 254 || email.bytes().any(|byte| byte.is_ascii_whitespace()) {
+        return false;
+    }
+    let Some((local, domain)) = email.split_once('@') else {
+        return false;
+    };
+    !local.is_empty()
+        && local.len() <= 64
+        && !domain.starts_with('.')
+        && !domain.ends_with('.')
+        && domain.contains('.')
+        && domain.split('.').all(|label| {
+            !label.is_empty()
+                && label
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b == b'-')
+        })
+        && email.matches('@').count() == 1
 }
 async fn password_hash(s: &AppState, password: String) -> Result<String, ApiError> {
     let permit = s.auth_slots.clone().try_acquire_owned().map_err(|_| {
@@ -381,7 +502,7 @@ async fn setup(State(s): State<AppState>, Json(v): Json<Setup>) -> ApiResult<Val
         is_owner: true,
     };
     tx.execute(
-        "INSERT INTO users VALUES(?,?,?,1)",
+        "INSERT INTO users(id,username,password,is_owner) VALUES(?,?,?,1)",
         params![u.id, u.username, pw],
     )?;
     tx.execute(
@@ -405,7 +526,7 @@ async fn login(State(s): State<AppState>, Json(v): Json<Login>) -> ApiResult<Val
         s.db.lock()
             .unwrap()
             .query_row(
-                "SELECT id,username,is_owner,password FROM users WHERE username=?",
+                "SELECT id,username,is_owner,password FROM users WHERE username=? AND disabled=0",
                 [&v.username],
                 |r| {
                     Ok((
@@ -453,6 +574,7 @@ async fn login(State(s): State<AppState>, Json(v): Json<Login>) -> ApiResult<Val
 #[derive(Deserialize)]
 struct Invite {
     expires_in_seconds: i64,
+    email: String,
     server_id: Option<String>,
 }
 async fn invite(
@@ -464,17 +586,37 @@ async fn invite(
     if !(60..=604800).contains(&v.expires_in_seconds) {
         return Err(bad("invalid expiry"));
     }
+    let email = v.email.trim().to_ascii_lowercase();
+    if !valid_email(&email) {
+        return Err(bad("valid email required"));
+    }
     let token = secret();
     let expires = now() + v.expires_in_seconds * 1000;
-    let db = s.db.lock().unwrap();
     let server_id = v.server_id.unwrap_or_else(|| "home".into());
-    servers::exists(&db, &server_id)?;
-    db.execute(
-        "INSERT INTO invites(token_hash,expires_at,used_at,server_id) VALUES(?,?,NULL,?)",
-        params![hash(&token), expires, server_id],
-    )?;
+    {
+        let db = s.db.lock().unwrap();
+        servers::exists(&db, &server_id)?;
+        db.execute(
+            "INSERT INTO invites(token_hash,expires_at,used_at,server_id,email) VALUES(?,?,NULL,?,?)",
+            params![hash(&token), expires, server_id, email],
+        )?;
+    }
+    let email_sent = match s.invite_mail.send_invite(&email, &token).await {
+        Ok(sent) => sent,
+        Err(error) => {
+            let _ = s.db.lock().unwrap().execute(
+                "DELETE FROM invites WHERE token_hash=? AND used_at IS NULL",
+                [hash(&token)],
+            );
+            tracing::warn!(%error, "invite email delivery failed");
+            return Err(ApiError(
+                StatusCode::BAD_GATEWAY,
+                "invitation email could not be sent",
+            ));
+        }
+    };
     Ok(Json(
-        json!({"id":hash(&token),"token":token,"expires_at":expires,"server_id":server_id}),
+        json!({"id":hash(&token),"token":if email_sent { Value::Null } else { json!(token) },"expires_at":expires,"server_id":server_id,"email":email,"email_sent":email_sent}),
     ))
 }
 async fn invites(
@@ -484,9 +626,9 @@ async fn invites(
     owner(&p)?;
     let db = s.db.lock().unwrap();
     let mut q = db.prepare(
-        "SELECT token_hash,expires_at,used_at FROM invites ORDER BY expires_at DESC LIMIT 500",
+        "SELECT token_hash,expires_at,used_at,email FROM invites ORDER BY expires_at DESC LIMIT 500",
     )?;
-    let rows=q.query_map([],|r|Ok(json!({"id":r.get::<_,String>(0)?,"expires_at":r.get::<_,i64>(1)?,"used_at":r.get::<_,Option<i64>>(2)?})))?.collect::<Result<Vec<_>,_>>()?;
+    let rows=q.query_map([],|r|Ok(json!({"id":r.get::<_,String>(0)?,"expires_at":r.get::<_,i64>(1)?,"used_at":r.get::<_,Option<i64>>(2)?,"email":r.get::<_,String>(3)?})))?.collect::<Result<Vec<_>,_>>()?;
     Ok(Json(json!({"invites":rows})))
 }
 async fn revoke_invite(
@@ -516,6 +658,27 @@ async fn revoke_user_sessions(
             .unwrap()
             .execute("DELETE FROM sessions WHERE user_id=?", [id])?;
     Ok(Json(json!({"ok":true,"revoked":count})))
+}
+
+async fn disable_user(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(id): Path<String>,
+) -> ApiResult<Value> {
+    owner(&p)?;
+    if id == p.user.id {
+        return Err(conflict("the owner account cannot disable itself"));
+    }
+    let mut db = s.db.lock().unwrap();
+    let tx = db.transaction()?;
+    if tx.execute("UPDATE users SET disabled=1 WHERE id=?", [&id])? == 0 {
+        return Err(missing());
+    }
+    let revoked = tx.execute("DELETE FROM sessions WHERE user_id=?", [&id])?;
+    tx.commit()?;
+    Ok(Json(
+        json!({"ok":true,"disabled":true,"sessions_revoked":revoked}),
+    ))
 }
 
 #[derive(Deserialize)]
@@ -557,7 +720,7 @@ async fn accept(State(s): State<AppState>, Json(v): Json<Accept>) -> ApiResult<V
         is_owner: false,
     };
     tx.execute(
-        "INSERT INTO users VALUES(?,?,?,0)",
+        "INSERT INTO users(id,username,password,is_owner) VALUES(?,?,?,0)",
         params![u.id, u.username, pw],
     )?;
     let server_id: String = tx.query_row(
@@ -572,7 +735,7 @@ async fn accept(State(s): State<AppState>, Json(v): Json<Accept>) -> ApiResult<V
 }
 async fn me(State(s): State<AppState>, Extension(p): Extension<Principal>) -> Json<Value> {
     Json(
-        json!({"user":p.user,"session_id":p.session_id,"capabilities":{"password":true,"passkeys":s.passkeys.is_some(),"chat":true,"embeds":true,"uploads":s.media.is_some(),"transcode":s.transcoder.is_some(),"plex":s.plex.is_some() && s.voice.is_some(),"voice":s.voice.is_some(),"activities":false,"activity_sync":true,"activity_playback":false,"giphy":giphy::configured(),"gimme_dry_run":s.gimme.is_dry_run(),"dj":s.dj.is_some() && s.voice.is_some(),"push":false}}),
+        json!({"user":p.user,"session_id":p.session_id,"capabilities":{"password":true,"passkeys":s.passkeys.is_some(),"chat":true,"embeds":true,"uploads":s.media.is_some(),"transcode":s.transcoder.is_some(),"plex":s.plex.is_some() && s.voice.is_some(),"voice":s.voice.is_some(),"activities":false,"activity_sync":true,"activity_playback":false,"vm_input":s.vm.is_some() && s.voice.is_some(),"vm_reset":s.vm.as_ref().is_some_and(|vm| vm.reset_socket.is_some()) && s.voice.is_some(),"vm_media":s.vm_media.configured() && s.voice.is_some(),"giphy":giphy::configured(),"gimme_dry_run":s.gimme.is_dry_run(),"dj":s.dj.is_some() && s.voice.is_some(),"push":false}}),
     )
 }
 async fn devices(

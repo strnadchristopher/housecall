@@ -35,24 +35,19 @@ set --
 if [ "${VM_SERIAL_CONSOLE:-0}" = 1 ]; then
   set -- -chardev socket,id=serial0,path=/control/serial.sock,server=on,wait=off -serial chardev:serial0
 fi
-child=
-terminate() {
-  if [ -n "$child" ]; then
-    kill -TERM "$child" 2>/dev/null || true
-    wait "$child" 2>/dev/null || true
-  fi
-  exit 0
-}
-trap terminate TERM INT
-qemu-system-x86_64 -enable-kvm -cpu host -smp "${VM_CPUS:-2}" -m "${VM_MEMORY_MB:-2048}" \
+# Output-only audio. The default backend is silent and can never discover host capture.
+display=/control/display.sock
+if [ "${VM_MEDIA_AUDIO:-0}" = 1 ]; then
+  test -S /audio/native && test -d /display || { echo 'Private VM media sockets unavailable' >&2; exit 1; }
+  display=/display/display.sock
+  set -- "$@" -audiodev pa,id=vm_audio,server=unix:/audio/native,out.name=vm_output,out.frequency=48000,out.channels=2,out.latency=10000
+else
+  set -- "$@" -audiodev none,id=vm_audio
+fi
+export VM_DISPLAY_DIR="$(dirname "$display")"
+exec /usr/bin/python3 /usr/local/bin/vm-supervisor -- qemu-system-x86_64 -enable-kvm -cpu host -smp "${VM_CPUS:-2}" -m "${VM_MEMORY_MB:-2048}" \
   -nodefaults -no-reboot -display none \
   -drive file=/vm/session.qcow2,format=qcow2,if=virtio \
-  -device virtio-vga -device intel-hda -device hda-duplex \
+  -device virtio-vga -device qemu-xhci -device usb-tablet -device intel-hda -device hda-output,audiodev=vm_audio \
   -netdev user,id=net0,ipv6=off -device virtio-net-pci,netdev=net0 \
-  -vnc unix:/control/display.sock -qmp unix:/control/qmp.sock,server=on,wait=off "$@" &
-child=$!
-set +e
-wait "$child"
-result=$?
-set -e
-exit "$result"
+  -vnc "unix:$display" -qmp unix:/control/qmp.sock,server=on,wait=off "$@"

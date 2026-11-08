@@ -1,8 +1,18 @@
 import type { Api } from "./api";
+export interface VoiceInputs { microphone?: string; camera?: string }
+export interface VoiceDevice { id: string; label: string; kind: "audioinput" | "videoinput" }
+/** Enumeration does not request permission; labels may be blank until an explicit capture grant. */
+export async function availableVoiceInputs(): Promise<VoiceDevice[]> {
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  return devices.filter(device => device.kind === "audioinput" || device.kind === "videoinput")
+    .map(device => ({ id: device.deviceId, label: device.label, kind: device.kind as VoiceDevice["kind"] }));
+}
 export interface VoiceStatus {
   phase: "idle" | "connecting" | "live" | "failed";
   peerId?: string;
   streams: MediaStream[];
+  /** SFU msid is the originating peer ID; values contain no session credential. */
+  sourcePeers?: Record<string, string>;
   receivedBytes: number;
   decodedFrames: number;
   roundTripSeconds?: number;
@@ -36,24 +46,35 @@ export function opusFullband(sdp: string, bitrate = 510000) {
   }
   return sdp;
 }
-async function gathered(pc: RTCPeerConnection) {
+async function gathered(pc: RTCPeerConnection, signal: AbortSignal) {
+  signal.throwIfAborted();
   if (pc.iceGatheringState === "complete") return;
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {
       pc.removeEventListener("icegatheringstatechange", listener);
+      signal.removeEventListener("abort", aborted);
       reject(new Error("ICE gathering timed out"));
     }, 10000);
     const listener = () => {
       if (pc.iceGatheringState === "complete") {
         clearTimeout(timer);
+        signal.removeEventListener("abort", aborted);
         pc.removeEventListener("icegatheringstatechange", listener);
         resolve();
       }
     };
+    const aborted = () => {
+      clearTimeout(timer);
+      pc.removeEventListener("icegatheringstatechange", listener);
+      reject(new DOMException("Call ended", "AbortError"));
+    };
+    signal.addEventListener("abort", aborted, { once: true });
     pc.addEventListener("icegatheringstatechange", listener);
   });
 }
 export class VoiceSession {
+  private generation = 0;
+  private cancellation = new AbortController();
   private pc?: RTCPeerConnection;
   private dc?: RTCDataChannel;
   private local: MediaStream[] = [];
@@ -75,13 +96,16 @@ export class VoiceSession {
     this.state = { ...this.state, ...next };
     this.changed(this.state);
   }
-  private queue(work: () => Promise<void>) {
+  private queue(pc: RTCPeerConnection, work: () => Promise<void>) {
     this.serial = this.serial
-      .then(work)
-      .catch((error) => this.update({ phase: "failed", error: String(error) }));
+      .then(async () => { if (this.pc === pc) await work(); })
+      .catch((error) => { if (this.pc === pc) { this.close(); this.update({ phase: "failed", error: String(error) }); } });
   }
-  async join(channelId: string, camera = true) {
+  async join(channelId: string, camera = true, inputs: VoiceInputs = {}) {
     this.close();
+    const generation = this.generation;
+    const signal = this.cancellation.signal;
+    const current = () => { if (generation !== this.generation) throw new DOMException("Call ended", "AbortError"); };
     this.channelId = channelId;
     this.update({ phase: "connecting", error: undefined, streams: [] });
     try {
@@ -92,15 +116,21 @@ export class VoiceSession {
           noiseSuppression: false,
           echoCancellation: false,
           autoGainControl: false,
+          ...(inputs.microphone ? { deviceId: { exact: inputs.microphone } } : {}),
         },
         video: camera
           ? {
               width: { ideal: 1280 },
               height: { ideal: 720 },
               frameRate: { ideal: 30 },
+              ...(inputs.camera ? { deviceId: { exact: inputs.camera } } : {}),
             }
           : false,
       });
+      if (generation !== this.generation) {
+        for (const track of stream.getTracks()) track.stop();
+        return;
+      }
       this.local.push(stream);
       const pc = new RTCPeerConnection({
         iceServers: [],
@@ -111,14 +141,17 @@ export class VoiceSession {
         pc.addTransceiver(track, { direction: "sendonly", streams: [stream] });
       if (!camera) pc.addTransceiver("video", { direction: "sendonly" });
       pc.ontrack = (event) => {
+        if (this.pc !== pc) return;
         const remote = new MediaStream([event.track]);
-        this.update({ streams: [...this.state.streams, remote] });
-        event.track.onended = () =>
-          this.update({
+        this.update({ streams: [...this.state.streams, remote], sourcePeers: {
+          ...this.state.sourcePeers, [remote.id]: event.streams[0]?.id ?? "",
+        } });
+        event.track.onended = () => { if (this.pc === pc) this.update({
             streams: this.state.streams.filter((s) => s !== remote),
-          });
+            sourcePeers: Object.fromEntries(Object.entries(this.state.sourcePeers ?? {}).filter(([id]) => id !== remote.id)),
+          }); };
       };
-      pc.onconnectionstatechange = () =>
+      pc.onconnectionstatechange = () => { if (this.pc !== pc) return;
         this.update({
           phase:
             pc.connectionState === "connected"
@@ -126,38 +159,45 @@ export class VoiceSession {
               : pc.connectionState === "failed"
                 ? "failed"
                 : "connecting",
-        });
+        }); };
       const dc = pc.createDataChannel("chriscord-signaling");
       this.dc = dc;
       dc.onmessage = (event) =>
-        this.queue(async () => {
+        this.queue(pc, async () => {
           const description = JSON.parse(
             String(event.data),
           ) as RTCSessionDescriptionInit;
           if (description.type === "offer") {
             await pc.setRemoteDescription(description);
+            current();
             const answer = await pc.createAnswer();
+            current();
             await pc.setLocalDescription({
               type: "answer",
               sdp: opusFullband(answer.sdp ?? ""),
             });
-            await gathered(pc);
+            await gathered(pc, signal);
+            current();
             dc.send(JSON.stringify(pc.localDescription));
           } else if (description.type === "answer")
             await pc.setRemoteDescription(description);
         });
       const offer = await pc.createOffer();
+      current();
       await pc.setLocalDescription({
         type: "offer",
         sdp: opusFullband(offer.sdp ?? ""),
       });
-      await gathered(pc);
+      await gathered(pc, signal);
+      current();
       const result = await this.api.post<{
-        peer_id: string;
+        peer_id: string | number;
         answer: RTCSessionDescriptionInit;
       }>(`/api/channels/${channelId}/voice/join`, pc.localDescription);
+      current();
       await pc.setRemoteDescription(result.answer);
-      this.update({ peerId: result.peer_id });
+      current();
+      this.update({ peerId: String(result.peer_id) });
       for (const sender of pc.getSenders())
         if (sender.track?.kind === "audio") {
           const parameters = sender.getParameters();
@@ -167,9 +207,11 @@ export class VoiceSession {
           for (const encoding of parameters.encodings)
             encoding.maxBitrate = 510000;
           await sender.setParameters(parameters);
+          current();
         }
       this.timer = setInterval(() => void this.statistics(), 1000);
     } catch (error) {
+      if (generation !== this.generation) return;
       this.close();
       this.update({
         phase: "failed",
@@ -179,26 +221,26 @@ export class VoiceSession {
     }
   }
   async screenShare() {
-    if(this.screenTrack?.readyState==='live')throw new Error('Screen sharing is already active; stop it from the capture control first');
-    if (!this.pc || this.pc.connectionState !== "connected")
-      throw new Error("Join voice before sharing your screen");
-    const sender = this.pc
-      .getTransceivers()
-      .find(
-        (transceiver) => transceiver.receiver.track.kind === "video",
-      )?.sender;
+    if (this.screenTrack?.readyState === "live") throw new Error("Screen sharing is already active; stop it from the capture control first");
+    const pc = this.pc;
+    if (!pc || pc.connectionState !== "connected") throw new Error("Join voice before sharing your screen");
+    const sender = pc.getTransceivers().find(t => t.receiver.track.kind === "video")?.sender;
     if (!sender) throw new Error("A video transceiver is required");
     const original = sender.track;
-    const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: true,
-      audio: false,
-    });
+    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+    if (this.pc !== pc) { for (const track of stream.getTracks()) track.stop(); return; }
     const track = stream.getVideoTracks()[0];
-    try{await sender.replaceTrack(track);}catch(error){track.stop();throw error;}
-    this.local.push(stream);this.screenTrack=track;
+    if (!track) { for (const item of stream.getTracks()) item.stop(); throw new Error("Screen capture returned no video"); }
+    try { await sender.replaceTrack(track); }
+    catch (error) { for (const item of stream.getTracks()) item.stop(); if (this.pc === pc) throw error; return; }
+    if (this.pc !== pc) { for (const item of stream.getTracks()) item.stop(); return; }
+    this.local.push(stream);
+    this.screenTrack = track;
     track.onended = () => {
-      this.screenTrack=undefined;this.local=this.local.filter(local=>local!==stream);
-      if (this.pc) void sender.replaceTrack(original).catch(() => {});
+      if (this.pc !== pc || this.screenTrack !== track) return;
+      this.screenTrack = undefined;
+      this.local = this.local.filter(local => local !== stream);
+      void sender.replaceTrack(original?.readyState === "live" ? original : null).catch(() => {});
     };
   }
   mute(muted: boolean) {
@@ -206,7 +248,7 @@ export class VoiceSession {
       for (const track of stream.getAudioTracks()) track.enabled = !muted;
   }
   async setAudio(bitrate: number, noiseSuppression: boolean) {
-    if (bitrate < 6000 || bitrate > 510000)
+    if (!Number.isInteger(bitrate) || bitrate < 6000 || bitrate > 510000)
       throw new Error("Opus bitrate must be 6000–510000");
     for (const sender of this.pc?.getSenders() ?? [])
       if (sender.track?.kind === "audio") {
@@ -222,11 +264,15 @@ export class VoiceSession {
       }
   }
   private async statistics() {
-    if (!this.pc) return;
+    const pc = this.pc;
+    if (!pc) return;
+    let reports: RTCStatsReport;
+    try { reports = await pc.getStats(); } catch { return; }
+    if (this.pc !== pc) return;
     let receivedBytes = 0,
       decodedFrames = 0,
       roundTripSeconds: number | undefined;
-    for (const report of (await this.pc.getStats()).values()) {
+    for (const report of reports.values()) {
       if (report.type === "inbound-rtp") {
         receivedBytes += report.bytesReceived ?? 0;
         decodedFrames += report.framesDecoded ?? 0;
@@ -244,9 +290,12 @@ export class VoiceSession {
       await this.api.delete(`/api/channels/${channel}/voice/${peerId}`);
   }
   close() {
+    this.generation++;
+    this.cancellation.abort();
+    this.cancellation = new AbortController();
     this.screenTrack=undefined;
     clearInterval(this.timer);
-    this.dc?.close();
+    if (this.dc) { this.dc.onmessage = null; this.dc.close(); }
     if (this.pc) {
       this.pc.onconnectionstatechange = null;
       this.pc.ontrack = null;
@@ -255,7 +304,7 @@ export class VoiceSession {
     this.pc = undefined;
     this.dc = undefined;
     for (const stream of this.local)
-      for (const track of stream.getTracks()) track.stop();
+      for (const track of stream.getTracks()) { track.onended = null; track.stop(); }
     this.local = [];
     this.serial = Promise.resolve();
     this.state = {

@@ -21,6 +21,7 @@ pub(crate) struct Client {
     pub user: String,
     pub session: String,
     pub connected: bool,
+    pub publisher: bool,
     pub received_frames: u64,
     pub forwarded_frames: u64,
     pub forwarded_bytes: u64,
@@ -45,6 +46,9 @@ pub(crate) struct Client {
     tracks_in: Vec<TrackInEntry>,
     tracks_out: Vec<TrackOut>,
     chosen_rid: Option<Rid>,
+    output_maintenance_us: u64,
+    output_protocol_us: u64,
+    output_calls: u64,
 }
 
 // Thirty two-track publishers require ~61 media sections in a receiver's SDP.
@@ -170,6 +174,7 @@ impl Client {
             user,
             session,
             connected: false,
+            publisher: false,
             received_frames: 0,
             forwarded_frames: 0,
             forwarded_bytes: 0,
@@ -194,6 +199,9 @@ impl Client {
             tracks_in: vec![],
             tracks_out: vec![],
             chosen_rid: None,
+            output_maintenance_us: 0,
+            output_protocol_us: 0,
+            output_calls: 0,
         }
     }
 
@@ -231,6 +239,9 @@ impl Client {
             pending_offer_ms: self
                 .pending_since
                 .map(|at| now.saturating_duration_since(at).as_millis() as u64),
+            output_maintenance_us: self.output_maintenance_us,
+            output_protocol_us: self.output_protocol_us,
+            output_calls: self.output_calls,
             signaling_queued_bytes: self.signal.as_ref().map_or(0, |s| s.payload.len()),
             signaling_backpressure: self.signal_backpressure,
             signaling_sent: self.signals_sent,
@@ -309,17 +320,23 @@ impl Client {
         }
         // Incoming tracks from other clients cause new entries in track_out that
         // need SDP negotiation with the remote peer.
-        if self.negotiate_if_needed() {
+        let negotiated = self.negotiate_if_needed();
+        self.output_calls += 1;
+        self.output_maintenance_us += now.elapsed().as_micros() as u64;
+        if negotiated {
             return Propagated::Noop;
         }
 
-        match self.rtc.poll_output() {
+        let protocol_at = Instant::now();
+        let result = match self.rtc.poll_output() {
             Ok(output) => self.handle_output(output, socket),
             Err(_) => {
                 self.disconnect("poll_output_error");
                 Propagated::Noop
             }
-        }
+        };
+        self.output_protocol_us += protocol_at.elapsed().as_micros() as u64;
+        result
     }
 
     fn handle_output(&mut self, output: Output, socket: &UdpSocket) -> Propagated {
@@ -690,6 +707,9 @@ impl Propagated {
 }
 
 pub(crate) fn introduce(client: &mut Client, existing: &[Client]) {
+    if client.publisher {
+        return;
+    }
     let room = client.room.clone();
     for track in existing
         .iter()
@@ -715,8 +735,12 @@ pub(crate) fn propagate(event: &Propagated, clients: &mut [Client]) {
         .filter(|c| c.room == room && c.id != source)
     {
         match event {
-            Propagated::TrackOpen(_, track) => client.handle_track_open(track.clone()),
-            Propagated::MediaData(_, data) => client.handle_media_data_out(source, data),
+            Propagated::TrackOpen(_, track) if !client.publisher => {
+                client.handle_track_open(track.clone())
+            }
+            Propagated::MediaData(_, data) if !client.publisher => {
+                client.handle_media_data_out(source, data)
+            }
             Propagated::KeyframeRequest(_, request, origin, mid) if *origin == client.id => {
                 client.handle_keyframe_request(*request, *mid)
             }
@@ -728,6 +752,43 @@ pub(crate) fn propagate(event: &Propagated, clients: &mut [Client]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn publisher_never_subscribes_to_existing_or_new_user_tracks() {
+        str0m::crypto::from_feature_flags().install_process_default();
+        let now = Instant::now();
+        let mut human = Client::new(
+            Rtc::new(now),
+            "room".into(),
+            "human".into(),
+            "human-session".into(),
+        );
+        human.handle_media_added("audio".into(), MediaKind::Audio);
+        let mut source = Client::new(
+            Rtc::new(now),
+            "room".into(),
+            "source".into(),
+            "source-session".into(),
+        );
+        source.publisher = true;
+        introduce(&mut source, std::slice::from_ref(&human));
+        assert!(source.tracks_out.is_empty());
+        let viewer = Client::new(
+            Rtc::new(now),
+            "room".into(),
+            "viewer".into(),
+            "viewer-session".into(),
+        );
+        let event = human.handle_media_added("video".into(), MediaKind::Video);
+        let mut clients = [human, source, viewer];
+        propagate(&event, &mut clients);
+        assert!(clients[1].tracks_out.is_empty());
+        assert_eq!(clients[2].tracks_out.len(), 1);
+        let vm_frame = clients[1].handle_media_added("desktop".into(), MediaKind::Video);
+        propagate(&vm_frame, &mut clients);
+        assert_eq!(clients[0].tracks_out.len(), 1);
+        assert_eq!(clients[2].tracks_out.len(), 2);
+        assert!(clients[1].tracks_out.is_empty());
+    }
     #[test]
     fn signaling_backpressure_preserves_payload_then_sends_once_without_spinning() {
         let start = Instant::now();

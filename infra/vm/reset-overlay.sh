@@ -8,6 +8,9 @@ test "$(id -u)" = 47191 || { echo 'Reset must run as reserved UID 47191' >&2; ex
 umask 007
 exec 9>/vm/session.lock
 flock -n 9 || { echo 'VM is running or another disk operation is active' >&2; exit 75; }
+test ! -e /vm/reset-journal.json && test ! -e /vm/reset-original.qcow2 || {
+  echo 'Supervisor reset recovery is pending; restart the supervised VM first' >&2; exit 75;
+}
 for item in base.qcow2 base.sha512 session.qcow2; do
   test ! -L "/vm/$item" || { echo 'Symlinked VM disk files are forbidden' >&2; exit 1; }
 done

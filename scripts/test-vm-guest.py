@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import socket
 import subprocess
 import time
@@ -321,27 +322,44 @@ def main():
         record('reset_removes_persistent_changes', SERIAL.command('test ! -e /root/persistent-marker -a ! -e /root/qmp-marker')[0] == 0)
         record('reset_guest_vpn_http_works', guest_http('198.18.0.2')[0] == 0)
     finally:
-        if SERIAL:
-            SERIAL.close()
-            SERIAL = None
-        for name in OWNED:
-            logs = docker('logs', name, check=False)
-            log_prefix = 'vm-guest-input-' if args.scenario == 'input' else 'vm-guest-'
-            (EVIDENCE / (log_prefix + name.removeprefix(PREFIX + '-') + '.log')).write_text(logs.stdout + logs.stderr)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
         cleaned = True
-        for name in reversed(OWNED):
-            cleaned = docker('rm', '-f', name, check=False).returncode == 0 and cleaned
-        for name in reversed(NETWORKS):
-            cleaned = docker('network', 'rm', name, check=False).returncode == 0 and cleaned
+        try:
+            if SERIAL:
+                try: SERIAL.close()
+                except Exception as error: print('Fixture serial close failed: '+type(error).__name__, flush=True)
+                SERIAL = None
+            for name in OWNED:
+                try:
+                    logs = docker('logs', name, check=False, timeout=5)
+                    log_prefix = 'vm-guest-input-' if args.scenario == 'input' else 'vm-guest-'
+                    (EVIDENCE / (log_prefix + name.removeprefix(PREFIX + '-') + '.log')).write_text(logs.stdout + logs.stderr)
+                except Exception as error:
+                    print('Fixture log collection failed: '+type(error).__name__, flush=True)
+        finally:
+            for name in reversed(OWNED):
+                try:
+                    cleaned = docker('rm', '-f', name, check=False, timeout=15).returncode == 0 and cleaned
+                except Exception:
+                    cleaned = False
+            for name in reversed(NETWORKS):
+                try:
+                    cleaned = docker('network', 'rm', name, check=False, timeout=15).returncode == 0 and cleaned
+                except Exception:
+                    cleaned = False
         overlay_size = (DISK / 'session.qcow2').stat().st_size if (DISK / 'session.qcow2').exists() else None
         receipt = {'scope': 'actual Debian12 guest; local admin QMP; no app/WebRTC/audio bridge', 'scenario': args.scenario, 'base_url': BASE_URL,
                    'base_sha512': BASE_SHA512, 'base_bytes': BASE.stat().st_size, 'overlay_bytes': overlay_size,
                    'vm_memory_mb': 768, 'vm_vcpus': 1, 'checks': CHECKS, 'prefix': PREFIX,
                    'cleaned_owned_containers_and_network': cleaned}
         (EVIDENCE / ('vm-guest-' + args.scenario + '-results.json')).write_text(json.dumps(receipt, indent=2) + '\n')
+        if not cleaned: raise RuntimeError('Owned fixture cleanup incomplete; retained working directory for inspection')
         # Delete only this run's generated overlay/keys. Pinned immutable base remains cached.
         subprocess.run(['sudo', '-n', 'rm', '-rf', '--', str(WORK)], check=True)
 
 
 if __name__ == '__main__':
+    def interrupted(_signal, _frame):
+        raise TimeoutError('Owned VM fixture interrupted; cleaning owned containers')
+    signal.signal(signal.SIGTERM, interrupted)
     main()

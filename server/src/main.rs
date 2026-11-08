@@ -1,4 +1,4 @@
-use chriscord_server::{app, AppState};
+use chriscord_server::{app, AppState, InviteMailConfig};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
@@ -35,6 +35,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
     }
     let mut state = AppState::new(&database, &token)?;
+    state.invite_mail =
+        std::sync::Arc::new(InviteMailConfig::from_env().map_err(std::io::Error::other)?);
     if let Ok(origins) = std::env::var("CHRISCORD_CLIENT_ORIGINS") {
         for origin in origins.split(',').map(str::trim).filter(|s| !s.is_empty()) {
             if origin == "*" {
@@ -45,7 +47,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     if let Ok(origin) = std::env::var("CHRISCORD_ORIGIN") {
         state.passkeys = Some(std::sync::Arc::new(
-            chriscord_server::passkeys::Passkeys::new(&origin)?,
+            chriscord_server::passkeys::Passkeys::with_android_origins(
+                &origin,
+                &std::env::var("CHRISCORD_ANDROID_PASSKEY_ORIGINS")
+                    .unwrap_or_default()
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(str::to_owned)
+                    .collect::<Vec<_>>(),
+            )?,
         ));
     }
     if let Ok(key) = std::env::var("CHRISCORD_MEDIA_KEY") {
@@ -55,14 +66,47 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let path = std::env::var("CHRISCORD_MEDIA_DIR").unwrap_or_else(|_| "data/media".into());
         state.media = Some(std::sync::Arc::new(chriscord_media::Store::new(path, key)?));
     }
-    #[cfg(unix)]
-    if let Ok(socket) = std::env::var("CHRISCORD_CLAMD_SOCKET") {
-        state.scanner = std::sync::Arc::new(chriscord_media::ClamdScanner {
-            socket: socket.into(),
-            timeout: std::time::Duration::from_secs(300),
-        });
+    let scanner_engine =
+        std::env::var("CHRISCORD_MEDIA_SCANNER").unwrap_or_else(|_| "clamav".into());
+    let scan_timeout: u64 = std::env::var("CHRISCORD_SCAN_TIMEOUT_SECONDS")
+        .unwrap_or_else(|_| "300".into())
+        .parse()
+        .map_err(|_| "CHRISCORD_SCAN_TIMEOUT_SECONDS must be an integer from 1 to 86400")?;
+    if !(1..=86400).contains(&scan_timeout) {
+        return Err("CHRISCORD_SCAN_TIMEOUT_SECONDS must be from 1 to 86400".into());
     }
+    let timeout = std::time::Duration::from_secs(scan_timeout);
+    match scanner_engine.as_str() {
+        "clamav" =>
+        {
+            #[cfg(unix)]
+            if let Ok(socket) = std::env::var("CHRISCORD_CLAMD_SOCKET") {
+                state.scanner = std::sync::Arc::new(chriscord_media::ClamdScanner {
+                    socket: socket.into(),
+                    timeout,
+                });
+            }
+        }
+        "withsecure" => {
+            #[cfg(target_os = "linux")]
+            {
+                let binary = std::env::var("CHRISCORD_FSANALYZE").map_err(|_| {
+                    "CHRISCORD_FSANALYZE must name the provisioned absolute executable"
+                })?;
+                state.scanner = std::sync::Arc::new(chriscord_media::WithSecureScanner::new(
+                    binary.into(),
+                    timeout,
+                )?);
+            }
+            #[cfg(not(target_os = "linux"))]
+            return Err("withsecure scanning requires Linux".into());
+        }
+        _ => return Err("CHRISCORD_MEDIA_SCANNER must be clamav or withsecure".into()),
+    }
+    chriscord_server::vm::configure(&mut state)?;
+    chriscord_server::vm_media::configure(&mut state)?;
     chriscord_server::voice::configure(&mut state)?;
+    chriscord_server::vm_media::start(&state).await?;
     chriscord_server::transcode::configure(&mut state)?;
     chriscord_server::plex::configure(&mut state)?;
     chriscord_server::gimme::configure(&mut state)?;

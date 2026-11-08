@@ -15,6 +15,8 @@ pub fn init(db: &Connection) -> rusqlite::Result<()> {
     for (table, column, definition) in [
         ("channels", "server_id", "TEXT REFERENCES servers(id)"),
         ("invites", "server_id", "TEXT NOT NULL DEFAULT 'home'"),
+        ("invites", "email", "TEXT NOT NULL DEFAULT ''"),
+        ("users", "disabled", "INTEGER NOT NULL DEFAULT 0"),
     ] {
         let mut q = db.prepare(&format!("PRAGMA table_info({table})"))?;
         let columns = q

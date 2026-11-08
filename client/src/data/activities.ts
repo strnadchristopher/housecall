@@ -11,7 +11,7 @@ export interface ActivitySnapshot {
     anchored_at_ms: number;
     duration_ms: number | null;
   };
-  queue: { id: string; title: string }[];
+  queue: { id: string; title: string; requested_by: string; duration_ms: number; source: string }[];
   skip_votes: string[];
   controller: { user_id: string; expires_at_ms: number } | null;
   control_requests: string[];

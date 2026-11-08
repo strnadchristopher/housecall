@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawn } from "node:child_process";
@@ -13,10 +13,10 @@ const binary =
 const child = spawn(binary, [], {
   stdio: "inherit",
   env: {
-    ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(CHRISCORD_|SFU_|PLEX_|GIMME_|GIPHY_|SWITCHBOARD_|PUSH_|APNS_|FCM_|DJ_|SPOTIFY_|YT_DLP_)/.test(key))),
+    ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(CHRISCORD_|SFU_|PLEX_|GIMME_|GIPHY_|SWITCHBOARD_|PUSH_|APNS_|FCM_|DJ_|SPOTIFY_|YT_DLP_|RESEND_)/.test(key))),
     GIMME_DRY_RUN: "true",
     DJ_ENABLED: "false",
-    ...((process.env.CHRISCORD_TEST_REPORTS === "1" || process.env.CHRISCORD_TEST_UPLOAD_VIDEO === "1")
+    ...((process.env.CHRISCORD_TEST_REPORTS === "1" || process.env.CHRISCORD_TEST_UPLOAD_VIDEO === "1" || process.env.CHRISCORD_TEST_UPLOADS === "1")
       ? { CHRISCORD_CLAMD_SOCKET: resolve("../.runtime/scan/clamd.sock") }
       : {}),
     CHRISCORD_BIND: "127.0.0.1:3031",
@@ -33,10 +33,13 @@ const child = spawn(binary, [], {
     CHRISCORD_SETUP_TOKEN: "test-setup-token-at-least-32-characters",
   },
 });
+if (process.env.CHRISCORD_TEST_PID_PATH && child.pid)
+  await writeFile(process.env.CHRISCORD_TEST_PID_PATH, String(child.pid));
 let cleaning;
 function cleanup() {
   return cleaning ??= (async()=>{
     child.kill("SIGTERM");
+    if (process.env.CHRISCORD_TEST_PID_PATH) await rm(process.env.CHRISCORD_TEST_PID_PATH, { force: true });
     await stopPlex?.();
     await rm(directory, { recursive: true, force: true });
   })();

@@ -14,7 +14,14 @@ use std::{
 };
 use uuid::Uuid;
 
+pub mod scan;
+
 pub const MAX_CHUNK: usize = 4 * 1024 * 1024;
+
+#[cfg(target_os = "linux")]
+mod withsecure;
+#[cfg(target_os = "linux")]
+pub use withsecure::WithSecureScanner;
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("media not found or not owned by this user")]
@@ -50,6 +57,8 @@ pub struct Upload {
     pub length: u64,
     pub offset: u64,
     pub status: Status,
+    #[serde(default)]
+    pub scan: Option<scan::Report>,
     chunks: Vec<Chunk>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -62,11 +71,20 @@ struct Chunk {
 pub trait Scanner: Send + Sync {
     /// Read the entire stream and return success only after a definitive clean result.
     fn scan(&self, source: &mut dyn Read) -> io::Result<()>;
+    fn engine(&self) -> scan::Engine {
+        scan::Engine::Unspecified
+    }
 }
 pub struct RejectScanner;
 impl Scanner for RejectScanner {
     fn scan(&self, _: &mut dyn Read) -> io::Result<()> {
-        Err(io::Error::other("scanner not configured"))
+        Err(scan::Failure::error(
+            scan::Verdict::Unavailable,
+            scan::Reason::ScannerNotConfigured,
+        ))
+    }
+    fn engine(&self) -> scan::Engine {
+        scan::Engine::Disabled
     }
 }
 
@@ -113,6 +131,7 @@ impl Store {
             length,
             offset: 0,
             status: Status::Uploading,
+            scan: None,
             chunks: vec![],
         };
         fs::create_dir(self.dir(upload.id))?;
@@ -190,27 +209,45 @@ impl Store {
             }
             // Quarantine before the external scan. No append is possible while quarantined.
             meta.status = Status::Quarantined;
+            meta.scan = Some(scan::Report::pending(scanner.engine()));
             self.save(&meta)?;
             meta
         };
         // Do not hold the store-wide lock across scanner I/O. Deletion must cancel availability
         // immediately, and unrelated encrypted uploads must continue during a long scan.
         let mut reader = self.reader(meta.clone(), 0, meta.length)?;
-        scanner.scan(&mut reader).map_err(|_| Error::Quarantined)?;
-        if reader.remaining != 0 {
-            return Err(Error::Quarantined);
+        let mut observed = ScanInput {
+            reader: &mut reader,
+            failed: false,
+        };
+        let mut result = scanner.scan(&mut observed);
+        if observed.failed {
+            result = Err(scan::Failure::error(
+                scan::Verdict::Incomplete,
+                scan::Reason::SourceReadFailed,
+            ));
         }
+        let mut report = meta.scan.clone().ok_or(Error::Integrity)?;
+        let released = report.finish(result, meta.length - reader.remaining, meta.length);
         let _guard = self.gate.lock().map_err(|_| Error::Conflict)?;
         let mut current = self.owned(id, owner)?;
         if current.status != Status::Quarantined
             || current.offset != meta.offset
             || current.length != meta.length
+            || current.scan.as_ref().map(|value| value.attempt_id) != Some(report.attempt_id)
         {
             return Err(Error::Conflict);
         }
-        current.status = Status::Ready;
+        current.scan = Some(report);
+        if released {
+            current.status = Status::Ready;
+        }
         self.save(&current)?;
-        Ok(current)
+        if released {
+            Ok(current)
+        } else {
+            Err(Error::Quarantined)
+        }
     }
     /// Trusted server-generated streams only. HTTP upload endpoints must never expose this operation.
     /// A generated stream starts with an unknown declared length (`u64::MAX`), then fixes its
@@ -352,6 +389,22 @@ pub struct MediaReader {
     current: io::Cursor<Vec<u8>>,
     remaining: u64,
 }
+struct ScanInput<'a> {
+    reader: &'a mut MediaReader,
+    failed: bool,
+}
+impl Read for ScanInput<'_> {
+    fn read(&mut self, out: &mut [u8]) -> io::Result<usize> {
+        let result = self.reader.read(out);
+        if result
+            .as_ref()
+            .is_err_and(|error| error.kind() != io::ErrorKind::Interrupted)
+        {
+            self.failed = true;
+        }
+        result
+    }
+}
 impl Read for MediaReader {
     fn read(&mut self, out: &mut [u8]) -> io::Result<usize> {
         if self.remaining == 0 || out.is_empty() {
@@ -453,12 +506,9 @@ impl Scanner for ClamdScanner {
         socket.write_all(&0u32.to_be_bytes())?;
         let mut response = vec![];
         socket.take(4096).read_to_end(&mut response)?;
-        if response == b"stream: OK\0" {
-            Ok(())
-        } else {
-            Err(io::Error::other(
-                "scanner rejected media or scan incomplete",
-            ))
-        }
+        scan::clamd_reply(&response)
+    }
+    fn engine(&self) -> scan::Engine {
+        scan::Engine::Clamav
     }
 }

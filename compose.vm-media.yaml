@@ -1,0 +1,98 @@
+# Explicit optional overlay: compose.yaml + this file, --profile vm.
+# Never invoke against a live VPN during development; use the isolated host fixture.
+services:
+  app:
+    group_add: ["47191"]
+    depends_on:
+      vm-media-init:
+        condition: service_completed_successfully
+    environment:
+      CHRISCORD_VM_QMP_SOCKET: /vm-control/qmp.sock
+      CHRISCORD_VM_SUPERVISOR_SOCKET: /vm-control/supervisor.sock
+      CHRISCORD_VM_CHANNEL_ID: ${CHRISCORD_VM_CHANNEL_ID:?Select the authorized VM channel}
+      CHRISCORD_VM_MEDIA_SOCKET: /signaling/publisher.sock
+      CHRISCORD_VM_MEDIA_UID: "47192"
+    volumes:
+      - vm-control:/vm-control:ro
+      - vm-signaling:/signaling
+  vm-media-init:
+    profiles: [vm]
+    image: debian:bookworm-slim
+    user: "0:0"
+    network_mode: none
+    entrypoint: ["/bin/sh", "-ec", "chown 47191:47191 /display && chmod 2770 /display && chown 47193:47191 /audio && chmod 2770 /audio && chown 10001:47191 /signaling && chmod 2750 /signaling"]
+    volumes: ["vm-display:/display", "vm-audio:/audio", "vm-signaling:/signaling"]
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 32m
+    pids_limit: 16
+  shared-vm:
+    depends_on:
+      vm-media-init:
+        condition: service_completed_successfully
+      vm-audio:
+        condition: service_healthy
+    environment:
+      VM_MEDIA_AUDIO: "1"
+    volumes:
+      - vm-display:/display
+      - vm-audio:/audio:ro
+  vm-audio:
+    profiles: [vm]
+    build:
+      context: infra/vm/media
+      dockerfile: Dockerfile.audio
+    depends_on:
+      vm-media-init:
+        condition: service_completed_successfully
+    network_mode: none
+    user: "47193:47191"
+    volumes: ["vm-audio:/audio"]
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    memswap_limit: 128m
+    pids_limit: 32
+    healthcheck:
+      test: ["CMD-SHELL", "test -S /audio/native"]
+      interval: 2s
+      timeout: 1s
+      retries: 15
+  vm-publisher:
+    profiles: [vm]
+    build:
+      context: infra/vm/media
+      dockerfile: Dockerfile
+    depends_on:
+      app:
+        condition: service_healthy
+      shared-vm:
+        condition: service_started
+    networks: [vm-media-egress]
+    environment:
+      VM_MEDIA_APP_UID: "10001"
+      VM_MEDIA_SFU_IP: ${SFU_PUBLIC_IP:?Use the numeric reachable SFU host candidate}
+      VM_MEDIA_SFU_PORT: ${SFU_PORT:-50000}
+    volumes:
+      - vm-display:/display:ro
+      - vm-audio:/audio:ro
+      - vm-signaling:/signaling:ro
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN, SETUID, SETGID, SETPCAP]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 768m
+    memswap_limit: 768m
+    cpus: 2
+    pids_limit: 128
+networks:
+  vm-media-egress: {}
+volumes:
+  vm-display:
+  vm-audio:
+  vm-signaling:

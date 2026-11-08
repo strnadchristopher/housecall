@@ -4,6 +4,7 @@ use crate::{
     Principal, User,
 };
 use axum::{extract::State, http::StatusCode, routing::post, Extension, Json, Router};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -11,6 +12,7 @@ use std::{collections::HashMap, sync::Mutex};
 use webauthn_rs::prelude::*;
 pub struct Passkeys {
     engine: Webauthn,
+    android_origins: Vec<String>,
     registrations: Mutex<HashMap<String, Registration>>,
     authentications: Mutex<HashMap<String, Authentication>>,
 }
@@ -27,6 +29,11 @@ struct Authentication {
 }
 impl Passkeys {
     pub fn new(origin: &str) -> Result<Self, String> {
+        Self::with_android_origins(origin, &[])
+    }
+    /// Only operator-provisioned signing certificate hashes may extend WebAuthn trust.
+    /// Request bodies never add origins, and browser RP matching stays exact.
+    pub fn with_android_origins(origin: &str, android_origins: &[String]) -> Result<Self, String> {
         let url = Url::parse(origin).map_err(|_| "invalid WebAuthn origin")?;
         let host = url.host_str().ok_or("origin needs hostname")?;
         if !url.username().is_empty()
@@ -42,13 +49,34 @@ impl Passkeys {
         if url.scheme() != "https" && !(url.scheme() == "http" && host == "localhost") {
             return Err("WebAuthn needs HTTPS (localhost HTTP allowed for development)".into());
         }
-        let engine = WebauthnBuilder::new(host, &url)
+        if android_origins.len() > 8 || (!android_origins.is_empty() && url.scheme() != "https") {
+            return Err(
+                "Android passkeys require HTTPS and at most eight provisioned signing origins"
+                    .into(),
+            );
+        }
+        let mut builder = WebauthnBuilder::new(host, &url)
             .map_err(|e| e.to_string())?
-            .rp_name("Chriscord")
-            .build()
-            .map_err(|e| e.to_string())?;
+            .rp_name("Chriscord");
+        for origin in android_origins {
+            let hash = origin
+                .strip_prefix("android:apk-key-hash:")
+                .ok_or("Android origin must identify an APK signing certificate")?;
+            let decoded = URL_SAFE_NO_PAD
+                .decode(hash)
+                .map_err(|_| "Invalid Android signing certificate hash")?;
+            if decoded.len() != 32 || URL_SAFE_NO_PAD.encode(&decoded) != hash {
+                return Err(
+                    "Android signing certificate hash must be canonical SHA256 base64url".into(),
+                );
+            }
+            builder = builder
+                .append_allowed_origin(&Url::parse(origin).map_err(|_| "Invalid Android origin")?);
+        }
+        let engine = builder.build().map_err(|e| e.to_string())?;
         Ok(Self {
             engine,
+            android_origins: android_origins.to_vec(),
             registrations: Default::default(),
             authentications: Default::default(),
         })
@@ -125,7 +153,9 @@ async fn register_start(
             state,
         },
     );
-    Ok(Json(json!({"challenge_id":challenge_id,"options":options})))
+    Ok(Json(
+        json!({"challenge_id":challenge_id,"options":options,"android_origins":passkeys.android_origins}),
+    ))
 }
 #[derive(Deserialize)]
 struct RegisterFinish {
@@ -218,7 +248,9 @@ async fn login_start(State(s): State<AppState>, Json(v): Json<LoginStart>) -> Ap
             state,
         },
     );
-    Ok(Json(json!({"challenge_id":challenge_id,"options":options})))
+    Ok(Json(
+        json!({"challenge_id":challenge_id,"options":options,"android_origins":passkeys.android_origins}),
+    ))
 }
 #[derive(Deserialize)]
 struct LoginFinish {
@@ -419,5 +451,32 @@ mod tests {
         ] {
             assert!(Passkeys::new(invalid).is_err(), "{invalid}");
         }
+    }
+    #[test]
+    fn android_origins_require_exact_operator_provisioned_certificate_hashes() {
+        let origin = format!("android:apk-key-hash:{}", URL_SAFE_NO_PAD.encode([7; 32]));
+        let configured = Passkeys::with_android_origins(
+            "https://chat.example.test",
+            std::slice::from_ref(&origin),
+        )
+        .unwrap();
+        assert_eq!(configured.android_origins, vec![origin.clone()]);
+        assert_eq!(configured.engine.get_allowed_origins().len(), 2);
+        assert!(Passkeys::with_android_origins("http://localhost:3000", &[origin]).is_err());
+        for invalid in [
+            "https://other.example.test",
+            "android:apk-key-hash:abc",
+            "android:apk-key-hash:*",
+            "android:apk-key-hash:AAAA?x=1",
+        ] {
+            assert!(
+                Passkeys::with_android_origins("https://chat.example.test", &[invalid.into()])
+                    .is_err()
+            );
+        }
+        assert!(Passkeys::new("https://chat.example.test")
+            .unwrap()
+            .android_origins
+            .is_empty());
     }
 }

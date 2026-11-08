@@ -1,9 +1,25 @@
 import { test, expect, type Browser, type BrowserContext, type Page } from "@playwright/test";
-import { writeFile, readFile } from "node:fs/promises";
+import { writeFile, readFile, readdir } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 const execute = promisify(execFile),
   password = "correct horse battery staple";
+async function workerCpu() {
+  if (!process.env.CHRISCORD_TEST_PID_PATH) return null;
+  try {
+    const pid = (await readFile(process.env.CHRISCORD_TEST_PID_PATH, "utf8")).trim();
+    if (!/^\d+$/.test(pid)) return null;
+    for (const tid of await readdir(`/proc/${pid}/task`)) {
+      const base = `/proc/${pid}/task/${tid}`;
+      if ((await readFile(`${base}/comm`, "utf8")).trim() !== "chriscord-sfu") continue;
+      const stat = await readFile(`${base}/stat`, "utf8");
+      const fields = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+      // Linux fields14/15; USER_HZ from getconf is recorded by the caller.
+      return { userTicks: Number(fields[11]), systemTicks: Number(fields[12]) };
+    }
+  } catch { /* Fixture may not have started, or may have exited. */ }
+  return null;
+}
 async function resources() {
   const rows = (await execute("ps", ["-eo", "comm=,rss=,%cpu="])).stdout
     .trim()
@@ -20,6 +36,7 @@ async function resources() {
 
   const udp = (await readFile("/proc/net/udp", "utf8")).split("\n").map(line => line.trim().split(/\s+/)).find(row => row[1]?.endsWith(":C35A"));
   return {
+    workerCpu: await workerCpu(),
     serverUdp: udp ? { receiveQueueBytes: parseInt(udp[4].split(":")[1],16), drops: Number(udp[12]) } : null,
     at: Date.now(),
     cgroupMiB,
@@ -130,7 +147,7 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
       const invite = await (
         await request.post("/api/invites", {
           headers,
-          data: { expires_in_seconds: 3600 },
+          data: { email: "fixture@example.test", expires_in_seconds: 3600 },
         })
       ).json();
       const accepted = await request.post("/api/invites/accept", {
@@ -267,7 +284,11 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
         );
       }
       console.log(`Media stage ${count}: ${peers.filter(peer => peer.video === count-1 && peer.audio === count-1).length}/${count} fully receiving; elapsed ${Date.now()-started}ms`);
+      const stageStats = await request.get("/api/channels/general/voice/stats", {
+        headers: participantHeaders[0], timeout: 3000,
+      }).catch(() => undefined);
       stages.push({
+        server: stageStats?.ok() ? await stageStats.json() : null,
         count,
         elapsedMs: Date.now() - started,
         peers,
@@ -307,7 +328,7 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
       } catch { serverDiagnostics = { unavailable: true }; }
     }
     await writeFile(
-      "../evidence/client-voice-load.json",
+      process.env.CHRISCORD_VOICE_RECEIPT ?? "../evidence/client-voice-load.json",
       JSON.stringify(
         {
           profile: {

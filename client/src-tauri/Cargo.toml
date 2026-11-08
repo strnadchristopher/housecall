@@ -11,6 +11,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
+serde_json = "1"
 
 # Exact upstream safety backport; see ../../patches/README.md.
 [patch.crates-io]

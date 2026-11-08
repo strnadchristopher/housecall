@@ -40,7 +40,7 @@ fn fixture(timeout: Duration) -> (tempfile::TempDir, AppState, Router) {
             ("outsider", "c", "f"),
         ] {
             db.execute(
-                "INSERT INTO users VALUES(?,?,?,?)",
+                "INSERT INTO users(id,username,password,is_owner) VALUES(?,?,?,?)",
                 params![name, name, "unused", name == "owner"],
             )
             .unwrap();
@@ -207,6 +207,7 @@ async fn actual_ffmpeg_derives_encrypted_fmp4_and_jpeg_with_auth_and_source_life
         ("GET", "/api/embeds?url=https%3A%2F%2F127.0.0.1%2F".into()),
         ("GET", "/api/media-jobs/id".into()),
         ("GET", "/api/media-jobs/id/video".into()),
+        ("GET", "/api/media-jobs/id/video/seek?time=0".into()),
         ("GET", "/api/media-jobs/id/thumbnail".into()),
     ] {
         assert_eq!(
@@ -249,6 +250,32 @@ async fn actual_ffmpeg_derives_encrypted_fmp4_and_jpeg_with_auth_and_source_life
     );
     let completed = terminal(&api, id).await;
     assert_eq!(completed["status"], "ready", "{completed}");
+    let seek_path = format!("/api/media-jobs/{id}/video/seek?time=0.3");
+    let (seek_status, seek) = json_req(&api, "GET", &seek_path, Some("friend")).await;
+    assert_eq!(seek_status, StatusCode::OK, "{seek}");
+    assert!(seek["duration"].as_f64().unwrap() >= 0.6);
+    assert!(!seek["fragments"].as_array().unwrap().is_empty());
+    assert_eq!(
+        json_req(&api, "GET", &seek_path, None).await.0,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        json_req(&api, "GET", &seek_path, Some("outsider")).await.0,
+        StatusCode::FORBIDDEN
+    );
+    for time in ["-1", "NaN", "inf"] {
+        assert_eq!(
+            json_req(
+                &api,
+                "GET",
+                &format!("/api/media-jobs/{id}/video/seek?time={time}"),
+                Some("friend")
+            )
+            .await
+            .0,
+            StatusCode::BAD_REQUEST
+        );
+    }
     let (status, mp4, mime) = request(
         &api,
         "GET",
@@ -284,6 +311,22 @@ async fn actual_ffmpeg_derives_encrypted_fmp4_and_jpeg_with_auth_and_source_life
             StatusCode::FORBIDDEN
         )
     }
+    // Returned ranges point at real container boundaries from the FFmpeg output.
+    let first = &seek["fragments"][0];
+    let offset: usize = first["offset"].as_str().unwrap().parse().unwrap();
+    let init_end: usize = seek["init_end"].as_str().unwrap().parse().unwrap();
+    assert_eq!(&mp4[offset + 4..offset + 8], b"moof");
+    assert!(init_end <= offset);
+    state
+        .db
+        .lock()
+        .unwrap()
+        .execute("DELETE FROM sessions WHERE id='friend'", [])
+        .unwrap();
+    assert_eq!(
+        json_req(&api, "GET", &seek_path, Some("friend")).await.0,
+        StatusCode::UNAUTHORIZED
+    );
     assert_only_ciphertext(dir.path(), &mp4);
     let mut decoder = std::process::Command::new("/usr/bin/ffmpeg")
         .args([
@@ -324,10 +367,14 @@ async fn actual_ffmpeg_derives_encrypted_fmp4_and_jpeg_with_auth_and_source_life
             &api,
             "GET",
             &format!("/api/media-jobs/{id}/video"),
-            Some("friend")
+            Some("owner")
         )
         .await
         .0,
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        json_req(&api, "GET", &seek_path, Some("owner")).await.0,
         StatusCode::CONFLICT
     );
     assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 0);
