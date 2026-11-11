@@ -36,7 +36,7 @@ pub async fn callkit<R: Runtime>(
     }
     #[cfg(target_os = "ios")]
     {
-        use tauri::plugin::PluginInvokeError;
+        use tauri::plugin::mobile::PluginInvokeError;
         let Some(state) = app.try_state::<CallKit<R>>() else {
             return Ok(unsupported());
         };
