@@ -230,7 +230,7 @@ The signer's public key is not inside the entry; the verifier looks it up from t
 
 ### 3.3 Entry kinds and who may sign them
 
-The verifier maintains a state: `members{account_id → {pub, username, display, role ∈ owner|admin|member|bot, joined_seq, history_mode, status}}`, `banned{ids, usernames}`, `channels{channel_id → {kind: public|private, creator, members, bots, archived}}`, `invites{invite_id → {issuer, used_by?, revoked}}`, `features`, `host_key`, `origin_hint`, `name`. An entry is valid only if every check in its row passes against the state **immediately before** it. An invalid entry makes the log invalid at that seq; the client stops, keeps the last valid prefix, and shows "Not verified" (SECURITY-LEVELS 4).
+The verifier maintains a state: `members{account_id → {pub, username, display, role ∈ owner|admin|member|bot, joined_seq, history_mode, status}}`, `banned{ids, usernames}`, `channels{channel_id → {kind: public|private, creator, members, bots, archived}}`, `invites{invite_id → {issuer, used_by?, revoked}}`, `features`, `host_key`, `origin_hint`, `name`. An entry is valid only if every check in its row passes against the state **immediately before** it. An invalid entry makes the log invalid at that seq; the client stops, keeps the last valid prefix, and shows "Not verified" (SECURITY-LEVELS 7).
 
 | # | Kind | Signer | Body | Extra checks |
 |---|---|---|---|---|
@@ -741,7 +741,7 @@ DM and group-DM calls use the same derivation with the DM or group DM's epoch ke
 
 ### 12.6 Server-played media
 
-A Plex watch stream or a Shared Browser tile is created by the host. It is not end-to-end encrypted and is labelled in the call UI (SECURITY-LEVELS 6). It does not touch call keys.
+A Plex watch stream or a Shared Browser tile is created by the host. It is not end-to-end encrypted and is labelled in the call UI (SECURITY-LEVELS 9). It does not touch call keys.
 
 ---
 
@@ -934,7 +934,7 @@ Can: read all content (and in calls, media) of the channels it was added to, fro
 
 Cannot: read any channel it was not added to; read DMs or group DMs (bots can never be added there: no `channel_member_add` kind for DMs accepts a bot); sign any log entry except its own `profile_set`; approve devices, join requests or invites; change features; add other members or bots.
 
-Bots appear in the member list with a "Bot" tag. Steve's configured chat endpoint and speech endpoint are shown to members in the channel's security details: anything Steve reads may be sent to them (SECURITY-LEVELS 5).
+Bots appear in the member list with a "Bot" tag. Steve's configured chat endpoint and speech endpoint are shown to members in the channel's security details: anything Steve reads may be sent to them (SECURITY-LEVELS 6).
 
 ### 16.3 Storage of bot keys
 
@@ -947,7 +947,7 @@ Bots appear in the member list with a "Bot" tag. Steve's configured chat endpoin
 
 ### 16.5 Chords that are not bots
 
-Gimme and Shared Browser do not read chat and do not hold channel keys. Their requests (search text, Plex requests, VM traffic) are visible to the server and the services behind it. Shared Browser sign-ins are visible to the host that runs the VM. These are labelled in their panels; they do not change a channel's security level (SECURITY-LEVELS 6).
+Gimme and Shared Browser do not read chat and do not hold channel keys. Their requests (search text, Plex requests, VM traffic) are visible to the server and the services behind it. Shared Browser sign-ins are visible to the host that runs the VM. These are labelled in their panels; they do not change a channel's security level (SECURITY-LEVELS 9).
 
 ---
 
@@ -1050,7 +1050,7 @@ The release key is an Ed25519 key held by the project (offline). Its public half
 
 ### 20.3 The limit, stated plainly
 
-The first time a browser loads the web client, the code comes from the host. If the host is malicious at that moment, it can serve code that steals the password and `RS`; nothing in the browser can detect this. After the first load, the service worker checks later bundles against the release key, but **the service worker script itself is also fetched from the host** and the browser replaces it when the file changes: a malicious host can ship a replacement service worker that skips verification. The signed bundle therefore gives detection (through `verify-web`, and through the page showing the manifest hash that the project publishes), not prevention. The security level on web is capped for this reason (SECURITY-LEVELS 5). Desktop and mobile apps are the recommended clients: their code comes from signed GitHub releases and never from the server.
+The first time a browser loads the web client, the code comes from the host. If the host is malicious at that moment, it can serve code that steals the password and `RS`; nothing in the browser can detect this. After the first load, the service worker checks later bundles against the release key, but **the service worker script itself is also fetched from the host** and the browser replaces it when the file changes: a malicious host can ship a replacement service worker that skips verification. The signed bundle therefore gives detection (through `verify-web`, and through the page showing the manifest hash that the project publishes), not prevention. The security level on web is capped for this reason (SECURITY-LEVELS 3). Desktop and mobile apps are the recommended clients: their code comes from signed GitHub releases and never from the server.
 
 The web client must also show, on its first screen, the installed manifest version and a link to the verification instructions.
 
