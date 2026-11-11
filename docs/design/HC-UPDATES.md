@@ -73,3 +73,50 @@ Status: code complete and committed. The upload E2E could not run here (no ClamA
 - `useMediaUrl` also resets its state when `path` changes, so a reused row never shows the previous blob.
 - The second E2E test reuses the first test's owner (`video_owner`, same password) and logs in when setup returns 409, because the server is shared by tests in one run.
 - The removed `.hc-player` CSS rule had no remaining users; `.hc-film` (used by the chords panels) is kept.
+
+## Phase 3
+
+Profile name and avatar, server name and icon, `MediaDropzone`, report screenshot picker (tasks 3.1 to 3.6).
+
+### Commits
+- `67ab77e` feat(profile): shared image blob validation
+- `ef5c9b0` feat(profile): display name, avatar, server name and icon routes (schema, routes, events, `/api/me` and `/api/members` fields)
+- `f893097` fix(profile): server member list includes display name and avatar rev
+- `87d0453` style(test): cargo fmt `server/tests/media.rs` (pre-existing diff from Phase 2 that made `test-server.sh` fail at its fmt step)
+- `a121d69` feat(profile): client model, Account and Server settings, `Avatar` images, `MediaDropzone`, report drop zone, e2e
+
+### What changed
+- Server: `users.display_name/avatar/avatar_type/avatar_rev` and `servers.icon/icon_type/icon_rev` (idempotent ALTERs). `PATCH /api/me`, `PUT/DELETE /api/me/avatar`, `GET /api/users/{id}/avatar`, `PATCH /api/servers/{id}`, `PUT/DELETE/GET /api/servers/{id}/icon`. Avatar and icon bodies are capped at 512 KB, magic-byte checked, SVG rejected. Owner-only for server routes; icon GET needs server membership. `member.updated` goes to every channel the user is in; `server.updated` to the server's general channel. `/api/me`, `/api/members`, `/api/servers/{id}/members` and `/api/servers` carry `display_name` and `avatar_rev` / `icon_rev`.
+- Two real bugs found by the new tests and fixed: (1) `INSERT OR IGNORE INTO servers VALUES(...)` in `servers::init` failed on the second startup once `servers` had extra columns, so a restart on an existing database would have crashed; both seed and create INSERTs now name their columns. (2) The global `headers` middleware overwrote every `Cache-Control` with `no-store`; it now keeps a handler's own value, so avatars and icons get `private, max-age=31536000, immutable`.
+- Client: `data/people.ts` (`nameOf`, `userName`, `avatarPath`, `iconPath`; `nameOf` re-exported from `ui/format.ts`). `Person.name` is now the display name with `username` kept beside it; mentions and mention suggestions still use the username. Display names reach messages, People, the friend list, the call bar and the user bar, plus call participant names. `Avatar` takes `src` (authenticated path, shared per-session cache) and `shape="squircle"`; the server picker shows squircle icons in rows and in the trigger when an icon is set. Settings has Account (display name, picture, sign out) and a new owner-only Server section (name, icon). Images are resized client-side to at most 256 px before upload (`ui/settings/resizeImage.ts`).
+- `MediaDropzone` in `ui/kit.tsx`: click to browse, drag and drop, paste, preview thumbnail, remove, type and size errors. Used by the report screenshot, the avatar and the server icon.
+- Behaviour fix: a rejected report (for example no consent) used to clear the description, logs and screenshot. `submitReport` now returns success and the form clears only on success.
+- UI guidelines applied (in the commit body): bare icon with no box; tonal accent fill and a dashed edge with no glow or shadow; nothing moves on hover; flat tonal arch initials (no gradient circles); no em dashes; content visible by default.
+
+### Tests run (real results)
+- `cargo test -p housecall-server --lib image_blob`: 3 passed.
+- `cargo test -p housecall-server --test profile`: 11 passed, 0 failed.
+- `cargo test -p housecall-server` (before the last server-list fix): all suites ok, including `route_inventory` 1 passed and `security` 16 passed.
+- `bash scripts/test-server.sh`: all 6 steps passed (fmt, workspace, media, activities, sfu, clippy).
+- `npm test` (client): 3 files, 37 tests passed (6 new in `tests/profile.test.ts`, added to the `test` script).
+- `npm run build` (client): passed.
+- `npx playwright test` (default `chat.spec.ts`): 1 passed.
+- `HOUSECALL_TEST_REPORTS=1 npx playwright test`: 1 passed (drops the PNG on the zone, preview visible, report submits, owner downloads byte-exact).
+- `HOUSECALL_TEST_SHELL=1 npx playwright test`: 2 passed (existing shell test, plus the new profile test: display name in the user bar and on a new message, avatar image in the user bar and on the message, server rename and icon in the picker).
+
+### Unverified
+- No real-device or phone-width visual check; Settings Account and Server use the existing settings layout, which was not screenshotted here.
+- Animated GIF avatars are flattened: the client re-encodes to WebP, and the picker accepts PNG, JPEG or WebP only.
+- Direct-message conversation names still come from the channel name the server stores, so a DM titled with a username is not changed by display names.
+- `scripts/check-public-safe.sh` reports FAIL on two lines in the Phase 1 and Phase 2 sections of this file (lines 33 and 65), not on anything added in Phase 3. I did not edit those lines.
+- The reports test writes `evidence/` in the repo root; I left it untracked and did not commit it.
+
+### Deviations from the plan
+- Drag-over uses a tonal fill and accent border, not `scale(1.01)`, because the design guidelines forbid movement on controls.
+- `Avatar`, not a new component, gained the image and squircle support, because `Avatar` already existed in `kit.tsx`.
+- `server/tests/route_inventory.rs` needed no edit: it discovers routes from source, and it passed with the new routes.
+- `PATCH /api/me` is declared on the existing `/me` route (`get(me).patch(...)`) to avoid a duplicate path.
+- Server rows from other hosts in the picker show initials, not icons: icon fetches use the active host's session, and the id `home` exists on every host, so fetching would show the wrong server's icon.
+- The shell profile test signs in as the owner created by the first test in that file (the server is shared across the file), so it does not pass if run alone with `--grep`.
+- `resizeImage` is unit-tested through its pure `fitWithin` only: `jsdom` and canvas are not installed. The canvas path is exercised by the shell e2e.
+- Attachments on the report form: the hidden file input has no label of its own; the drop zone group carries the "Screenshot" label.
