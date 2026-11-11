@@ -24,7 +24,10 @@ export function Composer({ compact }: { compact?: boolean }) {
   const picker = useRef<HTMLInputElement>(null);
   const upload = chat.upload;
   // The camera shows on a phone or any touch screen, when uploads exist, and never while editing.
-  const touch = usePhone() || useCoarsePointer();
+  // Both hooks run on every render: `a() || b()` would skip b and change the hook order.
+  const phone = usePhone();
+  const coarse = useCoarsePointer();
+  const touch = phone || coarse;
   const snaps = touch && chat.can.attach && !chat.editing;
   useEffect(() => { if (chat.replyingTo || chat.editing) input.current?.focus(); }, [chat.replyingTo?.id, chat.editing?.id]);
   useEffect(() => setPanel(""), [chat.current?.id]);
