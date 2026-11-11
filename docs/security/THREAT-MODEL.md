@@ -2,7 +2,7 @@
 
 Status: draft for the v1 protocol in `PROTOCOL.md`. It replaces the trusted-server assumptions in `docs/THREAT-MODEL.md` (plaintext chat, server-side scanning, passkeys); that older file needs a pass to remove the rows this one supersedes. Nothing here has had an independent audit. `CRACK-PLAN.md` describes how the implemented system will be attacked; its results go in `CRACK-REPORT.md`.
 
-Section numbers like "PROTOCOL 9.4" point into `PROTOCOL.md`. Limit ids `L1` to `L23` are defined in section 2 and are the ids the other documents cite.
+Section numbers like "PROTOCOL 9.4" point into `PROTOCOL.md`. Limit ids `L1` to `L24` are defined in section 2 and are the ids the other documents cite.
 
 ## 1. What Housecall promises
 
@@ -11,7 +11,7 @@ Housecall is a self-hosted chat and voice app. One deployment is one server run 
 - **P1. Content confidentiality from the host.** The server stores ciphertext and cannot read channel messages, DMs, files or call media.
 - **P2. Content integrity.** A message shown as from a member was signed by that member's account key. The server cannot forge, alter or attribute messages.
 - **P3. Membership integrity.** Who is a member, and who is an admin, is decided by signatures of admins, not by the server. A server cannot add a member that the admins did not sign, and honest clients will not give channel keys to one.
-- **P4. Password secrecy.** The password never reaches any server, and the server cannot test password guesses without its own secret (L2).
+- **P4. Password secrecy.** The password never reaches any server. A party that does not hold the server's OPAQUE secret and the stored records cannot test guesses. **The host always holds both**, so against a hostile host P4 holds only for sealed accounts (PROTOCOL 2.3) and for passwords strong enough to resist the offline attack in L2.
 - **P5. Removal.** After a member is removed, content encrypted after the key rotation is unreadable to them.
 - **P6. No silent host access.** The host cannot be made a key holder without an owner-signed entry that every member's client shows.
 - **P7. Honest labels.** The level the app shows never claims more than the cryptography gives (`SECURITY-LEVELS.md`).
@@ -23,7 +23,7 @@ Stated first because they are the ones most likely to be assumed.
 | Id | Not provided |
 |---|---|
 | L1 | **Forward secrecy for stored history.** Members and bots keep epoch keys so they can read history on any device. Anyone who gets a member's account secret `RS`, or a stored epoch key, can read all history that member was given, including old messages the server stored. There is no ratchet. |
-| L2 | **Resistance to offline password guessing after a server breach.** A party who has the server's database and its OPAQUE secret can test guesses at one Argon2id (64 MiB, 3 passes) per guess, and a cracked password yields the account root secret, which is the account on every server. One high-end GPU is estimated at about 10^3 guesses per second (to be measured, CRACK-PLAN C09), so a password estimated at 10^8 guesses (zxcvbn score 3) falls in about a day; the strength rule asks for score 4 (about 10^10). A hosting provider's disk snapshot counts as a whole-machine image. |
+| L2 | **Resistance to offline password guessing by a hostile host, or after a server breach.** The host itself is such a party (A2b): it holds its OPAQUE secret and every record and blob, needs no approval and leaves no trace, and the victim keeps seeing level 4. At the estimate below, a score-4 password costs about 115 GPU-days (10^10 guesses at 10^3 per second), which can be rented. **Sealed accounts** (PROTOCOL 2.3) have no blob on the server, so this attack yields nothing for them; owners and admins are sealed by default. A party who has the server's database and its OPAQUE secret can test guesses at one Argon2id (64 MiB, 3 passes) per guess, and a cracked password yields the account root secret, which is the account on every server. One high-end GPU is estimated at about 10^3 guesses per second (to be measured, CRACK-PLAN C09), so a password estimated at 10^8 guesses (zxcvbn score 3) falls in about a day; the strength rule asks for score 4 (about 10^10). A hosting provider's disk snapshot counts as a whole-machine image. |
 | L3 | **Cryptographic enforcement of device approval.** Approval is a server rule. A malicious server, or a breached one plus the password, skips it. |
 | L4 | **Post-compromise security inside an epoch,** and protection of old content from a removed member. A removed member keeps everything they could already read. |
 | L5 | **Cryptographic device revocation.** Every device holds `RS`. Revoking a device ends its sessions, not its knowledge. Theft of an unlocked device means the account key must be replaced (PROTOCOL 8.4). |
@@ -34,7 +34,7 @@ Stated first because they are the ones most likely to be assumed.
 | L10 | **Erasure.** Deleting a message deletes the server's copy where the server cooperates. It does not erase copies a recipient saved, backups, SQLite free pages, or SSD remnants, and a hostile server can keep ciphertext. |
 | L11 | **Confidentiality from the host for anything a host-assisted feature covers,** and any guarantee that the host deleted keys or artifacts after a feature is turned off. The host key at rest is protected against a stolen data volume, not against a stolen whole machine in default mode or a root user on the running machine. |
 | L12 | **Protection of the web client against a hostile host.** The host serves the code. Prevention does not exist. Detection exists only for a swap served to everyone; a swap aimed at one user is not detected (PROTOCOL 20.3). A member who joins with an invite pasted into the web client gives the invite to the host. Other members' levels show that someone in the conversation uses the web client. |
-| L13 | **Confidentiality from a bot, its host, and the services it forwards to,** in every channel the bot is added to. |
+| L13 | **Confidentiality from a bot, its host, and the services it forwards to,** in every channel the bot is added to. The bot's host is often the server's host (the project's own bot normally runs on the server machine), so in that case the server host reads every channel the bot is in, private channels included. |
 | L14 | **Authenticated sender inside a call,** forward secrecy inside a call, and hiding speaking activity, bitrate and participants from the SFU. Any channel member can derive any participant's media key. |
 | L15 | **Protection from a member who leaks.** Members can copy, screenshot, forward, or hand their keys to anyone. A malicious member can give a server the keys they hold. |
 | L16 | **Isolation between servers.** One account root secret serves every server, so a weak password or one breach of one server's password data endangers the account everywhere. |
@@ -45,6 +45,7 @@ Stated first because they are the ones most likely to be assumed.
 | L21 | **Identity beyond keys.** Nothing proves that "Alice" on two servers, or any username, is a particular human. Safety numbers compared out of band are the only proof. |
 | L22 | **Cryptographic enforcement of timeouts and mutes.** These are server policy. |
 | L23 | **Protection against supply-chain compromise of the project, its release key, GitHub, or the crates we depend on.** |
+| L24 | **Recovery from theft of the owner's key.** The owner's `ak_sign` alone signs `features_set` and (with `old_proof`) a `key_replace` that makes the thief the owner for good. There is no ownership transfer and no entry that removes an owner in v1. If a stolen key has been used, members create a new server. Prevention: the owner and admins never use the web client, and are sealed (PROTOCOL 15.9). |
 
 ## 3. Assumptions
 
@@ -164,7 +165,7 @@ Tests: C13.
 
 ### A8. Malicious bot host (the machine that runs Steve, or whoever compromises it)
 
-Can: read all content (and call media) of channels the bot was added to, from the epoch that listed the bot (all history if the admin chose `full`), plus everything the bot's configured chat and speech endpoints receive; post as the bot; keep the keys forever (L1, L13). Steve's DJ can join calls of the channels it is in.
+Can (and so can the server's host when the bot runs on the server machine, as the project's own bot normally does): read all content (and call media) of channels the bot was added to, from the epoch that listed the bot (all history if the admin chose `full`), plus everything the bot's configured chat and speech endpoints receive; post as the bot; keep the keys forever (L1, L13). Steve's DJ can join calls of the channels it is in.
 
 Cannot: read channels it was not added to, DMs or group DMs (no wrap, and no entry adds a bot there), sign admin or owner entries, approve devices, join requests, invites, or add other bots, change features, or silently stay after removal (removal rotates the channel's epoch, PROTOCOL 16.4).
 
@@ -174,17 +175,19 @@ Tests: C14.
 
 ### A9. Malicious owner who turns host features on, or an honest owner whose host is breached
 
-Can, once the owner signs `features_set`: read, on the server, the content classes the features need, for **public channels only**, **for epochs created after the entry**: message text (push_text, search), file bytes and names (scan, transcode), links the sender's client sent for previews (link_preview). Wraps are given to the host key only for those classes (PROTOCOL 15.2). The owner can then do anything with what the host process can read. A bot, if one is also present, adds more (A8).
+Can, once the owner signs `features_set`: read, on the server, the content classes the features need, for **public channels only**, **for epochs created after the entry**: message text (search), file bytes and names (scan, transcode), links the sender's client sent for previews (link_preview). Wraps are given to the host key only for those classes (PROTOCOL 15.2). The owner can then do anything with what the host process can read. A bot, if one is also present, adds more (A8).
 
 Cannot (even with full control of the server and the owner's key):
 - read private channels, DMs or group DMs: headers with a host entry for those are rejected by every client (PROTOCOL 9.4 rule 3);
 - read content from before the entry (the host never gets the earlier epoch keys, and class keys never include `K_call` or `EK`);
 - read call media (needs `EK`; the host only ever holds class keys);
-- read a class the enabled features do not need (e.g., files with only `push_text`);
+- read a class the enabled features do not need (e.g., files with only `search`);
 - hide the change from members: clients render it from the log, change the level and show a notice in affected channels (PROTOCOL 15.7);
 - erase the change: the log is append-only and clients keep their head.
 
 Also, an owner can sign in as a member who has no devices, add admins, ban people, and read history for any account they approve with `full` (the usual admin powers, A7).
+
+**Owner key theft.** Anyone holding the owner's key is in this position without the owner's consent, and can also become the owner for good (L24, PROTOCOL 15.9). The key must never load on the web client (A11): a hostile web host that serves the owner a page, or wins the password race in L2, obtains it. **Compromise of the host key** has a defined procedure (PROTOCOL 15.6): disable entry, forced new epochs, deletion of all wraps to the old key, and a member notice with the exposed period.
 
 What is not provided: confidentiality for covered content (L11), and a way to check that the server deleted keys or artifacts after a feature is turned off. Honest owner, breached host: the attacker obtains whatever the running host process could read, plus the host key if `WK` is on the same machine (L11).
 
@@ -206,7 +209,7 @@ Also can: show `housecall verify-web` a clean bundle (recognised by its user age
 
 Cannot: while an honest verified service worker is installed, change the bundle that browser runs without the release key, until the browser replaces the service worker itself.
 
-Control: use the desktop or mobile app; run `verify-web` (catches a swap served to everyone only); the web UI caps its security label, and other members' levels show that a web user is in the conversation (SECURITY-LEVELS 3).
+The owner's and admins' keys are the most valuable target of this attack, so the web client refuses to load an owner or admin account (PROTOCOL 3.3). Control: use the desktop or mobile app; run `verify-web` (catches a swap served to everyone only); the web UI shows level 1, and other members' levels show that a web user is in the conversation (SECURITY-LEVELS 3).
 
 Tests: C16.
 

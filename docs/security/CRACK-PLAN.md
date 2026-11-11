@@ -210,7 +210,7 @@ Steps:
 6. Cause rotations (remove a member with A) and inspect whether new headers carry any `host` field.
 7. Run the server process with a debugger: check whether any code path unwraps a class key without a corresponding wrap authorised in the log.
 8. Have a modified member client wrap the epoch key to a host key (L15).
-9. Now O genuinely enables `push_text` and `scan` through the owner's client. Check: the notice appears in every member's `#general` and `#side` in the right place; the levels change as in `SECURITY-LEVELS.md` section 11; the host can decrypt message text and file bytes in **new** epochs of **public** channels; it cannot decrypt **old** epochs, `#priv`, the DM, the group DM, call media, or file bytes with `push_text` only.
+9. Now O genuinely enables `search` and `scan` through the owner's client. Check: the notice appears in every member's `#general` and `#side` in the right place; the levels change as in `SECURITY-LEVELS.md` section 11; the host can decrypt message text and file bytes in **new** epochs of **public** channels; it cannot decrypt **old** epochs, `#priv`, the DM, the group DM, call media, or file bytes with `search` only.
 10. O disables both. Check the notice, the new epochs, the destruction of the host key file and artifacts, and that new messages are unreadable to the server.
 
 Break: in steps 1 to 8, any honest client produces a host wrap, any header with a host entry is accepted, the server decrypts any message text or file, any feature runs, or a client's UI shows level 4 while host wraps exist. In step 9, a member's client fails to show the notice or the lower level; the host reads anything outside the stated scope. In step 10, the host key file or a derived artifact (index, thumbnail, derivative, preview cache) is still present, or new epochs still carry host wraps. Step 8's leak is expected (L15).
@@ -344,7 +344,7 @@ Break: any join succeeds; any entry from a demoted admin or demoted-admin invite
 
 Property: P6, L11. Adversary: A2a, A9.
 
-Setup: S1 with `push_text`, `search` and `scan` on for one day, with real traffic in `#general`. The wrap key `WK` is in its default location (a separate directory on the same machine, not in the data volume). A second run uses passphrase mode. An **oracle build** writes the host private key, the unwrapped class keys and a few message plaintexts to a sealed file the tester uses only for comparison.
+Setup: S1 with `search` and `scan` on for one day, with real traffic in `#general`. The wrap key `WK` is in its default location (a separate directory on the same machine, not in the data volume). A second run uses passphrase mode. An **oracle build** writes the host private key, the unwrapped class keys and a few message plaintexts to a sealed file the tester uses only for comparison.
 
 Steps:
 1. Image **the data volume only** (and a backup of it). Look for: the host key file; the host private key in any form; class keys; epoch keys; plaintext of any message; the search index in plaintext; thumbnails, transcodes and preview caches in plaintext; WAL and free pages; logs; temp files; the OPAQUE `ServerSetup`. Try to decrypt the host key file without `WK`.
@@ -397,10 +397,10 @@ Setup: relay in test mode with capture of every payload; two servers S1 and S2 w
 
 Steps:
 1. Default mode: capture every payload to the relay and from the relay to the push service. Search for canaries (message text, channel name, sender name, username, mention flag, file names).
-2. With `push_text` on: payloads must be ciphertext only. Try to decrypt at the relay with all the relay's keys. Check a device that did not register `push_decrypt`.
-3. Check that the aliases for the same device on S1 and S2 differ, that the `push_key` the device gave S1 and S2 differs, and that S2 cannot push to S1's alias (the relay refuses: the alias is bound to S1's `relay_pub`). As S2, try to register a relay key that claims S1's `server_id` before S1 does; there must be nothing to claim. With `push_text` on, have the host seal a forged `{title: "Alice", body: …}` and a message whose signature is wrong: the device must show a content-free notification.
+2. With sealed push text on (a server setting; check that no host key or wrap exists for it): payloads must be ciphertext only. Try to decrypt at the relay with all the relay's keys. Check a device that did not register `push_decrypt`.
+3. Check that the aliases for the same device on S1 and S2 differ, that the `push_key` the device gave S1 and S2 differs, and that S2 cannot push to S1's alias (the relay refuses: the alias is bound to S1's `relay_pub`). As S2, try to register a relay key that claims S1's `server_id` before S1 does; there must be nothing to claim. With sealed push text on, have the host seal a forged `{title: "Alice", body: …}` and a message whose signature is wrong: the device must show a content-free notification.
 4. Spam: S1 sends 10,000 pushes to one alias.
-5. Private channels and DMs with `push_text` on: payloads must stay content-free.
+5. Private channels and DMs with sealed push text on: payloads must stay content-free.
 6. Mention-only user: record what an observer of the relay can infer (expected: that a mention happened, L20).
 
 Break: any plaintext content, sender, channel or mention flag in a payload in default mode; plaintext of any kind in sealed mode; cross-server alias use; the same alias on two servers; step 5 sends text; no spam limit.
