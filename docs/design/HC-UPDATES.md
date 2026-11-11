@@ -162,3 +162,44 @@ Call stage in the center, chat in the right column (tasks 4.1 to 4.4).
 - `shell.spec.ts` now clicks the People tab before counting people, since a call opens the right column on Chat. It also asserts that Chat is the selected tab.
 - Added a phone-width E2E (390 px) beyond the plan: stage is the main screen, the CallBar Chat button opens the sheet on the Chat tab.
 - Not done, per the brief: no extra guard for a call whose conversation is not the selected one (skipped as an unlikely race, see above).
+
+## Phase 5
+
+### Commits
+- `b0d9324` feat(ui): enter/exit motion for menus, sheets and settings (tasks 5.1 to 5.4)
+- `7d1b2fb` feat(profile): animated GIF avatars and server icons (task 5.5)
+- the handoff commit that adds this section
+
+### What changed
+- `Presence` (`ui/kit.tsx`) keeps children mounted for 190 ms (`--hc-dur-base`) after `show` turns false. The exiting copy is `inert` and `pointer-events: none`, so it never blocks a click underneath. Under reduced motion it unmounts at once. The timing lives in `afterExit` (`ui/tokens/motion.ts`) so it can be unit tested.
+- CSS (`styles/index.css`): `.hc-anim-slide-right`, `.hc-anim-pop`, `.hc-anim-fade`, enter plus exit keyframes, opacity and transform only, inside `prefers-reduced-motion: no-preference`. Existing `--hc-dur-*` and `--hc-ease-*` tokens were reused, so no new tokens.
+- Applied to: the settings layer (`AppShell.tsx`; settings is now an overlay layer over the center, so the chat can mount underneath while it slides out), the sheet scrim, the emoji picker (composer and message reactions), the GIF picker, the unsend confirm, and the lightbox.
+- Already animated before this phase and left alone: the right sheet and the server picker list (both transform/opacity transitions).
+- Picker focus: `EmojiPicker` now returns focus to its opener only if focus is lost or still inside the picker when it unmounts. Without this, the 190 ms exit would pull focus off the composer after an emoji is picked.
+- Task 5.5: server `image_blob.rs` validates GIFs separately (at most 2 MB, logical screen 1 to 1024 on each side, else `ApiError`). Other types keep 512 KB. The body limit on `/me/avatar` and `/servers/{id}/icon` is now `MAX_GIF_BYTES + 1`. Client: `prepareImage` returns a GIF (detected by `GIF8` magic bytes) unchanged after a 2 MB check, and resizes everything else. The avatar picker accepts GIF and its hint and type error mention GIF (new `copy.profile.pictureHint` and `pictureType`, and a `typeError` prop on `MediaDropzone`).
+- `Avatar` already rendered an `<img>` with `object-fit: cover` (`.hc-avatar img`), so nothing changed there.
+- UI guidelines applied (also in the commit body): content visible by default (the animation runs on the element, nothing is gated on it), only opacity and transform animate, no new shadows or hover movement, motion off under reduced motion, nothing delays a click.
+
+### Tests run (real results)
+- `npm run build` (in `client`): passed.
+- `npm test` (in `client`): 4 files, 47 tests passed (new: 3 in `tests/motion.test.ts`, 4 `prepareImage` cases in `tests/profile.test.ts`). `motion.test.ts` was added to the `test` script.
+- `HOUSECALL_TEST_SHELL=1 npx playwright test`: 3 passed, 0 failed (the shell test, the profile test now with the GIF avatar step, and the new reduced-motion test).
+- `npx playwright test` (default, chat.spec.ts): 1 passed.
+- `cargo test -p housecall-server --test profile`: 13 passed, 0 failed (includes the 1.5 MB GIF avatar and icon upload, and a 2 MB + 1 GIF rejected with 413).
+- `cargo test -p housecall-server --lib image_blob`: 7 passed, 0 failed.
+- `bash scripts/test-server.sh`: all 6 steps passed (fmt, workspace, media, activities, sfu, clippy).
+- `bash scripts/check-public-safe.sh`: OK.
+
+### Unverified
+- How the motion looks and feels on real devices, and the sheet and scrim on a phone. It was only checked through Playwright, which does not judge smoothness.
+- Animated playback in every place an avatar shows (message, People, call tile, server picker). Those all use the one `Avatar` component, but the E2E only loads the GIF in the user bar.
+- The wizard step transitions and the snap viewer in plan task 5.3: those screens do not exist yet (Phases 6 and 7). They should wrap their steps and viewer in `Presence` with `hc-anim-fade` or `hc-anim-slide-right`.
+
+### Deviations from the plan
+- `Presence` has no `requestAnimationFrame` and no separate `state`. `data-state` comes straight from `show`, so a re-shown element never flashes its exit animation. The default is 190 ms rather than 180 to match `--hc-dur-base`.
+- The `Presence` wrapper is a `display: contents` div that is also `inert` while exiting, a small addition to the plan's version.
+- The unit test covers `afterExit` (fake timers: still there at 189 ms, gone at 190 ms, immediate under reduced motion, cancelled if it returns) rather than rendering `Presence`, because the client has no DOM test environment (no jsdom) and I did not add a dependency. The E2E covers the real component.
+- There is no separate DeviceMenu animation. It is a settings pane, not a popup, so it rides on the settings slide. The plan's "message context menu" is the message action bar, which is not a popup, so the reaction picker and unsend confirm got the pop instead.
+- The GIF E2E generates the GIF with ffmpeg piped to stdout, so no file is written. It checks the avatar response through `waitForResponse` (type `image/gif`, identical bytes), then `naturalWidth > 0` on the user-bar image.
+- Per the brief, GIF avatars are not paused under reduced motion and there is no still-frame fallback.
+- Skipped as unlikely or hypothetical: re-entering a settings layer that is mid-exit with a different section, and a Lightbox Escape listener lingering for the 190 ms exit.
