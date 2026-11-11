@@ -1,0 +1,15 @@
+[package]
+name = "tauri-plugin-callkit"
+version = "0.1.0"
+description = "iOS CallKit and PushKit for Housecall 1:1 calls. Every other platform reports it is unsupported."
+edition = "2021"
+publish = false
+links = "tauri-plugin-callkit"
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[build-dependencies]
+tauri-plugin = { version = "2", features = ["build"] }

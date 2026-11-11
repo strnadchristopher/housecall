@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "callkit",
+  "description": "iOS system call screen for 1:1 calls. Local webview only; no remote URLs are listed.",
+  "platforms": ["iOS"],
+  "windows": ["main"],
+  "permissions": ["callkit:default"]
+}

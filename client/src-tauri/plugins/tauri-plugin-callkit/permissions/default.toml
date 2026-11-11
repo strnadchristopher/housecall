@@ -1,0 +1,12 @@
+"$schema" = "schemas/schema.json"
+
+[default]
+description = "Lets the local webview ring, answer and end Housecall 1:1 calls through the iOS system call screen."
+permissions = [
+  "allow-register",
+  "allow-report-incoming",
+  "allow-start-outgoing",
+  "allow-connected",
+  "allow-end",
+  "allow-pending",
+]

@@ -1,0 +1,12 @@
+const COMMANDS: &[&str] = &[
+    "register",
+    "report_incoming",
+    "start_outgoing",
+    "connected",
+    "end",
+    "pending",
+];
+
+fn main() {
+    tauri_plugin::Builder::new(COMMANDS).ios_path("ios").build();
+}
