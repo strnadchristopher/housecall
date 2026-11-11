@@ -1,10 +1,10 @@
 import { useIdentity } from "../../core/context";
 import { DeviceMenu } from "../call/DeviceMenu";
 import { copy } from "../copy";
-import { Avatar, Button, ErrorLine, IconButton, cx } from "../kit";
+import { ErrorLine, IconButton, cx } from "../kit";
 import { useNav, type SettingsSection } from "../shell/nav";
 import { usePhone } from "../tokens/motion";
-import { About, Channels, Devices, Invites, Notifications, ReportProblem, Reports, Roles } from "./sections";
+import { About, Account, Channels, ServerProfile, Devices, Invites, Notifications, ReportProblem, Reports, Roles } from "./sections";
 
 /** Account and server settings in one place; owner-only sections appear for the owner. */
 export function SettingsView() {
@@ -16,7 +16,7 @@ export function SettingsView() {
     ["call", copy.settings.call], ["report", copy.settings.report],
   ];
   const server: [SettingsSection, string][] = [
-    ...(identity.owner ? [["invites", copy.settings.invites], ["channels", copy.settings.channels], ["roles", copy.settings.roles], ["reports", copy.settings.reports]] as [SettingsSection, string][] : []),
+    ...(identity.owner ? [["server", copy.settings.serverProfile], ["invites", copy.settings.invites], ["channels", copy.settings.channels], ["roles", copy.settings.roles], ["reports", copy.settings.reports]] as [SettingsSection, string][] : []),
     ["about", copy.settings.about],
   ];
   const item = ([id, label]: [SettingsSection, string]) => (
@@ -41,12 +41,8 @@ export function SettingsView() {
         <section className="hc-settings__pane" aria-labelledby="hc-settings-title">
           <h2 id="hc-settings-title">{title}</h2>
           <ErrorLine text={identity.error} onDismiss={identity.clearError} dismissLabel={copy.common.dismiss} />
-          {nav.section === "account" && identity.me && (
-            <div className="hc-stack">
-              <p className="hc-person"><Avatar name={identity.me.name} size="lg" /><span><strong>{identity.me.name}</strong><small>{identity.serverName}</small></span></p>
-              <Button kind="danger" onClick={() => void identity.signOut()}>{copy.settings.signOut}</Button>
-            </div>
-          )}
+          {nav.section === "account" && identity.me && <Account />}
+          {nav.section === "server" && identity.owner && <ServerProfile />}
           {nav.section === "devices" && <Devices />}
           {nav.section === "notifications" && <Notifications />}
           {nav.section === "call" && <DeviceMenu />}

@@ -1,4 +1,6 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
+import { useChat } from "../core/context";
+import { copy } from "./copy";
 
 /**
  * House icons: 20 unit grid, one stroke weight, round caps. The recurring
@@ -42,6 +44,7 @@ const ICONS = {
   download: "M10 3.5v9M6 9l4 4l4-4M4 16.5h12",
   file: "M6 3h5l4 4v8.5a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 5 15.5v-11A1.5 1.5 0 0 1 6 3M11 3v4h4",
   slash: "M4 3.5l12 13",
+  image: "M4.5 4h11a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2M3 14.5l4.2-4.2l3 3l2.3-2.3L17 15M13 7.9v.2",
 } as const;
 
 export type IconName = keyof typeof ICONS;
@@ -63,12 +66,94 @@ function hash(text: string) {
   return value;
 }
 
-/** Generated avatar: the person's initial in a doorway arch, in one of six tones mixed from the palette. */
-export function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg" }) {
+/**
+ * Object URLs for small avatar and icon images, shared by every Avatar showing the same path.
+ * Paths carry a revision (?v=), so a changed image is a new key. The signed-in user id is part of
+ * the key so two accounts or hosts never share an entry. Entries live until the page closes: they
+ * are at most 512 KB each and only as many as there are people and servers.
+ */
+const pictures = new Map<string, Promise<string>>();
+
+function usePicture(path: string | undefined) {
+  const chat = useChat();
+  const [url, setUrl] = useState<string>();
+  useEffect(() => {
+    setUrl(undefined);
+    if (!path) return;
+    const key = `${chat.me.id}|${path}`;
+    let live = true;
+    let pending = pictures.get(key);
+    if (!pending) {
+      pending = chat.fetchMedia(path).then(blob => URL.createObjectURL(blob));
+      pictures.set(key, pending);
+      pending.catch(() => pictures.delete(key));
+    }
+    pending.then(next => { if (live) setUrl(next); }, () => {});
+    return () => { live = false; };
+  }, [path, chat.me.id]);
+  return url;
+}
+
+/**
+ * The person's picture, or their initial in a doorway arch in one of six tones mixed from the palette.
+ * Servers use the same component with the squircle shape. `src` is an authenticated media path.
+ */
+export function Avatar({ name, src, size = "md", shape = "arch" }: { name: string; src?: string; size?: "sm" | "md" | "lg"; shape?: "arch" | "squircle" }) {
+  const picture = usePicture(src);
   return (
-    <span className={`hc-avatar hc-avatar--${size}`} data-tone={hash(name) % 6} aria-hidden="true">
-      {(name.trim()[0] ?? "?").toUpperCase()}
+    <span className={cx("hc-avatar", `hc-avatar--${size}`, shape === "squircle" && "hc-avatar--squircle")} data-tone={hash(name) % 6} data-has-image={picture ? "" : undefined} aria-hidden="true">
+      {picture ? <img src={picture} alt="" /> : (name.trim()[0] ?? "?").toUpperCase()}
     </span>
+  );
+}
+
+const DROP_COPY = copy.dropzone;
+
+/**
+ * One drop zone for every image field: click to browse, drag and drop, or paste.
+ * Validates type and size before anything leaves the device and shows a small preview.
+ */
+export function MediaDropzone({ label, accept, maxBytes, value, onChange, hint }: {
+  label: string; accept: string[]; maxBytes: number; value?: File; onChange: (file?: File) => void; hint?: string;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  const [over, setOver] = useState(false);
+  const [error, setError] = useState("");
+  const [preview, setPreview] = useState<string>();
+  useEffect(() => {
+    if (!value) { setPreview(undefined); return; }
+    const url = URL.createObjectURL(value);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [value]);
+  const take = (file?: File) => {
+    if (!file) return;
+    if (!accept.includes(file.type)) return setError(DROP_COPY.type);
+    if (file.size > maxBytes) return setError(DROP_COPY.size(maxBytes));
+    setError("");
+    onChange(file);
+  };
+  return (
+    <div className="hc-field" role="group" aria-label={label}>
+      <span className="hc-field__label">{label}</span>
+      <div className={cx("hc-drop", over && "is-over", value && "has-file")} data-testid="dropzone"
+        onDragOver={event => { event.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
+        onDrop={event => { event.preventDefault(); setOver(false); take(event.dataTransfer.files[0]); }}
+        onPaste={event => take([...event.clipboardData.files][0])}>
+        {value && preview
+          ? <>
+              <img src={preview} alt="" className="hc-drop__preview" />
+              <span className="hc-drop__name">{value.name}</span>
+              <IconButton icon="close" label={DROP_COPY.remove} onClick={() => { setError(""); onChange(undefined); }} />
+            </>
+          : <button type="button" className="hc-drop__cta" onClick={() => input.current?.click()}>
+              <Icon name="image" /><strong>{DROP_COPY.cta}</strong><small>{hint ?? DROP_COPY.hint}</small>
+            </button>}
+        <input ref={input} type="file" accept={accept.join(",")} className="hc-sr" tabIndex={-1} aria-hidden="true"
+          onChange={event => { take(event.target.files?.[0]); event.target.value = ""; }} />
+      </div>
+      {error && <p className="hc-field__error" role="alert">{error}</p>}
+    </div>
   );
 }
 

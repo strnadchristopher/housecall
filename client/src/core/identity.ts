@@ -73,6 +73,10 @@ export interface IdentityState {
   /** True while this host was added from the picker and is not signed in yet. */
   adding: boolean;
   serverName: string;
+  /** Id of the server these settings apply to. */
+  serverId: string;
+  /** Icon media path for the current server, if one is set. */
+  serverIconUrl?: string;
   devices: DeviceSession[];
   notices: Notice[];
   roles: Role[];
@@ -100,7 +104,15 @@ export interface IdentityProvider extends IdentityState {
   createRole(name: string): Promise<boolean>;
   assignRole(roleId: string, personId: string): Promise<void>;
   deleteRole(roleId: string): Promise<void>;
-  submitReport(input: ReportInput): Promise<void>;
+  /** Presentation only; the username stays the sign-in name. Resolves true on success. */
+  setDisplayName(name: string | null): Promise<boolean>;
+  /** `undefined` removes the avatar. The image must already be small (see resizeImage). */
+  setAvatar(image: Blob | undefined): Promise<boolean>;
+  /** Server settings (owner only). */
+  renameServer(name: string): Promise<boolean>;
+  setServerIcon(image: Blob | undefined): Promise<boolean>;
+  /** Resolves true when the report was sent, so the form clears only then. */
+  submitReport(input: ReportInput): Promise<boolean>;
   loadReports(): Promise<void>;
   resolveReport(id: string): Promise<void>;
   downloadReportScreenshot(id: string): Promise<void>;

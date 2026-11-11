@@ -3,6 +3,8 @@ export interface User {
   id: string;
   username: string;
   is_owner: boolean;
+  display_name?: string | null;
+  avatar_rev?: number;
 }
 export interface Auth extends Session {
   user: User;
@@ -40,6 +42,7 @@ export interface Server {
   id: string;
   name: string;
   general_channel_id: string;
+  icon_rev?: number;
 }
 export interface Role {
   id: string;

@@ -105,6 +105,10 @@ export class Api {
       body: JSON.stringify(body),
     });
   }
+  /** Raw binary body, for small images. The blob's own type becomes the content type. */
+  putBlob<T>(path: string, body: Blob) {
+    return this.request<T>(path, { method: "PUT", body });
+  }
   delete<T>(path: string) {
     return this.request<T>(path, { method: "DELETE" });
   }

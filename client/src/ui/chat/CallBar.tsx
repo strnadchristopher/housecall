@@ -43,7 +43,7 @@ export function CallBar() {
     return (
       <section className={cx("hc-callbar", running.length > 0 && "is-live")} data-testid="call-bar" data-running={running.length > 0 ? "" : undefined} aria-label={copy.call.label}>
         {running.length > 0
-          ? <div className="hc-callbar__people">{running.slice(0, 5).map(person => <span key={person.personId} title={person.name}><Avatar name={person.name} size="sm" /></span>)}</div>
+          ? <div className="hc-callbar__people">{running.slice(0, 5).map(person => <span key={person.personId} title={person.name}><Avatar name={person.name} src={person.avatarUrl} size="sm" /></span>)}</div>
           : <span className="hc-callbar__mark"><Icon name="phone" /></span>}
         <div className="hc-callbar__title">
           <strong>{running.length > 0 ? copy.call.inProgress : copy.call.label}</strong>
@@ -56,7 +56,7 @@ export function CallBar() {
   return (
     <section className="hc-callbar is-live" data-testid="call-bar" data-phase={call.phase} aria-label={copy.call.label}>
       <div className="hc-callbar__people">
-        {call.participants.slice(0, 5).map(participant => <span key={participant.id} title={participant.name}><Avatar name={participant.name} size="sm" /></span>)}
+        {call.participants.slice(0, 5).map(participant => <span key={participant.id} title={participant.name}><Avatar name={participant.name} src={participant.avatarUrl} size="sm" /></span>)}
       </div>
       <div className="hc-callbar__title">
         <strong>

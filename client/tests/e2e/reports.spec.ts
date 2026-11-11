@@ -24,7 +24,14 @@ test("consented scanned screenshot and redacted logs are available only to owner
     await form.getByLabel("Description", { exact: true }).fill("Fixture screenshot report");
     await form.getByLabel("Logs", { exact: true }).fill("Authorization: fixture-secret\nnormal fixture log");
     const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=", "base64");
-    await form.getByLabel("Screenshot", { exact: true }).setInputFiles({ name: "fixture.png", mimeType: "image/png", buffer: png });
+    const dataTransfer = await page.evaluateHandle((bytes: number[]) => {
+      const dt = new DataTransfer();
+      dt.items.add(new File([new Uint8Array(bytes)], "fixture.png", { type: "image/png" }));
+      return dt;
+    }, [...png]);
+    await form.getByTestId("dropzone").dispatchEvent("drop", { dataTransfer });
+    await expect(form.locator(".hc-drop__preview")).toBeVisible();
+    await expect(form.getByText("fixture.png")).toBeVisible();
     let uploadPosts = 0;
     page.on("request", r => { if (r.method() === "POST" && new URL(r.url()).pathname === "/api/uploads") uploadPosts++; });
     await form.getByRole("button", { name: "Send report", exact: true }).click();

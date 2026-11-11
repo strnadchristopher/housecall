@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent 
 import { useChat, useIdentity } from "../../core/context";
 import { Logo } from "../brand/Logo";
 import { copy } from "../copy";
-import { Button, ErrorLine, Field, Icon, cx } from "../kit";
+import { Avatar, Button, ErrorLine, Field, Icon, cx } from "../kit";
 
 /**
  * The server picker. The list stays mounted and is moved with transform and
@@ -80,7 +80,7 @@ export function ServerPicker() {
       <button ref={trigger} type="button" className="hc-picker__trigger" aria-haspopup="listbox" aria-expanded={open} aria-controls={id}
         aria-label={`${copy.picker.label}: ${current?.name ?? identity.serverName}`}
         onClick={toggle} onKeyDown={event => { if (!open && (event.key === "ArrowDown" || event.key === "ArrowUp")) { event.preventDefault(); toggle(); } }}>
-        <Logo open={open} label="" />
+        {current?.iconUrl ? <Avatar name={current.name} src={current.iconUrl} shape="squircle" /> : <Logo open={open} label="" />}
         <span className="hc-picker__name">
           <strong>{current?.name ?? identity.serverName}</strong>
           <small data-state={chat.online ? "on" : "off"}>{chat.online ? copy.state.connected : copy.state.reconnecting}</small>
@@ -91,6 +91,7 @@ export function ServerPicker() {
         {chat.servers.map((server, at) => (
           <button key={server.key} type="button" role="option" aria-selected={server.current} data-index={at} tabIndex={at === index ? 0 : -1}
             className={cx("hc-picker__row", server.current && "is-current")} style={{ ["--i" as string]: at }} onClick={() => choose(at)}>
+            <Avatar name={server.name} src={server.iconUrl} size="sm" shape="squircle" />
             <span className="hc-picker__rowname">
               <strong>{server.name}</strong>
               <small>{manyHosts ? `${server.host} · ` : ""}{server.status === "connected" ? copy.state.connected : copy.state.reconnecting}</small>

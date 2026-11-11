@@ -62,8 +62,18 @@ export const copy = {
     film: "Shared film", music: "Shared music", screen: "Shared browser screen",
   },
   dm: { label: "Direct messages", start: "New message", name: "Name (optional)", create: "Start", people: "People" },
+  dropzone: {
+    cta: "Drop an image or browse", hint: "PNG, JPEG or WebP. You can also paste.",
+    type: "Use a PNG, JPEG or WebP image",
+    size: (bytes: number) => `Use an image under ${bytes >= 1024 * 1024 ? `${Math.round(bytes / (1024 * 1024))} MB` : `${Math.round(bytes / 1024)} KB`}`,
+    remove: "Remove image",
+  },
+  profile: {
+    displayName: "Display name", avatar: "Profile picture", username: "Username", removeAvatar: "Remove picture",
+    serverName: "Server name", serverIcon: "Server icon", removeIcon: "Remove icon",
+  },
   settings: {
-    label: "Settings", account: "Account", devices: "Devices", notifications: "Notifications", report: "Report a problem",
+    label: "Settings", serverProfile: "Server", account: "Account", devices: "Devices", notifications: "Notifications", report: "Report a problem",
     server: "Server", invites: "Invites", channels: "Channels", roles: "Roles", reports: "Reports", about: "About",
     call: "Audio and video", signOut: "Sign out",
     thisDevice: "This device", revoke: "Revoke",

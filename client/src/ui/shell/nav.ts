@@ -2,7 +2,7 @@ import { createContext, useContext } from "react";
 import type { ChordId } from "../../core/chords";
 
 /** Presentation state only: which view, which side panel, which phone screen. */
-export type SettingsSection = "account" | "devices" | "notifications" | "call" | "report" | "invites" | "channels" | "roles" | "reports" | "about";
+export type SettingsSection = "account" | "devices" | "notifications" | "call" | "report" | "server" | "invites" | "channels" | "roles" | "reports" | "about";
 export type Side = { kind: "tabs"; tab: "people" | "chords" } | { kind: "chord"; id: ChordId } | { kind: "search" } | { kind: "pins" };
 
 export interface Nav {

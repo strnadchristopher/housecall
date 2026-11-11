@@ -38,7 +38,7 @@ export const Message = memo(function Message({ message, grouped, me, day, stop }
       onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setEntered(false); }}
       onClick={event => { if (!(event.target as HTMLElement).closest("button, a, video, img, input, .hc-media")) setOpen(value => !value); }}>
       {day && <p className="hc-day">{day}</p>}
-      <div className="hc-msg__gutter">{!grouped && <Avatar name={message.authorName} />}</div>
+      <div className="hc-msg__gutter">{!grouped && <Avatar name={message.authorName} src={message.authorAvatarUrl} />}</div>
       <div className="hc-msg__main">
         {message.replyTo && (
           <p className="hc-msg__reply"><Icon name="reply" /><strong>{message.replyTo.authorName}</strong><span>{message.replyTo.excerpt}</span></p>

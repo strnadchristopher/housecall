@@ -1,5 +1,7 @@
 /** Display formatting only. Byte sizes arrive as decimal strings (never lossy numbers). */
 
+export { nameOf } from "../data/people";
+
 const UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
 
 export function bytes(dec: string | number | bigint): string {

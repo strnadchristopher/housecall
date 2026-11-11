@@ -7,6 +7,7 @@ import { markdownTokens } from "../../data/markdown";
 import { messageDetails } from "../../data/messageView";
 import { firstPreviewLink, previewLink } from "../../data/embeds";
 import { gimmeStatusText } from "../../data/gimme";
+import { avatarPath, iconPath, userName } from "../../data/people";
 import { completeMention, completeRole, mentionCandidates, mentionedRoles, mentionedUsers, roleCandidates } from "../../data/mentions";
 import { ResumableUpload, uploadScanMessage, type Upload } from "../../transport/uploads";
 import { UploadedVideo } from "../../transport/video";
@@ -17,7 +18,11 @@ export type Housecall = ReturnType<typeof useHousecall>;
 const GIF_LINK = /https:\/\/giphy\.com\/gifs\/([A-Za-z0-9]{1,64})(?![A-Za-z0-9])/g;
 const VIDEO_NAME = /\.(mp4|m4v|mov|mkv|webm|avi)$/i;
 
-export const person = (user: User): Person => ({ id: user.id, name: user.username, owner: user.is_owner });
+export const person = (user: User): Person => ({ id: user.id, name: userName(user), username: user.username, owner: user.is_owner, avatarUrl: avatarPath(user) });
+
+/** The signed-in user as the server last reported them, so a changed display name or avatar shows at once. */
+export const currentUser = (c: Pick<Housecall, "auth" | "members">): User | undefined =>
+  c.auth ? c.members.find(member => member.id === c.auth!.user.id) ?? c.auth.user : undefined;
 
 function kindOf(channel: Channel): Conversation["kind"] {
   return channel.kind === "channel" ? "channel" : channel.kind === "dm" ? "dm" : "group";
@@ -34,6 +39,7 @@ export function hostLabel(host: HostEntry): string {
 /** ChatStore over the current REST backend (hooks/useHousecall plus transport/*). */
 export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, directory: Record<string, HostReport>, isActive: boolean) {
   const me = c.auth?.user;
+  const meUser = currentUser(c);
   const [serverId, setServerId] = useState("");
   const [roles, setRoles] = useState<Role[]>([]);
   const [serverPeople, setServerPeople] = useState<User[]>([]);
@@ -99,7 +105,7 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
   // Report this host's picker rows to the shared directory.
   const label = hostLabel(host);
   const rows = useMemo(() => c.servers.map(server => ({
-    key: `${host.id}:${server.id}`, name: server.name, host: label,
+    key: `${host.id}:${server.id}`, name: server.name, iconUrl: iconPath(server), host: label,
     status: c.online ? "connected" as const : "reconnecting" as const,
     mentions: c.channels.filter(channel => channel.server_id === server.id).reduce((sum, channel) => sum + (mentionsBy.get(channel.id) ?? 0), 0),
   })), [c.servers, c.channels, c.online, mentionsBy, host.id, label]);
@@ -117,7 +123,8 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
     if (server) { setServerId(server.id); void c.run(() => c.select(server.general_channel_id)); }
   }, [isActive, !!me, c.servers.length]);
 
-  const nameOf = (id: string) => c.members.find(member => member.id === id)?.username ?? id;
+  const nameOf = (id: string) => { const member = c.members.find(candidate => candidate.id === id); return member ? userName(member) : id; };
+  const avatarOf = (id: string) => { const member = c.members.find(candidate => candidate.id === id); return member ? avatarPath(member) : undefined; };
   const fetchMedia = async (path: string): Promise<Blob> => {
     const response = await fetch(c.api.mediaRequest(path));
     if (!response.ok) throw new Error(`File unavailable (${response.status})`);
@@ -129,7 +136,7 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
     try { nodes = markdownTokens(message.body); } catch { nodes = [{ kind: "text", text: message.body }]; }
     const mine = message.author_id === me?.id;
     return {
-      id: message.id, authorId: message.author_id, authorName: details.authorName, body: message.body, nodes,
+      id: message.id, authorId: message.author_id, authorName: details.authorName, authorAvatarUrl: avatarOf(message.author_id), body: message.body, nodes,
       createdAt: message.created_at, editedAt: details.editedAt, pinned: details.pinned,
       replyTo: details.replyTo ?? null, reactions: details.reactions, mentionsMe: details.mentionsMe && !mine,
       attachments: details.attachments.map(a => ({ id: a.id, filename: a.filename, size: a.length, kind: a.kind as Attachment["kind"], video: !!a.videoPath, thumbnail: a.thumbnailPath })),
@@ -147,7 +154,7 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
   };
 
   const people: Person[] = current && current.kind !== "channel"
-    ? [...new Map([me!, ...c.members.filter(member => c.messages.some(message => message.author_id === member.id))].map(user => [user.id, person(user)])).values()]
+    ? [...new Map([meUser!, ...c.members.filter(member => c.messages.some(message => message.author_id === member.id))].map(user => [user.id, person(user)])).values()]
     : serverPeople.map(person);
 
   const pending: PendingUpload | undefined = upload ? {
@@ -176,7 +183,8 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
   };
 
   const servers: ServerEntry[] = hosts.hosts.flatMap(entry => (directory[entry.id]?.servers ?? []).map(row => ({
-    ...row, current: entry.id === host.id && row.key === `${host.id}:${serverId}`,
+    // Icons are fetched with this host's session, so rows from other hosts show initials.
+    ...row, iconUrl: entry.id === host.id ? row.iconUrl : undefined, current: entry.id === host.id && row.key === `${host.id}:${serverId}`,
   })));
 
   const post = async (body: string) => {
@@ -189,7 +197,7 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
 
   const store: ChatStore = {
     online: c.online, busy: c.busy, loading: c.loading, error: c.error,
-    me: me ? person(me) : { id: "", name: "", owner: false },
+    me: meUser ? person(meUser) : { id: "", name: "", username: "", owner: false },
     servers,
     conversations: c.channels
       .filter(channel => channel.kind !== "channel" || channel.server_id === serverId)

@@ -9,7 +9,7 @@ export function PeopleTab() {
     <ul className="hc-people" data-testid="people">
       {chat.people.map(person => (
         <li key={person.id}>
-          <Avatar name={person.name} />
+          <Avatar name={person.name} src={person.avatarUrl} />
           <span><strong>{person.name}</strong>{person.owner && <small>{copy.side.owner}</small>}</span>
         </li>
       ))}

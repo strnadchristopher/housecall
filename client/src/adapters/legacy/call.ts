@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CallTransport } from "../../core/call";
 import { VoiceSession, availableVoiceInputs, type VoiceDevice, type VoiceInputs, type VoiceStatus } from "../../transport/voice";
-import type { Housecall } from "./chat";
+import { avatarPath, userName } from "../../data/people";
+import { currentUser, type Housecall } from "./chat";
 
 interface Peer {
   peer_id: number;
@@ -69,7 +70,8 @@ export function useLegacyCall(c: Housecall) {
   }, [status.phase, channelId, c.api]);
 
   const fail = (reason: unknown) => setError(reason instanceof Error ? reason.message : String(reason));
-  const nameOf = (id: string) => c.members.find(member => member.id === id)?.username ?? id;
+  const nameOf = (id: string) => { const member = c.members.find(candidate => candidate.id === id); return member ? userName(member) : id; };
+  const avatarOf = (id: string) => { const member = c.members.find(candidate => candidate.id === id); return member ? avatarPath(member) : undefined; };
   const publishers = new Set(peers.filter(peer => peer.publisher).map(peer => String(peer.peer_id)));
   const members = peers.filter(peer => !peer.publisher);
   const active = status.phase !== "idle";
@@ -80,9 +82,9 @@ export function useLegacyCall(c: Housecall) {
     conversationId: active ? channelId : undefined,
     conversationName: active ? c.channels.find(channel => channel.id === channelId)?.name : undefined,
     participants: status.phase !== "live" ? []
-      : members.length ? members.map(peer => ({ id: String(peer.peer_id), personId: peer.user_id, name: nameOf(peer.user_id), me: peer.current_session, connected: peer.connected }))
-      : c.auth ? [{ id: status.peerId ?? "self", personId: c.auth.user.id, name: c.auth.user.username, me: true, connected: true }] : [],
-    active: Object.fromEntries(Object.entries(rooms).map(([room, ids]) => [room, ids.map(id => ({ personId: id, name: nameOf(id) }))])),
+      : members.length ? members.map(peer => ({ id: String(peer.peer_id), personId: peer.user_id, name: nameOf(peer.user_id), avatarUrl: avatarOf(peer.user_id), me: peer.current_session, connected: peer.connected }))
+      : c.auth ? [{ id: status.peerId ?? "self", personId: c.auth.user.id, name: userName(currentUser(c) ?? c.auth.user), avatarUrl: avatarOf(c.auth.user.id), me: true, connected: true }] : [],
+    active: Object.fromEntries(Object.entries(rooms).map(([room, ids]) => [room, ids.map(id => ({ personId: id, name: nameOf(id), avatarUrl: avatarOf(id) }))])),
     media: status.streams
       .filter(stream => !publishers.has(status.sourcePeers?.[stream.id] ?? ""))
       .map(stream => ({ id: stream.id, stream, participantId: status.sourcePeers?.[stream.id] || undefined, video: stream.getVideoTracks().length > 0 })),

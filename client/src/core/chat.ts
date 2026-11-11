@@ -8,14 +8,21 @@ import type { MarkdownNode } from "./markdown";
 
 export interface Person {
   id: string;
+  /** What to show: the display name when set, else the username. */
   name: string;
+  /** Sign-in name. Mentions and sign-in use this, never the display name. */
+  username: string;
   owner: boolean;
+  /** Authenticated media path; undefined means show initials. */
+  avatarUrl?: string;
 }
 
 /** One picker row: a server on a connected host. */
 export interface ServerEntry {
   key: string;
   name: string;
+  /** Authenticated media path for the server icon; undefined means show initials. */
+  iconUrl?: string;
   /** Host label (for example chat.example.com). Shown only when more than one host is connected. */
   host: string;
   status: "connected" | "reconnecting";
@@ -50,6 +57,7 @@ export interface ChatMessage {
   id: string;
   authorId: string;
   authorName: string;
+  authorAvatarUrl?: string;
   body: string;
   nodes: MarkdownNode[];
   createdAt: number;

@@ -3,8 +3,9 @@ import type { IdentityProvider, InviteResult, UpdateState } from "../../core/ide
 import type { Role } from "../../data/types";
 import { subscribeInviteLinks } from "../../transport/deepLinks";
 import { clearNativePush, enableNativePush, nativePushStatus, type NativePushStatus } from "../../transport/nativePush";
+import { iconPath } from "../../data/people";
 import { reportScreenshot, submitReport } from "../../transport/reports";
-import { person, hostLabel, type Housecall } from "./chat";
+import { currentUser, person, hostLabel, type Housecall } from "./chat";
 import { isNative, type HostEntry, type Hosts } from "./hosts";
 
 export interface Updater {
@@ -59,11 +60,13 @@ export function useLegacyIdentity(
 
   return {
     signedIn: !!c.auth, busy: c.busy, error: c.error,
-    me: c.auth ? person(c.auth.user) : undefined,
+    me: c.auth ? person(currentUser(c) ?? c.auth.user) : undefined,
     owner: !!c.auth?.user.is_owner,
     native: isNative(), address, inviteToken,
     adding: host.added && !c.auth,
     serverName: c.servers.find(candidate => candidate.id === server.id)?.name ?? hostLabel(host),
+    serverId: server.id,
+    serverIconUrl: (() => { const current = c.servers.find(candidate => candidate.id === server.id); return current ? iconPath(current) : undefined; })(),
     devices: c.devices.map(device => ({ id: device.id, name: device.device_name, createdAt: device.created_at, current: device.current })),
     notices: c.noticeList.map(notice => ({ id: notice.id, conversation: c.channels.find(channel => channel.id === notice.channel_id)?.name ?? "", at: notice.created_at ?? 0 })),
     roles: server.roles.map(role => ({ id: role.id, name: role.name, memberIds: role.member_ids })),
@@ -117,7 +120,18 @@ export function useLegacyIdentity(
     createRole: name => c.attempt(async () => { await c.api.post(`/api/servers/${server.id}/roles`, { name }); await loadRoles(); }),
     assignRole: (roleId, personId) => c.run(async () => { await c.api.post(`/api/roles/${roleId}/members`, { user_id: personId }); await loadRoles(); }),
     deleteRole: roleId => c.run(async () => { await c.api.delete(`/api/roles/${roleId}`); await loadRoles(); }),
-    submitReport: input => c.run(async () => { await submitReport(c.api, c.channel, input); }),
+    setDisplayName: name => c.attempt(async () => { await c.api.patch("/api/me", { display_name: name }); await c.refresh(); }),
+    setAvatar: image => c.attempt(async () => {
+      if (image) await c.api.putBlob("/api/me/avatar", image); else await c.api.delete("/api/me/avatar");
+      await c.refresh();
+    }),
+    renameServer: name => c.attempt(async () => { await c.api.patch(`/api/servers/${encodeURIComponent(server.id)}`, { name }); await c.refresh(); }),
+    setServerIcon: image => c.attempt(async () => {
+      const path = `/api/servers/${encodeURIComponent(server.id)}/icon`;
+      if (image) await c.api.putBlob(path, image); else await c.api.delete(path);
+      await c.refresh();
+    }),
+    submitReport: input => c.attempt(async () => { await submitReport(c.api, c.channel, input); }),
     loadReports: () => c.run(c.loadReports),
     resolveReport: id => c.run(async () => { await c.api.patch(`/api/reports/${id}`, { status: "resolved" }); await c.loadReports(); }),
     downloadReportScreenshot: id => c.run(async () => {

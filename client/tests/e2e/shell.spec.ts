@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { setup } from "./helpers";
+import { setup, signIn } from "./helpers";
 
 // Fictional fixture only. The GIF provider is not reachable from tests, so its
 // routes are answered locally and the capability flag is set on /api/me.
@@ -121,4 +121,46 @@ test("shell: picker, channel, call, composer, tabs, direct messages", async ({ p
   await bar.getByRole("button", { name: "Cancel", exact: true }).click();
   await bar.getByRole("button", { name: "Leave", exact: true }).click();
   await expect(bar.getByRole("button", { name: "Join", exact: true })).toBeVisible();
+});
+
+test("profile: display name and avatar show in the user bar and on new messages; owner edits the server", async ({ page }) => {
+  page.setDefaultTimeout(15000);
+  // The server is shared across this file: the first test already ran setup, so sign in as that owner.
+  await page.goto("/");
+  await signIn(page, "owner");
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+  const drop = async (screen: string) => {
+    const dataTransfer = await page.evaluateHandle((bytes: number[]) => {
+      const dt = new DataTransfer();
+      dt.items.add(new File([new Uint8Array(bytes)], "pic.png", { type: "image/png" }));
+      return dt;
+    }, [...png]);
+    await page.getByTestId("dropzone").dispatchEvent("drop", { dataTransfer });
+    await expect(page.locator(".hc-drop__preview")).toBeVisible();
+    await page.getByTestId(screen).getByRole("button", { name: "Save", exact: true }).last().click();
+  };
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  const account = page.getByTestId("screen-account");
+  await account.getByLabel("Display name", { exact: true }).fill("Ada Fixture");
+  await account.getByRole("button", { name: "Save", exact: true }).first().click();
+  const bar = page.locator(".hc-userbar");
+  await expect(bar).toContainText("Ada Fixture");
+  await expect(account).toContainText("owner");
+  await drop("screen-account");
+  await expect(bar.locator(".hc-avatar img")).toBeVisible();
+
+  await page.getByTestId("screen-settings").getByRole("button", { name: "Server", exact: true }).click();
+  const server = page.getByTestId("screen-server");
+  await server.getByLabel("Server name", { exact: true }).fill("Fixture House");
+  await server.getByRole("button", { name: "Save", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: /^Servers: Fixture House/ })).toBeVisible();
+  await drop("screen-server");
+  await expect(page.getByRole("button", { name: /^Servers:/ }).locator(".hc-avatar img")).toBeVisible();
+
+  await page.getByTestId("screen-settings").getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByTestId("screen-composer").getByLabel("Message", { exact: true }).fill("hello from the fixture");
+  await page.keyboard.press("Enter");
+  const message = page.locator(".hc-msg", { hasText: "hello from the fixture" });
+  await expect(message.locator(".hc-msg__head strong")).toHaveText("Ada Fixture");
+  await expect(message.locator(".hc-avatar img")).toBeVisible();
 });

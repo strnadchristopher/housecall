@@ -5,6 +5,7 @@ import type { ActivitySnapshot } from "../../data/activities";
 import type { PlexPlayer } from "../../transport/plex";
 import { DjPlayer } from "../../transport/dj";
 import type { VoiceStatus } from "../../transport/voice";
+import { userName } from "../../data/people";
 import type { Housecall } from "./chat";
 
 interface PlexItem { id: string; title: string; kind: string; duration_ms: number }
@@ -88,7 +89,7 @@ export function useLegacyChords(c: Housecall, voice: { status: VoiceStatus; live
     if (activity?.kind === "vm" && me && cap.vm_reset === true) void checkReset().catch(() => {});
   }, [c.channel, me, activity?.kind, cap.vm_reset]);
 
-  const nameOf = (id: string) => c.members.find(member => member.id === id)?.username ?? id;
+  const nameOf = (id: string) => { const member = c.members.find(candidate => candidate.id === id); return member ? userName(member) : id; };
   const session = (snapshot: ActivitySnapshot): SharedSession => ({
     kind: snapshot.kind === "plex" ? "watch" : snapshot.kind === "dj" ? "music" : "browser",
     playing: snapshot.playback.playing,

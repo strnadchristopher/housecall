@@ -24,7 +24,7 @@ export function FriendList() {
             <li key={person.id}>
               <button type="button" role="checkbox" aria-checked={on} aria-label={`${copy.common.add} ${person.name}`} className={cx("hc-channel", on && "is-picked")}
                 onClick={() => setPicked(on ? picked.filter(id => id !== person.id) : [...picked, person.id])}>
-                <Avatar name={person.name} size="sm" />
+                <Avatar name={person.name} src={person.avatarUrl} size="sm" />
                 <span className="hc-channel__name">{person.name}</span>
                 {on && <Icon name="check" />}
               </button>

@@ -9,7 +9,7 @@ export function UserBar() {
   const dmMentions = chat.conversations.filter(conversation => conversation.kind !== "channel").reduce((sum, conversation) => sum + conversation.mentions, 0);
   return (
     <footer className="hc-userbar">
-      <Avatar name={chat.me.name} />
+      <Avatar name={chat.me.name} src={chat.me.avatarUrl} />
       <span className="hc-userbar__name">
         <strong>{chat.me.name}</strong>
         <small>{chat.online ? copy.state.connected : copy.state.reconnecting}</small>

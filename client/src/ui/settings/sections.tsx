@@ -1,9 +1,78 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import type { InviteResult } from "../../core/identity";
 import { useChat, useIdentity } from "../../core/context";
 import { copy } from "../copy";
-import { Button, Field } from "../kit";
+import { Avatar, Button, Field, MediaDropzone } from "../kit";
 import { useNav } from "../shell/nav";
+import { resizeImage } from "./resizeImage";
+
+const PICTURE_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const PICTURE_PICK_LIMIT = 8 * 1024 * 1024;
+
+/** Picks an image, shrinks it on this device, then uploads it. Shared by the avatar and the server icon. */
+function PictureField({ label, remove, current, shape, name, save, clear }: {
+  label: string; remove: string; current?: string; shape: "arch" | "squircle"; name: string;
+  save: (image: Blob) => Promise<boolean>; clear: () => Promise<boolean>;
+}) {
+  const identity = useIdentity();
+  const [file, setFile] = useState<File>();
+  const [problem, setProblem] = useState("");
+  const upload = async () => {
+    if (!file) return;
+    setProblem("");
+    try {
+      if (await save(await resizeImage(file))) setFile(undefined);
+    } catch (error) { setProblem(error instanceof Error ? error.message : String(error)); }
+  };
+  return (
+    <div className="hc-stack">
+      {!file && shape === "squircle" && <p className="hc-person"><Avatar name={name} src={current} size="lg" shape={shape} /></p>}
+      <MediaDropzone label={label} accept={PICTURE_TYPES} maxBytes={PICTURE_PICK_LIMIT} value={file} onChange={next => { setProblem(""); setFile(next); }} />
+      {problem && <p className="hc-field__error" role="alert">{problem}</p>}
+      <div className="hc-inline">
+        {file && <Button kind="primary" busy={identity.busy} onClick={() => void upload()}>{copy.common.save}</Button>}
+        {!file && current && <Button kind="danger" busy={identity.busy} onClick={() => void clear()}>{remove}</Button>}
+      </div>
+    </div>
+  );
+}
+
+export function Account() {
+  const identity = useIdentity();
+  const me = identity.me!;
+  const [name, setName] = useState(me.name === me.username ? "" : me.name);
+  const saved = me.name === me.username ? "" : me.name;
+  const submit = (event: FormEvent) => { event.preventDefault(); void identity.setDisplayName(name.trim() || null); };
+  return (
+    <div className="hc-stack" data-testid="screen-account">
+      <p className="hc-person"><Avatar name={me.name} src={me.avatarUrl} size="lg" /><span><strong>{me.name}</strong><small>{me.username} · {identity.serverName}</small></span></p>
+      <form className="hc-inline" onSubmit={submit}>
+        <Field label={copy.profile.displayName} value={name} placeholder={me.username} maxLength={32} onChange={event => setName(event.target.value)} />
+        <Button kind="primary" type="submit" busy={identity.busy} disabled={name.trim() === saved}>{copy.common.save}</Button>
+      </form>
+      <PictureField label={copy.profile.avatar} remove={copy.profile.removeAvatar} current={me.avatarUrl} shape="arch" name={me.name}
+        save={image => identity.setAvatar(image)} clear={() => identity.setAvatar(undefined)} />
+      <Button kind="danger" onClick={() => void identity.signOut()}>{copy.settings.signOut}</Button>
+    </div>
+  );
+}
+
+export function ServerProfile() {
+  const identity = useIdentity();
+  const [name, setName] = useState(identity.serverName);
+  useEffect(() => setName(identity.serverName), [identity.serverName]);
+  const submit = (event: FormEvent) => { event.preventDefault(); void identity.renameServer(name.trim()); };
+  return (
+    <div className="hc-stack" data-testid="screen-server">
+      <form className="hc-inline" onSubmit={submit}>
+        <Field label={copy.profile.serverName} value={name} maxLength={48} required onChange={event => setName(event.target.value)} />
+        <Button kind="primary" type="submit" busy={identity.busy} disabled={!name.trim() || name.trim() === identity.serverName}>{copy.common.save}</Button>
+      </form>
+      <PictureField label={copy.profile.serverIcon} remove={copy.profile.removeIcon} current={identity.serverIconUrl} shape="squircle" name={identity.serverName}
+        save={image => identity.setServerIcon(image)} clear={() => identity.setServerIcon(undefined)} />
+    </div>
+  );
+}
 
 export function Devices() {
   const identity = useIdentity();
@@ -143,12 +212,12 @@ export function ReportProblem() {
   const [logsConsent, setLogsConsent] = useState(false);
   const [screenshotConsent, setScreenshotConsent] = useState(false);
   const [sent, setSent] = useState(false);
-  const file = useRef<HTMLInputElement>(null);
+  const [shot, setShot] = useState<File>();
   const submit = (event: FormEvent) => {
     event.preventDefault();
     setSent(false);
-    void identity.submitReport({ kind: feature ? "feature" : "bug", body, logs, logsConsent, screenshot: file.current?.files?.[0], screenshotConsent })
-      .then(() => { setBody(""); setLogs(""); setLogsConsent(false); setScreenshotConsent(false); if (file.current) file.current.value = ""; setSent(true); });
+    void identity.submitReport({ kind: feature ? "feature" : "bug", body, logs, logsConsent, screenshot: shot, screenshotConsent })
+      .then(ok => { if (!ok) return; setBody(""); setLogs(""); setLogsConsent(false); setScreenshotConsent(false); setShot(undefined); setSent(true); });
   };
   return (
     <form className="hc-stack" data-testid="screen-report" onSubmit={submit}>
@@ -161,8 +230,7 @@ export function ReportProblem() {
       <label className="hc-field"><span className="hc-field__label">{copy.settings.logs}</span>
         <textarea rows={3} value={logs} onChange={event => setLogs(event.target.value)} /></label>
       <label className="hc-check"><input type="checkbox" checked={logsConsent} onChange={event => setLogsConsent(event.target.checked)} /><span>{copy.settings.logsConsent}</span></label>
-      <label className="hc-field"><span className="hc-field__label">{copy.settings.screenshot}</span>
-        <input ref={file} type="file" name="report_screenshot" accept="image/png,image/jpeg,image/webp" /></label>
+      <MediaDropzone label={copy.settings.screenshot} accept={["image/png", "image/jpeg", "image/webp"]} maxBytes={8 * 1024 * 1024} value={shot} onChange={setShot} />
       <label className="hc-check"><input type="checkbox" checked={screenshotConsent} onChange={event => setScreenshotConsent(event.target.checked)} /><span>{copy.settings.screenshotConsent}</span></label>
       <Button kind="primary" type="submit" busy={identity.busy}>{copy.settings.submitReport}</Button>
       {sent && !identity.error && <p className="hc-muted" role="status">{copy.settings.reportSent}</p>}
