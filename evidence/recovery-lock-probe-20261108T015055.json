@@ -1,9 +1,0 @@
-{
-  "at": "2026-11-08T01:50:55.754789+00:00",
-  "path": "/home/christopher/.hermes/workspace/sprint-recovery-20261107/heavy.lock",
-  "open_mode": "O_RDONLY",
-  "operation": "LOCK_EX|LOCK_NB",
-  "acquired": false,
-  "errno": 11,
-  "error": "Resource temporarily unavailable"
-}

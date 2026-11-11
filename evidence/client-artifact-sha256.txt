@@ -1,2 +1,0 @@
-b5ec9e349d1b50d7550a8f087282b3c4abf236e8aec5c6ec628810cacbc0efa9  src-tauri/target/release/chriscord-client
-43f593c2137ac635c5c6d4164d3408fbb981744daab4d3fcab46f97f7cb67bcd  .runtime/artifacts/chriscord-android-arm64-debug.apk

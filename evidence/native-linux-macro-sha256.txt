@@ -1,1 +1,0 @@
-27283eb30e9cef30d242876f13646cbab5bf440b8f80d031776fdb60efa4c86e  client/src-tauri/target/release/chriscord-client

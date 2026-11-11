@@ -1,6 +1,0 @@
-{
-  "url": "http://tauri.localhost/",
-  "title": "Chriscord",
-  "text": "Sign in to Chriscord\n\nready\n\nServer URL (blank for this server)UsernamePassword (at least 12 characters)Sign in\nSign in with passkeySign inUse invitationFirst-run setup"
-}
-{"error":"TypeError: Failed to fetch"}

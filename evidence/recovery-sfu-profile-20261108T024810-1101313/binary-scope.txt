@@ -1,1 +1,0 @@
-Historical optimized phase-instrumented binary; predates scanner/auth/VM publisher source. Not final-candidate runtime acceptance.

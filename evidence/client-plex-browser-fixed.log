@@ -1,6 +1,0 @@
-
-Running 1 test using 1 worker
-
-  ✓  1 [chromium] › tests/e2e/plex.spec.ts:4:1 › three live voice peers browse and synchronously play real HLS from a synthetic Plex provider (20.2s)
-
-  1 passed (26.7s)

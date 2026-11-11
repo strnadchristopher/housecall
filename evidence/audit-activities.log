@@ -1,3 +1,0 @@
-      Loaded 1422 security advisories (from vendor-ref/advisory-db)
-warning: directory vendor-ref/advisory-db is locked, waiting for up to 300 seconds for it to become available
-    Scanning crates/activities/Cargo.lock for vulnerabilities (161 crate dependencies)

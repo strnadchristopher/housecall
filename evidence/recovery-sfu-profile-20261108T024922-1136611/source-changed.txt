@@ -1,1 +1,0 @@
-Source changed during gate; do not treat as frozen candidate acceptance.

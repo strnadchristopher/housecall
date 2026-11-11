@@ -1,6 +1,0 @@
-HTTP_CANARY 172.29.241.2 "GET / HTTP/1.1" 200 -
-dnsmasq[7]: started, version 2.91 cachesize 150
-dnsmasq[7]: DNS service limited to local subnets
-dnsmasq[7]: compile time options: IPv6 GNU-getopt no-DBus no-UBus no-i18n no-IDN DHCP DHCPv6 no-Lua TFTP no-conntrack ipset no-nftset auth no-DNSSEC loop-detect inotify dumpfile
-dnsmasq[7]: warning: no upstream servers configured
-dnsmasq[7]: cleared cache

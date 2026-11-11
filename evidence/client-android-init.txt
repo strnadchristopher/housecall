@@ -1,9 +1,0 @@
-
-> chriscord-client@0.1.0 tauri
-> tauri android init --ci --skip-targets-install
-
-        Info Using installed NDK: /home/christopher/GitHub/.worktrees/chriscord/sprint/.runtime/android-sdk/ndk/28.2.13676358
-Generating Android Studio project...
-        Info "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/src-tauri" relative to "/home/christopher/GitHub/.worktrees/chriscord/sprint/client/src-tauri/gen/android/chriscord_client" is "../../../"
-victory: Project generated successfully!
-    Make cool apps! 🌻 🐕 🎉

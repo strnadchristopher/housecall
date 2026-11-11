@@ -1,6 +1,0 @@
-{
-  "normal_background_child_terminated": true,
-  "normal_exit": 0,
-  "timeout_exit": 124,
-  "scope": "small disposable subprocesses only; no heavy or host gate"
-}

@@ -1,6 +1,0 @@
-
-Running 1 test using 1 worker
-
-  ✓  1 [chromium] › tests/e2e/voice.spec.ts:4:1 › three browsers exchange real fake-device audio/video through the Rust SFU (8.0s)
-
-  1 passed (12.4s)

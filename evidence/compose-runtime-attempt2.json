@@ -1,5 +1,0 @@
-{
-  "project": "chriscord-sprint-compose",
-  "checks": [],
-  "note": "Isolated local Docker fixture; no Shiva deployment. Synthetic credentials never logged."
-}

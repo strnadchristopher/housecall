@@ -1,7 +1,0 @@
-{
-  "completed": false,
-  "reason": "Browser harness cgroup OOM at 2 GiB; parent finally could not run. Owned containers/volumes manually cleaned; external signature cache retained.",
-  "container_startup": "app running; scanner healthy; small upload checks reached browser phase",
-  "browser_uploaded_approx_MiB": 1700,
-  "server_sample_RSS_note": "Docker memory sample142MiB while browser runner grew; not process RSS proof."
-}
