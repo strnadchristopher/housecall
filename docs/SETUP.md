@@ -1,6 +1,6 @@
 # Setup and current verification status
 
-This repository is an in-progress private chat implementation. See PROGRESS.md for what actually passed; compose/native scaffolding does not mean the whole sprint is deployable. No deployment to Shiva is authorized in this work.
+This repository is an in-progress private chat implementation. See PROGRESS.md for what actually passed; compose/native scaffolding does not mean the whole sprint is deployable.
 
 ## Local isolated server
 

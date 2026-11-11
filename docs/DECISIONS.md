@@ -6,7 +6,7 @@ Axum/Tokio and SQLite WAL fit a private 5–30 person instance with one self-hos
 
 ## DM end-to-end encryption
 
-This iteration does **not** claim DM E2EE. The trusted Christopher-administered server can read messages. This enables server search, moderation, previews and simple multi-device recovery, but a server compromise exposes chat text. TLS and encrypted media at rest are not E2EE. For a group that expects privacy from the administrator or host, E2EE is necessary; introduce OpenMLS only with verified group membership changes, device verification, replay protection, key backup and recovery, attachment-key distribution, and independent security review. Do not invent a custom group cipher or silently advertise “end-to-end encrypted.” Revisit before inviting anyone whose trust model excludes the server owner. See [OpenMLS](https://openmls.tech/).
+This iteration does **not** claim DM E2EE. The trusted, owner-administered server can read messages. This enables server search, moderation, previews and simple multi-device recovery, but a server compromise exposes chat text. TLS and encrypted media at rest are not E2EE. For a group that expects privacy from the administrator or host, E2EE is necessary; introduce OpenMLS only with verified group membership changes, device verification, replay protection, key backup and recovery, attachment-key distribution, and independent security review. Do not invent a custom group cipher or silently advertise “end-to-end encrypted.” Revisit before inviting anyone whose trust model excludes the server owner. See [OpenMLS](https://openmls.tech/).
 
 ## Sessions and passkeys
 
@@ -26,7 +26,7 @@ Scanning fails closed. ClamAV has internal size/format limits; accepting a strea
 
 Authoritative revisions and playback clock anchors synchronize clients. VM input requires a server lease, not a client-selected controller. Target SFU is in-house Rust using str0m; no GPU dependency, no mesh masquerading as SFU. LAN glass-to-glass latency and 30-person load require actual measurements.
 
-The requested Steve Harvey voice is restricted to Christopher's private group and must never be exposed as a public or hosted cloning service. No voice reference is present, so a local placeholder voice is the only usable voice. Use a pluggable local TTS command and explicitly configured local model/reference; never use a hosted clone API. Reference requirements and model adapters are documented in DJ-REFERENCE.md. Generated speech should remain identified as synthetic in settings. No reference audio will be scraped automatically.
+The requested Steve Harvey voice is restricted to a private group and must never be exposed as a public or hosted cloning service. No voice reference is present, so a local placeholder voice is the only usable voice. Use a pluggable local TTS command and explicitly configured local model/reference; never use a hosted clone API. Reference requirements and model adapters are documented in DJ-REFERENCE.md. Generated speech should remain identified as synthetic in settings. No reference audio will be scraped automatically.
 
 ## Integration boundaries
 

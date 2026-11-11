@@ -2,7 +2,7 @@
 
 Rabb.it used a shared remotely hosted browser: viewers watched one browsing session and passed control. This differs from synchronized independent movie players. Background: [Rabb.it](https://en.wikipedia.org/wiki/Rabb.it).
 
-The optional compose `vm` profile prepares QEMU/KVM with an administrator-supplied Debian base disk, persistent qcow2 overlay, Unix-socket QMP and VNC. It joins the existing Gluetun namespace; it has no fallback bridge or host network. Do not start this profile on Shiva during development. The profile is infrastructure groundwork, not an integrated shared-browser activity.
+The optional compose `vm` profile prepares QEMU/KVM with an administrator-supplied Debian base disk, persistent qcow2 overlay, Unix-socket QMP and VNC. It joins the existing Gluetun namespace; it has no fallback bridge or host network.. The profile is infrastructure groundwork, not an integrated shared-browser activity.
 
 ## Enforced network boundary
 

@@ -1,6 +1,6 @@
 # Housecall
 
-Private, invite-only chat, voice and shared activities for Christopher and friends.
+Placeholder
 
 This sprint is **in progress**, not production-ready. [PROGRESS.md](PROGRESS.md) records verified results and remaining work; [PLAN.md](PLAN.md) contains acceptance milestones. No push or deployment is part of this task.
 

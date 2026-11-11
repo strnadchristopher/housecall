@@ -1,6 +1,6 @@
 # Disposable VPN policy tests
 
-These tests never use Shiva, existing Gluetun, or external VPN credentials. They require local Docker via `sudo -n docker`, TUN and nftables. Build the small fixture image:
+These tests never use a production host, existing Gluetun, or external VPN credentials. They require local Docker via `sudo -n docker`, TUN and nftables. Build the small fixture image:
 
 ```
 sudo -n docker build -t housecall-sprint-vpn-fixture:local infra/vm/tests
