@@ -1,0 +1,75 @@
+/*
+ * Direction B, "Ledger". True-neutral ink and paper, light-first with a
+ * matching dark. Green appears only for live calls. Square corners, quick
+ * motion with no overshoot. Selected with ?direction=b.
+ */
+@font-face {
+  font-family: "Martian Grotesk";
+  src: url("../../fonts/martian-grotesk/MartianGrotesk-VF.woff2") format("woff2");
+  font-weight: 100 900;
+  font-stretch: 75% 112.5%;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root[data-direction="b"] {
+  --hc-bg: #ffffff;
+  --hc-surface: #ffffff;
+  --hc-surface-raised: #ecece9;
+  --hc-line: #d4d4d0;
+  --hc-text: #0d0d0d;
+  --hc-text-muted: #595957;
+  --hc-accent: #0d0d0d;
+  --hc-on-accent: #ffffff;
+  --hc-live: #0a7436;
+  --hc-danger: #b3261e;
+  --hc-focus: #0d0d0d;
+
+  --hc-font: "Martian Grotesk", system-ui, sans-serif;
+
+  --hc-text-xs: 0.6875rem;
+  --hc-text-sm: 0.8125rem;
+  --hc-text-md: 0.9375rem;
+  --hc-text-lg: 1.0625rem;
+  --hc-text-xl: 1.5rem;
+
+  --hc-weight-regular: 400;
+  --hc-weight-medium: 550;
+  --hc-weight-bold: 750;
+
+  --hc-leading: 1.5;
+
+  --hc-radius-sm: 0px;
+  --hc-radius-md: 2px;
+  --hc-radius-lg: 4px;
+
+  --hc-dur-fast: 70ms;
+  --hc-dur-base: 130ms;
+  --hc-dur-slow: 210ms;
+
+  --hc-ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --hc-ease-in: cubic-bezier(0.6, 0, 1, 1);
+  --hc-ease-spring: cubic-bezier(0.2, 0, 0, 1);
+
+  --hc-col-left: 272px;
+  --hc-col-right: 288px;
+}
+:root[data-direction="b"] body {
+  font-stretch: 87.5%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-direction="b"] {
+    --hc-bg: #0d0d0d;
+    --hc-surface: #0d0d0d;
+    --hc-surface-raised: #212120;
+    --hc-line: #333331;
+    --hc-text: #f3f3f0;
+    --hc-text-muted: #a6a6a2;
+    --hc-accent: #f3f3f0;
+    --hc-on-accent: #0d0d0d;
+    --hc-live: #55c783;
+    --hc-danger: #ff8f85;
+    --hc-focus: #f3f3f0;
+  }
+}

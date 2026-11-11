@@ -4,6 +4,8 @@ interface NotificationHandle {
 export interface NotificationRecord {
   id: string;
   message_id: string;
+  channel_id?: string;
+  created_at?: number;
   body?: string;
   retracted?: boolean;
   retracted_at?: number | null;

@@ -1,5 +1,12 @@
-import type { MessageDetails } from "../contracts/ui";
 import type { Message } from "../state/messages";
+
+export interface MessageDetails {
+  authorId: string; authorName: string; createdAt: number; editedAt?: number;
+  replyTo?: { id: string; authorName: string; excerpt: string } | null;
+  pinned: boolean; reactions: { emoji: string; count: number; mine: boolean }[];
+  attachments: { id: string; filename: string; length: string; videoPath?: string; thumbnailPath?: string }[];
+  mentionsMe: boolean;
+}
 
 /** Exact server fields; text parsing and username substring guesses are unnecessary. */
 export function messageDetails(message: Message, currentUser: string, name: (id: string) => string,

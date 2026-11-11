@@ -1,7 +1,7 @@
 import { clearNativePush, reconcileNativePush } from "../transport/nativePush";
 import type { GimmeRequestStatus } from "../data/gimme";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { authenticatePasskey, cancelNativePasskey } from "../transport/passkeys";
+import { cancelNativePasskey } from "../transport/passkeys";
 import { Api, ApiError } from "../transport/api";
 import { NotificationReconciler } from "../transport/notifications";
 import type { NotificationRecord } from "../transport/notifications";
@@ -14,9 +14,15 @@ import type {
   Channel,
   Device,
   Report,
+  Server,
   ServerEvent,
   User,
 } from "../data/types";
+function deviceName() {
+  if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window)
+    return /android|iphone|ipad/i.test(navigator.userAgent) ? "Housecall mobile" : "Housecall desktop";
+  return "Housecall browser";
+}
 export function useHousecall() {
   const api = useMemo(() => new Api(), []),
     store = useMemo(() => new MessageStore(), []),
@@ -24,6 +30,7 @@ export function useHousecall() {
   const [auth, setAuth] = useState<Auth>(),
     [channels, setChannels] = useState<Channel[]>([]),
     [members, setMembers] = useState<User[]>([]),
+    [servers, setServers] = useState<Server[]>([]),
     [channel, setChannel] = useState("");
   const [gimmeRequests, setGimmeRequests] = useState<GimmeRequestStatus[]>([]);
   const [messages, setMessages] = useState<Message[]>([]),
@@ -51,6 +58,7 @@ export function useHousecall() {
     setGimmeRequests([]);
     setChannels([]);
     setMembers([]);
+    setServers([]);
     setDevices([]);
     setReports([]);
     setNoticeList([]);
@@ -68,14 +76,16 @@ export function useHousecall() {
   const refresh = useCallback(
     async (id = selected.current) => {
       const epoch = generation.current;
-      const [cs, ms, ns] = await Promise.all([
+      const [cs, ms, ns, ss] = await Promise.all([
         api.get<{ channels: Channel[] }>("/api/channels"),
         api.get<{ members: User[] }>("/api/members"),
         api.get<{ notifications: NotificationRecord[] }>("/api/notifications"),
+        api.get<{ servers: Server[] }>("/api/servers"),
       ]);
       if (epoch !== generation.current) return;
       setChannels(cs.channels);
       setMembers(ms.members);
+      setServers(ss.servers);
       setNoticeList(ns.notifications);
       notifications.reconcile(ns.notifications);
       const active = id || cs.channels[0]?.id;
@@ -134,14 +144,9 @@ export function useHousecall() {
     await establish(
       await api.post<Auth>(path, {
         ...credentials,
-        device_name: "Housecall browser",
+        device_name: deviceName(),
       }),
     );
-  };
-  const passkeyLogin = async (username: string, origin: string) => {
-    await clearNativePush();
-    api.configure(origin);
-    await establish(await authenticatePasskey(api, username));
   };
   useEffect(() => {
     if (!auth) return;
@@ -245,6 +250,7 @@ export function useHousecall() {
     typers,
     channels,
     members,
+    servers,
     channel,
     messages,
     gimmeRequests,
@@ -257,7 +263,6 @@ export function useHousecall() {
     capabilities,
     run,
     authenticate,
-    passkeyLogin,
     logout,
     refresh,
     select,

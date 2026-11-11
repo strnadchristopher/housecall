@@ -79,6 +79,7 @@ export class VoiceSession {
   private dc?: RTCDataChannel;
   private local: MediaStream[] = [];
   private screenTrack?:MediaStreamTrack;
+  private cameraTrack?: MediaStreamTrack;
   private channelId?: string;
   private timer?: ReturnType<typeof setInterval>;
   private serial = Promise.resolve();
@@ -132,6 +133,7 @@ export class VoiceSession {
         return;
       }
       this.local.push(stream);
+      this.cameraTrack = stream.getVideoTracks()[0];
       const pc = new RTCPeerConnection({
         iceServers: [],
         bundlePolicy: "max-bundle",
@@ -240,8 +242,45 @@ export class VoiceSession {
       if (this.pc !== pc || this.screenTrack !== track) return;
       this.screenTrack = undefined;
       this.local = this.local.filter(local => local !== stream);
-      void sender.replaceTrack(original?.readyState === "live" ? original : null).catch(() => {});
+      const camera = this.cameraTrack?.readyState === "live" ? this.cameraTrack : original?.readyState === "live" ? original : null;
+      void sender.replaceTrack(camera).catch(() => {});
     };
+  }
+  /** Ends a screen share started by this session and restores the camera, if one is on. */
+  stopScreenShare() {
+    const track = this.screenTrack;
+    if (!track) return;
+    track.stop();
+    track.onended?.call(track, new Event("ended"));
+  }
+  get sharing() {
+    return this.screenTrack?.readyState === "live";
+  }
+  /** Turns the camera on or off inside a live call by swapping the outgoing video track. */
+  async camera(on: boolean, deviceId?: string) {
+    const pc = this.pc;
+    if (!pc || pc.connectionState !== "connected") throw new Error("Join the call before turning the camera on");
+    const sender = pc.getTransceivers().find(t => t.receiver.track.kind === "video")?.sender;
+    if (!sender) throw new Error("A video transceiver is required");
+    if (!on) {
+      const track = this.cameraTrack ?? (sender.track !== this.screenTrack ? sender.track : null);
+      this.cameraTrack = undefined;
+      if (track) {
+        if (sender.track === track) await sender.replaceTrack(null);
+        track.stop();
+      }
+      return;
+    }
+    if (this.cameraTrack?.readyState === "live") return;
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 }, ...(deviceId ? { deviceId: { exact: deviceId } } : {}) },
+    });
+    const track = stream.getVideoTracks()[0];
+    if (this.pc !== pc || !track) { for (const item of stream.getTracks()) item.stop(); return; }
+    this.local.push(stream);
+    this.cameraTrack = track;
+    if (!this.sharing) await sender.replaceTrack(track);
   }
   mute(muted: boolean) {
     for (const stream of this.local)
@@ -294,6 +333,7 @@ export class VoiceSession {
     this.cancellation.abort();
     this.cancellation = new AbortController();
     this.screenTrack=undefined;
+    this.cameraTrack = undefined;
     clearInterval(this.timer);
     if (this.dc) { this.dc.onmessage = null; this.dc.close(); }
     if (this.pc) {

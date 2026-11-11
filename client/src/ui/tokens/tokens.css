@@ -1,0 +1,99 @@
+/*
+ * Housecall design tokens. Direction A, "Doorway" (the default).
+ * Warm charcoal house at night; amber is the lit doorway and is reserved
+ * for live and primary states. Light scheme is fired clay, not cream.
+ *
+ * The property list is fixed by PLAN Task 0.9. Directions B and C override
+ * the same names in ./directions/. Components may use nothing else.
+ */
+@font-face {
+  font-family: "Inria Sans";
+  src: url("../fonts/inria-sans/InriaSans-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inria Sans";
+  src: url("../fonts/inria-sans/InriaSans-Italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inria Sans";
+  src: url("../fonts/inria-sans/InriaSans-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark light;
+
+  --hc-bg: #171311;
+  --hc-surface: #1f1a17;
+  --hc-surface-raised: #2b2420;
+  --hc-line: #3b322c;
+  --hc-text: #f3ebe1;
+  --hc-text-muted: #b3a597;
+  --hc-accent: #e6a94f;
+  --hc-on-accent: #1f1407;
+  --hc-live: #e6a94f;
+  --hc-danger: #ee8a78;
+  --hc-focus: #f7d9a8;
+
+  --hc-font: "Inria Sans", system-ui, sans-serif;
+
+  --hc-text-xs: 0.75rem;
+  --hc-text-sm: 0.875rem;
+  --hc-text-md: 1rem;
+  --hc-text-lg: 1.1875rem;
+  --hc-text-xl: 1.625rem;
+
+  --hc-weight-regular: 400;
+  --hc-weight-medium: 700;
+  --hc-weight-bold: 700;
+
+  --hc-leading: 1.45;
+
+  --hc-space-1: 4px;
+  --hc-space-2: 8px;
+  --hc-space-3: 12px;
+  --hc-space-4: 16px;
+  --hc-space-5: 24px;
+  --hc-space-6: 32px;
+  --hc-space-7: 44px;
+  --hc-space-8: 64px;
+
+  --hc-radius-sm: 6px;
+  --hc-radius-md: 10px;
+  --hc-radius-lg: 18px;
+
+  --hc-dur-fast: 110ms;
+  --hc-dur-base: 190ms;
+  --hc-dur-slow: 320ms;
+
+  --hc-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --hc-ease-in: cubic-bezier(0.5, 0, 1, 0.6);
+  --hc-ease-spring: cubic-bezier(0.3, 1.35, 0.55, 1);
+
+  --hc-col-left: 288px;
+  --hc-col-right: 304px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --hc-bg: #e8d3c4;
+    --hc-surface: #f3e3d7;
+    --hc-surface-raised: #fcf1e7;
+    --hc-line: #d3b9a6;
+    --hc-text: #2b1d15;
+    --hc-text-muted: #6a5143;
+    --hc-accent: #8a4a00;
+    --hc-on-accent: #fff6ea;
+    --hc-live: #8a4a00;
+    --hc-danger: #a12a1a;
+    --hc-focus: #2b1d15;
+  }
+}

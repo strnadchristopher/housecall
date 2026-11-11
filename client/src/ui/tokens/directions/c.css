@@ -1,0 +1,85 @@
+/*
+ * Direction C, "Roofline". Green-black surfaces with one terracotta accent;
+ * light scheme is pale sage. Large panel radius, slow settle with a visible
+ * overshoot. Selected with ?direction=c.
+ */
+@font-face {
+  font-family: "Apfel Grotezk";
+  src: url("../../fonts/apfel-grotezk/ApfelGrotezk-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Apfel Grotezk";
+  src: url("../../fonts/apfel-grotezk/ApfelGrotezk-Mittel.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Apfel Grotezk";
+  src: url("../../fonts/apfel-grotezk/ApfelGrotezk-Fett.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root[data-direction="c"] {
+  --hc-bg: #0e1411;
+  --hc-surface: #151d19;
+  --hc-surface-raised: #202b25;
+  --hc-line: #2e3b34;
+  --hc-text: #e8efe5;
+  --hc-text-muted: #9faea2;
+  --hc-accent: #dd8f6e;
+  --hc-on-accent: #1e0f07;
+  --hc-live: #dd8f6e;
+  --hc-danger: #ff93a3;
+  --hc-focus: #f6cdb9;
+
+  --hc-font: "Apfel Grotezk", system-ui, sans-serif;
+
+  --hc-text-xs: 0.75rem;
+  --hc-text-sm: 0.875rem;
+  --hc-text-md: 1rem;
+  --hc-text-lg: 1.1875rem;
+  --hc-text-xl: 1.75rem;
+
+  --hc-weight-regular: 400;
+  --hc-weight-medium: 500;
+  --hc-weight-bold: 700;
+
+  --hc-leading: 1.42;
+
+  --hc-radius-sm: 3px;
+  --hc-radius-md: 7px;
+  --hc-radius-lg: 24px;
+
+  --hc-dur-fast: 140ms;
+  --hc-dur-base: 260ms;
+  --hc-dur-slow: 440ms;
+
+  --hc-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --hc-ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --hc-ease-spring: cubic-bezier(0.3, 1.6, 0.5, 1);
+
+  --hc-col-left: 296px;
+  --hc-col-right: 312px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-direction="c"] {
+    --hc-bg: #dde5d9;
+    --hc-surface: #ebf1e7;
+    --hc-surface-raised: #f8fbf4;
+    --hc-line: #c0cdbd;
+    --hc-text: #132019;
+    --hc-text-muted: #4c5f53;
+    --hc-accent: #9c4626;
+    --hc-on-accent: #fff5ee;
+    --hc-live: #9c4626;
+    --hc-danger: #a81d3a;
+    --hc-focus: #132019;
+  }
+}
