@@ -1,5 +1,7 @@
 # Native authentication and invitation handoff
 
+> Update on `hc-ui`: the new interface signs in with a password only. The client-side passkey flows (`registerPasskey`, `authenticatePasskey`), their unit tests and the `@simplewebauthn/browser` dependency were removed; `transport/passkeys.ts` keeps only `cancelNativePasskey` for the Android bridge. The description below is of the earlier client and the Android bridge.
+
 Android now has a Credential Manager bridge for passkey enrollment and sign-in. The browser continues using `@simplewebauthn/browser`; Android sends the server's public-key options to the platform provider and returns its credential JSON to the existing finish endpoint. Native iOS and desktop passkey adapters are unavailable and explicitly return an unsupported result instead of attempting WebAuthn from a custom WebView origin. Password fallback remains available.
 
 This is source implementation, not an Android device acceptance receipt. Credential Manager dependencies, Kotlin compilation, app association and actual provider registration/assertion need the checks below. No signing credential, provider account, asset-links publication or device provisioning was performed for this change.

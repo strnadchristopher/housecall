@@ -41,15 +41,12 @@ export function Notifications() {
 export function Invites() {
   const identity = useIdentity();
   const [result, setResult] = useState<InviteResult>();
-  const [email, setEmail] = useState("");
   const [expires, setExpires] = useState("604800");
   const [copied, setCopied] = useState(false);
-  const needsEmail = !!result?.needsEmail;
   const create = (event: FormEvent) => {
     event.preventDefault();
     setCopied(false);
-    void identity.createInvite({ email: needsEmail ? email : undefined, expiresInSeconds: Number(expires) })
-      .then(next => setResult(next.needsEmail || next.link || next.sentTo ? next : result));
+    void identity.createInvite({ expiresInSeconds: Number(expires) }).then(next => setResult(next.link ? next : result));
   };
   const copyLink = async () => {
     if (!result?.link) return;
@@ -65,7 +62,6 @@ export function Invites() {
           <option value="604800">{copy.settings.week}</option>
         </select>
       </label>
-      {needsEmail && <Field label={copy.settings.email} type="email" value={email} onChange={event => setEmail(event.target.value)} required autoFocus />}
       <Button kind="primary" type="submit" busy={identity.busy}>{copy.settings.invite}</Button>
       {result?.link && (
         <div className="hc-copy">
@@ -73,7 +69,6 @@ export function Invites() {
           <Button onClick={() => void copyLink()}>{copied ? copy.common.copied : copy.common.copy}</Button>
         </div>
       )}
-      {result?.sentTo && <p className="hc-muted" role="status">{copy.settings.sentTo(result.sentTo)}</p>}
     </form>
   );
 }
@@ -101,7 +96,7 @@ export function Channels() {
   const [members, setMembers] = useState<string[]>([]);
   const create = (event: FormEvent) => {
     event.preventDefault();
-    void chat.createChannel(name.trim(), members).then(() => nav.set({ main: "chat", left: "channels" }));
+    void chat.createChannel(name.trim(), members).then(ok => { if (ok) nav.set({ main: "chat", left: "channels" }); });
   };
   return (
     <form className="hc-stack" data-testid="screen-channels" onSubmit={create}>
@@ -117,7 +112,7 @@ export function Roles() {
   const chat = useChat();
   const [name, setName] = useState("");
   useEffect(() => { void identity.loadRoles(); }, []);
-  const create = (event: FormEvent) => { event.preventDefault(); void identity.createRole(name.trim()).then(() => setName("")); };
+  const create = (event: FormEvent) => { event.preventDefault(); void identity.createRole(name.trim()).then(ok => { if (ok) setName(""); }); };
   return (
     <div className="hc-stack" data-testid="screen-roles">
       <form className="hc-inline" onSubmit={create}>
@@ -184,7 +179,7 @@ export function Reports() {
       {identity.reports.map(report => (
         <li key={report.id} className="hc-results__action">
           <span>
-            <small>{report.kind === "feature" ? copy.settings.feature : copy.settings.bug} · {report.status === "resolved" ? copy.settings.resolved : report.status}</small>
+            <small>{report.kind === "feature" ? copy.settings.feature : copy.settings.bug} · {report.status === "resolved" ? copy.settings.resolved : copy.settings.open}</small>
             <strong>{report.body}</strong>
             {report.logs && <code>{report.logs}</code>}
           </span>
@@ -200,9 +195,9 @@ export function About() {
   const identity = useIdentity();
   return (
     <ul className="hc-results" data-testid="screen-about">
-      {identity.capabilities.map(capability => (
+      {identity.capabilities.filter(capability => capability.id in copy.capabilities).map(capability => (
         <li key={capability.id} className="hc-pair">
-          <span>{copy.capabilities[capability.id] ?? capability.id}</span>
+          <span>{copy.capabilities[capability.id]}</span>
           <strong>{capability.available ? copy.settings.available : copy.settings.unavailable}</strong>
         </li>
       ))}

@@ -186,6 +186,7 @@ a { color: var(--hc-accent); }
 /* Messages */
 .hc-messages { flex: 1; min-height: 0; overflow-y: auto; padding: var(--hc-space-2) 0; display: flex; flex-direction: column; }
 .hc-messages > ol { margin-top: auto; }
+.hc-loading { padding: var(--hc-space-3) var(--hc-space-5); }
 .hc-day { text-align: center; font-size: var(--hc-text-xs); color: var(--hc-text-muted); padding: var(--hc-space-3) 0 var(--hc-space-1); }
 .hc-skip:focus { position: static; width: auto; height: auto; clip-path: none; opacity: 1; margin: var(--hc-space-1) var(--hc-space-4); padding: var(--hc-space-1) var(--hc-space-3); border-radius: var(--hc-radius-sm); background: var(--hc-surface-raised); }
 .hc-msg > .hc-day { grid-column: 1 / -1; }

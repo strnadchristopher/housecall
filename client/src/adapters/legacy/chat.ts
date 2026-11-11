@@ -183,7 +183,7 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
   };
 
   const store: ChatStore = {
-    online: c.online, busy: c.busy, error: c.error,
+    online: c.online, busy: c.busy, loading: c.loading, error: c.error,
     me: me ? person(me) : { id: "", name: "", owner: false },
     servers,
     conversations: c.channels
@@ -337,13 +337,13 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
       void player.load(path);
       return () => player.destroy();
     },
-    startDirect: (memberIds, name) => c.run(async () => {
+    startDirect: (memberIds, name) => c.attempt(async () => {
       const title = name.trim() || memberIds.map(nameOf).join(", ");
       const created = await c.api.post<{ id: string }>("/api/channels", { name: title, kind: memberIds.length > 1 ? "group_dm" : "dm", member_ids: memberIds });
       await c.refresh();
       await c.select(created.id);
     }),
-    createChannel: (name, memberIds) => c.run(async () => {
+    createChannel: (name, memberIds) => c.attempt(async () => {
       const created = await c.api.post<{ id: string }>("/api/channels", { name, kind: "channel", server_id: serverId, member_ids: memberIds });
       await c.refresh();
       await c.select(created.id);

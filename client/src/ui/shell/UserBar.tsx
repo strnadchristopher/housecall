@@ -12,7 +12,7 @@ export function UserBar() {
       <Avatar name={chat.me.name} />
       <span className="hc-userbar__name">
         <strong>{chat.me.name}</strong>
-        <small>{chat.online ? copy.state.connected : copy.state.offline}</small>
+        <small>{chat.online ? copy.state.connected : copy.state.reconnecting}</small>
       </span>
       <span className="hc-userbar__mail">
         <IconButton icon="mail" label={copy.userBar.messages} active={nav.left === "dm"} onClick={() => nav.set({ left: nav.left === "dm" ? "channels" : "dm", screen: "list" })} />

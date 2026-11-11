@@ -21,21 +21,12 @@ export async function signIn(page: Page, name: string) {
   await expect(page.getByTestId("screen-composer")).toBeVisible();
 }
 
-let invitationNumber = 0;
 /** Owner creates an invite from Server settings and returns the copyable link. */
 export async function invite(page: Page): Promise<string> {
   await page.getByRole("button", { name: "Server settings", exact: true }).click();
   const screen = page.getByTestId("screen-invites");
   await screen.getByRole("button", { name: "Create invite link" }).click();
   const link = page.getByTestId("invite-link");
-  const email = screen.getByLabel("Email");
-  await expect(link.or(email)).toBeVisible();
-  // The current server still asks for an address; the field appears only then.
-  if (await email.isVisible()) {
-    invitationNumber += 1;
-    await email.fill(`friend${invitationNumber}@example.test`);
-    await screen.getByRole("button", { name: "Create invite link" }).click();
-  }
   await expect(link).toHaveValue(/#invite=[a-f0-9]{64}$/);
   const value = await link.inputValue();
   await page.getByTestId("screen-settings").getByRole("button", { name: "Close", exact: true }).click();

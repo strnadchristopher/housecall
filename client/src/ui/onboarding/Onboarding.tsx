@@ -27,7 +27,7 @@ export function Onboarding() {
     else if (mode === "join") void identity.join({ address, token: identity.inviteToken || token.trim(), name: username, password });
     else void identity.setup({ address, setupToken: token.trim(), username, password });
   };
-  const others = (["sign-in", "join", "setup"] as const).filter(candidate => candidate !== mode && !(identity.adding && candidate === "setup"));
+  const others = (["sign-in", "join", "setup"] as const).filter(candidate => candidate !== mode && !(candidate === "setup" && (identity.adding || identity.inviteToken)));
   const label = { "sign-in": copy.onboarding.toSignIn, join: copy.onboarding.toJoin, setup: copy.onboarding.toSetup };
 
   return (

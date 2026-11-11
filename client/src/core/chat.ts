@@ -107,6 +107,8 @@ export interface RequestCard {
 export interface ChatState {
   online: boolean;
   busy: boolean;
+  /** The current conversation's first page has not arrived yet. */
+  loading: boolean;
   error: string;
   me: Person;
   servers: ServerEntry[];
@@ -162,6 +164,7 @@ export interface ChatStore extends ChatState {
   download(attachment: Attachment): Promise<void>;
   /** Binds a scanned video attachment to a player element; returns a disposer. */
   playVideo(element: HTMLVideoElement, messageId: string, attachmentId: string, onError: (message: string) => void): () => void;
-  startDirect(memberIds: string[], name: string): Promise<void>;
-  createChannel(name: string, memberIds: string[]): Promise<void>;
+  /** These resolve to whether the request succeeded; callers navigate or clear forms only on success. */
+  startDirect(memberIds: string[], name: string): Promise<boolean>;
+  createChannel(name: string, memberIds: string[]): Promise<boolean>;
 }

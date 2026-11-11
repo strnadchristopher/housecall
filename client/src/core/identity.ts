@@ -45,10 +45,6 @@ export interface ReportInput {
 export interface InviteResult {
   /** Copyable invite link. */
   link?: string;
-  /** Set when the server mailed the invite instead of returning a link. */
-  sentTo?: string;
-  /** The server refused to issue an invite without an email address. */
-  needsEmail?: boolean;
 }
 
 export interface Capability {
@@ -99,9 +95,9 @@ export interface IdentityProvider extends IdentityState {
   revokeDevice(id: string): Promise<void>;
   enableNotifications(): Promise<void>;
   disableBackgroundNotifications(): Promise<void>;
-  createInvite(input: { email?: string; expiresInSeconds: number }): Promise<InviteResult>;
+  createInvite(input: { expiresInSeconds: number }): Promise<InviteResult>;
   loadRoles(): Promise<void>;
-  createRole(name: string): Promise<void>;
+  createRole(name: string): Promise<boolean>;
   assignRole(roleId: string, personId: string): Promise<void>;
   deleteRole(roleId: string): Promise<void>;
   submitReport(input: ReportInput): Promise<void>;

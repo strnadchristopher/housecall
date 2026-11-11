@@ -11,7 +11,7 @@ import { copy } from "../copy";
 export function Logo({ open, label = copy.app.name }: { open?: boolean; label?: string }) {
   const which = direction();
   return (
-    <svg className="hc-logo" data-open={open ? "" : undefined} viewBox="0 0 32 32" role="img" aria-label={label}>
+    <svg className="hc-logo" data-open={open ? "" : undefined} viewBox="0 0 32 32" {...(label ? { role: "img", "aria-label": label } : { "aria-hidden": true })}>
       {which === "a" && (
         <>
           <path className="hc-logo__ink" d="M6 3H12V10.83A10 10 0 0 1 26 20V29H20V20A4 4 0 0 0 12 20V29H6Z" />

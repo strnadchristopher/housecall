@@ -105,23 +105,27 @@ export function useHousecall() {
     },
     [api, store, notifications],
   );
-  const run = useCallback(
-    async (fn: () => Promise<void>) => {
+  const attempt = useCallback(
+    /** Resolves true when `fn` succeeded, so callers navigate or clear forms only then. */
+    async (fn: () => Promise<void>): Promise<boolean> => {
       setError("");
       setBusy(true);
       try {
         await fn();
+        return true;
       } catch (e) {
         setError(e instanceof Error ? e.message : "Request failed");
         if (e instanceof ApiError && e.status === 401) {
           try { await logout(); } catch (cleanup) { setError(String(cleanup)); }
         }
+        return false;
       } finally {
         setBusy(false);
       }
     },
     [logout],
   );
+  const run = useCallback(async (fn: () => Promise<void>) => { await attempt(fn); }, [attempt]);
   const establish = async (result: Auth) => {
     generation.current++;
     api.authenticate(result);
@@ -215,12 +219,14 @@ export function useHousecall() {
       abort.abort();
     };
   }, [auth, api, store, notifications, refresh, logout, typingStore]);
+  const [loading, setLoading] = useState(false);
   const select = async (id: string) => {
     selected.current = id;
     setChannel(id);
     setMessages([]);
     setGimmeRequests([]);
-    await refresh(id);
+    setLoading(true);
+    try { await refresh(id); } finally { if (selected.current === id) setLoading(false); }
   };
   const loadDevices = async () =>
     setDevices((await api.get<{ devices: Device[] }>("/api/devices")).devices);
@@ -262,6 +268,8 @@ export function useHousecall() {
     online,
     capabilities,
     run,
+    attempt,
+    loading,
     authenticate,
     logout,
     refresh,

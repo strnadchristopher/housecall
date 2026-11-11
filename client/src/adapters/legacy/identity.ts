@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { IdentityProvider, InviteResult, UpdateState } from "../../core/identity";
 import type { Role } from "../../data/types";
-import { ApiError } from "../../transport/api";
 import { subscribeInviteLinks } from "../../transport/deepLinks";
 import { clearNativePush, enableNativePush, nativePushStatus, type NativePushStatus } from "../../transport/nativePush";
 import { reportScreenshot, submitReport } from "../../transport/reports";
@@ -108,21 +107,14 @@ export function useLegacyIdentity(
     disableBackgroundNotifications: () => c.run(async () => { await clearNativePush(); setPush(await nativePushStatus()); }),
     createInvite: async input => {
       let result: InviteResult = {};
-      try {
-        const issued = await c.api.post<{ token?: string | null; link?: string; email?: string; email_sent?: boolean }>("/api/invites", {
-          expires_in_seconds: input.expiresInSeconds, server_id: server.id || undefined, ...(input.email ? { email: input.email } : {}),
-        });
-        result = typeof issued.link === "string" && issued.link ? { link: issued.link }
-          : issued.email_sent ? { sentTo: issued.email }
-          : issued.token ? { link: `${origin()}/#invite=${encodeURIComponent(issued.token)}` } : {};
-      } catch (error) {
-        if (!input.email && error instanceof ApiError && (error.status === 400 || error.status === 422)) return { needsEmail: true };
-        await c.run(async () => { throw error; });
-      }
+      await c.run(async () => {
+        const issued = await c.api.post<{ link?: string }>("/api/invites", { expires_in_seconds: input.expiresInSeconds, server_id: server.id || undefined });
+        if (issued.link) result = { link: issued.link };
+      });
       return result;
     },
     loadRoles: () => c.run(loadRoles),
-    createRole: name => c.run(async () => { await c.api.post(`/api/servers/${server.id}/roles`, { name }); await loadRoles(); }),
+    createRole: name => c.attempt(async () => { await c.api.post(`/api/servers/${server.id}/roles`, { name }); await loadRoles(); }),
     assignRole: (roleId, personId) => c.run(async () => { await c.api.post(`/api/roles/${roleId}/members`, { user_id: personId }); await loadRoles(); }),
     deleteRole: roleId => c.run(async () => { await c.api.delete(`/api/roles/${roleId}`); await loadRoles(); }),
     submitReport: input => c.run(async () => { await submitReport(c.api, c.channel, input); }),

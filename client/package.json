@@ -7,14 +7,13 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "build:desktop": "node scripts/build-desktop.mjs",
-    "test": "vitest run tests/state.test.ts tests/native-auth.test.ts tests/voice-lifecycle.test.ts",
+    "test": "vitest run tests/state.test.ts tests/voice-lifecycle.test.ts",
     "e2e": "playwright test",
     "tauri": "tauri",
     "test:voice": "node tests/run-voice.mjs",
     "test:plex": "node tests/run-plex.mjs"
   },
   "dependencies": {
-    "@simplewebauthn/browser": "^13.3.0",
     "@tauri-apps/plugin-process": "^2.4.0",
     "@tauri-apps/plugin-updater": "^2.14.1",
     "hls.js": "^1.7.4",

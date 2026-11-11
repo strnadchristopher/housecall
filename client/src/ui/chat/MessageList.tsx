@@ -54,6 +54,7 @@ export function MessageList() {
         })}
         {chat.requests.map(request => <GimmeCard key={request.id} request={request} />)}
       </ol>
+      {chat.loading && chat.messages.length === 0 && <p className="hc-muted hc-loading" role="status">{copy.common.loading}</p>}
       <p className="hc-typing" role="status">{chat.typing.length > 0 ? copy.messages.typing(chat.typing) : ""}</p>
     </div>
   );

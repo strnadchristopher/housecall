@@ -12,7 +12,7 @@ export function FriendList() {
   const [name, setName] = useState("");
   const others = chat.friends.filter(person => person.id !== chat.me.id);
   const start = () => {
-    void chat.startDirect(picked, name).then(() => { setPicked([]); setName(""); nav.set({ main: "chat", screen: "main" }); });
+    void chat.startDirect(picked, name).then(ok => { if (!ok) return; setPicked([]); setName(""); nav.set({ main: "chat", screen: "main" }); });
   };
   return (
     <div className="hc-friends">
