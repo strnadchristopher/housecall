@@ -12,6 +12,7 @@ pub mod plex;
 pub mod profile;
 pub mod push;
 pub mod servers;
+pub mod setup;
 pub mod transcode;
 pub mod vm;
 pub mod vm_media;
@@ -292,6 +293,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .merge(vm_media::routes())
         .merge(vm_reset::routes())
         .merge(servers::routes())
+        .merge(setup::routes())
         .merge(profile::routes())
         .merge(media::routes())
         .merge(giphy::routes())
