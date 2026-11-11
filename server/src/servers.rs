@@ -1,6 +1,6 @@
 //! Private server namespaces and owner-managed roles; role mentions never widen channel access.
 use crate::{
-    bad, emit, forbidden, missing, owner, secret, ApiError, ApiResult, AppState, Principal, User,
+    bad, emit, forbidden, missing, owner, secret, ApiError, ApiResult, AppState, Principal,
 };
 use axum::{
     extract::{Path, State},
@@ -170,14 +170,16 @@ async fn members(
 ) -> ApiResult<Value> {
     let db = s.db.lock().unwrap();
     member(&db, &p.user.id, &sid)?;
-    let mut q=db.prepare("SELECT u.id,u.username,u.is_owner FROM users u JOIN server_members m ON m.user_id=u.id WHERE m.server_id=? ORDER BY u.username")?;
+    let mut q=db.prepare("SELECT u.id,u.username,u.is_owner,u.display_name,u.avatar_rev FROM users u JOIN server_members m ON m.user_id=u.id WHERE m.server_id=? ORDER BY u.username")?;
     let rows = q
         .query_map([sid], |r| {
-            Ok(User {
-                id: r.get(0)?,
-                username: r.get(1)?,
-                is_owner: r.get(2)?,
-            })
+            Ok(json!({
+                "id": r.get::<_, String>(0)?,
+                "username": r.get::<_, String>(1)?,
+                "is_owner": r.get::<_, bool>(2)?,
+                "display_name": r.get::<_, Option<String>>(3)?,
+                "avatar_rev": r.get::<_, i64>(4)?,
+            }))
         })?
         .collect::<Result<Vec<_>, _>>()?;
     Ok(Json(json!({"members":rows})))

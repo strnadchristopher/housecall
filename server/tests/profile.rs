@@ -162,6 +162,35 @@ async fn rename_succeeds_and_is_listed() {
     assert!(me["user"]["display_name"].is_null());
 }
 #[tokio::test]
+async fn server_member_list_carries_display_name_and_avatar_rev() {
+    let (api, _, _, alice) = fixture().await;
+    call(
+        &api,
+        "PATCH",
+        "/api/me",
+        &alice,
+        json!({"display_name":"Ali"}),
+    )
+    .await;
+    let members = call(
+        &api,
+        "GET",
+        "/api/servers/home/members",
+        &alice,
+        Value::Null,
+    )
+    .await
+    .json();
+    let row = members["members"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|m| m["username"] == "alice")
+        .unwrap();
+    assert_eq!(row["display_name"], "Ali");
+    assert_eq!(row["avatar_rev"], 0);
+}
+#[tokio::test]
 async fn rename_emits_member_updated_to_peers() {
     let (api, _, owner, alice) = fixture().await;
     call(
