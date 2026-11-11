@@ -42,20 +42,24 @@ test("scanned upload transcodes, streams to a member before full buffering, and 
     await a.getByRole("button", { name: "Send", exact: true }).click();
     // The video is in the message already: no Play click and no download.
     const video = b.getByTestId("uploaded-media");
+    // The E2E server is a debug build, so decrypting and serving fragments is unoptimized: first metadata takes
+    // 2-5 s and a backward seek re-buffers at a few seconds of media per second. Default 5 s polls failed about
+    // 1 run in 8; every streaming poll gets 15 s.
+    await video.waitFor({ state: "attached", timeout: 15000 });
     // preload="metadata" may stop at HAVE_METADATA until playback is requested, so wait for metadata, then play.
-    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState)).toBeGreaterThanOrEqual(1);
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState), { timeout: 15000 }).toBeGreaterThanOrEqual(1);
     await video.evaluate((v: HTMLVideoElement) => v.play());
-    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime)).toBeGreaterThan(1);
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime), { timeout: 15000 }).toBeGreaterThan(1);
     const state = await video.evaluate((v: HTMLVideoElement) => ({ time: v.currentTime, bufferedEnd: v.buffered.end(v.buffered.length - 1), frames: v.getVideoPlaybackQuality().totalVideoFrames, error: v.error?.code ?? 0 }));
     expect(state.frames).toBeGreaterThan(0); expect(state.error).toBe(0); expect(state.bufferedEnd).toBeLessThan(45);
     await video.evaluate((v: HTMLVideoElement) => { v.pause(); v.currentTime = 55; });
-    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => !v.seeking && v.readyState >= 2 && v.currentTime >= 54.9 && Array.from({ length: v.buffered.length }, (_, i) => [v.buffered.start(i), v.buffered.end(i)]).some(([a, b]) => a <= 55 && b > 55))).toBe(true);
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => !v.seeking && v.readyState >= 2 && v.currentTime >= 54.9 && Array.from({ length: v.buffered.length }, (_, i) => [v.buffered.start(i), v.buffered.end(i)]).some(([a, b]) => a <= 55 && b > 55)), { timeout: 15000 }).toBe(true);
     await video.evaluate((v: HTMLVideoElement) => v.play());
-    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime)).toBeGreaterThan(55.3);
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime), { timeout: 15000 }).toBeGreaterThan(55.3);
     const late = await video.evaluate((v: HTMLVideoElement) => ({ time: v.currentTime, frames: v.getVideoPlaybackQuality().totalVideoFrames, bufferedStart: v.buffered.start(0) }));
     expect(late.frames).toBeGreaterThan(state.frames); expect(late.bufferedStart).toBeGreaterThan(30);
     await video.evaluate((v: HTMLVideoElement) => { v.pause(); v.currentTime = 2; });
-    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => !v.seeking && v.readyState >= 2 && v.buffered.length > 0 && v.buffered.start(0) <= 2 && v.buffered.end(0) > 2)).toBe(true);
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => !v.seeking && v.readyState >= 2 && v.buffered.length > 0 && v.buffered.start(0) <= 2 && v.buffered.end(0) > 2), { timeout: 15000 }).toBe(true);
     const message = (await (await request.get(`/api/channels/${channel.id}/messages`, { headers: headers(owner) })).json()).messages[0];
     const attachment = message.attachments[0];
     for (const path of [attachment.video_path, `${attachment.video_path}/seek?time=55`, attachment.thumbnail_path]) {
