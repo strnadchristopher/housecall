@@ -371,7 +371,7 @@ fn private_file(path: &Path) -> io::Result<File> {
     options.open(path)
 }
 fn aad(id: Uuid, offset: u64, length: u32) -> Vec<u8> {
-    let mut a = b"chriscord-media-v1".to_vec();
+    let mut a = b"housecall-media-v1".to_vec();
     a.extend(id.as_bytes());
     a.extend(offset.to_be_bytes());
     a.extend(length.to_be_bytes());

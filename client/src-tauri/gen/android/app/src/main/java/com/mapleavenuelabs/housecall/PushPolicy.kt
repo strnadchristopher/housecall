@@ -1,4 +1,4 @@
-package com.littleobelisk.chriscord
+package com.mapleavenuelabs.housecall
 
 /** Pure ordering policy shared by native reconciliation and regression tests. */
 internal object PushPolicy {

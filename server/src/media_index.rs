@@ -2,7 +2,7 @@
 //! file, whole-object download, or whole-index allocation is needed to seek.
 use crate::{bad, ApiError};
 use axum::http::StatusCode;
-use chriscord_media::{Store, Upload};
+use housecall_media::{Store, Upload};
 use serde::{Deserialize, Serialize};
 use std::{
     io::{self, Read},

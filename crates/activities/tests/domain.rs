@@ -1,4 +1,4 @@
-use chriscord_activities::{session::Track, Command, Error, Kind, Session};
+use housecall_activities::{session::Track, Command, Error, Kind, Session};
 use std::collections::BTreeSet;
 fn members() -> BTreeSet<String> {
     ["alice", "bob", "cara"]
@@ -196,8 +196,8 @@ fn malformed_protocol_fields_are_rejected() {
 proptest::proptest! {
     #[test]
     fn parser_never_panics_and_normalized_sources_roundtrip(raw in ".{0,2048}") {
-        if let Ok(s) = chriscord_activities::dj::Source::parse(&raw) {
-            proptest::prop_assert_eq!(chriscord_activities::dj::Source::parse(&s.normalized()).unwrap(), s);
+        if let Ok(s) = housecall_activities::dj::Source::parse(&raw) {
+            proptest::prop_assert_eq!(housecall_activities::dj::Source::parse(&s.normalized()).unwrap(), s);
         }
     }
     #[test]
@@ -206,7 +206,7 @@ proptest::proptest! {
     }
     #[test]
     fn playback_position_is_bounded(now in 0u64..u64::MAX, position in 0u64..u64::MAX, duration in 0u64..u64::MAX) {
-        let p = chriscord_activities::session::Playback { media_id: None, playing: true, position_ms: position, anchored_at_ms: 0, duration_ms: duration };
+        let p = housecall_activities::session::Playback { media_id: None, playing: true, position_ms: position, anchored_at_ms: 0, duration_ms: duration };
         proptest::prop_assert!(p.position_at(now) <= duration);
     }
 }
@@ -224,7 +224,7 @@ fn rejects_ssrf_url_and_cli_injection_sources() {
         "https://youtu.be/dQw4w9WgXcQ/extra",
     ] {
         assert!(
-            chriscord_activities::dj::Source::parse(raw).is_err(),
+            housecall_activities::dj::Source::parse(raw).is_err(),
             "accepted {raw}"
         );
     }

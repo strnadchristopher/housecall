@@ -22,7 +22,7 @@ Plex's token stays in an `X-Plex-Token` server header; it is never included in r
 
 DJ `Resolver::resolve` accepts strictly validated YouTube/SoundCloud track URLs or text search. Spotify track URLs fetch catalog title/artist with a server-held token and resolve a YouTube search. This is a candidate match, not an acoustic identity guarantee; a confidence/review UI and fallback matching remain outstanding. `yt-dlp` executes without a shell or user config, with process timeout and bounded output. Short-lived CDN URLs are server-private and excluded from serialized responses. Fetch them only from an isolated media worker with controlled outbound networking; the resolver itself is not a complete SSRF sandbox for extractor redirects. See [yt-dlp CLI documentation](https://github.com/yt-dlp/yt-dlp) and [Spotify Get Track](https://developer.spotify.com/documentation/web-api/reference/get-track). Spotify access-token acquisition/refresh is not yet supplied by this adapter.
 
-Switchboard uses the prescribed local endpoint, `model: role:chat`, and `X-Inference-Task: chriscord.dj`. Song titles are sent as untrusted metadata. A localhost-only override enables fixtures. Banter generation and local speech are implemented adapters; scheduling banter between actual streamed songs remains outstanding. See [DJ-REFERENCE.md](DJ-REFERENCE.md).
+Switchboard uses the prescribed local endpoint, `model: role:chat`, and `X-Inference-Task: housecall.dj`. Song titles are sent as untrusted metadata. A localhost-only override enables fixtures. Banter generation and local speech are implemented adapters; scheduling banter between actual streamed songs remains outstanding. See [DJ-REFERENCE.md](DJ-REFERENCE.md).
 
 ## Gimme v2
 

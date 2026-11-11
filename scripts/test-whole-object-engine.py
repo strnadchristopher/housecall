@@ -49,13 +49,13 @@ def main():
                 port_probe.bind(('127.0.0.1',0)); port=port_probe.getsockname()[1]
             origin=f'http://127.0.0.1:{port}'
             setup=secrets.token_hex(32)
-            env={'PATH':os.environ.get('PATH','/usr/bin:/bin'),'CHRISCORD_BIND':f'127.0.0.1:{port}',
-                'CHRISCORD_DATABASE':str(work/'api.sqlite'),'CHRISCORD_MEDIA_DIR':str(work/'encrypted'),
-                'CHRISCORD_MEDIA_KEY':secrets.token_hex(32),'CHRISCORD_SETUP_TOKEN':setup,
-                'CHRISCORD_MEDIA_SCANNER':'withsecure','CHRISCORD_FSANALYZE':str(args.engine),
-                'CHRISCORD_SCAN_TIMEOUT_SECONDS':'900','CHRISCORD_TRANSCODE_TIMEOUT_SECONDS':'600','GIMME_DRY_RUN':'true','DJ_ENABLED':'false'}
+            env={'PATH':os.environ.get('PATH','/usr/bin:/bin'),'HOUSECALL_BIND':f'127.0.0.1:{port}',
+                'HOUSECALL_DATABASE':str(work/'api.sqlite'),'HOUSECALL_MEDIA_DIR':str(work/'encrypted'),
+                'HOUSECALL_MEDIA_KEY':secrets.token_hex(32),'HOUSECALL_SETUP_TOKEN':setup,
+                'HOUSECALL_MEDIA_SCANNER':'withsecure','HOUSECALL_FSANALYZE':str(args.engine),
+                'HOUSECALL_SCAN_TIMEOUT_SECONDS':'900','HOUSECALL_TRANSCODE_TIMEOUT_SECONDS':'600','GIMME_DRY_RUN':'true','DJ_ENABLED':'false'}
             with (work/'backend.log').open('wb') as log:
-                backend=subprocess.Popen([str(ROOT/'target/release/chriscord-server')],env=env,stdout=log,stderr=log)
+                backend=subprocess.Popen([str(ROOT/'target/release/housecall-server')],env=env,stdout=log,stderr=log)
                 processes.callback(stop_backend)
             auth=None
             last_request=0.0

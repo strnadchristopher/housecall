@@ -41,7 +41,7 @@ fn client() -> Result<Client, ApiError> {
         .timeout(Duration::from_secs(15))
         .redirect(reqwest::redirect::Policy::none())
         .https_only(true)
-        .user_agent("Chriscord/0.1")
+        .user_agent("Housecall/0.1")
         .build()
         .map_err(|_| upstream())
 }

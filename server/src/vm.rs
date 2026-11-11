@@ -6,7 +6,7 @@ use axum::{
     routing::post,
     Extension, Json, Router,
 };
-use chriscord_activities::{Kind, Session};
+use housecall_activities::{Kind, Session};
 use rusqlite::{params, OptionalExtension};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -19,8 +19,8 @@ pub struct Gateway {
 }
 pub fn configure(state: &mut AppState) -> Result<(), String> {
     match (
-        std::env::var("CHRISCORD_VM_QMP_SOCKET").ok(),
-        std::env::var("CHRISCORD_VM_CHANNEL_ID").ok(),
+        std::env::var("HOUSECALL_VM_QMP_SOCKET").ok(),
+        std::env::var("HOUSECALL_VM_CHANNEL_ID").ok(),
     ) {
         (None, None) => Ok(()),
         (Some(socket), Some(channel)) if cfg!(unix) => {
@@ -30,7 +30,7 @@ pub fn configure(state: &mut AppState) -> Result<(), String> {
                     "VM input requires an absolute Unix socket and a configured channel".into(),
                 );
             }
-            let reset_socket = std::env::var("CHRISCORD_VM_SUPERVISOR_SOCKET")
+            let reset_socket = std::env::var("HOUSECALL_VM_SUPERVISOR_SOCKET")
                 .ok()
                 .map(PathBuf::from);
             if reset_socket
@@ -47,7 +47,7 @@ pub fn configure(state: &mut AppState) -> Result<(), String> {
             Ok(())
         }
         _ => Err(
-            "Set both CHRISCORD_VM_QMP_SOCKET and CHRISCORD_VM_CHANNEL_ID on Unix, or neither"
+            "Set both HOUSECALL_VM_QMP_SOCKET and HOUSECALL_VM_CHANNEL_ID on Unix, or neither"
                 .into(),
         ),
     }
@@ -386,7 +386,7 @@ mod tests {
                 .apply(
                     "controller",
                     0,
-                    chriscord_activities::Command::RequestControl {},
+                    housecall_activities::Command::RequestControl {},
                     now() as u64,
                 )
                 .unwrap();

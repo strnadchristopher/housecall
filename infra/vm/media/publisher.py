@@ -167,7 +167,7 @@ def capture(config, generation, pipe):
         bus.connect("message::eos", fail)
         if pipeline.set_state(Gst.State.READY) == Gst.StateChangeReturn.FAILURE:
             raise RuntimeError("capture initialization failed")
-        channel = rtc.emit("create-data-channel", "chriscord-signaling", None)
+        channel = rtc.emit("create-data-channel", "housecall-signaling", None)
         if channel is None:
             raise RuntimeError("data channel unavailable")
         channel.connect("on-message-string", lambda _, text: dispatch(receive, text))

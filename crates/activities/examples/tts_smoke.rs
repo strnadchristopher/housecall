@@ -1,4 +1,4 @@
-use chriscord_activities::dj::{PlaceholderTts, Tts};
+use housecall_activities::dj::{PlaceholderTts, Tts};
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
     let output = std::env::args().nth(1).expect("output WAV path required");
@@ -6,7 +6,7 @@ async fn main() {
         espeak_ng: "espeak-ng".into(),
     }
     .synthesize(
-        "Chriscord local placeholder voice. Next up, a song for our friends.",
+        "Housecall local placeholder voice. Next up, a song for our friends.",
         std::path::Path::new(&output),
     )
     .await

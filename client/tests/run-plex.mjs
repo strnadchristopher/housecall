@@ -11,8 +11,8 @@ const child = spawn(
     stdio: "inherit",
     env: {
       ...process.env,
-      CHRISCORD_TEST_VOICE: "1",
-      CHRISCORD_TEST_PLEX: "1",
+      HOUSECALL_TEST_VOICE: "1",
+      HOUSECALL_TEST_PLEX: "1",
     },
   },
 );

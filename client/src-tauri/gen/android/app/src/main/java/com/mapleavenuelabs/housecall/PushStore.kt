@@ -1,4 +1,4 @@
-package com.littleobelisk.chriscord
+package com.mapleavenuelabs.housecall
 
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
@@ -14,7 +14,7 @@ import javax.crypto.spec.GCMParameterSpec
 
 /** Session and replay ledger never leave app-private, backup-excluded storage in plaintext. */
 internal object PushStore {
-    private const val ALIAS = "chriscord.push.session.v1"
+    private const val ALIAS = "housecall.push.session.v1"
     private fun file(context: Context) = AtomicFile(File(context.noBackupFilesDir, "push-v1.enc"))
     private fun key(): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }

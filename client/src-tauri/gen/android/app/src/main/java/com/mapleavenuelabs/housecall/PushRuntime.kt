@@ -1,4 +1,4 @@
-package com.littleobelisk.chriscord
+package com.mapleavenuelabs.housecall
 
 import android.app.Application
 import android.app.NotificationChannel
@@ -56,9 +56,9 @@ class PushWorker(context: Context, parameters: WorkerParameters) : Worker(contex
 internal class PushHttpError(val status: Int) : Exception("Push request rejected")
 
 internal object PushRuntime {
-    private const val WORK = "chriscord-native-push"
+    private const val WORK = "housecall-native-push"
     private const val CHANNEL = "private-mentions"
-    private const val PREFIX = "chriscord-push:"
+    private const val PREFIX = "housecall-push:"
     private const val MAX_LEDGER = 4096
     // Network reconciliation is serialized; logout does not acquire this lock.
     private val reconcileLock = Any()
@@ -314,7 +314,7 @@ internal object PushRuntime {
                     val intent = Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
                     val open = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                     val notification = NotificationCompat.Builder(context, CHANNEL)
-                        .setSmallIcon(android.R.drawable.ic_dialog_email).setContentTitle("Chriscord")
+                        .setSmallIcon(android.R.drawable.ic_dialog_email).setContentTitle("Housecall")
                         .setContentText("You have a new mention").setContentIntent(open).setAutoCancel(true)
                         .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setOnlyAlertOnce(true).build()
                     manager.notify(PREFIX + event.message, 0, notification)

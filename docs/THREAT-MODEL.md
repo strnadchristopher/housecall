@@ -1,4 +1,4 @@
-# Chriscord threat model
+# Housecall threat model
 
 Status: implementation in progress; this is a threat model and acceptance ledger, not a security certification.
 

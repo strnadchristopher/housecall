@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 export async function startPlexFixture() {
-  const directory = await mkdtemp(join(tmpdir(), "chriscord-plex-fixture-"));
+  const directory = await mkdtemp(join(tmpdir(), "housecall-plex-fixture-"));
   await promisify(execFile)(
     "ffmpeg",
     [

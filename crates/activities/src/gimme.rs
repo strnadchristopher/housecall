@@ -105,7 +105,7 @@ impl Gimme {
             .client
             .get(self.endpoint(path)?)
             .header("x-api-key", &self.key)
-            .header("User-Agent", "Chriscord-Gimme/0.1"))
+            .header("User-Agent", "Housecall-Gimme/0.1"))
     }
     /// In dry-run mode discovery uses explicit v2 fixture documents supplied by the caller.
     pub fn discover_fixture(
@@ -193,7 +193,7 @@ impl Gimme {
             .post(self.endpoint(path)?)
             .header("x-api-key", &self.key)
             .header("Idempotency-Key", idempotency_key)
-            .header("User-Agent", "Chriscord-Gimme/0.1")
+            .header("User-Agent", "Housecall-Gimme/0.1")
             .json(&body)
             .send()
             .await

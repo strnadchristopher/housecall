@@ -27,11 +27,11 @@ def main():
     command = ['sudo','-n','docker','run','--rm','--name',run.name,'--device','/dev/kvm',
                '--memory','3072m','--memory-swap','3072m','--cpus','1','--pids-limit','256',
                '-v',f'{run}:/image','-v',f'{ROOT}/infra/vm/desktop:/fixture:ro',
-               'chriscord-vm-prepare:local','-a','/image/base.qcow2',
+               'housecall-vm-prepare:local','-a','/image/base.qcow2',
                '--install','xserver-xorg,xinit,x11-xserver-utils,python3-tk,alsa-utils,fonts-dejavu-core',
-               '--upload','/fixture/fixture.py:/opt/chriscord-fixture.py',
-               '--upload','/fixture/fixture.service:/etc/systemd/system/chriscord-fixture.service',
-               '--run-command','systemctl enable chriscord-fixture.service']
+               '--upload','/fixture/fixture.py:/opt/housecall-fixture.py',
+               '--upload','/fixture/fixture.service:/etc/systemd/system/housecall-fixture.service',
+               '--run-command','systemctl enable housecall-fixture.service']
     # virt-customize's isolated appliance uses networking for Debian packages only.
     # It never boots the supplied guest and never attaches an existing VPN namespace.
     def interrupted(_signal, _frame):

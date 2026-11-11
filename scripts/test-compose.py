@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Exercise only the disposable chriscord-sprint-compose project, never the default deployment."""
+"""Exercise only the disposable housecall-sprint-compose project, never the default deployment."""
 from pathlib import Path
 import shutil
 import hashlib,json,os,secrets,signal,socket,subprocess,time,urllib.error,urllib.request
 ROOT=Path(__file__).resolve().parents[1]
-PROJECT='chriscord-sprint-compose'
+PROJECT='housecall-sprint-compose'
 RUNTIME=ROOT/'.runtime'/'compose-fixture'
 EVIDENCE=ROOT/'evidence'/'compose-runtime.json'
 
@@ -19,14 +19,14 @@ def main():
     envfile=RUNTIME/'fixture.env'
     fd=os.open(envfile,os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
     with os.fdopen(fd,'w') as f:
-        f.write(f'CHRISCORD_SETUP_TOKEN={token}\nCHRISCORD_MEDIA_KEY={secrets.token_hex(32)}\nCHRISCORD_PORT={port}\nCHRISCORD_ORIGIN=http://localhost:{port}\nCHRISCORD_PUBLIC_URL=http://localhost:{port}\nSFU_PORT={udp}\nLO_PROXY_NETWORK={PROJECT}-proxy\nCHRISCORD_DATA_DIR={data_dir}\n')
+        f.write(f'HOUSECALL_SETUP_TOKEN={token}\nHOUSECALL_MEDIA_KEY={secrets.token_hex(32)}\nHOUSECALL_PORT={port}\nHOUSECALL_ORIGIN=http://localhost:{port}\nHOUSECALL_PUBLIC_URL=http://localhost:{port}\nSFU_PORT={udp}\nLO_PROXY_NETWORK={PROJECT}-proxy\nHOUSECALL_DATA_DIR={data_dir}\n')
     # Reuse only the signature cache created by our earlier isolated scanner test.
     # Its original scanner must be stopped before this runner starts.
     override=RUNTIME/'override.yaml'
-    override.write_text('volumes:\n  scanner-db:\n    external: true\n    name: chriscord-sprint-scanner_scanner-db\n')
+    override.write_text('volumes:\n  scanner-db:\n    external: true\n    name: housecall-sprint-scanner_scanner-db\n')
     base=['sudo','-n','docker','--host','unix:///var/run/docker.sock','compose','--env-file',str(envfile),'-p',PROJECT,'-f',str(ROOT/'compose.yaml'),'-f',str(override)]
     docker=['sudo','-n','docker','--host','unix:///var/run/docker.sock']
-    clean_env={k:v for k,v in os.environ.items() if not k.startswith(('CHRISCORD_','SFU_','PLEX_','GIMME_','GIPHY_','SWITCHBOARD_','PUSH_','APNS_','FCM_','GLUETUN_','VM_','DJ_','SPOTIFY_','YT_DLP_','RESEND_'))}
+    clean_env={k:v for k,v in os.environ.items() if not k.startswith(('HOUSECALL_','SFU_','PLEX_','GIMME_','GIPHY_','SWITCHBOARD_','PUSH_','APNS_','FCM_','GLUETUN_','VM_','DJ_','SPOTIFY_','YT_DLP_','RESEND_'))}
     checks=[]
     completed=False
     proxy_network_created=False
@@ -81,7 +81,7 @@ def main():
         while cli('exec','-T','scanner','clamdscan','--ping','1',check=False).returncode:
             if time.monotonic()>deadline:raise RuntimeError('scanner readiness timeout')
             time.sleep(1)
-        data=(b'Chriscord isolated encrypted container fixture\n'*24000)
+        data=(b'Housecall isolated encrypted container fixture\n'*24000)
         _,upload,_=call('/api/uploads',{'channel_id':'general','filename':'fixture.txt','length':str(len(data))},owner)
         uid=upload['id']
         for offset in range(0,len(data),700000):
@@ -96,7 +96,7 @@ def main():
         verify('loopback link SSRF rejected',call('/api/embeds?url=https%3A%2F%2F127.0.0.1%2F',auth=owner)[0]==400)
         verify('delete encrypted file',call('/api/uploads/'+uid,auth=owner,method='DELETE')[0]==200)
         verify('deleted ciphertext unavailable',call('/api/media/'+uid,auth=friend)[0]==404)
-        if os.environ.get('CHRISCORD_LARGE_BROWSER')=='1':
+        if os.environ.get('HOUSECALL_LARGE_BROWSER')=='1':
             result=subprocess.run(['node',str(ROOT/'scripts/test-large-browser.mjs'),origin],cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=780)
             (ROOT/'evidence'/'client-multigib.log').write_text(result.stdout)
             verify('browser multi-GiB interrupted resume',result.returncode==0)

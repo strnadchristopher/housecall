@@ -17,7 +17,7 @@ function shell(opts: { owner?: boolean; phase?: Phase; dryRun?: boolean; channel
   const owner = opts.owner ?? true;
   const channels = opts.channels ?? ['general', 'movie-night', 'games', 'Maya', 'Weekend plans'];
   return {
-    id: 'shell', title: `Chriscord — ${ME}`, phase: opts.phase ?? 'ready',
+    id: 'shell', title: `Housecall — ${ME}`, phase: opts.phase ?? 'ready',
     items: channels.map((name, i) => ({ id: `ch${i}`, text: name, actions: [{ id: 'select', label: `Open ${name}` }] })),
     actions: [
       { id: 'direct-messages', label: 'New DM' },
@@ -109,7 +109,7 @@ function auth(view: 'login' | 'invite' | 'setup', error?: string): P {
   ];
   return {
     id: view, phase: 'ready', error,
-    title: view === 'setup' ? 'Initialize Chriscord' : view === 'invite' ? 'Accept invitation' : 'Sign in to Chriscord',
+    title: view === 'setup' ? 'Initialize Housecall' : view === 'invite' ? 'Accept invitation' : 'Sign in to Housecall',
     fields, submitLabel: view === 'setup' ? 'Initialize' : view === 'invite' ? 'Join' : 'Sign in',
     actions: [{ id: 'passkey', label: 'Sign in with passkey' }, { id: 'login', label: 'Sign in' }, { id: 'invite', label: 'Use invitation' }, { id: 'setup', label: 'First-run setup' }],
   };
@@ -223,7 +223,7 @@ export const scenes: Scene[] = [
       { id: 'g2', text: 'Severance: Subscribed — episode discovery scheduled; downloads not yet verified' },
       { id: 'g3', text: 'Heat: Already available in Plex' },
       { id: 'g4', text: 'Obscure 1971 thing: Gimme completed the search without a usable result' },
-      { id: 'g5', text: 'The Thing 1982: Confirmation required — no download was started by Chriscord' },
+      { id: 'g5', text: 'The Thing 1982: Confirmation required — no download was started by Housecall' },
     ] })]) },
   { name: 'uploads-empty', note: 'Pick a file', signedIn: true, screens: withChat([page({ id: 'uploads', title: 'Resumable upload', phase: 'ready', fields: [{ name: 'file', label: 'File', type: 'file' }], submitLabel: 'Upload', items: [],
     actions: [{ id: 'pause', label: 'Pause' }, { id: 'derive', label: 'Prepare video and thumbnail', disabled: true }, { id: 'attach', label: 'Attach to message', disabled: true }] })]) },
@@ -251,7 +251,7 @@ export const scenes: Scene[] = [
   ] })]) },
   { name: 'devices', note: 'Sessions and passkeys', signedIn: true, screens: withChat([page({ id: 'devices', title: 'Device sessions', phase: 'ready',
     actions: [{ id: 'passkey', label: 'Add passkey', disabled: false }],
-    items: [{ id: 'd1', text: 'Chriscord browser (this device)', actions: [{ id: 'revoke', label: 'Revoke' }] }, { id: 'd2', text: 'Chriscord desktop', actions: [{ id: 'revoke', label: 'Revoke' }] }, { id: 'd3', text: 'Pixel phone', actions: [{ id: 'revoke', label: 'Revoke' }] }] })]) },
+    items: [{ id: 'd1', text: 'Housecall browser (this device)', actions: [{ id: 'revoke', label: 'Revoke' }] }, { id: 'd2', text: 'Housecall desktop', actions: [{ id: 'revoke', label: 'Revoke' }] }, { id: 'd3', text: 'Pixel phone', actions: [{ id: 'revoke', label: 'Revoke' }] }] })]) },
   { name: 'notifications', note: 'Notification list', signedIn: true, screens: withChat([page({ id: 'notifications', title: 'Notifications', phase: 'ready', actions: [{ id: 'enable', label: 'Enable desktop notifications' }],
     items: [{ id: 'n1', text: 'Message 01JF6Q0Y1V4M7W' }, { id: 'n2', text: 'Message 01JF6Q2KDXN8B3' }] })]) },
   { name: 'notifications-empty', note: 'Nothing new', signedIn: true, screens: withChat([page({ id: 'notifications', title: 'Notifications', phase: 'ready', actions: [{ id: 'enable', label: 'Enable desktop notifications' }], items: [] })]) },

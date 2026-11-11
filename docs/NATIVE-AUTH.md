@@ -6,11 +6,11 @@ This is source implementation, not an Android device acceptance receipt. Credent
 
 ## Android configuration and trust
 
-Set the public build setting `CHRISCORD_AUTH_ORIGIN=https://chat.example.test` to the intended self-hosted server. It must be the exact lowercase HTTPS origin, without a port, path or trailing slash. An unset value leaves native passkeys and native invitation links unconfigured. This one-server pin applies to the native bridge; password sign-in retains the existing server selection behavior.
+Set the public build setting `HOUSECALL_AUTH_ORIGIN=https://chat.example.test` to the intended self-hosted server. It must be the exact lowercase HTTPS origin, without a port, path or trailing slash. An unset value leaves native passkeys and native invitation links unconfigured. This one-server pin applies to the native bridge; password sign-in retains the existing server selection behavior.
 
 The build generates `BuildConfig.AUTH_ORIGIN`, the HTTPS App Link host and the app's Digital Asset Links include statement. The bridge derives `android:apk-key-hash:<base64url SHA-256 certificate digest>` from the installed APK's signing certificate. It requires Android 9/API 28 or newer and one current APK signing certificate. Provider availability is checked by the OS operation; `nativePasskeyStatus()` does not claim a provider or domain association has been verified. The two pinned AndroidX Credential Manager artifacts are version 1.5.0; the Play Services integration enables supported providers on older Android versions.
 
-Configure server `CHRISCORD_ORIGIN` to the same HTTPS origin and `CHRISCORD_ANDROID_PASSKEY_ORIGINS` to the explicit comma-separated approved APK certificate origins. The server returns its approved Android origins in `android_origins` on both start responses. The TypeScript and Kotlin adapters require that list to include the installed app, and require the returned RP ID to equal the pinned hostname. The server still verifies the cryptographic response, exact origin, challenge lifetime, single use, and registration account/session binding. No client-supplied origin grants server trust.
+Configure server `HOUSECALL_ORIGIN` to the same HTTPS origin and `HOUSECALL_ANDROID_PASSKEY_ORIGINS` to the explicit comma-separated approved APK certificate origins. The server returns its approved Android origins in `android_origins` on both start responses. The TypeScript and Kotlin adapters require that list to include the installed app, and require the returned RP ID to equal the pinned hostname. The server still verifies the cryptographic response, exact origin, challenge lifetime, single use, and registration account/session binding. No client-supplied origin grants server trust.
 
 Credential Manager receives no `origin` or `clientDataHash` override. An ordinary app must not impersonate an HTTPS browser origin; Android responses use the certificate origin. [Android origin verification](https://developer.android.com/identity/passkeys/create-passkeys), [privileged origin overrides](https://developer.android.com/identity/sign-in/privileged-apps).
 
@@ -25,7 +25,7 @@ Provision `https://<RP host>/.well-known/assetlinks.json` with the following pub
     ],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.littleobelisk.chriscord",
+      "package_name": "com.mapleavenuelabs.housecall",
       "sha256_cert_fingerprints": ["REPLACE_WITH_APPROVED_CERTIFICATE_SHA256"]
     }
   }
@@ -60,24 +60,24 @@ cd client
 ./node_modules/.bin/tsc --noEmit
 ```
 
-From `client/src-tauri/gen/android`, run the unit-test task matching the generated architecture flavor (currently `arm64`), after supplying `CHRISCORD_AUTH_ORIGIN` for the isolated test RP:
+From `client/src-tauri/gen/android`, run the unit-test task matching the generated architecture flavor (currently `arm64`), after supplying `HOUSECALL_AUTH_ORIGIN` for the isolated test RP:
 
 ```sh
-./gradlew :app:testArm64DebugUnitTest --tests com.littleobelisk.chriscord.NativeAuthPolicyTest --no-daemon --max-workers=1
+./gradlew :app:testArm64DebugUnitTest --tests com.mapleavenuelabs.housecall.NativeAuthPolicyTest --no-daemon --max-workers=1
 ```
 
 Rebuild through the existing Tauri Android path, rather than assuming a Kotlin-only build refreshes the Rust command handler:
 
 ```sh
 cd client
-CHRISCORD_AUTH_ORIGIN=https://chat.example.test ./node_modules/.bin/tauri android build --debug --target aarch64
+HOUSECALL_AUTH_ORIGIN=https://chat.example.test ./node_modules/.bin/tauri android build --debug --target aarch64
 ```
 
 On an authorized test device with a configured credential provider, screen lock and correctly associated isolated RP, install the resulting APK. These commands inspect/refresh App Links; they do not force-approve a failed association:
 
 ```sh
-adb shell pm verify-app-links --re-verify com.littleobelisk.chriscord
-adb shell pm get-app-links com.littleobelisk.chriscord
+adb shell pm verify-app-links --re-verify com.mapleavenuelabs.housecall
+adb shell pm get-app-links com.mapleavenuelabs.housecall
 ```
 
 After asynchronous verification, require `verified` for the actual RP host. To test link routing without exposing a live invite in shell history, use this deliberately invalid fixture token against the configured test host:

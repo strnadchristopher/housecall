@@ -1,7 +1,7 @@
 import type { ReactNode, SVGProps } from 'react';
 
 /**
- * Chriscord house icons. Drawn on a 20px grid in one construction:
+ * Housecall house icons. Drawn on a 20px grid in one construction:
  * faceted geometry. Rectangles take a 2px chamfer instead of a radius,
  * circles are cut as octagons, and dots are diamonds. Miter joins, butt caps.
  * Nothing here comes from an icon pack.

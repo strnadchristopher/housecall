@@ -1,11 +1,11 @@
 [package]
-name = "chriscord-client"
+name = "housecall-client"
 version = "0.1.2"
-description = "Private Chriscord client"
+description = "Private Housecall client"
 edition = "2021"
 publish = false
 [lib]
-name = "chriscord_client_lib"
+name = "housecall_client_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

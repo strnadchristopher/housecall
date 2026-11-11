@@ -9,7 +9,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("native-auth")
         .setup(|app, api| {
             app.manage(Auth(api.register_android_plugin(
-                "com.littleobelisk.chriscord",
+                "com.mapleavenuelabs.housecall",
                 "NativeAuthPlugin",
             )?));
             Ok(())

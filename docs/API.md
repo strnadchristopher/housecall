@@ -29,7 +29,7 @@ Passwords 12–256 bytes; usernames 2–32 ASCII letters/digits/underscore/dash.
 
 ## Encrypted resumable uploads
 
-Requires `CHRISCORD_MEDIA_KEY` (64 hex chars) and optional `CHRISCORD_MEDIA_DIR` (default `data/media`). `CHRISCORD_CLAMD_SOCKET` enables a local ClamAV INSTREAM scanner; without it completion fails closed with 423 and media stays quarantined. Scanner size/time limits can reject large files; quarantine is never bypassed.
+Requires `HOUSECALL_MEDIA_KEY` (64 hex chars) and optional `HOUSECALL_MEDIA_DIR` (default `data/media`). `HOUSECALL_CLAMD_SOCKET` enables a local ClamAV INSTREAM scanner; without it completion fails closed with 423 and media stays quarantined. Scanner size/time limits can reject large files; quarantine is never bypassed.
 
 - `POST /api/uploads`: `{channel_id,filename,length:"decimal u64"}` → `{id,channel_id,filename,length:"...",offset:"...",status:"uploading"|"quarantined"|"ready"}`. Membership required.
 - `GET /api/uploads/:id`: owner-only resumable metadata.
@@ -40,7 +40,7 @@ Requires `CHRISCORD_MEDIA_KEY` (64 hex chars) and optional `CHRISCORD_MEDIA_DIR`
 
 ## Passkeys
 
-`CHRISCORD_ORIGIN=https://your-host` sets exact WebAuthn origin and hostname RP ID. Only `http://localhost:<port>` is allowed for development. Challenges expire after two minutes, remain server-side, and are consumed once. Registration requires an existing authenticated session from invite/password onboarding.
+`HOUSECALL_ORIGIN=https://your-host` sets exact WebAuthn origin and hostname RP ID. Only `http://localhost:<port>` is allowed for development. Challenges expire after two minutes, remain server-side, and are consumed once. Registration requires an existing authenticated session from invite/password onboarding.
 
 - `POST /api/passkeys/register/start`: authenticated; no body → `{challenge_id,options}`. Options are WebAuthn `CreationChallengeResponse` with `publicKey`.
 - `POST /api/passkeys/register/finish`: authenticated `{challenge_id,credential}` → `{ok,credential_id}`. Credential is standard JSON registration credential (base64url binary fields). Session and account must match start.
@@ -84,7 +84,7 @@ When SFU is configured, activity launch/read/control/stop requires a connected v
 
 ## Asynchronous CPU video derivatives
 
-With encrypted media configured and `CHRISCORD_FFMPEG` (default `/usr/bin/ffmpeg`) present, `capabilities.transcode` is true. `CHRISCORD_TRANSCODE_TIMEOUT_SECONDS` defaults to 21600 (maximum86400). Jobs are persisted in SQLite, processed one at a time, with at most32 queued/running jobs. Restart marks interrupted jobs failed and retryable; re-POST the source to retry.
+With encrypted media configured and `HOUSECALL_FFMPEG` (default `/usr/bin/ffmpeg`) present, `capabilities.transcode` is true. `HOUSECALL_TRANSCODE_TIMEOUT_SECONDS` defaults to 21600 (maximum86400). Jobs are persisted in SQLite, processed one at a time, with at most32 queued/running jobs. Restart marks interrupted jobs failed and retryable; re-POST the source to retry.
 
 - `POST /api/uploads/:id/derive` requires a ready scanned upload owned by the caller plus current channel membership. Returns **202** `{id,status:"queued"}`. An active job for that source returns409; a full queue returns429.
 - `GET /api/media-jobs/:id` requires job ownership and channel membership. Returns `{id,source_id,owner_id,channel_id,status:"queued"|"running"|"ready"|"failed",error:null|string,retryable,created_at,updated_at}`. Ready jobs add `video_path` and `thumbnail_path`.
@@ -108,6 +108,6 @@ Set both `PLEX_URL` and `PLEX_TOKEN` to enable the provider; `capabilities.plex`
 - `GET /api/channels/:id/plex/metadata/:rating_key` → one item with subtitle choices.
 - `POST /api/channels/:id/plex/playback` with `{rating_key,subtitle_id?:string}` → `{playback_id,rating_key,manifest_url}`. The host first selects the same media ID in the synchronized activity; only the host may select subtitles. Peers reuse the shared playback.
 - `GET /api/channels/:id/plex/playback` returns the current descriptor. Host-only `DELETE` stops it; stopping the activity also closes its gateway session.
-- `GET /api/channels/:id/plex/resources/:opaque_id` streams authorized HLS manifests/segments and subtitle resources. Every rewritten URI stays on the authenticated Chriscord origin; HLS requests must include the bearer and device-key headers. Segment streaming rechecks the device session and voice/activity access every second. Provider URLs/tokens never appear in client manifests.
+- `GET /api/channels/:id/plex/resources/:opaque_id` streams authorized HLS manifests/segments and subtitle resources. Every rewritten URI stays on the authenticated Housecall origin; HLS requests must include the bearer and device-key headers. Segment streaming rechecks the device session and voice/activity access every second. Provider URLs/tokens never appear in client manifests.
 
 Play/pause/seek remain revision-checked activity commands. Playback descriptors emit `plex.playback`; clients use the activity clock for synchronization. The gateway does not by itself establish playback quality or synchronization measurements; those require the three-client fixture/live-provider evidence.

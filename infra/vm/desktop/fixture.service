@@ -1,8 +1,8 @@
 [Unit]
-Description=Chriscord synthetic desktop acceptance fixture
+Description=Housecall synthetic desktop acceptance fixture
 After=systemd-user-sessions.service
 [Service]
-ExecStart=/usr/bin/xinit /usr/bin/python3 /opt/chriscord-fixture.py -- /usr/bin/X :0 -nolisten tcp vt7
+ExecStart=/usr/bin/xinit /usr/bin/python3 /opt/housecall-fixture.py -- /usr/bin/X :0 -nolisten tcp vt7
 Restart=on-failure
 [Install]
 WantedBy=multi-user.target

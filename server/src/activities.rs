@@ -6,7 +6,7 @@ use axum::{
     routing::{get, post},
     Extension, Json, Router,
 };
-use chriscord_activities::{Command, Kind, Session};
+use housecall_activities::{Command, Kind, Session};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -17,7 +17,7 @@ pub async fn authorized_snapshot(
     s: &AppState,
     p: &Principal,
     channel: &str,
-) -> Result<chriscord_activities::Snapshot, ApiError> {
+) -> Result<housecall_activities::Snapshot, ApiError> {
     let active = active_roster(s, p, channel).await?;
     let db = s.db.lock().unwrap();
     member(&db, &p.user.id, channel)?;
@@ -38,8 +38,8 @@ pub fn routes() -> Router<AppState> {
         )
         .route("/channels/{id}/activity/commands", post(command))
 }
-fn domain(e: chriscord_activities::Error) -> ApiError {
-    use chriscord_activities::Error::*;
+fn domain(e: housecall_activities::Error) -> ApiError {
+    use housecall_activities::Error::*;
     match e {
         Forbidden => ApiError(StatusCode::FORBIDDEN, "activity permission denied"),
         Conflict => ApiError(
@@ -499,7 +499,7 @@ mod tests {
     async fn configured_voice_requires_connected_session_for_activity_routes() {
         let mut state = state();
         state.voice = Some(Arc::new(
-            chriscord_sfu::Sfu::start(
+            housecall_sfu::Sfu::start(
                 "127.0.0.1:0".parse().unwrap(),
                 "127.0.0.1".parse().unwrap(),
                 Arc::new(|_, _, _| true),

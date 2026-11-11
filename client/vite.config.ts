@@ -7,7 +7,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       "/api": {
-        target: process.env.CHRISCORD_API ?? "http://127.0.0.1:3000",
+        target: process.env.HOUSECALL_API ?? "http://127.0.0.1:3000",
         changeOrigin: false,
       },
     },

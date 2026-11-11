@@ -160,7 +160,7 @@ export class VoiceSession {
                 ? "failed"
                 : "connecting",
         }); };
-      const dc = pc.createDataChannel("chriscord-signaling");
+      const dc = pc.createDataChannel("housecall-signaling");
       this.dc = dc;
       dc.onmessage = (event) =>
         this.queue(pc, async () => {

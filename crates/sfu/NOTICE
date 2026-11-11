@@ -4,5 +4,5 @@ from str0m's examples/chat.rs at commit
 Original authors: Martin Algesten, Hugo Tunius, Davide Bertola.
 Upstream: https://github.com/algesten/str0m
 Used under the MIT license reproduced in LICENSE-STR0M-MIT.
-Chriscord adds authenticated room/session isolation, revocation rechecks,
+Housecall adds authenticated room/session isolation, revocation rechecks,
 resource bounds, graceful failures, control APIs and counters.

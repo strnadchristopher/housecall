@@ -119,6 +119,6 @@ export async function authenticatePasskey(api: Api, username: string) {
   return api.post<Auth>("/api/passkeys/login/finish", {
     challenge_id: start.challenge_id,
     credential,
-    device_name: native ? "Chriscord Android passkey" : "Chriscord browser passkey",
+    device_name: native ? "Housecall Android passkey" : "Housecall browser passkey",
   });
 }

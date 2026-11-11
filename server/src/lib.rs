@@ -88,10 +88,10 @@ pub struct AppState {
     pub public_auth_limit: u32,
     pub auth_slots: Arc<tokio::sync::Semaphore>,
     pub client_origins: Vec<axum::http::HeaderValue>,
-    pub media: Option<Arc<chriscord_media::Store>>,
-    pub scanner: Arc<dyn chriscord_media::Scanner>,
+    pub media: Option<Arc<housecall_media::Store>>,
+    pub scanner: Arc<dyn housecall_media::Scanner>,
     pub passkeys: Option<Arc<passkeys::Passkeys>>,
-    pub voice: Option<Arc<chriscord_sfu::Sfu>>,
+    pub voice: Option<Arc<housecall_sfu::Sfu>>,
     pub transcoder: Option<Arc<transcode::Processor>>,
     pub plex: Option<Arc<plex::Gateway>>,
     pub gimme: Arc<gimme::Worker>,
@@ -113,16 +113,16 @@ impl InviteMailConfig {
         let api_key = std::env::var("RESEND_API_KEY")
             .ok()
             .filter(|value| !value.is_empty());
-        let mail_from = std::env::var("CHRISCORD_MAIL_FROM")
+        let mail_from = std::env::var("HOUSECALL_MAIL_FROM")
             .ok()
             .filter(|value| !value.is_empty());
         if api_key.is_some() && mail_from.is_none() {
-            return Err("CHRISCORD_MAIL_FROM is required when RESEND_API_KEY is set".into());
+            return Err("HOUSECALL_MAIL_FROM is required when RESEND_API_KEY is set".into());
         }
-        let public_url = std::env::var("CHRISCORD_PUBLIC_URL")
-            .unwrap_or_else(|_| "https://chriscord.littleobelisk.com".into());
+        let public_url = std::env::var("HOUSECALL_PUBLIC_URL")
+            .unwrap_or_else(|_| "https://housecall.littleobelisk.com".into());
         let parsed =
-            reqwest::Url::parse(&public_url).map_err(|_| "invalid CHRISCORD_PUBLIC_URL")?;
+            reqwest::Url::parse(&public_url).map_err(|_| "invalid HOUSECALL_PUBLIC_URL")?;
         if !matches!(parsed.scheme(), "http" | "https")
             || parsed.host_str().is_none()
             || !parsed.username().is_empty()
@@ -131,7 +131,7 @@ impl InviteMailConfig {
             || parsed.fragment().is_some()
             || !matches!(parsed.path(), "" | "/")
         {
-            return Err("CHRISCORD_PUBLIC_URL must be an HTTP(S) origin".into());
+            return Err("HOUSECALL_PUBLIC_URL must be an HTTP(S) origin".into());
         }
         Ok(Self {
             api_key,
@@ -161,9 +161,9 @@ impl InviteMailConfig {
             .json(&json!({
                 "from": self.mail_from.as_deref().expect("validated sender"),
                 "to": [email],
-                "subject": "Your Chriscord invitation",
-                "html": format!("<p>Christopher invited you to Chriscord. This link works once and expires in seven days.</p><p><a href=\"{html_link}\">Accept your invitation</a></p><p>If you did not expect this, you can ignore this email.</p>"),
-                "text": format!("Christopher invited you to Chriscord. This link works once and expires in seven days:\n\n{link}\n\nIf you did not expect this, you can ignore this email.")
+                "subject": "Your Housecall invitation",
+                "html": format!("<p>Christopher invited you to Housecall. This link works once and expires in seven days.</p><p><a href=\"{html_link}\">Accept your invitation</a></p><p>If you did not expect this, you can ignore this email.</p>"),
+                "text": format!("Christopher invited you to Housecall. This link works once and expires in seven days:\n\n{link}\n\nIf you did not expect this, you can ignore this email.")
             }))
             .send()
             .await
@@ -229,7 +229,7 @@ impl AppState {
             auth_slots: Arc::new(tokio::sync::Semaphore::new(2)),
             client_origins: vec![],
             media: None,
-            scanner: Arc::new(chriscord_media::RejectScanner),
+            scanner: Arc::new(housecall_media::RejectScanner),
             passkeys: None,
             voice: None,
             transcoder: None,
@@ -1003,7 +1003,7 @@ async fn send_message(
     for upload_id in &v.attachment_ids {
         let store = s.media.as_ref().ok_or_else(|| bad("media unavailable"))?;
         let upload = store.inspect(*upload_id, &p.user.id)?;
-        if upload.channel_id != cid || upload.status != chriscord_media::Status::Ready {
+        if upload.channel_id != cid || upload.status != housecall_media::Status::Ready {
             return Err(bad("attachment must be clean and in this conversation"));
         }
         if tx
@@ -1102,7 +1102,7 @@ async fn unsend(
             let aid = uuid::Uuid::parse_str(&aid).map_err(|_| bad("invalid stored attachment"))?;
             transcode::purge_source(&tx, store, aid, &author)?;
             match store.delete(aid, &author) {
-                Ok(()) | Err(chriscord_media::Error::NotFound) => {}
+                Ok(()) | Err(housecall_media::Error::NotFound) => {}
                 Err(e) => return Err(e.into()),
             }
         }
@@ -1277,7 +1277,7 @@ async fn report(
             .as_ref()
             .ok_or_else(|| bad("media unavailable"))?
             .inspect(uid, &p.user.id)?;
-        if upload.status != chriscord_media::Status::Ready {
+        if upload.status != housecall_media::Status::Ready {
             return Err(bad("screenshot must pass scanning"));
         }
     }

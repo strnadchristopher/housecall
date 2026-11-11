@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Isolated real WireGuard+Gluetun network-namespace test. Never touches existing containers.
-Docker operations use a random chriscord-sprint-vpn prefix; all owned resources clean up.
+Docker operations use a random housecall-sprint-vpn prefix; all owned resources clean up.
 """
 import json
 import os
@@ -13,8 +13,8 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[3]
 EVIDENCE = ROOT / 'evidence'
-PREFIX = 'chriscord-sprint-vpn-' + uuid.uuid4().hex[:8]
-IMAGE = 'chriscord-sprint-vpn-fixture:local'
+PREFIX = 'housecall-sprint-vpn-' + uuid.uuid4().hex[:8]
+IMAGE = 'housecall-sprint-vpn-fixture:local'
 GLUETUN = 'qmcgaw/gluetun@sha256:78c09588169ad05b9f88bc492ac8f80e6167e93da7526171863c0dfb88bf18d6'
 NET = PREFIX + '-net'
 SERVER = PREFIX + '-server'
@@ -37,7 +37,7 @@ def docker(*args, check=True, timeout=30):
     return result
 
 def run(name, *args):
-    result = docker('run', '-d', '--name', name, '--label', 'chriscord.fixture=' + PREFIX, *args)
+    result = docker('run', '-d', '--name', name, '--label', 'housecall.fixture=' + PREFIX, *args)
     owned_containers.append(name)
     return result.stdout.strip()
 
@@ -80,7 +80,7 @@ try:
         # Keys are synthetic and never printed or committed; Docker root writes protected files.
         client_key=docker('run','--rm','--name',PREFIX+'-readkey','--network','none','--entrypoint','cat','-v',f'{keys}:/keys:ro',IMAGE,'/keys/client').stdout.strip()
         server_pub=docker('run','--rm','--name',PREFIX+'-readpub','--network','none','--entrypoint','cat','-v',f'{keys}:/keys:ro',IMAGE,'/keys/server.pub').stdout.strip()
-        docker('network','create','--internal','--ipv6','--subnet',IP4+'.0/24','--subnet',IP6+'::/64','--label','chriscord.fixture='+PREFIX,NET)
+        docker('network','create','--internal','--ipv6','--subnet',IP4+'.0/24','--subnet',IP6+'::/64','--label','housecall.fixture='+PREFIX,NET)
         owned_networks.append(NET)
         run(SERVER,'--network',NET,'--ip',IP4+'.2','--ip6',IP6+'::2','--cap-add','NET_ADMIN','--device','/dev/net/tun','-v',f'{keys}:/keys:ro','-e','ROLE=wireguard',IMAGE)
         run(CANARY,'--network',NET,'--ip',IP4+'.3','--ip6',IP6+'::3','-e','ROLE=canary',IMAGE)
@@ -127,10 +127,10 @@ try:
             docker('run','--rm','--network','container:'+VPN,'--cap-drop','ALL','--cap-add','NET_ADMIN','--entrypoint','sh','-v',str(ROOT/'infra/vm/install-policy.sh')+':/policy.sh:ro',IMAGE,'/policy.sh')
         else:
             for binary in ['iptables','ip6tables']:
-                docker('exec',VPN,binary,'-N','CHRISCORD_VM')
-                docker('exec',VPN,binary,'-A','CHRISCORD_VM','-o','tun0','-j','ACCEPT')
-                docker('exec',VPN,binary,'-A','CHRISCORD_VM','-j','REJECT')
-                docker('exec',VPN,binary,'-I','OUTPUT','1','-m','owner','--uid-owner','10001','-j','CHRISCORD_VM')
+                docker('exec',VPN,binary,'-N','HOUSECALL_VM')
+                docker('exec',VPN,binary,'-A','HOUSECALL_VM','-o','tun0','-j','ACCEPT')
+                docker('exec',VPN,binary,'-A','HOUSECALL_VM','-j','REJECT')
+                docker('exec',VPN,binary,'-I','OUTPUT','1','-m','owner','--uid-owner','10001','-j','HOUSECALL_VM')
         record('hardened_vpn_up_http',wait_http('http://198.18.0.2:8080','wireguard'))
         dns=probe('dig','+time=2','+tries=1','@198.18.0.2','fixture.test','A')
         record('hardened_vpn_up_dns',dns.returncode==0 and '198.18.0.2' in dns.stdout)
@@ -142,10 +142,10 @@ try:
             checks[-1]['skipped'] = 'External IPv6 baseline unavailable; observation is not proof'
         if NFT:
             # Gluetun updates only iptables-managed tables. The dedicated nft hook must survive.
-            docker('exec',VPN,'sh','-c','iptables-save > /tmp/chriscord-before-flush; iptables -F OUTPUT')
+            docker('exec',VPN,'sh','-c','iptables-save > /tmp/housecall-before-flush; iptables -F OUTPUT')
             direct=probe('curl','--noproxy','*','-fsS','--max-time','2',f'http://{IP4}.3:8080')
             record('nft_survives_iptables_output_flush',direct.returncode!=0,f'exit={direct.returncode}')
-            docker('exec',VPN,'sh','-c','iptables-restore < /tmp/chriscord-before-flush')
+            docker('exec',VPN,'sh','-c','iptables-restore < /tmp/housecall-before-flush')
             record('nft_flush_vpn_still_works',wait_http('http://198.18.0.2:8080','wireguard'))
         # Bring only the disposable tunnel server interface down; namespace remains alive.
         docker('exec',SERVER,'ip','link','set','wg0','down')
@@ -166,7 +166,7 @@ finally:
         firewall6=docker('exec',VPN,'ip6tables-save',check=False)
         (EVIDENCE/'vm-firewall.txt').write_text(firewall.stdout+'\nIPv6:\n'+firewall6.stdout)
         if NFT:
-            nft=docker('run','--rm','--network','container:'+VPN,'--cap-add','NET_ADMIN','--entrypoint','nft',IMAGE,'list','table','inet','chriscord_vm_47191',check=False)
+            nft=docker('run','--rm','--network','container:'+VPN,'--cap-add','NET_ADMIN','--entrypoint','nft',IMAGE,'list','table','inet','housecall_vm_47191',check=False)
             (EVIDENCE/'vm-nft-policy.txt').write_text(nft.stdout+nft.stderr)
     for name in reversed(owned_containers):
         docker('rm','-f',name,check=False)

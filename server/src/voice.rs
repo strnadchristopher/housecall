@@ -26,7 +26,7 @@ pub fn configure(state: &mut AppState) -> Result<(), String> {
             let public = public.parse().map_err(|_| "invalid SFU_PUBLIC_IP")?;
             let db = state.db.clone();
             let publisher = state.vm_media.clone();
-            let authorize: chriscord_sfu::Authorize = Arc::new(move |room, user, session| {
+            let authorize: housecall_sfu::Authorize = Arc::new(move |room, user, session| {
                 let Ok(db) = db.lock() else {
                     return false;
                 };
@@ -36,7 +36,7 @@ pub fn configure(state: &mut AppState) -> Result<(), String> {
                 db.query_row("SELECT EXISTS(SELECT 1 FROM sessions s JOIN members m ON m.user_id=s.user_id WHERE s.id=?1 AND s.user_id=?2 AND s.expires_at>?3 AND m.channel_id=?4)", params![session, user, now(), room], |r| r.get::<_, bool>(0)).unwrap_or(false)
             });
             let sfu =
-                chriscord_sfu::Sfu::start(bind, public, authorize).map_err(|e| e.to_string())?;
+                housecall_sfu::Sfu::start(bind, public, authorize).map_err(|e| e.to_string())?;
             tracing::info!(address=%sfu.address(), "private WebRTC SFU enabled");
             state.voice = Some(Arc::new(sfu));
             Ok(())
@@ -44,22 +44,22 @@ pub fn configure(state: &mut AppState) -> Result<(), String> {
         _ => Err("set both SFU_BIND and SFU_PUBLIC_IP, or neither".into()),
     }
 }
-fn engine(s: &AppState) -> Result<Arc<chriscord_sfu::Sfu>, ApiError> {
+fn engine(s: &AppState) -> Result<Arc<housecall_sfu::Sfu>, ApiError> {
     s.voice.clone().ok_or(ApiError(
         StatusCode::SERVICE_UNAVAILABLE,
         "voice transport is not configured",
     ))
 }
-fn error(e: chriscord_sfu::Error) -> ApiError {
+fn error(e: housecall_sfu::Error) -> ApiError {
     match e {
-        chriscord_sfu::Error::Forbidden => {
+        housecall_sfu::Error::Forbidden => {
             ApiError(StatusCode::FORBIDDEN, "voice session unauthorized")
         }
-        chriscord_sfu::Error::Invalid => ApiError(StatusCode::BAD_REQUEST, "invalid voice offer"),
-        chriscord_sfu::Error::Busy => {
+        housecall_sfu::Error::Invalid => ApiError(StatusCode::BAD_REQUEST, "invalid voice offer"),
+        housecall_sfu::Error::Busy => {
             ApiError(StatusCode::SERVICE_UNAVAILABLE, "voice capacity reached")
         }
-        chriscord_sfu::Error::Io => {
+        housecall_sfu::Error::Io => {
             ApiError(StatusCode::INTERNAL_SERVER_ERROR, "voice transport failed")
         }
     }
@@ -75,7 +75,7 @@ async fn join(
         member(&db, &p.user.id, &room)?;
     }
     let engine = engine(&s)?;
-    let offer = serde_json::from_value::<chriscord_sfu::SdpOffer>(offer)
+    let offer = serde_json::from_value::<housecall_sfu::SdpOffer>(offer)
         .map_err(|_| ApiError(StatusCode::BAD_REQUEST, "invalid SDP offer"))?;
     let joined = engine
         .join(room, p.user.id, p.session_id, offer)

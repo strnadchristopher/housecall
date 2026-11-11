@@ -1,4 +1,4 @@
-name: chriscord
+name: housecall
 services:
   app:
     build: .
@@ -8,30 +8,30 @@ services:
     restart: unless-stopped
     init: true
     ports:
-      - "127.0.0.1:${CHRISCORD_PORT:-4317}:3000"
+      - "127.0.0.1:${HOUSECALL_PORT:-4317}:3000"
       - "${SFU_HOST_BIND:-127.0.0.1}:${SFU_PORT:-50000}:${SFU_PORT:-50000}/udp"
     networks:
       lo-proxy:
-        aliases: [chriscord]
+        aliases: [housecall]
     environment:
-      CHRISCORD_BIND: 0.0.0.0:3000
-      CHRISCORD_DATABASE: /data/chriscord.sqlite
-      CHRISCORD_STATIC_DIR: /app/client
-      CHRISCORD_SETUP_TOKEN: ${CHRISCORD_SETUP_TOKEN:-}
-      CHRISCORD_ORIGIN: ${CHRISCORD_ORIGIN:-https://chriscord.littleobelisk.com}
-      CHRISCORD_PUBLIC_URL: ${CHRISCORD_PUBLIC_URL:-https://chriscord.littleobelisk.com}
-      CHRISCORD_MAIL_FROM: ${CHRISCORD_MAIL_FROM:-}
+      HOUSECALL_BIND: 0.0.0.0:3000
+      HOUSECALL_DATABASE: /data/housecall.sqlite
+      HOUSECALL_STATIC_DIR: /app/client
+      HOUSECALL_SETUP_TOKEN: ${HOUSECALL_SETUP_TOKEN:-}
+      HOUSECALL_ORIGIN: ${HOUSECALL_ORIGIN:-https://housecall.littleobelisk.com}
+      HOUSECALL_PUBLIC_URL: ${HOUSECALL_PUBLIC_URL:-https://housecall.littleobelisk.com}
+      HOUSECALL_MAIL_FROM: ${HOUSECALL_MAIL_FROM:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
-      CHRISCORD_MEDIA_DIR: /data/media
-      CHRISCORD_MEDIA_KEY: ${CHRISCORD_MEDIA_KEY:?Set a random 32-byte hex media encryption key in .env}
-      CHRISCORD_CLAMD_SOCKET: /scan/clamd.sock
-      CHRISCORD_MEDIA_SCANNER: ${CHRISCORD_MEDIA_SCANNER:-clamav}
-      CHRISCORD_FSANALYZE: ${CHRISCORD_FSANALYZE:-}
-      CHRISCORD_SCAN_TIMEOUT_SECONDS: ${CHRISCORD_SCAN_TIMEOUT_SECONDS:-300}
+      HOUSECALL_MEDIA_DIR: /data/media
+      HOUSECALL_MEDIA_KEY: ${HOUSECALL_MEDIA_KEY:?Set a random 32-byte hex media encryption key in .env}
+      HOUSECALL_CLAMD_SOCKET: /scan/clamd.sock
+      HOUSECALL_MEDIA_SCANNER: ${HOUSECALL_MEDIA_SCANNER:-clamav}
+      HOUSECALL_FSANALYZE: ${HOUSECALL_FSANALYZE:-}
+      HOUSECALL_SCAN_TIMEOUT_SECONDS: ${HOUSECALL_SCAN_TIMEOUT_SECONDS:-300}
       SFU_BIND: 0.0.0.0:${SFU_PORT:-50000}
       SFU_PUBLIC_IP: ${SFU_PUBLIC_IP:-127.0.0.1}
-      CHRISCORD_CLIENT_ORIGINS: ${CHRISCORD_CLIENT_ORIGINS:-tauri://localhost,http://tauri.localhost}
-      CHRISCORD_ANDROID_PASSKEY_ORIGINS: ${CHRISCORD_ANDROID_PASSKEY_ORIGINS:-}
+      HOUSECALL_CLIENT_ORIGINS: ${HOUSECALL_CLIENT_ORIGINS:-tauri://localhost,http://tauri.localhost}
+      HOUSECALL_ANDROID_PASSKEY_ORIGINS: ${HOUSECALL_ANDROID_PASSKEY_ORIGINS:-}
       GIPHY_API_KEY: ${GIPHY_API_KEY:-}
       PLEX_URL: ${PLEX_URL:-}
       PLEX_TOKEN: ${PLEX_TOKEN:-}
@@ -41,7 +41,7 @@ services:
       SWITCHBOARD_URL: ${SWITCHBOARD_URL:-https://switchboard.littleobelisk.com/v1/chat/completions}
       SWITCHBOARD_API_KEY: ${SWITCHBOARD_API_KEY:-}
       DJ_ENABLED: ${DJ_ENABLED:-false}
-      DJ_TMPFS_DIR: /tmp/chriscord-dj
+      DJ_TMPFS_DIR: /tmp/housecall-dj
       SPOTIFY_ACCESS_TOKEN: ${SPOTIFY_ACCESS_TOKEN:-}
       PUSH_ENABLED: ${PUSH_ENABLED:-false}
       PUSH_TOKEN_KEY: ${PUSH_TOKEN_KEY:-}
@@ -52,8 +52,8 @@ services:
       APNS_SANDBOX: ${APNS_SANDBOX:-false}
       FCM_SERVICE_ACCOUNT_JSON: ${FCM_SERVICE_ACCOUNT_JSON:-}
     volumes:
-      - ${CHRISCORD_DATA_DIR:-./data}:/data
-      - ${CHRISCORD_UPDATES_DIR:-./updates}:/app/client/updates:ro
+      - ${HOUSECALL_DATA_DIR:-./data}:/data
+      - ${HOUSECALL_UPDATES_DIR:-./updates}:/app/client/updates:ro
       - scan-socket:/scan:ro
     read_only: true
     tmpfs:
@@ -112,7 +112,7 @@ services:
     tmpfs: ["/tmp:size=1m,mode=1777"]
     security_opt: [no-new-privileges:true]
     healthcheck:
-      test: ["CMD-SHELL", "nft list chain inet chriscord_vm_47191 output >/dev/null"]
+      test: ["CMD-SHELL", "nft list chain inet housecall_vm_47191 output >/dev/null"]
       interval: 5s
       timeout: 2s
       retries: 2

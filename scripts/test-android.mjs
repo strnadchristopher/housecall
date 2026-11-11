@@ -14,7 +14,7 @@ const invitation=await call('/api/invites',{expires_in_seconds:600},owner);
 const devices=await _android.devices({port:5038,omitDriverInstall:true});
 const device=devices.find(d=>d.serial()==='emulator-5580');if(!device)throw new Error('Owned emulator missing');
 try {
- const page=await(await device.webView({pkg:'com.littleobelisk.chriscord'},{timeout:30000})).page();
+ const page=await(await device.webView({pkg:'com.mapleavenuelabs.housecall'},{timeout:30000})).page();
  page.setDefaultTimeout(20000);
  await expect(page.getByTestId('screen-login')).toBeVisible();
  const started=performance.now();
@@ -46,8 +46,8 @@ try {
  await device.screenshot({path:'evidence/android-chat.png'});
  const adb='.runtime/android-sdk/platform-tools/adb';
  const adbArgs=['-P','5038','-s','emulator-5580'];
- execFileSync(adb,[...adbArgs,'shell','uiautomator','dump','/sdcard/chriscord-test-window.xml'],{timeout:15000});
- const nativeWindow=execFileSync(adb,[...adbArgs,'exec-out','cat','/sdcard/chriscord-test-window.xml'],{timeout:5000}).toString();
+ execFileSync(adb,[...adbArgs,'shell','uiautomator','dump','/sdcard/housecall-test-window.xml'],{timeout:15000});
+ const nativeWindow=execFileSync(adb,[...adbArgs,'exec-out','cat','/sdcard/housecall-test-window.xml'],{timeout:5000}).toString();
  expect(nativeWindow).not.toMatch(/isn.t responding|System UI isn/i);
  evidence.checks.push('native window has no ANR dialog');
  await call('/api/users/'+session.user.id+'/sessions',undefined,owner,'DELETE');

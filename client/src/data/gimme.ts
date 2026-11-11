@@ -40,7 +40,7 @@ export function mergeGimmeUpdate(previous: GimmeRequestStatus[], next: GimmeRequ
 export function gimmeStatusText(item: GimmeRequestStatus): string {
   if (item.dry_run) return "Preview saved — no provider request sent";
   if (item.polling_paused) return "Provider polling paused while dry-run mode is enabled";
-  if (item.confirmation_required) return "Confirmation required — no download was started by Chriscord";
+  if (item.confirmation_required) return "Confirmation required — no download was started by Housecall";
   if (item.provider_outcome_unknown) return "Provider outcome unknown — request ID retained; do not submit again";
   if (item.state === "queued") return "Request queued";
   if (item.state === "pending") return "Gimme is still processing this request";

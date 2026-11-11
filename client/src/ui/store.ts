@@ -19,7 +19,7 @@ export interface UiState {
   streams: number;
 }
 
-const THEME_KEY = 'chriscord.theme';
+const THEME_KEY = 'housecall.theme';
 
 function storedTheme(): ThemeId {
   try {

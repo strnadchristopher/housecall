@@ -1,4 +1,4 @@
-use chriscord_activities::plex::Plex;
+use housecall_activities::plex::Plex;
 use proptest::prelude::*;
 use url::Url;
 fn plex() -> Plex {

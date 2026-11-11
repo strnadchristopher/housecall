@@ -57,7 +57,7 @@ impl Passkeys {
         }
         let mut builder = WebauthnBuilder::new(host, &url)
             .map_err(|e| e.to_string())?
-            .rp_name("Chriscord");
+            .rp_name("Housecall");
         for origin in android_origins {
             let hash = origin
                 .strip_prefix("android:apk-key-hash:")
@@ -110,7 +110,7 @@ fn keys(db: &Connection, user: &str) -> Result<Vec<Passkey>, ApiError> {
 fn configured(s: &AppState) -> Result<&Passkeys, ApiError> {
     s.passkeys.as_deref().ok_or(ApiError(
         StatusCode::SERVICE_UNAVAILABLE,
-        "passkeys require CHRISCORD_ORIGIN",
+        "passkeys require HOUSECALL_ORIGIN",
     ))
 }
 async fn register_start(

@@ -3,43 +3,43 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawn } from "node:child_process";
 const stopPlex =
-  process.env.CHRISCORD_TEST_PLEX === "1"
+  process.env.HOUSECALL_TEST_PLEX === "1"
     ? await (await import("./plex-fixture.mjs")).startPlexFixture()
     : undefined;
-const directory = await mkdtemp(join(tmpdir(), "chriscord-e2e-"));
+const directory = await mkdtemp(join(tmpdir(), "housecall-e2e-"));
 const binary =
-  process.env.CHRISCORD_TEST_BINARY ??
-  resolve("../target/debug/chriscord-server");
+  process.env.HOUSECALL_TEST_BINARY ??
+  resolve("../target/debug/housecall-server");
 const child = spawn(binary, [], {
   stdio: "inherit",
   env: {
-    ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(CHRISCORD_|SFU_|PLEX_|GIMME_|GIPHY_|SWITCHBOARD_|PUSH_|APNS_|FCM_|DJ_|SPOTIFY_|YT_DLP_|RESEND_)/.test(key))),
+    ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(HOUSECALL_|SFU_|PLEX_|GIMME_|GIPHY_|SWITCHBOARD_|PUSH_|APNS_|FCM_|DJ_|SPOTIFY_|YT_DLP_|RESEND_)/.test(key))),
     GIMME_DRY_RUN: "true",
     DJ_ENABLED: "false",
-    ...((process.env.CHRISCORD_TEST_REPORTS === "1" || process.env.CHRISCORD_TEST_UPLOAD_VIDEO === "1" || process.env.CHRISCORD_TEST_UPLOADS === "1")
-      ? { CHRISCORD_CLAMD_SOCKET: resolve("../.runtime/scan/clamd.sock") }
+    ...((process.env.HOUSECALL_TEST_REPORTS === "1" || process.env.HOUSECALL_TEST_UPLOAD_VIDEO === "1" || process.env.HOUSECALL_TEST_UPLOADS === "1")
+      ? { HOUSECALL_CLAMD_SOCKET: resolve("../.runtime/scan/clamd.sock") }
       : {}),
-    CHRISCORD_BIND: "127.0.0.1:3031",
-    ...(process.env.CHRISCORD_TEST_VOICE === "1"
+    HOUSECALL_BIND: "127.0.0.1:3031",
+    ...(process.env.HOUSECALL_TEST_VOICE === "1"
       ? { SFU_BIND: "127.0.0.1:50010", SFU_PUBLIC_IP: "127.0.0.1" }
       : {}),
-    ...(process.env.CHRISCORD_TEST_PLEX === "1"
+    ...(process.env.HOUSECALL_TEST_PLEX === "1"
       ? { PLEX_URL: "http://127.0.0.1:3032", PLEX_TOKEN: "fixture-secret" }
       : {}),
-    CHRISCORD_ORIGIN: "http://localhost:1420",
-    CHRISCORD_DATABASE: join(directory, "database.sqlite"),
-    CHRISCORD_MEDIA_DIR: join(directory, "media"),
-    CHRISCORD_MEDIA_KEY: "11".repeat(32),
-    CHRISCORD_SETUP_TOKEN: "test-setup-token-at-least-32-characters",
+    HOUSECALL_ORIGIN: "http://localhost:1420",
+    HOUSECALL_DATABASE: join(directory, "database.sqlite"),
+    HOUSECALL_MEDIA_DIR: join(directory, "media"),
+    HOUSECALL_MEDIA_KEY: "11".repeat(32),
+    HOUSECALL_SETUP_TOKEN: "test-setup-token-at-least-32-characters",
   },
 });
-if (process.env.CHRISCORD_TEST_PID_PATH && child.pid)
-  await writeFile(process.env.CHRISCORD_TEST_PID_PATH, String(child.pid));
+if (process.env.HOUSECALL_TEST_PID_PATH && child.pid)
+  await writeFile(process.env.HOUSECALL_TEST_PID_PATH, String(child.pid));
 let cleaning;
 function cleanup() {
   return cleaning ??= (async()=>{
     child.kill("SIGTERM");
-    if (process.env.CHRISCORD_TEST_PID_PATH) await rm(process.env.CHRISCORD_TEST_PID_PATH, { force: true });
+    if (process.env.HOUSECALL_TEST_PID_PATH) await rm(process.env.HOUSECALL_TEST_PID_PATH, { force: true });
     await stopPlex?.();
     await rm(directory, { recursive: true, force: true });
   })();

@@ -1,5 +1,5 @@
 //! Synthetic scan outcomes; these tests do not establish real malware-engine coverage.
-use chriscord_media::{
+use housecall_media::{
     Error, Scanner, Status, Store,
     scan::{Coverage, Engine, Failure, Reason, Verdict},
 };

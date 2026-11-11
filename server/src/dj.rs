@@ -9,7 +9,7 @@ use axum::{
     routing::{get, post},
     Extension, Json, Router,
 };
-use chriscord_activities::{
+use housecall_activities::{
     dj::{
         probe_duration, AudioDownloader, CloneTts, PlaceholderTts, ResolvedTrack, Resolver, Source,
         Switchboard, Tts,
@@ -17,7 +17,7 @@ use chriscord_activities::{
     session::Track,
     Command, Kind, Session, Snapshot,
 };
-use chriscord_media::{Scanner, Store};
+use housecall_media::{Scanner, Store};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -32,7 +32,7 @@ use std::{
 use tokio::io::AsyncReadExt;
 use tokio_stream::wrappers::ReceiverStream;
 use uuid::Uuid;
-const OWNER: &str = "chriscord-dj-cache";
+const OWNER: &str = "housecall-dj-cache";
 const MAX_OUTPUT: u64 = 64 * 1024 * 1024;
 const CACHE_BYTES: u64 = 512 * 1024 * 1024;
 const MAX_ASSETS: i64 = 128;
@@ -256,7 +256,7 @@ pub fn configure(state: &mut AppState) -> Result<(), String> {
         return Err("DJ requires voice SFU".into());
     }
     let scratch = PathBuf::from(
-        std::env::var("DJ_TMPFS_DIR").unwrap_or_else(|_| "/dev/shm/chriscord-dj".into()),
+        std::env::var("DJ_TMPFS_DIR").unwrap_or_else(|_| "/dev/shm/housecall-dj".into()),
     );
     std::fs::create_dir_all(&scratch).map_err(|_| "cannot create DJ tmpfs directory")?;
     let scratch = scratch
@@ -400,9 +400,9 @@ fn busy() -> ApiError {
         "DJ preparation is busy; retry later",
     )
 }
-fn provider(error: chriscord_activities::Error) -> ApiError {
+fn provider(error: housecall_activities::Error) -> ApiError {
     match error {
-        chriscord_activities::Error::Invalid(reason) => invalid(reason),
+        housecall_activities::Error::Invalid(reason) => invalid(reason),
         _ => unavailable(),
     }
 }
@@ -670,7 +670,7 @@ async fn audio(
     };
     let range = headers.get(header::RANGE);
     let (start, end) = if let Some(range) = range {
-        chriscord_media::parse_range(
+        housecall_media::parse_range(
             range.to_str().map_err(|_| invalid("byte range"))?,
             metadata.length,
         )
@@ -982,7 +982,7 @@ mod tests {
         socket: UdpSocket,
     }
     impl Peer {
-        async fn connect(sfu: &chriscord_sfu::Sfu, user: &str) -> Self {
+        async fn connect(sfu: &housecall_sfu::Sfu, user: &str) -> Self {
             let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
             socket.set_nonblocking(true).unwrap();
             let mut rtc = str0m::Rtc::new(Instant::now());
@@ -991,7 +991,7 @@ mod tests {
             )
             .unwrap();
             let mut change = rtc.sdp_api();
-            change.add_channel("chriscord-signaling".into());
+            change.add_channel("housecall-signaling".into());
             change.add_media(
                 str0m::media::MediaKind::Audio,
                 str0m::media::Direction::SendOnly,
@@ -1016,7 +1016,7 @@ mod tests {
                         let _ = self.socket.send_to(&t.contents, t.destination);
                     }
                     Ok(str0m::Output::Event(str0m::Event::ChannelData(d))) => {
-                        let offer: chriscord_sfu::SdpOffer =
+                        let offer: housecall_sfu::SdpOffer =
                             serde_json::from_slice(&d.data).unwrap();
                         let answer = self.rtc.sdp_api().accept_offer(offer).unwrap();
                         assert!(self
@@ -1053,7 +1053,7 @@ mod tests {
     impl VoiceFixture {
         async fn start(state: &mut AppState) -> Self {
             let db = state.db.clone();
-            let sfu=Arc::new(chriscord_sfu::Sfu::start("127.0.0.1:0".parse().unwrap(),"127.0.0.1".parse().unwrap(),Arc::new(move|room,user,session|{let db=db.lock().unwrap();member(&db,user,room).is_ok()&&db.query_row("SELECT EXISTS(SELECT 1 FROM sessions WHERE id=?1 AND user_id=?2 AND expires_at>?3)",params![session,user,now()],|r|r.get::<_,bool>(0)).unwrap_or(false)})).unwrap());
+            let sfu=Arc::new(housecall_sfu::Sfu::start("127.0.0.1:0".parse().unwrap(),"127.0.0.1".parse().unwrap(),Arc::new(move|room,user,session|{let db=db.lock().unwrap();member(&db,user,room).is_ok()&&db.query_row("SELECT EXISTS(SELECT 1 FROM sessions WHERE id=?1 AND user_id=?2 AND expires_at>?3)",params![session,user,now()],|r|r.get::<_,bool>(0)).unwrap_or(false)})).unwrap());
             let mut peers = Vec::new();
             for user in ["alice", "bob", "cara"] {
                 peers.push(Peer::connect(&sfu, user).await);
@@ -1440,7 +1440,7 @@ mod tests {
             for request in seen.iter().filter(|r| r.starts_with("POST")) {
                 assert!(request
                     .to_lowercase()
-                    .contains("x-inference-task: chriscord.dj"));
+                    .contains("x-inference-task: housecall.dj"));
                 assert!(request.contains("\"model\":\"role:chat\""));
             }
         }
@@ -1563,7 +1563,7 @@ mod tests {
             .arg("node_modules/vite/bin/vite.js")
             .args(["--host", "127.0.0.1", "--port", "1424", "--strictPort"])
             .current_dir(root.join("client"))
-            .env("CHRISCORD_API", format!("http://{address}"))
+            .env("HOUSECALL_API", format!("http://{address}"))
             .stdin(Stdio::null())
             .stdout(Stdio::from(log.try_clone().unwrap()))
             .stderr(Stdio::from(log))
@@ -1581,7 +1581,7 @@ mod tests {
         let mut browser = tokio::process::Command::new("node")
             .arg(root.join("server/tests/dj-browser.mjs"))
             .env(
-                "CHRISCORD_DJ_RECEIPT",
+                "HOUSECALL_DJ_RECEIPT",
                 root.join(format!("evidence/media-dj-browser-{run}.json")),
             )
             .current_dir(root)

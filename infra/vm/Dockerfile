@@ -6,5 +6,5 @@ RUN chmod 755 /usr/local/bin/install-vm-policy /usr/local/bin/vm-policy-entrypoi
 COPY reset-overlay.sh /usr/local/bin/reset-vm-overlay
 RUN chmod 755 /usr/local/bin/reset-vm-overlay
 COPY supervisor.py /usr/local/bin/vm-supervisor
-COPY entrypoint.sh /usr/local/bin/chriscord-vm
-ENTRYPOINT ["/bin/sh", "/usr/local/bin/chriscord-vm"]
+COPY entrypoint.sh /usr/local/bin/housecall-vm
+ENTRYPOINT ["/bin/sh", "/usr/local/bin/housecall-vm"]

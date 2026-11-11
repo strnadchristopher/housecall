@@ -1,6 +1,6 @@
 //! Process-contract fixtures, NOT real WithSecure malware-detection evidence.
 #![cfg(target_os = "linux")]
-use chriscord_media::{Error, Scanner, Status, Store, WithSecureScanner};
+use housecall_media::{Error, Scanner, Status, Store, WithSecureScanner};
 use std::{
     fs,
     io::{self, Read},
@@ -23,7 +23,7 @@ fn whole_stream_and_fixed_private_arguments_are_required() {
 test "$#" -eq 11 || exit 1
 test "$*" = '--malware=none --pua=none --suspected=none --scan-archives=yes --max-nested=64 --detect-max-nested=yes --detect-encrypted-archives=yes --detect-pua=yes --use-orsp=no --ignore-exclude-paths --quiet' || exit 1
 test -z "$HOME" || exit 1
-test -z "$CHRISCORD_MEDIA_KEY" || exit 1
+test -z "$HOUSECALL_MEDIA_KEY" || exit 1
 test "$(/usr/bin/wc -c)" -eq 2000003 || exit 1
 exit 0
 "#;

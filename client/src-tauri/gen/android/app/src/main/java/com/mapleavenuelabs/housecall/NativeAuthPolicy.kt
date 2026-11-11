@@ -1,4 +1,4 @@
-package com.littleobelisk.chriscord
+package com.mapleavenuelabs.housecall
 
 import java.net.URI
 

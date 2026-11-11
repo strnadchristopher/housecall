@@ -14,7 +14,7 @@ trap 'rm -rf "$fixture"' EXIT
 mkdir "$fixture/src"
 cat > "$fixture/Cargo.toml" <<EOF
 [package]
-name = "chriscord-macro-errors"
+name = "housecall-macro-errors"
 version = "0.0.0"
 edition = "2021"
 [workspace]

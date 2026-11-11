@@ -1,4 +1,4 @@
-package com.littleobelisk.chriscord
+package com.mapleavenuelabs.housecall
 
 import org.junit.Assert.*
 import org.junit.Test
@@ -29,7 +29,7 @@ class NativeAuthPolicyTest {
         assertEquals(token, NativeAuthPolicy.inviteToken("$origin/#invite=$token", origin))
         for (value in listOf("$origin/?invite=$token", "$origin/a/../#invite=$token",
             "$origin/#invite=$token&extra=yes", "$origin/#invite=$token%00", "$origin/#invite=${token.uppercase()}",
-            "https://evil.test/#invite=$token", "chriscord://invite/#invite=$token", "$origin:443/#invite=$token")) {
+            "https://evil.test/#invite=$token", "housecall://invite/#invite=$token", "$origin:443/#invite=$token")) {
             assertNull(NativeAuthPolicy.inviteToken(value, origin))
         }
     }

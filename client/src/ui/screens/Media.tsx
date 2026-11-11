@@ -259,7 +259,7 @@ export function ReportScreen(props: ScreenProps) {
         <ContractForm props={props} formRef={form} submitIcon="arrowUpRight"
           hints={{
             feature: { hint: 'Leave off for a bug report.' },
-            body: { multiline: true, placeholder: feature ? 'What would make Chriscord better?' : 'What happened, and what did you expect?' },
+            body: { multiline: true, placeholder: feature ? 'What would make Housecall better?' : 'What happened, and what did you expect?' },
             logs: { multiline: true, placeholder: 'Paste only what helps. Remove tokens, passwords and private messages.', hint: 'Lines that look like secrets are redacted again before they are stored.' },
             report_screenshot: { accept: 'image/png,image/jpeg,image/webp', placeholder: 'PNG, JPEG or WebP' },
           }}

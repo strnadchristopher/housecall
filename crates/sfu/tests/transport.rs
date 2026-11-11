@@ -1,6 +1,6 @@
 //! Real localhost UDP ICE/DTLS/SRTP roundtrip with synthetic encoded Opus frames.
 //! This is not a browser decode test or glass-to-glass measurement.
-use chriscord_sfu::{SdpOffer, Sfu};
+use housecall_sfu::{SdpOffer, Sfu};
 use std::{
     net::UdpSocket,
     sync::{
@@ -31,7 +31,7 @@ impl Peer {
         rtc.add_local_candidate(Candidate::host(socket.local_addr().unwrap(), "udp").unwrap())
             .unwrap();
         let mut change = rtc.sdp_api();
-        change.add_channel("chriscord-signaling".into());
+        change.add_channel("housecall-signaling".into());
         let mid = change.add_media(MediaKind::Audio, Direction::SendOnly, None, None, None);
         let (offer, pending) = change.apply().unwrap();
         let joined = sfu

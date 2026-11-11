@@ -3,7 +3,7 @@ use axum::{
     http::{Request, StatusCode},
     Router,
 };
-use chriscord_server::{app, AppState};
+use housecall_server::{app, AppState};
 use http_body_util::BodyExt;
 use serde_json::{json, Value};
 use std::{
@@ -12,7 +12,7 @@ use std::{
 };
 use tower::ServiceExt;
 struct Clean;
-impl chriscord_media::Scanner for Clean {
+impl housecall_media::Scanner for Clean {
     fn scan(&self, input: &mut dyn Read) -> io::Result<()> {
         io::copy(input, &mut io::sink())?;
         Ok(())
@@ -84,7 +84,7 @@ async fn encrypted_upload_http_resume_ownership_quarantine_range_and_limits() {
     let dir = tempfile::tempdir().unwrap();
     let mut s = AppState::new(":memory:", "bootstrap-long-enough-for-test-secret").unwrap();
     s.media = Some(Arc::new(
-        chriscord_media::Store::new(dir.path(), [7; 32]).unwrap(),
+        housecall_media::Store::new(dir.path(), [7; 32]).unwrap(),
     ));
     let state = s.clone();
     let api = app(s, None);

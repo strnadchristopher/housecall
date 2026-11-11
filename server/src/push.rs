@@ -838,7 +838,7 @@ mod tests {
         );
         env.insert("APNS_KEY_ID", "KEY1234567".into());
         env.insert("APNS_TEAM_ID", "TEAM123456".into());
-        env.insert("APNS_TOPIC", "com.chriscord.fixture".into());
+        env.insert("APNS_TOPIC", "com.housecall.fixture".into());
         configure_from(&mut state, |k| env.get(k).cloned()).unwrap();
         assert!(state.push.is_enabled());
         assert_eq!(state.push.providers.len(), 1);
@@ -989,7 +989,7 @@ mod tests {
                 "fixture@fixture.iam.gserviceaccount.com".into()
             },
             topic: if kind == Kind::Apns {
-                "com.chriscord.fixture".into()
+                "com.housecall.fixture".into()
             } else {
                 "fixture-project".into()
             },

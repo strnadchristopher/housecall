@@ -132,7 +132,7 @@ fn safe_client(host: &str, address: SocketAddr) -> Result<Client, ApiError> {
         .connect_timeout(Duration::from_secs(3))
         .timeout(Duration::from_secs(8))
         .resolve(host, address)
-        .user_agent("Chriscord-LinkPreview/0.1")
+        .user_agent("Housecall-LinkPreview/0.1")
         .build()
         .map_err(|_| upstream())
 }

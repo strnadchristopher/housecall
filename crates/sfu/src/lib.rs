@@ -179,7 +179,7 @@ impl Sfu {
         let ingress = Ingress::start(socket.try_clone().map_err(|_| Error::Io)?)?;
         let (tx, rx) = mpsc::sync_channel(128);
         std::thread::Builder::new()
-            .name("chriscord-sfu".into())
+            .name("housecall-sfu".into())
             .spawn(move || run(socket, ingress, address, rx, authorize))
             .map_err(|_| Error::Io)?;
         Ok(Self { tx, address })
@@ -306,7 +306,7 @@ impl Ingress {
         let stopping = stop.clone();
         let drops = dropped.clone();
         let thread = std::thread::Builder::new()
-            .name("chriscord-udp".into())
+            .name("housecall-udp".into())
             .spawn(move || {
                 let mut buffer = [0u8; 65536];
                 while !stopping.load(Ordering::Relaxed) {

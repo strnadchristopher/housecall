@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "desktop-updater",
-  "description": "Signed self-update from the Chriscord server and relaunch after install.",
+  "description": "Signed self-update from the Housecall server and relaunch after install.",
   "platforms": [
     "linux",
     "macOS",

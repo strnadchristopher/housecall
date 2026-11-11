@@ -17,20 +17,20 @@ val tauriProperties = Properties().apply {
 
 android {
     compileSdk = 36
-    namespace = "com.littleobelisk.chriscord"
+    namespace = "com.mapleavenuelabs.housecall"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
-        applicationId = "com.littleobelisk.chriscord"
+        applicationId = "com.mapleavenuelabs.housecall"
         minSdk = 24
         targetSdk = 35
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
-        val authOrigin = providers.environmentVariable("CHRISCORD_AUTH_ORIGIN").orElse("").get()
+        val authOrigin = providers.environmentVariable("HOUSECALL_AUTH_ORIGIN").orElse("").get()
         val authUri = if (authOrigin.isEmpty()) null else URI(authOrigin)
         require(authUri == null || (authUri.scheme == "https" && authUri.host != null &&
             authUri.host.matches(Regex("[a-z0-9]+(?:[.-][a-z0-9]+)*")) &&
-            authOrigin == "https://${authUri.host}")) { "CHRISCORD_AUTH_ORIGIN must be a canonical HTTPS origin without a port or trailing slash" }
+            authOrigin == "https://${authUri.host}")) { "HOUSECALL_AUTH_ORIGIN must be a canonical HTTPS origin without a port or trailing slash" }
         buildConfigField("String", "AUTH_ORIGIN", "\"$authOrigin\"")
         val assetStatements = if (authUri == null) "[]" else "[{\"include\":\"$authOrigin/.well-known/assetlinks.json\"}]"
         resValue("string", "asset_statements", assetStatements.replace("\"", "\\\""))
@@ -39,7 +39,7 @@ android {
         // Public Firebase client identifiers, supplied explicitly by the app builder.
         // No service-account credentials or google-services.json are loaded.
         for (name in listOf("APPLICATION_ID", "API_KEY", "PROJECT_ID", "SENDER_ID")) {
-            val value = providers.environmentVariable("CHRISCORD_FIREBASE_$name").orElse("").get()
+            val value = providers.environmentVariable("HOUSECALL_FIREBASE_$name").orElse("").get()
             require(value.matches(Regex("[A-Za-z0-9_:.-]*"))) { "Invalid Firebase client configuration" }
             buildConfigField("String", "FIREBASE_$name", "\"$value\"")
         }

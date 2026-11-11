@@ -4,7 +4,7 @@ use axum::{
     http::{Request, StatusCode},
     Router,
 };
-use chriscord_server::{app, AppState};
+use housecall_server::{app, AppState};
 use http_body_util::BodyExt;
 use serde_json::{json, Value};
 use std::collections::BTreeSet;

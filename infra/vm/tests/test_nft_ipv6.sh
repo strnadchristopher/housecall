@@ -1,8 +1,8 @@
 #!/bin/sh
 # Independent kernel IPv6 OUTPUT test; does not claim external IPv6 bridge reachability.
 set -eu
-prefix=chriscord-sprint-vpn-ipv6-$$
-image=chriscord-sprint-vpn-fixture:local
+prefix=housecall-sprint-vpn-ipv6-$$
+image=housecall-sprint-vpn-fixture:local
 policy_image=${POLICY_IMAGE:-$image}
 docker() { sudo -n docker "$@"; }
 cleanup() { docker rm -f "$prefix" >/dev/null 2>&1 || true; }

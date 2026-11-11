@@ -97,7 +97,7 @@ test("three private users: invitation, realtime mentions, unsend/retraction, edi
   await owner
     .getByLabel("Setup token")
     .fill(
-      process.env.CHRISCORD_SETUP_TOKEN ??
+      process.env.HOUSECALL_SETUP_TOKEN ??
         "test-setup-token-at-least-32-characters",
     );
   await owner.getByLabel("Username", { exact: true }).fill("owner");
@@ -201,7 +201,7 @@ test("three private users: invitation, realtime mentions, unsend/retraction, edi
     await expect(page.getByRole("button", { name: "Activity controls", exact: true })).toHaveCount(0);
   await owner.getByRole('button',{name:'Gimme request (dry run)',exact:true}).click();await owner.getByLabel('Movie or show').fill('Arrival 2016');await owner.getByRole('button',{name:'Preview request'}).click();await expect(owner.getByTestId('screen-gimme')).toContainText('Preview saved — no provider request sent');await owner.getByRole('button',{name:'Back to conversation'}).click();
   for (const page of [owner, bob, carol]) await expect(page.getByTestId('screen-conversation')).toContainText('Arrival 2016: Preview saved — no provider request sent');
-  if (process.env.CHRISCORD_TEST_UPLOADS === "1") {
+  if (process.env.HOUSECALL_TEST_UPLOADS === "1") {
     await owner.getByRole('button',{name:'Upload file',exact:true}).click();
     await owner.locator('input[type="file"]').setInputFiles({name:'upload-fixture.bin',mimeType:'application/octet-stream',buffer:Buffer.alloc(5*1024*1024,23)});
     await owner.getByRole('button',{name:'Upload',exact:true}).click();
@@ -233,7 +233,7 @@ test("three private users: invitation, realtime mentions, unsend/retraction, edi
   await bob.getByRole("button", { name: "Add passkey", exact: true }).click();
   const registrationResponse=await registered;
   expect(registrationResponse.status()).toBe(200);
-  await bob.screenshot({path:`../evidence/${process.env.CHRISCORD_ARTIFACT_PREFIX ?? ''}client-devices.png`});
+  await bob.screenshot({path:`../evidence/${process.env.HOUSECALL_ARTIFACT_PREFIX ?? ''}client-devices.png`});
   const oldHeaders={Authorization:(await registrationResponse.request().headerValue('authorization'))!,'X-Device-Key':(await registrationResponse.request().headerValue('x-device-key'))!};
   const registrationReplay=await contexts[1].request.post(registrationResponse.url(),{headers:oldHeaders,data:registrationResponse.request().postDataJSON()});
   expect(registrationReplay.status()).toBeGreaterThanOrEqual(400);
@@ -252,6 +252,6 @@ test("three private users: invitation, realtime mentions, unsend/retraction, edi
   const assertionResponse=await asserted;
   expect(assertionResponse.status()).toBe(200);
   expect((await contexts[1].request.post(assertionResponse.url(),{data:assertionResponse.request().postDataJSON()})).status()).toBeGreaterThanOrEqual(400);
-  await owner.screenshot({ path: `../evidence/${process.env.CHRISCORD_ARTIFACT_PREFIX ?? ""}client-chat.png` });
+  await owner.screenshot({ path: `../evidence/${process.env.HOUSECALL_ARTIFACT_PREFIX ?? ""}client-chat.png` });
   for (const context of contexts) await context.close();
 });

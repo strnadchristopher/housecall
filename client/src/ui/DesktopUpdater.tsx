@@ -57,7 +57,7 @@ export function DesktopUpdater() {
           },
         });
       } catch (error) {
-        console.warn("Chriscord update check failed", error);
+        console.warn("Housecall update check failed", error);
         if (version) setPhase({ kind: "failed", version });
       } finally {
         busy = false;
@@ -80,7 +80,7 @@ export function DesktopUpdater() {
     try {
       await install();
     } catch (error) {
-      console.warn("Chriscord update install failed", error);
+      console.warn("Housecall update install failed", error);
       downloaded.current = false;
       setPhase({ kind: "failed", version });
     }
@@ -90,7 +90,7 @@ export function DesktopUpdater() {
     <div className="cc-updater">
       {phase.kind === "downloading" && (
         <Banner icon="download">
-          <strong>Chriscord {phase.version}</strong> is available. Downloading
+          <strong>Housecall {phase.version}</strong> is available. Downloading
           {phase.percent === undefined ? "…" : ` ${phase.percent}%`}
         </Banner>
       )}
@@ -109,7 +109,7 @@ export function DesktopUpdater() {
             </span>
           }
         >
-          <strong>Chriscord {phase.version}</strong> is ready to install.
+          <strong>Housecall {phase.version}</strong> is ready to install.
         </Banner>
       )}
       {phase.kind === "failed" && (
@@ -118,7 +118,7 @@ export function DesktopUpdater() {
           icon="warn"
           action={<Button variant="quiet" onClick={() => setHidden(true)}>Dismiss</Button>}
         >
-          Couldn't update to <strong>Chriscord {phase.version}</strong>. Trying again later.
+          Couldn't update to <strong>Housecall {phase.version}</strong>. Trying again later.
         </Banner>
       )}
     </div>

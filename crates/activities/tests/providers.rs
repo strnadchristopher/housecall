@@ -1,5 +1,5 @@
 //! All provider network tests use local TCP fixtures, never production credentials/services.
-use chriscord_activities::{
+use housecall_activities::{
     dj::Switchboard,
     gimme::{Gimme, Mode, Poll, Request, Submission},
     plex::Plex,
@@ -77,7 +77,7 @@ async fn switchboard_exact_model_and_task_header_on_loopback_fixture() {
     let request = &requests[0];
     assert!(request
         .to_lowercase()
-        .contains("x-inference-task: chriscord.dj"));
+        .contains("x-inference-task: housecall.dj"));
     let body: serde_json::Value =
         serde_json::from_str(request.split("\r\n\r\n").nth(1).unwrap()).unwrap();
     assert_eq!(body["model"], "role:chat");
@@ -216,7 +216,7 @@ async fn bounded_metadata_rejects_content_length_and_chunked_overflow() {
             }
         });
         let response = reqwest::get(endpoint).await.unwrap();
-        assert!(chriscord_activities::read_json(response, 8).await.is_err());
+        assert!(housecall_activities::read_json(response, 8).await.is_err());
         worker.join().unwrap();
     }
 }

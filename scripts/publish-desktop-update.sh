@@ -2,14 +2,14 @@
 # Publish a signed desktop release to the self-hosted updater feed.
 # Usage: scripts/publish-desktop-update.sh <tag> [notes]
 # Reads release assets (+ .sig files) from the GitHub release, writes
-# latest.json, and copies everything to the Chriscord server's updates dir.
+# latest.json, and copies everything to the Housecall server's updates dir.
 set -euo pipefail
 TAG=${1:?tag, e.g. v0.1.2}
-NOTES=${2:-"Chriscord ${TAG#v}"}
-REPO=${CHRISCORD_REPO:-strnadchristopher/chriscord}
-HOST=${CHRISCORD_UPDATE_HOST:-shiva}
-DEST=${CHRISCORD_UPDATE_DIR:-/mnt/nvme1tb/appdata/chriscord/updates}
-BASE=${CHRISCORD_UPDATE_URL:-https://chriscord.littleobelisk.com/updates}
+NOTES=${2:-"Housecall ${TAG#v}"}
+REPO=${HOUSECALL_REPO:-strnadchristopher/housecall}
+HOST=${HOUSECALL_UPDATE_HOST:-shiva}
+DEST=${HOUSECALL_UPDATE_DIR:-/mnt/nvme1tb/appdata/housecall/updates}
+BASE=${HOUSECALL_UPDATE_URL:-https://housecall.littleobelisk.com/updates}
 VERSION=${TAG#v}; VERSION=${VERSION%%-*}
 
 WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT

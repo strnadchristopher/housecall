@@ -6,7 +6,7 @@ use axum::{
     routing::{get, post},
     Extension, Json, Router,
 };
-use chriscord_activities::{Kind, Session};
+use housecall_activities::{Kind, Session};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -97,7 +97,7 @@ fn database_authority(db: &Connection, principal: &Principal, channel: &str) -> 
         .is_some_and(|snapshot| snapshot.kind == Kind::Vm && snapshot.host == principal.user.id)
 }
 pub fn configure(state: &mut AppState) -> Result<(), String> {
-    let socket = std::env::var("CHRISCORD_VM_MEDIA_SOCKET").unwrap_or_default();
+    let socket = std::env::var("HOUSECALL_VM_MEDIA_SOCKET").unwrap_or_default();
     if socket.is_empty() {
         return Ok(());
     }
@@ -105,7 +105,7 @@ pub fn configure(state: &mut AppState) -> Result<(), String> {
         return Err("VM capture requires configured Unix VM input/channel".into());
     }
     let socket = PathBuf::from(socket);
-    let uid: u32 = std::env::var("CHRISCORD_VM_MEDIA_UID")
+    let uid: u32 = std::env::var("HOUSECALL_VM_MEDIA_UID")
         .unwrap_or_else(|_| "47192".into())
         .parse()
         .map_err(|_| "invalid VM publisher UID")?;
@@ -115,7 +115,7 @@ pub fn configure(state: &mut AppState) -> Result<(), String> {
     state.vm_media = Arc::new(Publisher {
         socket: Some(socket),
         uid,
-        channel: std::env::var("CHRISCORD_VM_CHANNEL_ID").map_err(|_| "VM channel missing")?,
+        channel: std::env::var("HOUSECALL_VM_CHANNEL_ID").map_err(|_| "VM channel missing")?,
         grant: Mutex::new(None),
     });
     Ok(())
@@ -268,7 +268,7 @@ impl Drop for PendingJoin {
 #[serde(deny_unknown_fields)]
 struct Join {
     generation: String,
-    offer: chriscord_sfu::SdpOffer,
+    offer: housecall_sfu::SdpOffer,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]

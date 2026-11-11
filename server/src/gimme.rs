@@ -7,7 +7,7 @@ use axum::{
     routing::get,
     Extension, Json, Router,
 };
-use chriscord_activities::gimme::{Gimme, Job, Mode, Poll, Request, Submission};
+use housecall_activities::gimme::{Gimme, Job, Mode, Poll, Request, Submission};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};

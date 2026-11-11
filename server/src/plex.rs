@@ -8,7 +8,7 @@ use axum::{
     routing::get,
     Extension, Json, Router,
 };
-use chriscord_activities::{
+use housecall_activities::{
     plex::{Plex, Resource},
     Kind, Snapshot,
 };
@@ -133,7 +133,7 @@ impl Gateway {
                         if cache.resources.len() + additions.len() >= MAX_RESOURCES
                             || count + additions.len() >= MAX_SESSION_RESOURCES
                         {
-                            return Err(chriscord_activities::Error::Invalid(
+                            return Err(housecall_activities::Error::Invalid(
                                 "Plex resource capacity",
                             ));
                         }
@@ -192,7 +192,7 @@ fn missing() -> ApiError {
         "Plex playback resource is unavailable",
     )
 }
-fn provider_error(_: chriscord_activities::Error) -> ApiError {
+fn provider_error(_: housecall_activities::Error) -> ApiError {
     ApiError(
         StatusCode::BAD_GATEWAY,
         "Plex returned an invalid or unavailable resource",
@@ -418,20 +418,20 @@ async fn stop(
 async fn read_manifest(mut response: reqwest::Response) -> Result<String, ApiError> {
     if !response.status().is_success() || response.content_length().is_some_and(|n| n > 1024 * 1024)
     {
-        return Err(provider_error(chriscord_activities::Error::Provider));
+        return Err(provider_error(housecall_activities::Error::Provider));
     }
     let mut data = Vec::new();
     while let Some(chunk) = response
         .chunk()
         .await
-        .map_err(|_| provider_error(chriscord_activities::Error::Provider))?
+        .map_err(|_| provider_error(housecall_activities::Error::Provider))?
     {
         if data.len() + chunk.len() > 1024 * 1024 {
-            return Err(provider_error(chriscord_activities::Error::Provider));
+            return Err(provider_error(housecall_activities::Error::Provider));
         }
         data.extend_from_slice(&chunk);
     }
-    String::from_utf8(data).map_err(|_| provider_error(chriscord_activities::Error::Provider))
+    String::from_utf8(data).map_err(|_| provider_error(housecall_activities::Error::Provider))
 }
 async fn resource(
     State(s): State<AppState>,
@@ -506,7 +506,7 @@ async fn resource(
         return manifest_response(g.rewrite(&channel, &entry.playback, &text, &url)?);
     }
     if response.content_length().is_some_and(|n| n > MAX_SEGMENT) {
-        return Err(provider_error(chriscord_activities::Error::Provider));
+        return Err(provider_error(housecall_activities::Error::Provider));
     }
     let base_mime = mime
         .split(';')
@@ -525,7 +525,7 @@ async fn resource(
             | "application/octet-stream"
             | "application/x-subrip"
     ) {
-        return Err(provider_error(chriscord_activities::Error::Provider));
+        return Err(provider_error(housecall_activities::Error::Provider));
     }
     let status = response.status();
     let content_range = response.headers().get(header::CONTENT_RANGE).cloned();
@@ -590,7 +590,7 @@ async fn resource(
     output.headers_mut().insert(
         header::CONTENT_TYPE,
         mime.parse()
-            .map_err(|_| provider_error(chriscord_activities::Error::Provider))?,
+            .map_err(|_| provider_error(housecall_activities::Error::Provider))?,
     );
     output
         .headers_mut()
@@ -645,7 +645,7 @@ mod tests {
                     .unwrap();
                 }
             }
-            let session = chriscord_activities::Session::new(
+            let session = housecall_activities::Session::new(
                 Kind::Plex,
                 "alice".into(),
                 ["alice".into()].into(),

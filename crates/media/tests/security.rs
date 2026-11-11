@@ -1,4 +1,4 @@
-use chriscord_media::*;
+use housecall_media::*;
 use proptest::prelude::*;
 use std::{
     fs,
@@ -244,16 +244,16 @@ fn clamd_protocol_accepts_only_definitive_clean_response() {
 
 #[cfg(unix)]
 #[test]
-#[ignore = "requires isolated live clamd fixture via CHRISCORD_TEST_CLAMD_SOCKET"]
+#[ignore = "requires isolated live clamd fixture via HOUSECALL_TEST_CLAMD_SOCKET"]
 fn live_clamd_releases_clean_and_quarantines_eicar() {
-    let socket = std::env::var("CHRISCORD_TEST_CLAMD_SOCKET").expect("set isolated scanner socket");
+    let socket = std::env::var("HOUSECALL_TEST_CLAMD_SOCKET").expect("set isolated scanner socket");
     let scanner = ClamdScanner {
         socket: socket.into(),
         timeout: std::time::Duration::from_secs(30),
     };
     let tmp = tempfile::tempdir().unwrap();
     let store = Store::new(tmp.path(), [45; 32]).unwrap();
-    let clean = b"Chriscord clean scanner fixture.";
+    let clean = b"Housecall clean scanner fixture.";
     let upload = store
         .create("fixture", "channel", "clean.txt", clean.len() as u64)
         .unwrap();
@@ -292,7 +292,7 @@ fn live_clamd_releases_clean_and_quarantines_eicar() {
 #[ignore = "continues the exact owned disk fixture after an actual process interruption"]
 fn resume_large_fixture_after_process_interrupt() {
     let path = std::path::PathBuf::from(
-        std::env::var("CHRISCORD_LARGE_FIXTURE_PATH").expect("owned fixture path"),
+        std::env::var("HOUSECALL_LARGE_FIXTURE_PATH").expect("owned fixture path"),
     );
     let root = std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/target"))
         .canonicalize()

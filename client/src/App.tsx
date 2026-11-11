@@ -13,7 +13,7 @@ import { MediaTrack } from "./data/MediaTrack";
 import { firstPreviewLink, previewLink, type LinkPreview } from "./data/embeds";
 import { Screen } from "./ui/Screen";
 import type { Intent, ScreenId, ScreenProps } from "./contracts/ui";
-import { useChriscord } from "./hooks/useChriscord";
+import { useHousecall } from "./hooks/useHousecall";
 import { isDesktopTauri, registerPasskey } from "./transport/passkeys";
 import { subscribeInviteLinks, type InviteLink } from "./transport/deepLinks";
 import { ResumableUpload, uploadScanMessage, type Upload } from "./transport/uploads";
@@ -29,7 +29,7 @@ import type { Message } from "./state/messages";
 import type { User, Server, Role } from "./data/types";
 /** Engineering adapter: data and intents only. Opus owns Screen and all presentation. */
 export function App() {
-  const c = useChriscord();
+  const c = useHousecall();
   const desktopPasskeysUnavailable = isDesktopTauri();
   const [nativePush, setNativePush] = useState<NativePushStatus>();
   useEffect(() => {
@@ -839,10 +839,10 @@ export function App() {
                   : "login",
             title:
               view === "setup"
-                ? "Initialize Chriscord"
+                ? "Initialize Housecall"
                 : view === "invite"
                   ? "Accept invitation"
-                  : "Sign in to Chriscord",
+                  : "Sign in to Housecall",
             phase: "ready",
             fields: [
               {
@@ -905,7 +905,7 @@ export function App() {
   };
   const shell = screen({
     id: "shell",
-    title: `Chriscord — ${c.auth.user.username}`,
+    title: `Housecall — ${c.auth.user.username}`,
     ...common,
     items: c.channels.map((ch) => ({
       id: ch.id,

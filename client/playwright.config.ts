@@ -2,17 +2,17 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch:
-    process.env.CHRISCORD_TEST_NATIVE_PUSH === "1"
+    process.env.HOUSECALL_TEST_NATIVE_PUSH === "1"
       ? "**/native-push.spec.ts"
-      : process.env.CHRISCORD_TEST_UPLOAD_VIDEO === "1"
+      : process.env.HOUSECALL_TEST_UPLOAD_VIDEO === "1"
       ? "**/upload-video.spec.ts"
-      : process.env.CHRISCORD_TEST_REPORTS === "1"
+      : process.env.HOUSECALL_TEST_REPORTS === "1"
       ? "**/reports.spec.ts"
-      : process.env.CHRISCORD_TEST_PLEX === "1"
+      : process.env.HOUSECALL_TEST_PLEX === "1"
       ? "**/plex.spec.ts"
-      : process.env.CHRISCORD_TEST_LOAD === "1"
+      : process.env.HOUSECALL_TEST_LOAD === "1"
         ? "**/voice-load.spec.ts"
-        : process.env.CHRISCORD_TEST_VOICE === "1"
+        : process.env.HOUSECALL_TEST_VOICE === "1"
           ? "**/voice.spec.ts"
           : "**/chat.spec.ts",
   fullyParallel: false,
@@ -20,7 +20,7 @@ export default defineConfig({
   timeout: 120000,
   reporter: [
     ["list"],
-    ["json", { outputFile: process.env.CHRISCORD_TEST_RECEIPT ?? "../evidence/client-playwright.json" }],
+    ["json", { outputFile: process.env.HOUSECALL_TEST_RECEIPT ?? "../evidence/client-playwright.json" }],
   ],
   use: {
     baseURL: "http://localhost:1420",
@@ -37,7 +37,7 @@ export default defineConfig({
       command: "npm run dev",
       url: "http://127.0.0.1:1420",
       reuseExistingServer: false,
-      env: { CHRISCORD_API: "http://127.0.0.1:3031" },
+      env: { HOUSECALL_API: "http://127.0.0.1:3031" },
     },
   ],
   projects: [

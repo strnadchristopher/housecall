@@ -209,7 +209,7 @@ it("markdown produces inert data, strips image fetching and unsafe links, preser
 
 import { Api as MediaApi } from "../src/transport/api";
 it("media requests keep device credentials on the configured API origin and reject redirects", () => {
-  const api = new MediaApi("https://chriscord.example");
+  const api = new MediaApi("https://housecall.example");
   api.authenticate({ token: "fixture-token", device_key: "fixture-device" });
   const request = api.mediaRequest(
     "/api/channels/general/plex/resources/opaque",

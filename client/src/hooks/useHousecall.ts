@@ -17,7 +17,7 @@ import type {
   ServerEvent,
   User,
 } from "../data/types";
-export function useChriscord() {
+export function useHousecall() {
   const api = useMemo(() => new Api(), []),
     store = useMemo(() => new MessageStore(), []),
     notifications = useMemo(() => new NotificationReconciler(), []);
@@ -134,7 +134,7 @@ export function useChriscord() {
     await establish(
       await api.post<Auth>(path, {
         ...credentials,
-        device_name: "Chriscord browser",
+        device_name: "Housecall browser",
       }),
     );
   };

@@ -6,7 +6,7 @@ const require=createRequire(new URL('../../client/package.json',import.meta.url)
 const {chromium}=require('@playwright/test');
 let input='';for await(const chunk of process.stdin)input+=chunk;
 const {origin,sessions}=JSON.parse(input);
-const receipt=process.env.CHRISCORD_DJ_RECEIPT;assert.ok(receipt,'unique receipt path is required');
+const receipt=process.env.HOUSECALL_DJ_RECEIPT;assert.ok(receipt,'unique receipt path is required');
 assert.equal(new URL(origin).hostname,'127.0.0.1');
 async function request(actor,path,body){const response=await fetch(origin+path,{method:body===undefined?'GET':'POST',headers:{'content-type':'application/json',authorization:`Bearer ${sessions[actor].token}`,'x-device-key':sessions[actor].device_key},body:body===undefined?undefined:JSON.stringify(body)});assert.equal(response.ok,true,`HTTP ${response.status} ${path}`);return response.json();}
 const browser=await chromium.launch({headless:true,args:['--autoplay-policy=no-user-gesture-required']});

@@ -12,7 +12,7 @@ services:
     read_only: true
     tmpfs: ["/tmp:rw,nosuid,nodev,noexec,size=16m,mode=1777"]
     volumes:
-      - /run/chriscord/vm-audio:/audio
+      - /run/housecall/vm-audio:/audio
     mem_limit: 128m
     pids_limit: 32
     restart: unless-stopped
@@ -33,9 +33,9 @@ services:
       VM_MEDIA_SFU_IP: ${VM_MEDIA_SFU_IP:?numeric reachable SFU candidate IP required}
       VM_MEDIA_SFU_PORT: ${VM_MEDIA_SFU_PORT:-50000}
     volumes:
-      - /run/chriscord/vm-display:/display:ro
-      - /run/chriscord/vm-audio:/audio:ro
-      - /run/chriscord/vm-signaling:/signaling:ro
+      - /run/housecall/vm-display:/display:ro
+      - /run/housecall/vm-audio:/audio:ro
+      - /run/housecall/vm-signaling:/signaling:ro
     mem_limit: 768m
     cpus: 2
     pids_limit: 128

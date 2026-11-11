@@ -24,5 +24,5 @@ pub fn run() {
         .plugin(tauri_plugin_process::init());
     builder
         .run(tauri::generate_context!())
-        .expect("Chriscord application failed to start");
+        .expect("Housecall application failed to start");
 }

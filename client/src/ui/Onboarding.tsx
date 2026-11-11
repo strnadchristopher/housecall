@@ -138,7 +138,7 @@ function Scene() {
         <path d="M0 742 C 220 728 420 736 640 730 C 900 724 1180 738 1600 732 L1600 1000 L0 1000 Z" fill="var(--cc-ground)" />
         <rect className="cc-scene__grain" width="1600" height="1000" filter="url(#cc-grain-f)" />
       </svg>
-      <p className="cc-scene__word cc-display">Chriscord</p>
+      <p className="cc-scene__word cc-display">Housecall</p>
       <svg className="cc-scene__front" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMax slice">
         <defs>
           <linearGradient id="cc-lit" x1="0" y1="0" x2="0" y2="1">

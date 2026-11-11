@@ -25,7 +25,7 @@ spec.loader.exec_module(g)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--desktop-receipt', type=Path, required=True)
-    parser.add_argument('--app-image', default='chriscord-app:vm-fixture')
+    parser.add_argument('--app-image', default='housecall-app:vm-fixture')
     args = parser.parse_args()
     assert shutil.disk_usage(ROOT).free >= 12*1024**3, '12 GiB reserve required'
     assert Path('/dev/kvm').exists(), 'Proper KVM host required'
@@ -44,7 +44,7 @@ def main():
     evidence.mkdir(mode=0o700)
     (evidence/'source-before.json').write_text(json.dumps(source_identity,indent=2)+'\n')
     images = {}
-    for image in (args.app_image,g.VM_IMAGE,'chriscord-vm-audio:local','chriscord-vm-publisher:local'):
+    for image in (args.app_image,g.VM_IMAGE,'housecall-vm-audio:local','housecall-vm-publisher:local'):
         images[image] = g.docker('image','inspect','--format','{{.Id}}',image).stdout.strip()
     (evidence/'images.json').write_text(json.dumps(images,indent=2)+'\n')
     work = ROOT/'.runtime'/('vm-desktop-'+run_id)
@@ -77,10 +77,10 @@ def main():
               '--security-opt','no-new-privileges:true','--memory','768m','--memory-swap','768m','--cpus','1',
               '--tmpfs','/tmp:size=32m,mode=1777','-v',f'{work}/app:/data','-v',f'{g.CONTROL}:/vm-control:ro',
               '-v',f'{work}/signaling:/signaling','-e','SFU_BIND=0.0.0.0:50000','-e','SFU_PUBLIC_IP=172.29.242.2',
-              '-e','CHRISCORD_SETUP_TOKEN=test-setup-token-at-least-32-characters','-e','GIMME_DRY_RUN=true',
-              '-e','DJ_ENABLED=false','-e','CHRISCORD_VM_QMP_SOCKET=/vm-control/qmp.sock',
-              '-e','CHRISCORD_VM_SUPERVISOR_SOCKET=/vm-control/supervisor.sock','-e','CHRISCORD_VM_MEDIA_SOCKET=/signaling/publisher.sock',
-              '-e','CHRISCORD_VM_MEDIA_UID=47192','-e','CHRISCORD_VM_CHANNEL_ID='+channel,args.app_image)
+              '-e','HOUSECALL_SETUP_TOKEN=test-setup-token-at-least-32-characters','-e','GIMME_DRY_RUN=true',
+              '-e','DJ_ENABLED=false','-e','HOUSECALL_VM_QMP_SOCKET=/vm-control/qmp.sock',
+              '-e','HOUSECALL_VM_SUPERVISOR_SOCKET=/vm-control/supervisor.sock','-e','HOUSECALL_VM_MEDIA_SOCKET=/signaling/publisher.sock',
+              '-e','HOUSECALL_VM_MEDIA_UID=47192','-e','HOUSECALL_VM_CHANNEL_ID='+channel,args.app_image)
         wait_http()
     original_args=g.vm_args
     def vm_args():
@@ -142,11 +142,11 @@ for protocol,port,payload in [('tcp',8080,b'GET / HTTP/1.0\\r\\nHost: fixture\\r
         g.record('one_actual_capture_encoder_child_for_three_viewers',True)
     def host_action(action):
         if action=='runtime_boundaries':runtime_boundaries()
-        elif action=='verify_input':serial('test -f /root/chriscord-input-marker -a -f /root/chriscord-pointer-marker')
-        elif action=='write_persistent_marker':serial('echo persisted > /root/chriscord-persistent-marker; sync')
+        elif action=='verify_input':serial('test -f /root/housecall-input-marker -a -f /root/housecall-pointer-marker')
+        elif action=='write_persistent_marker':serial('echo persisted > /root/housecall-persistent-marker; sync')
         elif action=='restart_vm':g.stop_vm();g.start_vm()
-        elif action=='verify_persistent_marker':serial('grep -q persisted /root/chriscord-persistent-marker')
-        elif action=='verify_reset':reconnect_serial();serial('test ! -e /root/chriscord-persistent-marker -a ! -e /root/chriscord-input-marker -a ! -e /root/chriscord-pointer-marker')
+        elif action=='verify_persistent_marker':serial('grep -q persisted /root/housecall-persistent-marker')
+        elif action=='verify_reset':reconnect_serial();serial('test ! -e /root/housecall-persistent-marker -a ! -e /root/housecall-input-marker -a ! -e /root/housecall-pointer-marker')
         elif action=='guest_network_matrix':
             g.guest_matrix('desktop_vpn_up',True)
             g.docker('exec',g.SERVER,'ip','link','set','wg0','down')
@@ -166,17 +166,17 @@ for protocol,port,payload in [('tcp',8080,b'GET / HTTP/1.0\\r\\nHost: fixture\\r
     signal.signal(signal.SIGTERM,interrupted);signal.signal(signal.SIGINT,interrupted)
     try:
         g.fixture_network()
-        g.docker('network','create','--internal','--subnet','172.29.242.0/24','--label','chriscord.fixture='+g.PREFIX,network)
+        g.docker('network','create','--internal','--subnet','172.29.242.0/24','--label','housecall.fixture='+g.PREFIX,network)
         g.NETWORKS.append(network)
         g.docker('network','connect','--ip','172.29.242.3',network,g.CANARY)
         g.run(audio,'--network','none','--user','47193:47191','--read-only','--cap-drop','ALL',
               '--security-opt','no-new-privileges:true','--memory','128m','--memory-swap','128m',
-              '--tmpfs','/tmp:size=16m,mode=1777','-v',f'{work}/audio:/audio','chriscord-vm-audio:local')
+              '--tmpfs','/tmp:size=16m,mode=1777','-v',f'{work}/audio:/audio','housecall-vm-audio:local')
         deadline=time.monotonic()+15
         while not (work/'audio/native').exists() and time.monotonic()<deadline:time.sleep(.1)
         assert (work/'audio/native').exists()
         g.start_vm()
-        serial('systemctl is-active --quiet chriscord-fixture.service')
+        serial('systemctl is-active --quiet housecall-fixture.service')
         start_app('bootstrap')
         owner=request('POST','/setup',{'setup_token':'test-setup-token-at-least-32-characters','username':'vm_owner','password':'synthetic desktop fixture password','device_name':'fixture'})
         sessions=[owner]
@@ -189,19 +189,19 @@ for protocol,port,payload in [('tcp',8080,b'GET / HTTP/1.0\\r\\nHost: fixture\\r
         g.run(publisher,'--network',network,'--read-only','--cap-drop','ALL','--cap-add','NET_ADMIN','--cap-add','SETUID','--cap-add','SETGID','--cap-add','SETPCAP',
               '--security-opt','no-new-privileges:true','--memory','768m','--memory-swap','768m','--cpus','1','--pids-limit','128',
               '--tmpfs','/tmp:size=64m,mode=1777','-v',f'{work}/display:/display:ro','-v',f'{work}/audio:/audio:ro','-v',f'{work}/signaling:/signaling:ro',
-              '-e','VM_MEDIA_APP_UID=10001','-e','VM_MEDIA_SFU_IP=172.29.242.2','chriscord-vm-publisher:local')
+              '-e','VM_MEDIA_APP_UID=10001','-e','VM_MEDIA_SFU_IP=172.29.242.2','housecall-vm-publisher:local')
         config=work/'browser.json';config.write_text(json.dumps({'sessions':sessions,'channel':channel,'api':api,'web':web,'receipt':str(evidence/'browser.json')}));config.chmod(0o600)
         for name in ('vite.log','browser-stderr.log'):
             opened.append((evidence/name).open('xb'))
-        env={k:v for k,v in os.environ.items() if not k.startswith(('CHRISCORD_','SFU_','DJ_','PLEX_','PUSH_','APNS_','FCM_','SWITCHBOARD_'))}
-        vite=subprocess.Popen([str(ROOT/'client/node_modules/.bin/vite'),'--host','127.0.0.1','--port','1429','--strictPort'],cwd=ROOT/'client',env={**env,'CHRISCORD_API':api},stdout=opened[0],stderr=subprocess.STDOUT)
+        env={k:v for k,v in os.environ.items() if not k.startswith(('HOUSECALL_','SFU_','DJ_','PLEX_','PUSH_','APNS_','FCM_','SWITCHBOARD_'))}
+        vite=subprocess.Popen([str(ROOT/'client/node_modules/.bin/vite'),'--host','127.0.0.1','--port','1429','--strictPort'],cwd=ROOT/'client',env={**env,'HOUSECALL_API':api},stdout=opened[0],stderr=subprocess.STDOUT)
         children.append(vite)
         deadline=time.monotonic()+20
         while time.monotonic()<deadline:
             try:
                 with urllib.request.urlopen(web,timeout=1):break
             except OSError:time.sleep(.2)
-        node=subprocess.Popen(['node','tests/vm-desktop-acceptance.mjs'],cwd=ROOT/'client',env={**env,'CHRISCORD_VM_FIXTURE':str(config)},stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=opened[1],text=True)
+        node=subprocess.Popen(['node','tests/vm-desktop-acceptance.mjs'],cwd=ROOT/'client',env={**env,'HOUSECALL_VM_FIXTURE':str(config)},stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=opened[1],text=True)
         children.append(node)
         selector=selectors.DefaultSelector();selector.register(node.stdout,selectors.EVENT_READ)
         deadline=time.monotonic()+360

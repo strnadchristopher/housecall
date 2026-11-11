@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import hashlib,json,os,secrets,socket,statistics,subprocess,tempfile,time,urllib.request
 ROOT=Path(__file__).resolve().parents[1]
-BINARY=ROOT/'target/debug/chriscord-server'
+BINARY=ROOT/'target/debug/housecall-server'
 def main():
     runtime=ROOT/'.runtime';runtime.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='load-chat-',dir=runtime) as tmp:
@@ -12,11 +12,11 @@ def main():
             sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
         origin=f'http://127.0.0.1:{port}'
         token=secrets.token_hex(32)
-        env={**os.environ,'CHRISCORD_SETUP_TOKEN':token,'CHRISCORD_BIND':f'127.0.0.1:{port}','CHRISCORD_DATABASE':str(Path(tmp)/'fixture.sqlite'),'CHRISCORD_MEDIA_KEY':'22'*32,'CHRISCORD_MEDIA_DIR':str(Path(tmp)/'media')}
+        env={**os.environ,'HOUSECALL_SETUP_TOKEN':token,'HOUSECALL_BIND':f'127.0.0.1:{port}','HOUSECALL_DATABASE':str(Path(tmp)/'fixture.sqlite'),'HOUSECALL_MEDIA_KEY':'22'*32,'HOUSECALL_MEDIA_DIR':str(Path(tmp)/'media')}
         # Never inherit integration credentials into a synthetic test process.
         for key in list(env):
             if key.startswith(('PLEX_','GIMME_','GIPHY_','SWITCHBOARD_','APNS_','FCM_')):env.pop(key)
-        env.pop('CHRISCORD_ORIGIN',None)
+        env.pop('HOUSECALL_ORIGIN',None)
         with open(Path(tmp)/'server.log','w') as log:
             proc=subprocess.Popen([str(BINARY)],cwd=ROOT,env=env,stdout=log,stderr=log)
             try:

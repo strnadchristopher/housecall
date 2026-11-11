@@ -22,7 +22,7 @@ export class NotificationReconciler {
         Notification.permission !== "granted"
       )
         return;
-      return new Notification("Chriscord", {
+      return new Notification("Housecall", {
         body: record.body ?? "New message",
         tag: record.message_id,
       });

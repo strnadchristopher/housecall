@@ -15,13 +15,13 @@ The parent integrates these hooks through the existing notification intents and 
 
 ## Build configuration
 
-Supply these public client identifiers to the Android app build environment, from the Firebase Android app registered with package `com.littleobelisk.chriscord`:
+Supply these public client identifiers to the Android app build environment, from the Firebase Android app registered with package `com.mapleavenuelabs.housecall`:
 
 ```
-CHRISCORD_FIREBASE_APPLICATION_ID
-CHRISCORD_FIREBASE_API_KEY
-CHRISCORD_FIREBASE_PROJECT_ID
-CHRISCORD_FIREBASE_SENDER_ID
+HOUSECALL_FIREBASE_APPLICATION_ID
+HOUSECALL_FIREBASE_API_KEY
+HOUSECALL_FIREBASE_PROJECT_ID
+HOUSECALL_FIREBASE_SENDER_ID
 ```
 
 They are compiled as BuildConfig values; all four must be nonempty. They are Firebase client configuration, not the server's FCM service-account private key. No `google-services.json`, service-account file or host credentials are read. No identifiers have been invented. Firebase Messaging uses the pinned BoM 35.0.2; Analytics is not a dependency, and analytics collection plus FCM auto-init default to disabled. Automatic token generation is enabled only after opt-in. The backend must separately enable its FCM provider with matching project credentials as documented in PUSH.md.
@@ -30,7 +30,7 @@ Changing these values changes the APK and requires rebuilding. Reinitializing th
 
 ## Reconciliation and security
 
-Provider payloads are ignored as content and used only to schedule work. The worker obtains the real SDK token and registers it through authenticated `PUT /api/push/device`. It retrieves at most 100 authenticated `/api/push/events`, validates operation/epoch agreement, applies retracts first, then retrieves at most 500 `/api/notifications`. The latter endpoint checks current channel membership and uses a message foreign key that cascades on unsend. Alerts require an exact current message/channel notification pair. Missing or truncated data never authorizes an alert. Existing OS inventory is checked on every pass, so omitted/inaccessible/deleted notifications are removed conservatively, even when outbox history has overflowed. No chat text or names are fetched or shown: the OS displays only “Chriscord / You have a new mention”.
+Provider payloads are ignored as content and used only to schedule work. The worker obtains the real SDK token and registers it through authenticated `PUT /api/push/device`. It retrieves at most 100 authenticated `/api/push/events`, validates operation/epoch agreement, applies retracts first, then retrieves at most 500 `/api/notifications`. The latter endpoint checks current channel membership and uses a message foreign key that cascades on unsend. Alerts require an exact current message/channel notification pair. Missing or truncated data never authorizes an alert. Existing OS inventory is checked on every pass, so omitted/inaccessible/deleted notifications are removed conservatively, even when outbox history has overflowed. No chat text or names are fetched or shown: the OS displays only “Housecall / You have a new mention”.
 
 Each session has a random generation. Every local state update rechecks it under the same lock used by logout. Requests use captured credentials only, reject redirects, disable HTTP proxies, require HTTPS, bound response bytes to 1 MiB and use timeouts. A late response cannot persist state or post a notification for another generation. Authentication/membership rejection clears the grant. Network failure suppresses new alerts and retries; it is not evidence of delivery or removal.
 

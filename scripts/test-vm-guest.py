@@ -24,10 +24,10 @@ EVIDENCE = ROOT / 'evidence'
 BASE = RUNTIME / 'base.qcow2'
 BASE_URL = 'https://cloud.debian.org/images/cloud/bookworm/20261026-2643/debian-12-nocloud-amd64-20261026-2643.qcow2'
 BASE_SHA512 = '3b7c3342105085c60097147c7f7491e761c115170213ba7d9c87685e32d234bdafe0ddf8d6fd6600a6a837c761fa229ce8b9fe2086d1235f8eebeb778d05b977'
-VM_IMAGE = 'chriscord-vm:fixture'
-FIXTURE_IMAGE = 'chriscord-sprint-vpn-fixture:local'
+VM_IMAGE = 'housecall-vm:fixture'
+FIXTURE_IMAGE = 'housecall-sprint-vpn-fixture:local'
 GLUETUN = 'qmcgaw/gluetun@sha256:78c09588169ad05b9f88bc492ac8f80e6167e93da7526171863c0dfb88bf18d6'
-PREFIX = 'chriscord-sprint-vpn-guest-' + uuid.uuid4().hex[:8]
+PREFIX = 'housecall-sprint-vpn-guest-' + uuid.uuid4().hex[:8]
 NET, SERVER, CANARY, VPN, VM = [PREFIX + '-' + name for name in ('net', 'server', 'canary', 'vpn', 'vm')]
 IP = '172.29.241'
 WORK = RUNTIME / ('run-' + PREFIX.rsplit('-', 1)[-1])
@@ -51,7 +51,7 @@ def docker(*args, check=True, timeout=30):
 
 
 def run(name, *args):
-    result = docker('run', '-d', '--name', name, '--label', 'chriscord.fixture=' + PREFIX, *args)
+    result = docker('run', '-d', '--name', name, '--label', 'housecall.fixture=' + PREFIX, *args)
     OWNED.append(name)
     return result
 
@@ -146,7 +146,7 @@ def fixture_network():
            '-c', 'umask 077; wg genkey > /keys/server; wg pubkey < /keys/server > /keys/server.pub; wg genkey > /keys/client; wg pubkey < /keys/client > /keys/client.pub')
     client = docker('run', '--rm', '--network', 'none', '--entrypoint', 'cat', '-v', f'{keys}:/keys:ro', FIXTURE_IMAGE, '/keys/client').stdout.strip()
     server = docker('run', '--rm', '--network', 'none', '--entrypoint', 'cat', '-v', f'{keys}:/keys:ro', FIXTURE_IMAGE, '/keys/server.pub').stdout.strip()
-    docker('network', 'create', '--internal', '--subnet', IP + '.0/24', '--label', 'chriscord.fixture=' + PREFIX, NET)
+    docker('network', 'create', '--internal', '--subnet', IP + '.0/24', '--label', 'housecall.fixture=' + PREFIX, NET)
     NETWORKS.append(NET)
     run(SERVER, '--network', NET, '--ip', IP + '.2', '--cap-add', 'NET_ADMIN', '--device', '/dev/net/tun', '-v', f'{keys}:/keys:ro', '-e', 'ROLE=wireguard', FIXTURE_IMAGE)
     run(CANARY, '--network', NET, '--ip', IP + '.3', '-e', 'ROLE=canary', FIXTURE_IMAGE)
@@ -186,7 +186,7 @@ def vm_args():
     return ['--network', 'container:' + VPN, '--user', '47191:47191', '--group-add', str(os.stat('/dev/kvm').st_gid),
             '--device', '/dev/kvm', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges:true', '--read-only', '--memory', '1152m', '--cpus', '1',
             '--tmpfs', '/tmp:size=16m,mode=1777', '-v', f'{DISK}:/vm', '-v', f'{BASE}:/vm/base.qcow2:ro', '-v', f'{CONTROL}:/control',
-            '-v', f'{WORK}/resolv.conf:/etc/resolv.conf:ro', '-v', f'{ROOT}/infra/vm/entrypoint.sh:/usr/local/bin/chriscord-vm:ro',
+            '-v', f'{WORK}/resolv.conf:/etc/resolv.conf:ro', '-v', f'{ROOT}/infra/vm/entrypoint.sh:/usr/local/bin/housecall-vm:ro',
             '-e', 'VM_CPUS=1', '-e', 'VM_MEMORY_MB=768', '-e', 'VM_SERIAL_CONSOLE=1']
 
 

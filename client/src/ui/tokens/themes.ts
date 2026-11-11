@@ -1,5 +1,5 @@
 /**
- * Chriscord theme tokens. This is the ONE place theme values live.
+ * Housecall theme tokens. This is the ONE place theme values live.
  *
  * Every colour the UI paints comes from here and is exposed as a CSS custom
  * property (`--cc-<token>`) by `applyTheme`. Components never hard-code colour.

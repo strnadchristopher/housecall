@@ -3,7 +3,7 @@ use axum::{
     http::{Request, StatusCode},
     Router,
 };
-use chriscord_server::{app, AppState};
+use housecall_server::{app, AppState};
 use http_body_util::BodyExt;
 use serde_json::{json, Value};
 use tower::ServiceExt;
@@ -153,7 +153,7 @@ async fn desktop_origins_pass_cors_preflight() {
 #[tokio::test]
 async fn initialized_server_restarts_without_setup_token() {
     let directory = tempfile::tempdir().unwrap();
-    let database = directory.path().join("chriscord.sqlite");
+    let database = directory.path().join("housecall.sqlite");
     let first = AppState::new(database.to_str().unwrap(), SETUP).unwrap();
     let first_api = app(first, None);
     let (status, owner) = call(&first_api, "POST", "/api/setup", None,
@@ -662,7 +662,7 @@ async fn login_and_invite_accept_rate_limits_are_independent() {
         StatusCode::TOO_MANY_REQUESTS
     );
 }
-proptest::proptest! {#[test]fn username_parser_is_total(s in ".{0,512}"){let valid=chriscord_server::valid_username(&s);if valid{proptest::prop_assert!((2..=32).contains(&s.len()));proptest::prop_assert!(s.is_ascii());}let redacted=chriscord_server::redact_logs(&s);proptest::prop_assert!(redacted.len()<=s.len()+40);}}
+proptest::proptest! {#[test]fn username_parser_is_total(s in ".{0,512}"){let valid=housecall_server::valid_username(&s);if valid{proptest::prop_assert!((2..=32).contains(&s.len()));proptest::prop_assert!(s.is_ascii());}let redacted=housecall_server::redact_logs(&s);proptest::prop_assert!(redacted.len()<=s.len()+40);}}
 
 #[tokio::test]
 async fn owner_invite_and_user_session_revocation() {

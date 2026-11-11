@@ -29,17 +29,17 @@ client/node_modules/.bin/tsc --noEmit --project client/tsconfig.json
 Authored, unexecuted Rust cases include sparse multi-terabyte virtual offsets without allocating payload, exact offsets above JavaScript's integer limit, malformed/missing index handling, actual FFmpeg derivative index boundaries, anonymous/cross-channel/revoked-session access, source deletion and current-DJ-track invalidation. The existing actual-FFmpeg server tests now check the seek endpoints and new MP4 container. Run them only after the historical SFU receipt and through Noah's shared-lock, single-job, incremental-disabled, disk-floor guard:
 
 ```bash
-cargo test --locked -p chriscord-server media_index::tests
-cargo test --locked -p chriscord-server --test transcode
-cargo test --locked -p chriscord-server dj::tests -- --skip three_browsers_decode_and_synchronize_dj_fixture
+cargo test --locked -p housecall-server media_index::tests
+cargo test --locked -p housecall-server --test transcode
+cargo test --locked -p housecall-server dj::tests -- --skip three_browsers_decode_and_synchronize_dj_fixture
 ```
 
 The isolated ignored DJ test now uses ninety-second synthetic audio. Its actual Chromium scenario asserts playback with most audio still unrequested, seeks forward to 70 seconds then backward to 7 seconds, and checks three-client pause/resume/vote-skip. Unique UUID receipts preserve historical evidence:
 
 ```bash
-cargo test --locked -p chriscord-server dj::tests::three_browsers_decode_and_synchronize_dj_fixture -- --ignored --exact --nocapture
+cargo test --locked -p housecall-server dj::tests::three_browsers_decode_and_synchronize_dj_fixture -- --ignored --exact --nocapture
 ```
 
-The existing `client/tests/e2e/upload-video.spec.ts` scenario now seeks the sixty-second synthetic video from the initial buffer to 55 seconds and back to 2 seconds, checking actual decoded progress and anonymous/cross-user/unsend denial for the seek endpoint. It writes a unique `evidence/media-upload-seek-<uuid>.json`. Run with `CHRISCORD_TEST_UPLOAD_VIDEO=1` against a rebuilt candidate server using the existing isolated Playwright harness and the same heavy guard; real ClamAV availability and current Opus UI selectors are prerequisites. Browser screenshots/adversarial UI review and actual native decoder execution remain pending. No frozen launcher/package/test-selector files were edited.
+The existing `client/tests/e2e/upload-video.spec.ts` scenario now seeks the sixty-second synthetic video from the initial buffer to 55 seconds and back to 2 seconds, checking actual decoded progress and anonymous/cross-user/unsend denial for the seek endpoint. It writes a unique `evidence/media-upload-seek-<uuid>.json`. Run with `HOUSECALL_TEST_UPLOAD_VIDEO=1` against a rebuilt candidate server using the existing isolated Playwright harness and the same heavy guard; real ClamAV availability and current Opus UI selectors are prerequisites. Browser screenshots/adversarial UI review and actual native decoder execution remain pending. No frozen launcher/package/test-selector files were edited.
 
 Format references: [FFmpeg MP4 fragmentation flags](https://ffmpeg.org/ffmpeg-formats.html#mov_002c-mp4_002c-ismv), [FFmpeg trailer writer](https://ffmpeg.org/doxygen/7.1/movenc_8c_source.html), and [WebKit ManagedMediaSource requirements](https://webkit.org/blog/14735/webkit-features-in-safari-17-1/).

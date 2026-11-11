@@ -3,8 +3,8 @@ use axum::{
     http::{Request, StatusCode},
     Router,
 };
-use chriscord_media::{Scanner, Store};
-use chriscord_server::{app, transcode::Processor, AppState};
+use housecall_media::{Scanner, Store};
+use housecall_server::{app, transcode::Processor, AppState};
 use http_body_util::BodyExt;
 use rusqlite::params;
 use serde_json::Value;
@@ -53,7 +53,7 @@ fn fixture(timeout: Duration) -> (tempfile::TempDir, AppState, Router) {
                     hash(&device.repeat(64)),
                     name,
                     0,
-                    chriscord_server::now() + 600000
+                    housecall_server::now() + 600000
                 ],
             )
             .unwrap();
@@ -112,7 +112,7 @@ fn source(state: &AppState, bytes: &[u8]) -> uuid::Uuid {
     let upload = store
         .create("owner", "room", "original.mp4", bytes.len() as u64)
         .unwrap();
-    for chunk in bytes.chunks(chriscord_media::MAX_CHUNK) {
+    for chunk in bytes.chunks(housecall_media::MAX_CHUNK) {
         let offset = store.inspect(upload.id, "owner").unwrap().offset;
         store.append(upload.id, "owner", offset, chunk).unwrap();
     }
@@ -385,7 +385,7 @@ async fn scanner_rejection_bad_input_and_timeout_never_publish_derivatives() {
     let (_dir, mut state, _) = fixture(Duration::from_secs(20));
     let bytes = video_fixture();
     let source_id = source(&state, &bytes);
-    state.scanner = Arc::new(chriscord_media::RejectScanner);
+    state.scanner = Arc::new(housecall_media::RejectScanner);
     let api = app(state.clone(), None);
     let (_, j) = json_req(
         &api,
@@ -443,7 +443,7 @@ fn restart_marks_jobs_failed_retryable_and_length_finalize_is_server_only() {
     for status in ["queued", "running"] {
         db.execute("INSERT INTO media_jobs(id,source_id,owner_id,channel_id,status,created_at,updated_at) VALUES(?,?,'owner','room',?,0,0)",params![status,"source",status]).unwrap();
     }
-    chriscord_server::transcode::init(&db).unwrap();
+    housecall_server::transcode::init(&db).unwrap();
     let count:i64=db.query_row("SELECT COUNT(*) FROM media_jobs WHERE status='failed' AND retryable=1 AND error='interrupted_by_restart'",[],|r|r.get(0)).unwrap();
     assert_eq!(count, 2);
     let store = state.media.as_ref().unwrap();
@@ -458,7 +458,7 @@ fn restart_marks_jobs_failed_retryable_and_length_finalize_is_server_only() {
         .finish_generated(generated.id, "owner", &Clean)
         .unwrap();
     assert_eq!(ready.length, 2);
-    assert_eq!(ready.status, chriscord_media::Status::Ready);
+    assert_eq!(ready.status, housecall_media::Status::Ready);
 }
 
 #[test]

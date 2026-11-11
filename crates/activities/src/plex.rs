@@ -52,8 +52,8 @@ impl Plex {
             .client
             .get(url)
             .header("X-Plex-Token", &self.token)
-            .header("X-Plex-Client-Identifier", "chriscord-server")
-            .header("X-Plex-Product", "Chriscord")
+            .header("X-Plex-Client-Identifier", "housecall-server")
+            .header("X-Plex-Product", "Housecall")
             .header("Accept", "application/json"))
     }
     pub async fn libraries(&self) -> Result<Vec<Library>> {

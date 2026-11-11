@@ -7,7 +7,7 @@ use axum::{
     routing::{get, post},
     Extension, Json, Router,
 };
-use chriscord_media::{Scanner, Status, Store, Upload, MAX_CHUNK};
+use housecall_media::{Scanner, Status, Store, Upload, MAX_CHUNK};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::{json, Value};
 use std::{io::Read, path::PathBuf, process::Stdio, sync::Arc, time::Duration};
@@ -39,11 +39,11 @@ pub fn configure(s: &mut AppState) -> Result<(), String> {
     if s.media.is_none() {
         return Ok(());
     }
-    let binary = std::env::var("CHRISCORD_FFMPEG").unwrap_or_else(|_| "/usr/bin/ffmpeg".into());
+    let binary = std::env::var("HOUSECALL_FFMPEG").unwrap_or_else(|_| "/usr/bin/ffmpeg".into());
     if !std::path::Path::new(&binary).is_file() {
         return Ok(());
     }
-    let seconds = std::env::var("CHRISCORD_TRANSCODE_TIMEOUT_SECONDS")
+    let seconds = std::env::var("HOUSECALL_TRANSCODE_TIMEOUT_SECONDS")
         .unwrap_or_else(|_| "21600".into())
         .parse::<u64>()
         .map_err(|_| "invalid transcode timeout")?;
@@ -264,7 +264,7 @@ pub fn purge_source(
         for id in [video, thumb].into_iter().flatten() {
             let uid = Uuid::parse_str(&id).map_err(|_| bad("invalid stored derivative"))?;
             match store.delete(uid, owner) {
-                Ok(()) | Err(chriscord_media::Error::NotFound) => {}
+                Ok(()) | Err(housecall_media::Error::NotFound) => {}
                 Err(e) => return Err(e.into()),
             }
         }

@@ -6,7 +6,7 @@ use axum::{
     routing::get,
     Extension, Json, Router,
 };
-use chriscord_activities::{Kind, Session};
+use housecall_activities::{Kind, Session};
 use rusqlite::{params, OptionalExtension};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -374,7 +374,7 @@ mod tests {
             .apply(
                 "host",
                 0,
-                chriscord_activities::Command::RequestControl {},
+                housecall_activities::Command::RequestControl {},
                 now() as u64,
             )
             .unwrap();

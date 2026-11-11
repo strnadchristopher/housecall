@@ -3,7 +3,7 @@
 These tests never use Shiva, existing Gluetun, or external VPN credentials. They require local Docker via `sudo -n docker`, TUN and nftables. Build the small fixture image:
 
 ```
-sudo -n docker build -t chriscord-sprint-vpn-fixture:local infra/vm/tests
+sudo -n docker build -t housecall-sprint-vpn-fixture:local infra/vm/tests
 python3 infra/vm/tests/test_killswitch.py --nft
 sh infra/vm/tests/test_nft_ipv6.sh
 ```

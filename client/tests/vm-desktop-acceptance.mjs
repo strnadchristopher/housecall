@@ -3,7 +3,7 @@ import { chromium } from '@playwright/test';
 import { readFile, writeFile } from 'node:fs/promises';
 import readline from 'node:readline';
 import assert from 'node:assert/strict';
-const config = JSON.parse(await readFile(process.env.CHRISCORD_VM_FIXTURE, 'utf8'));
+const config = JSON.parse(await readFile(process.env.HOUSECALL_VM_FIXTURE, 'utf8'));
 const incoming = readline.createInterface({ input: process.stdin });
 const replies = incoming[Symbol.asyncIterator]();
 const checks = [];

@@ -61,7 +61,7 @@ jobs:
         with:
           projectPath: client
           tagName: ${{ env.RELEASE_TAG }}
-          releaseName: Chriscord ${{ env.RELEASE_TAG }}
+          releaseName: Housecall ${{ env.RELEASE_TAG }}
           releaseBody: Desktop installers for Windows, macOS, and Linux.
           releaseDraft: true
           prerelease: false

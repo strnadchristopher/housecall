@@ -72,12 +72,12 @@ export function ShellScreen(props: ScreenProps) {
   const owner = group('owner');
 
   return (
-    <nav data-testid="screen-shell" aria-busy={props.busy} className="cc-shell" aria-label="Chriscord">
+    <nav data-testid="screen-shell" aria-busy={props.busy} className="cc-shell" aria-label="Housecall">
       <div className={cx('cc-side cc-grain', drawer && 'is-open')} id="cc-side">
         <header className="cc-side__head">
           <ObeliskMark size={26} />
           <div className="cc-side__brand">
-            <span className="cc-display">Chriscord</span>
+            <span className="cc-display">Housecall</span>
             <span className="cc-side__phase" role="status">{props.phase === 'offline' ? 'Reconnecting' : props.phase === 'ready' ? 'Connected' : props.phase}</span>
           </div>
           {servers && (

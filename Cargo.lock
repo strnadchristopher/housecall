@@ -306,7 +306,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "chriscord-activities"
+name = "housecall-activities"
 version = "0.1.0"
 dependencies = [
  "reqwest",
@@ -318,7 +318,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "chriscord-media"
+name = "housecall-media"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
@@ -331,15 +331,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "chriscord-server"
+name = "housecall-server"
 version = "0.1.0"
 dependencies = [
  "argon2",
  "axum",
  "base64 0.22.1",
- "chriscord-activities",
- "chriscord-media",
- "chriscord-sfu",
+ "housecall-activities",
+ "housecall-media",
+ "housecall-sfu",
  "hex",
  "http-body-util",
  "httpdate",
@@ -366,7 +366,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "chriscord-sfu"
+name = "housecall-sfu"
 version = "0.1.0"
 dependencies = [
  "serde",

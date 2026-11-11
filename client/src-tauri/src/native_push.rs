@@ -9,7 +9,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("native-push")
         .setup(|app, api| {
             app.manage(Push(api.register_android_plugin(
-                "com.littleobelisk.chriscord",
+                "com.mapleavenuelabs.housecall",
                 "NativePushPlugin",
             )?));
             Ok(())

@@ -7,11 +7,11 @@ services:
       vm-media-init:
         condition: service_completed_successfully
     environment:
-      CHRISCORD_VM_QMP_SOCKET: /vm-control/qmp.sock
-      CHRISCORD_VM_SUPERVISOR_SOCKET: /vm-control/supervisor.sock
-      CHRISCORD_VM_CHANNEL_ID: ${CHRISCORD_VM_CHANNEL_ID:?Select the authorized VM channel}
-      CHRISCORD_VM_MEDIA_SOCKET: /signaling/publisher.sock
-      CHRISCORD_VM_MEDIA_UID: "47192"
+      HOUSECALL_VM_QMP_SOCKET: /vm-control/qmp.sock
+      HOUSECALL_VM_SUPERVISOR_SOCKET: /vm-control/supervisor.sock
+      HOUSECALL_VM_CHANNEL_ID: ${HOUSECALL_VM_CHANNEL_ID:?Select the authorized VM channel}
+      HOUSECALL_VM_MEDIA_SOCKET: /signaling/publisher.sock
+      HOUSECALL_VM_MEDIA_UID: "47192"
     volumes:
       - vm-control:/vm-control:ro
       - vm-signaling:/signaling

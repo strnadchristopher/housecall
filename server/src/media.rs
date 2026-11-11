@@ -7,7 +7,7 @@ use axum::{
     routing::{get, post},
     Extension, Json, Router,
 };
-use chriscord_media::{Error, Upload, MAX_CHUNK};
+use housecall_media::{Error, Upload, MAX_CHUNK};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::{io::Read, sync::Arc};
@@ -39,7 +39,7 @@ pub fn routes() -> Router<AppState> {
         .route("/uploads/{id}/complete", post(complete))
         .route("/media/{id}", get(download))
 }
-fn store(s: &AppState) -> Result<Arc<chriscord_media::Store>, ApiError> {
+fn store(s: &AppState) -> Result<Arc<housecall_media::Store>, ApiError> {
     s.media.clone().ok_or(ApiError(
         StatusCode::SERVICE_UNAVAILABLE,
         "encrypted media storage is not configured",
@@ -137,14 +137,14 @@ async fn download(
 }
 /// Caller must authorize either channel membership or owner-only report access.
 pub(crate) async fn authorized_stream(
-    store: Arc<chriscord_media::Store>,
+    store: Arc<housecall_media::Store>,
     m: Upload,
     headers: HeaderMap,
 ) -> Result<Response, ApiError> {
     let id = m.id;
     let partial = headers.contains_key("range");
     let (start, end) = if let Some(range) = headers.get("range") {
-        chriscord_media::parse_range(
+        housecall_media::parse_range(
             range.to_str().map_err(|_| bad("invalid byte range"))?,
             m.length,
         )

@@ -8,7 +8,7 @@ import { promisify } from "node:util";
 const execute = promisify(execFile);
 test("scanned upload transcodes, streams to a member before full buffering, and unsend removes playback", async ({ browser, request }) => {
   test.setTimeout(90000);
-  const directory = await mkdtemp(join(tmpdir(), "chriscord-video-fixture-"));
+  const directory = await mkdtemp(join(tmpdir(), "housecall-video-fixture-"));
   const password = "synthetic video password 123";
   const headers = (s: any) => ({ Authorization: `Bearer ${s.token}`, "X-Device-Key": s.device_key });
   const owner = await (await request.post("/api/setup", { data: { setup_token: "test-setup-token-at-least-32-characters", username: "video_owner", password, device_name: "fixture" } })).json();

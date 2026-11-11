@@ -8,12 +8,12 @@ import time
 import tkinter as tk
 import wave
 
-wave_path = '/tmp/chriscord-fixture-tone.wav'
+wave_path = '/tmp/housecall-fixture-tone.wav'
 with wave.open(wave_path, 'wb') as output:
     output.setparams((2, 2, 48000, 0, 'NONE', 'not compressed'))
     output.writeframes(b''.join(struct.pack('<hh', sample, sample) for sample in
         (int(6000 * math.sin(2 * math.pi * 440 * i / 48000)) for i in range(48000))))
-audio = subprocess.Popen(['/bin/sh', '-c', 'while true; do aplay -q /tmp/chriscord-fixture-tone.wav || exit; done'])
+audio = subprocess.Popen(['/bin/sh', '-c', 'while true; do aplay -q /tmp/housecall-fixture-tone.wav || exit; done'])
 subprocess.run(['xrandr', '-s', '1280x720'], check=True)
 root = tk.Tk()
 root.attributes('-fullscreen', True)
@@ -24,10 +24,10 @@ label = canvas.create_text(640, 320, fill='white', font=('DejaVu Sans', 40), tex
 canvas.create_text(640, 440, fill='white', font=('DejaVu Sans', 24), text='Synthetic Debian desktop. Press a to prove input.')
 def key(event):
     if event.char == 'a':
-        Path('/root/chriscord-input-marker').write_text('guest received a\n')
+        Path('/root/housecall-input-marker').write_text('guest received a\n')
         canvas.configure(background='#184080')
 root.bind('<KeyPress>', key)
-root.bind('<Button-1>', lambda _event: Path('/root/chriscord-pointer-marker').write_text('guest received click\n'))
+root.bind('<Button-1>', lambda _event: Path('/root/housecall-pointer-marker').write_text('guest received click\n'))
 def frame():
     stamp = int(time.time()*1000) & 0xffffffff
     for i, item in enumerate(rectangles):

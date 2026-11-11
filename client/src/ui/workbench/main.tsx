@@ -58,7 +58,7 @@ function FixtureVideo({ n, testid }: { n: number; testid: string }) {
 function Index() {
   return (
     <main style={{ padding: 32, fontFamily: 'system-ui', color: 'var(--cc-ink)', overflow: 'auto', height: '100dvh' }}>
-      <h1 className="cc-display" style={{ fontSize: 36, fontWeight: 400 }}>Chriscord UI workbench</h1>
+      <h1 className="cc-display" style={{ fontSize: 36, fontWeight: 400 }}>Housecall UI workbench</h1>
       <p style={{ color: 'var(--cc-ink-3)', margin: '8px 0 20px' }}>Fixture props only. Themes: {themeOrder.map(t => <a key={t} style={{ color: 'var(--cc-accent)', marginRight: 10 }} href={`?theme=${t}`}>{t}</a>)}</p>
       <ul style={{ columns: 3, listStyle: 'none', padding: 0 }}>
         {scenes.map(s => <li key={s.name} style={{ padding: '3px 0' }}><a style={{ color: 'var(--cc-ink)' }} href={`?scene=${s.name}${theme ? `&theme=${theme}` : ''}`}>{s.name}</a> <span style={{ color: 'var(--cc-ink-3)' }}>{s.note}</span></li>)}

@@ -1,12 +1,12 @@
-# Chriscord WebRTC SFU
+# Housecall WebRTC SFU
 
-This Rust library hosts a shared UDP port and forwards encoded audio/video media between authenticated peers in the same room. `str0m` supplies ICE, DTLS, SRTP, RTP/RTCP, codecs' packetization and SCTP; Chriscord owns session authorization, room isolation, peer bounds, forwarding policy and the server integration. It does not decode/transcode media or allocate VRAM. The forwarding/renegotiation implementation derives from str0m's chat example; see NOTICE and LICENSE-STR0M-MIT.
+This Rust library hosts a shared UDP port and forwards encoded audio/video media between authenticated peers in the same room. `str0m` supplies ICE, DTLS, SRTP, RTP/RTCP, codecs' packetization and SCTP; Housecall owns session authorization, room isolation, peer bounds, forwarding policy and the server integration. It does not decode/transcode media or allocate VRAM. The forwarding/renegotiation implementation derives from str0m's chat example; see NOTICE and LICENSE-STR0M-MIT.
 
 The application constructs `Sfu::start(bind, public_ip, authorize)`. The authorization callback checks channel membership and the authenticated device session at join and every second during active transport. A removed member, expired session or revoked device therefore loses transport within one second, even without another HTTP request. There is one peer per device session, at most 30 total; joining again removes that session's former transport. Room isolation applies to forwarded tracks, media and keyframe feedback. A peer may leave only its own connection. A bounded control queue prevents unbounded HTTP join backlog.
 
 ## Browser protocol
 
-1. Create an RTCPeerConnection with a reliable `chriscord-signaling` data channel and up to three sending media tracks (microphone, camera, screen). Do not request simulcast in this first slice.
+1. Create an RTCPeerConnection with a reliable `housecall-signaling` data channel and up to three sending media tracks (microphone, camera, screen). Do not request simulcast in this first slice.
 2. Configure audio Opus `stereo=1;sprop-stereo=1;maxaveragebitrate=510000;maxplaybackrate=48000`, sender maxBitrate 510000, optional processing according to user preference. Negotiated ceilings do not guarantee constant achieved bitrate; silence and codec VBR reduce it.
 3. Create an offer, set local description and wait for ICE gathering to finish. POST the raw `{type:"offer",sdp}` description to authenticated `/api/channels/{id}/voice/join`, with the usual bearer and device headers. The response is `{peer_id,answer}`. Apply `answer` as remote description.
 4. The server sends additional raw SDP offers over the data channel as other peers' tracks appear/disappear. Serialize negotiation, apply the offer, create/set an answer and send the raw answer back on that channel. Handle `ontrack` with normal media elements. Client-initiated renegotiation must not race a server offer: this slice fails closed on offer glare. Prefer `replaceTrack` to switch camera/screen when possible.

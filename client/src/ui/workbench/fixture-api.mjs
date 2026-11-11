@@ -1,4 +1,4 @@
-// In-memory fixture of the Chriscord HTTP API, for the UI lane only.
+// In-memory fixture of the Housecall HTTP API, for the UI lane only.
 // It implements just enough of docs/API.md for client/src/App.tsx to drive the
 // designed UI end to end in a browser. It is a mock: no auth security, no
 // persistence, no media. Passing UI tests against it says nothing about the
@@ -97,7 +97,7 @@ const server = createServer(async (req, res) => {
     const after = Number(url.searchParams.get('after') ?? 0);
     return json(res, 200, { events: events.filter(e => e.id > after), cursor });
   }
-  if (m === 'GET' && p === '/api/devices') return json(res, 200, { devices: [...sessions.entries()].filter(([, s]) => s.user_id === me.id).map(([t, s]) => ({ id: s.id, device_name: 'Chriscord browser', created_at: s.created_at, expires_at: s.created_at + 86400000, current: t === (req.headers.authorization ?? '').slice(7) })) });
+  if (m === 'GET' && p === '/api/devices') return json(res, 200, { devices: [...sessions.entries()].filter(([, s]) => s.user_id === me.id).map(([t, s]) => ({ id: s.id, device_name: 'Housecall browser', created_at: s.created_at, expires_at: s.created_at + 86400000, current: t === (req.headers.authorization ?? '').slice(7) })) });
   if (m === 'DELETE' && (mm = /^\/api\/devices\/([^/]+)$/.exec(p))) { for (const [t, s] of sessions) if (s.id === mm[1]) sessions.delete(t); return json(res, 204); }
   if (m === 'GET' && p === '/api/servers') return json(res, 200, { servers: [{ id: 'home', name: 'Home', general_channel_id: 'c-general' }] });
   if (m === 'GET' && /^\/api\/servers\/[^/]+\/roles$/.test(p)) return json(res, 200, { roles: [{ id: 'r-crew', name: 'movie crew', member_ids: ['u-maya', 'u-jun'] }] });

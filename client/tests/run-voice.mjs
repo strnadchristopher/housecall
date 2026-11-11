@@ -4,12 +4,12 @@ const child = spawn(
   [
     "node_modules/@playwright/test/cli.js",
     "test",
-    process.env.CHRISCORD_TEST_LOAD === "1"
+    process.env.HOUSECALL_TEST_LOAD === "1"
       ? "voice-load.spec.ts"
       : "voice.spec.ts",
     ...process.argv.slice(2),
   ],
-  { stdio: "inherit", env: { ...process.env, CHRISCORD_TEST_VOICE: "1" } },
+  { stdio: "inherit", env: { ...process.env, HOUSECALL_TEST_VOICE: "1" } },
 );
 child.on("exit", (code) => process.exit(code ?? 1));
 for (const signal of ["SIGTERM", "SIGINT"])

@@ -5,13 +5,13 @@ import { promisify } from "node:util";
 const execute = promisify(execFile),
   password = "correct horse battery staple";
 async function workerCpu() {
-  if (!process.env.CHRISCORD_TEST_PID_PATH) return null;
+  if (!process.env.HOUSECALL_TEST_PID_PATH) return null;
   try {
-    const pid = (await readFile(process.env.CHRISCORD_TEST_PID_PATH, "utf8")).trim();
+    const pid = (await readFile(process.env.HOUSECALL_TEST_PID_PATH, "utf8")).trim();
     if (!/^\d+$/.test(pid)) return null;
     for (const tid of await readdir(`/proc/${pid}/task`)) {
       const base = `/proc/${pid}/task/${tid}`;
-      if ((await readFile(`${base}/comm`, "utf8")).trim() !== "chriscord-sfu") continue;
+      if ((await readFile(`${base}/comm`, "utf8")).trim() !== "housecall-sfu") continue;
       const stat = await readFile(`${base}/stat`, "utf8");
       const fields = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
       // Linux fields14/15; USER_HZ from getconf is recorded by the caller.
@@ -25,12 +25,12 @@ async function resources() {
     .trim()
     .split("\n")
     .map((line) => line.trim().split(/\s+/))
-    .filter((row) => /chrom|chriscord/.test(row[0]));
+    .filter((row) => /chrom|housecall/.test(row[0]));
   const memory = await readFile("/proc/meminfo", "utf8");
   const membership = await readFile("/proc/self/cgroup", "utf8");
   const group = membership.split("\n").find(line => line.startsWith("0::"))?.slice(3);
   // A dedicated bounded test unit excludes unrelated desktop Chrome processes.
-  const dedicated = /chriscord-(?:voice|sfu)-load/.test(group ?? "") ?? false;
+  const dedicated = /housecall-(?:voice|sfu)-load/.test(group ?? "") ?? false;
   const cgroupMiB = dedicated ? Number(await readFile(`/sys/fs/cgroup${group}/memory.current`, "utf8")) / 1024 / 1024 : null;
   const cpuStat = dedicated ? await readFile(`/sys/fs/cgroup${group}/cpu.stat`, "utf8") : "";
 
@@ -328,7 +328,7 @@ test("bounded thirty-peer real RTP load at 320x180 five fps", async ({
       } catch { serverDiagnostics = { unavailable: true }; }
     }
     await writeFile(
-      process.env.CHRISCORD_VOICE_RECEIPT ?? "../evidence/client-voice-load.json",
+      process.env.HOUSECALL_VOICE_RECEIPT ?? "../evidence/client-voice-load.json",
       JSON.stringify(
         {
           profile: {

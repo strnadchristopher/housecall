@@ -38,7 +38,7 @@ The bridge is HTTP/1.1 over a private Unix socket, accepting **only publisher UI
 | POST `/v1/vm-publisher/heartbeat` | `{"generation":"UUID","peer_id":123}` | `{"active":true}` or `{"active":false}` |
 | POST `/v1/vm-publisher/leave` | `{"generation":"UUID","peer_id":123}` | `{"left":true}` |
 
-The `leave` peer ID can be `null` when join's response was lost or the worker died before handing its ID to the watchdog. Revoke only the matching generation; never let a stale leave revoke a newer owner/source. The server generates the synthetic SFU session, binds the publisher-generated UUID to the currently armed owner/session/activity, and rejects duplicate/replaced sources. The synthetic session must differ from the owner's browser voice session. Use a publish-only SFU peer: subscribe it to no user tracks, filter it out of the controller/member roster, and reserve one source slot beyond the human room cap. The data channel remains `chriscord-signaling`.
+The `leave` peer ID can be `null` when join's response was lost or the worker died before handing its ID to the watchdog. Revoke only the matching generation; never let a stale leave revoke a newer owner/source. The server generates the synthetic SFU session, binds the publisher-generated UUID to the currently armed owner/session/activity, and rejects duplicate/replaced sources. The synthetic session must differ from the owner's browser voice session. Use a publish-only SFU peer: subscribe it to no user tracks, filter it out of the controller/member roster, and reserve one source slot beyond the human room cap. The data channel remains `housecall-signaling`.
 
 Only the authenticated VM owner can arm capture. Revalidate owner session, membership, voice presence, current host/activity and revocation on join and every heartbeat. Stop/revoke/owner departure invalidates the grant and disarms capture. The server independently expires a source after three seconds without a heartbeat. Leave disarms the matching generation so failures after join require a fresh owner action.
 
@@ -67,9 +67,9 @@ Eleven tests passed during authoring: candidate pinning and malformed SDP; wrong
 After the shared build hold is released, build the images from the candidate source (not executed here):
 
 ```sh
-docker build -f infra/vm/media/Dockerfile -t chriscord-vm-publisher:local infra/vm/media
-docker build -f infra/vm/media/Dockerfile.audio -t chriscord-vm-audio:local infra/vm/media
-docker run --rm --network none --entrypoint /usr/bin/python3 chriscord-vm-publisher:local -c 'import gi; gi.require_version("Gst", "1.0"); gi.require_version("GstWebRTC", "1.0"); from gi.repository import Gst; Gst.init(None); assert all(Gst.ElementFactory.find(n) for n in ["rfbsrc","pulsesrc","webrtcbin","vp8enc","opusenc","rtpvp8pay","rtpopuspay"])'
+docker build -f infra/vm/media/Dockerfile -t housecall-vm-publisher:local infra/vm/media
+docker build -f infra/vm/media/Dockerfile.audio -t housecall-vm-audio:local infra/vm/media
+docker run --rm --network none --entrypoint /usr/bin/python3 housecall-vm-publisher:local -c 'import gi; gi.require_version("Gst", "1.0"); gi.require_version("GstWebRTC", "1.0"); from gi.repository import Gst; Gst.init(None); assert all(Gst.ElementFactory.find(n) for n in ["rfbsrc","pulsesrc","webrtcbin","vp8enc","opusenc","rtpvp8pay","rtpopuspay"])'
 ```
 
 Root integration must then run an isolated desktop-guest fixture against the actual bridge/SFU and three viewers. Prove visible timestamped desktop motion **and audible guest audio**, codec/bitrate stats, one encode for all viewers, no self-return audio, late join/leave and renegotiation, owner handoff/stop/logout/revocation, kill-on-heartbeat-loss with timestamps, restart/rearm, and persistence/reset. Record actual glass-to-glass and A/V skew under intended CPU limits; the 150 ms target remains unmeasured for this source.
