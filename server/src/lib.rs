@@ -1,4 +1,5 @@
 pub mod activities;
+pub mod attach_kind;
 pub mod dj;
 pub mod embeds;
 pub mod gimme;
@@ -898,7 +899,7 @@ fn message(db: &Connection, id: &str) -> Result<Value, ApiError> {
     msg["role_mention_ids"] = json!(roles);
     let mut q =
         db.prepare("SELECT upload_id,filename,length,(SELECT id FROM media_jobs WHERE source_id=attachments.upload_id AND status='ready' ORDER BY created_at DESC LIMIT 1) FROM attachments WHERE message_id=?")?;
-    let attachments=q.query_map([id],|r|{let job=r.get::<_,Option<String>>(3)?;Ok(json!({"id":r.get::<_,String>(0)?,"filename":r.get::<_,String>(1)?,"length":r.get::<_,String>(2)?,"video_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/video")),"thumbnail_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/thumbnail"))}))})?.collect::<Result<Vec<_>,_>>()?;
+    let attachments=q.query_map([id],|r|{let job=r.get::<_,Option<String>>(3)?;let filename=r.get::<_,String>(1)?;let kind=attach_kind::kind(&filename,job.is_some());Ok(json!({"id":r.get::<_,String>(0)?,"filename":filename,"kind":kind,"length":r.get::<_,String>(2)?,"video_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/video")),"thumbnail_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/thumbnail"))}))})?.collect::<Result<Vec<_>,_>>()?;
     msg["attachments"] = json!(attachments);
     Ok(msg)
 }
