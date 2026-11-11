@@ -4,6 +4,8 @@ export default defineConfig({
   testMatch:
     process.env.HOUSECALL_TEST_SETUP === "1"
       ? "**/setup.spec.ts"
+      : process.env.HOUSECALL_TEST_SNAPS === "1"
+      ? "**/snaps.spec.ts"
       : process.env.HOUSECALL_TEST_NATIVE_PUSH === "1"
       ? "**/native-push.spec.ts"
       : process.env.HOUSECALL_TEST_UPLOAD_VIDEO === "1"

@@ -41,10 +41,12 @@ export interface Attachment {
   id: string;
   filename: string;
   size: string;
-  kind: "image" | "gif" | "video" | "video_pending" | "file";
+  kind: "image" | "gif" | "video" | "video_pending" | "file" | "snap" | "snap_expired";
   /** Kept for existing callers; true when kind === "video". */
   video: boolean;
   thumbnail?: string;
+  /** Present for snaps (view-once photos). The server never sends a path for these. */
+  snap?: { opened: boolean; openedCount: number; recipients: number };
 }
 
 export interface Reaction {
@@ -173,6 +175,13 @@ export interface ChatStore extends ChatState {
   gifSource(id: string): Promise<string>;
   /** Saves an attachment to the device. */
   download(attachment: Attachment): Promise<void>;
+  /** Uploads a photo and sends it as a view-once snap. Resolves to whether it was sent. */
+  sendSnap(photo: File): Promise<boolean>;
+  /**
+   * Opens a snap you received. The server allows this once per person: the photo, or "gone"
+   * when it was already opened or has expired.
+   */
+  openSnap(attachmentId: string): Promise<Blob | "gone">;
   /** Fetches an authenticated media path as a Blob (for inline display). */
   fetchMedia(path: string): Promise<Blob>;
   /** Binds a scanned video attachment to a player element; returns a disposer. */

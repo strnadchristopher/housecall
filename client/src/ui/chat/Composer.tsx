@@ -5,6 +5,8 @@ import { bytes } from "../format";
 import { Button, IconButton, Presence, cx } from "../kit";
 import { EmojiPicker } from "./EmojiPicker";
 import { GifPicker } from "./GifPicker";
+import { SnapCapture } from "./Snap";
+import { useCoarsePointer, usePhone } from "../tokens/motion";
 
 /** Where `field-sizing: content` is missing (older WebKit), size the field to its text by hand. */
 const nativeGrowth = typeof CSS !== "undefined" && CSS.supports?.("field-sizing", "content");
@@ -21,6 +23,9 @@ export function Composer({ compact }: { compact?: boolean }) {
   const input = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const upload = chat.upload;
+  // The camera shows on a phone or any touch screen, when uploads exist, and never while editing.
+  const touch = usePhone() || useCoarsePointer();
+  const snaps = touch && chat.can.attach && !chat.editing;
   useEffect(() => { if (chat.replyingTo || chat.editing) input.current?.focus(); }, [chat.replyingTo?.id, chat.editing?.id]);
   useEffect(() => setPanel(""), [chat.current?.id]);
   // Draft changes that do not come from typing (send, edit, emoji) also resize the field.
@@ -92,6 +97,7 @@ export function Composer({ compact }: { compact?: boolean }) {
               onChange={event => { const chosen = event.target.files?.[0]; event.target.value = ""; if (chosen) void chat.attach(chosen); }} />
           </>
         )}
+        {snaps && <SnapCapture />}
         <textarea ref={input} rows={1} name="body" aria-label={copy.composer.label} placeholder={copy.composer.placeholder(chat.current.name)}
           value={chat.draft} onChange={event => { chat.setDraft(event.target.value); grow(event.target); }} onKeyDown={onKey} />
         <IconButton icon="emoji" label={copy.composer.emoji} active={panel === "emoji"} onClick={() => setPanel(panel === "emoji" ? "" : "emoji")} />

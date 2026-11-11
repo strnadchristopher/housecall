@@ -16,7 +16,8 @@ import type { HostEntry, HostReport, Hosts } from "./hosts";
 export type Housecall = ReturnType<typeof useHousecall>;
 
 const GIF_LINK = /https:\/\/giphy\.com\/gifs\/([A-Za-z0-9]{1,64})(?![A-Za-z0-9])/g;
-const VIDEO_NAME = /\.(mp4|m4v|mov|mkv|webm|avi)$/i;
+const SNAP_TYPES: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+const VIDEO_NAME =/\.(mp4|m4v|mov|mkv|webm|avi)$/i;
 
 export const person = (user: User): Person => ({ id: user.id, name: userName(user), username: user.username, owner: user.is_owner, avatarUrl: avatarPath(user) });
 
@@ -55,6 +56,8 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
   const lastTyping = useRef(0);
   const gifCache = useRef(new Map<string, Promise<string>>());
   const uploader = useMemo(() => new ResumableUpload(c.api, setUpload), [c.api]);
+  // Snaps upload on their own so a snap never touches a file the person is attaching.
+  const snapUploader = useMemo(() => new ResumableUpload(c.api, () => {}), [c.api]);
 
   const current = c.channels.find(channel => channel.id === c.channel);
   const channelServer = current?.server_id ?? undefined;
@@ -139,7 +142,7 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
       id: message.id, authorId: message.author_id, authorName: details.authorName, authorAvatarUrl: avatarOf(message.author_id), body: message.body, nodes,
       createdAt: message.created_at, editedAt: details.editedAt, pinned: details.pinned,
       replyTo: details.replyTo ?? null, reactions: details.reactions, mentionsMe: details.mentionsMe && !mine,
-      attachments: details.attachments.map(a => ({ id: a.id, filename: a.filename, size: a.length, kind: a.kind as Attachment["kind"], video: !!a.videoPath, thumbnail: a.thumbnailPath })),
+      attachments: details.attachments.map(a => ({ id: a.id, filename: a.filename, size: a.length, kind: a.kind as Attachment["kind"], video: !!a.videoPath, thumbnail: a.thumbnailPath, snap: a.snap })),
       mine, canEdit: mine, canUnsend: mine || !!me?.is_owner,
       link: c.capabilities.embeds === true ? firstPreviewLink(message.body) : undefined,
       gifs: c.capabilities.giphy === true ? [...message.body.matchAll(GIF_LINK)].map(match => match[1]) : [],
@@ -342,6 +345,25 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
       link.href = url; link.download = attachment.filename; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }),
+    sendSnap: photo => c.attempt(async () => {
+      const extension = SNAP_TYPES[photo.type];
+      if (!extension) throw new Error("Use a JPEG, PNG or WebP photo");
+      // A neutral name: the camera's own file name is never sent.
+      const file = new File([photo], `snap.${extension}`, { type: photo.type });
+      const target = await snapUploader.create(c.channel, file);
+      const done = await snapUploader.resume(target.id, file);
+      if (done.status !== "ready") throw new Error(uploadScanMessage(done.scan));
+      await c.api.post(`/api/channels/${c.channel}/messages`, { body: "", attachment_ids: [done.id], view_once: true });
+      await c.refresh();
+    }),
+    openSnap: async id => {
+      const response = await fetch(c.api.mediaRequest(`/api/snaps/${encodeURIComponent(id)}/open`, { method: "POST" }));
+      if (response.status === 410) { await c.refresh(); return "gone"; }
+      if (!response.ok) throw new Error(`Snap unavailable (${response.status})`);
+      const photo = await response.blob();
+      await c.refresh();
+      return photo;
+    },
     playVideo: (element, messageId, attachmentId, onError) => {
       const path = c.messages.find(message => message.id === messageId)?.attachments?.find(item => item.id === attachmentId)?.video_path;
       if (!path) { onError("Video unavailable"); return () => {}; }

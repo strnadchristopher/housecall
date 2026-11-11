@@ -36,6 +36,12 @@ export const copy = {
     video: { queued: "Video queued", running: "Preparing video", ready: "Video ready", failed: "Video failed" },
     gifSearch: "Search GIFs", gifSource: "Powered by GIPHY", noGifs: "No GIFs", role: "role",
   },
+  snaps: {
+    take: "Take a snap", preview: "Snap preview", send: "Send as snap", sending: "Sending", once: "Each person can open it once",
+    snap: "Snap", tap: "Tap to view", opening: "Opening", opened: "Opened", expired: "Expired", gone: "This snap is gone",
+    openedBy: (opened: number, total: number) => `Opened by ${opened} of ${total}`,
+    close: "Close snap", left: (seconds: number) => `${seconds} s`, photo: "Photo in a snap",
+  },
   call: {
     label: "Call", inProgress: "Call in progress", join: "Join", joining: "Joining", leave: "Leave", mute: "Mute", unmute: "Unmute",
     deafen: "Deafen", undeafen: "Undeafen", cameraOn: "Camera on", cameraOff: "Camera off",

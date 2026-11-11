@@ -4,6 +4,7 @@ import { useChat } from "../../core/context";
 import { copy } from "../copy";
 import { bytes } from "../format";
 import { Icon, IconButton, Presence } from "../kit";
+import { SnapTile } from "./Snap";
 import { useMediaUrl } from "./useMediaUrl";
 
 const INLINE_IMAGE_LIMIT = 25 * 1024 * 1024;
@@ -89,7 +90,8 @@ export function Attachments({ message }: { message: ChatMessage }) {
   return (
     <div className="hc-attachments">
       {message.attachments.map(a =>
-        (a.kind === "image" || a.kind === "gif") && Number(a.size) <= INLINE_IMAGE_LIMIT ? <InlineImage key={a.id} attachment={a} />
+        a.kind === "snap" || a.kind === "snap_expired" ? <SnapTile key={a.id} message={message} attachment={a} />
+        : (a.kind === "image" || a.kind === "gif") && Number(a.size) <= INLINE_IMAGE_LIMIT ? <InlineImage key={a.id} attachment={a} />
         : a.kind === "video" || a.kind === "video_pending" ? <InlineVideo key={a.id} message={message} attachment={a} />
         : <FileCard key={a.id} attachment={a} />)}
     </div>

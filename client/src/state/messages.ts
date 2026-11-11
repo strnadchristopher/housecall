@@ -10,7 +10,7 @@ export interface Message {
   reply_to?: string | null;
   pinned?: boolean;
   reactions?: { emoji: string; user_id: string }[];
-  attachments?: { id: string; filename: string; length: string; kind?: string; video_path?: string | null; thumbnail_path?: string | null }[];
+  attachments?: { id: string; filename: string; length: string; kind?: string; video_path?: string | null; thumbnail_path?: string | null; opened?: boolean; opened_count?: number; recipients?: number }[];
 }
 /** A tombstone always wins, including against a late response from before unsend. */
 export class MessageStore {
