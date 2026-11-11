@@ -74,3 +74,7 @@ Then in Xcode: select your development team, make sure the **Push Notifications*
 - Whether WKWebView's microphone capture keeps running under CallKit's audio session activation is device behaviour that could not be tested here. The plugin forwards `didActivate` and `didDeactivate` as `audio` events and sets a play-and-record voice-chat category before it reports a call; nothing in the web code uses them yet.
 - No ring push for Android or the web.
 - Direct (peer-to-peer) calls are a separate, design-gated phase.
+
+## Push environment
+
+The iOS app is exported with the `debugging` method (`client/src-tauri/gen/apple/ExportOptions.plist`), so it is signed with a development profile and its entitlement is `aps-environment = development`. VoIP pushes to these installs must go to the APNs sandbox host. Moving to TestFlight or the App Store means switching the entitlement to `production` and the server to the production APNs host together.

@@ -11,6 +11,7 @@ Lets the local webview ring, answer and end Housecall 1:1 calls through the iOS 
 - `allow-end`
 - `allow-pending`
 - `allow-mute`
+- `allow-video`
 
 ## Permission Table
 
@@ -199,6 +200,32 @@ Enables the start_outgoing command without any pre-configured scope.
 <td>
 
 Denies the start_outgoing command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`callkit:allow-video`
+
+</td>
+<td>
+
+Enables the video command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`callkit:deny-video`
+
+</td>
+<td>
+
+Denies the video command without any pre-configured scope.
 
 </td>
 </tr>

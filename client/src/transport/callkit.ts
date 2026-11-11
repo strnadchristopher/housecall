@@ -49,6 +49,8 @@ export const callKit = {
   end: (channelId: string, options: { remote?: boolean; declined?: boolean } = {}) => run("end", { channelId, ...options }),
   /** Shows the Housecall mute state on the system call screen. The plugin does not echo it back as a `mute` event. */
   mute: (channelId: string, muted: boolean) => run("mute", { channelId, muted }),
+  /** Marks the system call as a video call while the camera is on. */
+  video: (channelId: string, on: boolean) => run("video", { channelId, video: on }),
   /** The ringing or answered call a cold-started webview should know about. */
   pending: async (): Promise<CallKitPending | undefined> => (await run<{ pending?: CallKitPending }>("pending")).pending,
 };

@@ -21,6 +21,8 @@ private struct CallArgs: Decodable {
   let declined: Bool?
   /// `mute` only: the state the Housecall UI is now in.
   let muted: Bool?
+  /// `video` only: whether the camera is now on.
+  let video: Bool?
 }
 
 private struct Reply: Encodable {
@@ -141,6 +143,22 @@ class CallKitPlugin: Plugin, CXProviderDelegate, PKPushRegistryDelegate {
           invoke.resolve(Reply())
         }
       }
+    }
+  }
+
+  /// Camera turned on or off in the Housecall UI: tell the system call screen it is (not) a video call.
+  @objc(video:)
+  func videoCommand(_ invoke: Invoke) {
+    guard let args = try? invoke.parseArgs(CallArgs.self), let channelId = args.channelId, let video = args.video else {
+      return invoke.reject("channelId and video are required")
+    }
+    DispatchQueue.main.async {
+      if let uuid = self.uuidForChannel[channelId] {
+        let update = CXCallUpdate()
+        update.hasVideo = video
+        self.provider.reportCall(with: uuid, updated: update)
+      }
+      invoke.resolve(Reply())
     }
   }
 

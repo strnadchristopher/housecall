@@ -154,10 +154,10 @@ Commits: server `8336478`, Presence/tests `bd46c2f`, snap viewer/wizard `9e50f92
 | 11 | Fixed (`9e50f92`). The invite is created when the step opens (once). At desktop widths the wizard panel hugs its content, so Back and Done sit by the link. |
 | 12 | Fixed (`529d0ea`). "Save name", "Save picture", "Save icon". The current icon sits under its label, inside the field. |
 | 13 | Fixed (`db0d5bd`). Swift emits an empty `voipToken`; the bridge sends `DELETE /api/push/voip`. Not device-tested. |
-| 14 | Partly fixed (`db0d5bd`). Calls report `hasVideo = false`. The system screen is not updated when the camera turns on (that would need another command). |
+| 14 | Fixed (`db0d5bd`, follow-up). Calls report `hasVideo = false` at start, and a new `video` command updates the system call with `CXCallUpdate.hasVideo` whenever the camera turns on or off during a CallKit call. |
 | 15 | Fixed (`db0d5bd`). The ring stores its start time and the timer counts from it. |
 | 16 | Fixed (`8336478`). `open` runs `reap` through `spawn_blocking`. |
-| 17 | Not changed. `CALLKIT.md` already says the entitlement is `development` and that release builds switch it to `production`. Confirming the export step rewrites it needs the Mac build. |
+| 17 | Not a defect as shipped. `gen/apple/ExportOptions.plist` exports with the `debugging` method, whose development provisioning profile requires `aps-environment = development`; `production` would fail signing. The server must use the sandbox APNs host for these builds (`CALLKIT.md`). An App Store or TestFlight export would need `production` and the production APNs host. |
 
 Also done from the follow-up brief: `mute` command and echo guard, `.remoteEnded` for a declined outgoing call, snap hardening, the wizard calls/extras changes, the snap viewer restyle, an unsend-hover retry in the shell test, and the wizard Presence/`hc-anim-slide-right` and snap `hc-anim-fade` check (both were already in place). No `eslint-plugin-react-hooks` is installed, and `client/src` has no other conditional hook calls.
 

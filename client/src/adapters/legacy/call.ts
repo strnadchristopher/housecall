@@ -193,6 +193,12 @@ export function useLegacyCall(c: Housecall) {
     systemMuted.current = muted;
     void callKit.mute(call.channelId, muted).catch(() => {});
   }, [muted, channelId]);
+  // Camera on or off during a CallKit call: the system call screen shows it as a video call or not.
+  useEffect(() => {
+    const call = systemCall.current;
+    if (!call || call.channelId !== channelId) return;
+    void callKit.video(call.channelId, camera).catch(() => {});
+  }, [camera, channelId]);
   useEffect(() => {
     if (!c.auth || !isCallKit()) return;
     let live = true;

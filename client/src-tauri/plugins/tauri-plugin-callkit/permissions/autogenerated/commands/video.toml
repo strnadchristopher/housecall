@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-video"
+description = "Enables the video command without any pre-configured scope."
+commands.allow = ["video"]
+
+[[permission]]
+identifier = "deny-video"
+description = "Denies the video command without any pre-configured scope."
+commands.deny = ["video"]

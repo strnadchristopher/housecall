@@ -379,10 +379,22 @@
           "markdownDescription": "Denies the start_outgoing command without any pre-configured scope."
         },
         {
-          "description": "Lets the local webview ring, answer and end Housecall 1:1 calls through the iOS system call screen.\n#### This default permission set includes:\n\n- `allow-register`\n- `allow-report-incoming`\n- `allow-start-outgoing`\n- `allow-connected`\n- `allow-end`\n- `allow-pending`\n- `allow-mute`",
+          "description": "Enables the video command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-video",
+          "markdownDescription": "Enables the video command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the video command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-video",
+          "markdownDescription": "Denies the video command without any pre-configured scope."
+        },
+        {
+          "description": "Lets the local webview ring, answer and end Housecall 1:1 calls through the iOS system call screen.\n#### This default permission set includes:\n\n- `allow-register`\n- `allow-report-incoming`\n- `allow-start-outgoing`\n- `allow-connected`\n- `allow-end`\n- `allow-pending`\n- `allow-mute`\n- `allow-video`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Lets the local webview ring, answer and end Housecall 1:1 calls through the iOS system call screen.\n#### This default permission set includes:\n\n- `allow-register`\n- `allow-report-incoming`\n- `allow-start-outgoing`\n- `allow-connected`\n- `allow-end`\n- `allow-pending`\n- `allow-mute`"
+          "markdownDescription": "Lets the local webview ring, answer and end Housecall 1:1 calls through the iOS system call screen.\n#### This default permission set includes:\n\n- `allow-register`\n- `allow-report-incoming`\n- `allow-start-outgoing`\n- `allow-connected`\n- `allow-end`\n- `allow-pending`\n- `allow-mute`\n- `allow-video`"
         }
       ]
     }

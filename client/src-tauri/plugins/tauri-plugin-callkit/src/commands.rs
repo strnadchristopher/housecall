@@ -11,7 +11,7 @@ pub(crate) struct CallKit<R: Runtime>(pub(crate) PluginHandle<R>);
 
 /// Native events the web side may listen for.
 const EVENTS: [&str; 6] = ["voipToken", "answer", "end", "mute", "audio", "reset"];
-const ACTIONS: [&str; 7] = [
+const ACTIONS: [&str; 8] = [
     "register",
     "report_incoming",
     "start_outgoing",
@@ -19,6 +19,7 @@ const ACTIONS: [&str; 7] = [
     "end",
     "pending",
     "mute",
+    "video",
 ];
 
 fn unsupported() -> Value {

@@ -6,6 +6,7 @@ const COMMANDS: &[&str] = &[
     "end",
     "pending",
     "mute",
+    "video",
 ];
 
 fn main() {
