@@ -125,3 +125,10 @@ passkey screens, the theme picker, the create-server screen.
 ## Check at the end
 
 Recorded at the end of the work; see the bottom of this file.
+
+## Result of the end check (2026-11-11)
+
+- Every file named in the "new home" column exists under `client/src/ui/`.
+- `grep -rn -i "together" client/src/ui` prints nothing; row 88 is a Plex panel control whose label no longer uses that word.
+- Rows removed by plan (Together row, separate voice entries, passkey screens, theme picker, create-server screen) are not rendered. Row 93 and row 75 are left out under the no-dead-controls rule.
+- Exercised by end-to-end tests: sign in, setup, invite accept, send, edit, reply, pin, react, unsend, search, pins, direct messages, device revoke, call join and leave, picker, composer attach, emoji and GIF, People and Chords tabs. Not exercised by tests and checked only by reading the code: settings sections other than Notifications, Devices and Invites, the Chord panels with live integrations, the updater banners.

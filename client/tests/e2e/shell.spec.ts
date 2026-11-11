@@ -70,6 +70,12 @@ test("shell: picker, channel, call, composer, tabs, direct messages", async ({ p
   await page.getByPlaceholder(/search/i).fill("wave");
   await page.getByRole("button", { name: gif.title }).click();
   await expect(page.getByTestId("screen-conversation").locator("video").first()).toBeVisible();
+  // Leave the shared server clean for the screenshot run that follows.
+  const sent = page.locator("li[data-message-id]").filter({ has: page.locator("video") });
+  await sent.hover();
+  await sent.getByRole("button", { name: "Unsend", exact: true }).click();
+  await page.getByRole("button", { name: "Unsend for everyone", exact: true }).click();
+  await expect(page.getByTestId("screen-conversation").locator("video")).toHaveCount(0);
 
   // Call bar: Join, then count, duration and avatars under the channel name.
   const bar = page.getByTestId("call-bar");

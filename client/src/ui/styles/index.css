@@ -269,7 +269,7 @@ a { color: var(--hc-accent); }
 .hc-side__head h2 { font-size: var(--hc-text-lg); padding-inline: var(--hc-space-2); }
 .hc-side__body { flex: 1; min-height: 0; overflow-y: auto; padding-inline: var(--hc-space-1); }
 .hc-people li, .hc-person { display: flex; align-items: center; gap: var(--hc-space-3); padding: var(--hc-space-1) var(--hc-space-2); min-height: var(--hc-space-7); }
-.hc-people span, .hc-person span { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.hc-people span:not(.hc-avatar), .hc-person span:not(.hc-avatar) { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
 .hc-chord { display: flex; align-items: center; gap: var(--hc-space-3); width: 100%; min-height: var(--hc-space-7); padding: var(--hc-space-1) var(--hc-space-2); border-radius: var(--hc-radius-sm); }
 .hc-chord:hover { background: var(--hc-surface); }
 .hc-chord strong { flex: 1; }
