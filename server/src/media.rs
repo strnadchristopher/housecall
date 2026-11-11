@@ -8,6 +8,7 @@ use axum::{
     Extension, Json, Router,
 };
 use housecall_media::{Error, Upload, MAX_CHUNK};
+use rusqlite::OptionalExtension;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::{io::Read, sync::Arc};
@@ -132,7 +133,22 @@ async fn download(
     let store = store(&s)?;
     let metadata_store = store.clone();
     let m = blocking(move || metadata_store.metadata(id)).await?;
-    member(&s.db.lock().unwrap(), &p.user.id, &m.channel_id)?;
+    {
+        let db = s.db.lock().unwrap();
+        member(&db, &p.user.id, &m.channel_id)?;
+        // Snap bytes leave only through POST /api/snaps/{id}/open, once per recipient.
+        if db
+            .query_row(
+                "SELECT 1 FROM attachments WHERE upload_id=? AND view_once<>0",
+                [id.to_string()],
+                |_| Ok(()),
+            )
+            .optional()?
+            .is_some()
+        {
+            return Err(crate::forbidden());
+        }
+    }
     authorized_stream(store, m, headers).await
 }
 /// Caller must authorize either channel membership or owner-only report access.

@@ -13,6 +13,8 @@ pub mod profile;
 pub mod push;
 pub mod servers;
 pub mod setup;
+/// View-once photos: open once per recipient, deleted when everyone has or after 24 hours.
+pub mod snaps;
 pub mod transcode;
 pub mod vm;
 pub mod vm_media;
@@ -221,6 +223,7 @@ impl AppState {
         db.execute_batch("CREATE TABLE IF NOT EXISTS report_media(report_id TEXT PRIMARY KEY REFERENCES reports(id) ON DELETE CASCADE,upload_id TEXT NOT NULL);")?;
         transcode::init(&db)?;
         servers::init(&db)?;
+        snaps::init(&db)?;
         passkeys::init(&db)?;
         activities::init(&db)?;
         vm_reset::init(&db)?;
@@ -295,6 +298,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .merge(servers::routes())
         .merge(setup::routes())
         .merge(profile::routes())
+        .merge(snaps::routes())
         .merge(media::routes())
         .merge(giphy::routes())
         .merge(gimme::routes())
@@ -906,7 +910,8 @@ struct MessageQuery {
     pinned: Option<bool>,
     reply_to: Option<String>,
 }
-fn message(db: &Connection, id: &str) -> Result<Value, ApiError> {
+/// `viewer` decides what a snap shows: whether this user already opened it.
+fn message(db: &Connection, id: &str, viewer: &str) -> Result<Value, ApiError> {
     let mut msg=db.query_row("SELECT id,channel_id,author_id,body,reply_to,created_at,edited_at,revision,pinned,mention_ids FROM messages WHERE id=?",[id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"channel_id":r.get::<_,String>(1)?,"author_id":r.get::<_,String>(2)?,"body":r.get::<_,String>(3)?,"reply_to":r.get::<_,Option<String>>(4)?,"created_at":r.get::<_,i64>(5)?,"edited_at":r.get::<_,Option<i64>>(6)?,"revision":r.get::<_,i64>(7)?,"pinned":r.get::<_,bool>(8)?,"mention_ids":serde_json::from_str::<Value>(&r.get::<_,String>(9)?).unwrap_or(json!([]))}))).optional()?.ok_or_else(missing)?;
     let mut q = db.prepare("SELECT emoji,user_id FROM reactions WHERE message_id=?")?;
     let reactions = q
@@ -921,8 +926,8 @@ fn message(db: &Connection, id: &str) -> Result<Value, ApiError> {
         .collect::<Result<Vec<_>, _>>()?;
     msg["role_mention_ids"] = json!(roles);
     let mut q =
-        db.prepare("SELECT upload_id,filename,length,(SELECT id FROM media_jobs WHERE source_id=attachments.upload_id AND status='ready' ORDER BY created_at DESC LIMIT 1) FROM attachments WHERE message_id=?")?;
-    let attachments=q.query_map([id],|r|{let job=r.get::<_,Option<String>>(3)?;let filename=r.get::<_,String>(1)?;let kind=attach_kind::kind(&filename,job.is_some());Ok(json!({"id":r.get::<_,String>(0)?,"filename":filename,"kind":kind,"length":r.get::<_,String>(2)?,"video_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/video")),"thumbnail_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/thumbnail"))}))})?.collect::<Result<Vec<_>,_>>()?;
+        db.prepare("SELECT upload_id,filename,length,(SELECT id FROM media_jobs WHERE source_id=attachments.upload_id AND status='ready' ORDER BY created_at DESC LIMIT 1),view_once FROM attachments WHERE message_id=?")?;
+    let attachments=q.query_map([id],|r|{if r.get::<_,i64>(4)?!=snaps::NONE{return snaps::describe(db,&r.get::<_,String>(0)?,r.get::<_,i64>(4)?,viewer)}let job=r.get::<_,Option<String>>(3)?;let filename=r.get::<_,String>(1)?;let kind=attach_kind::kind(&filename,job.is_some());Ok(json!({"id":r.get::<_,String>(0)?,"filename":filename,"kind":kind,"length":r.get::<_,String>(2)?,"video_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/video")),"thumbnail_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/thumbnail"))}))})?.collect::<Result<Vec<_>,_>>()?;
     msg["attachments"] = json!(attachments);
     Ok(msg)
 }
@@ -976,7 +981,7 @@ async fn messages(
     let rows = ids
         .iter()
         .rev()
-        .map(|id| message(&db, id))
+        .map(|id| message(&db, id, &p.user.id))
         .collect::<Result<Vec<_>, _>>()?;
     Ok(Json(json!({"messages":rows})))
 }
@@ -990,6 +995,8 @@ struct SendMessage {
     attachment_ids: Vec<uuid::Uuid>,
     #[serde(default)]
     role_mention_ids: Vec<String>,
+    #[serde(default)]
+    view_once: bool,
 }
 fn body_valid(body: &str) -> Result<(), ApiError> {
     if body.trim().is_empty() || body.len() > 16384 {
@@ -1003,6 +1010,9 @@ async fn send_message(
     Path(cid): Path<String>,
     Json(mut v): Json<SendMessage>,
 ) -> ApiResult<Value> {
+    if v.view_once && v.attachment_ids.len() != 1 {
+        return Err(bad("a snap carries exactly one photo"));
+    }
     if v.attachment_ids.is_empty() {
         body_valid(&v.body)?;
     } else if v.body.len() > 16384 || v.attachment_ids.len() > 20 {
@@ -1043,6 +1053,9 @@ async fn send_message(
         if upload.channel_id != cid || upload.status != housecall_media::Status::Ready {
             return Err(bad("attachment must be clean and in this conversation"));
         }
+        if v.view_once && attach_kind::kind(&upload.filename, false) != "image" {
+            return Err(bad("a snap must be a photo"));
+        }
         if tx
             .query_row(
                 "SELECT 1 FROM attachments WHERE upload_id=?",
@@ -1063,12 +1076,13 @@ async fn send_message(
     }
     for upload in attachments {
         tx.execute(
-            "INSERT INTO attachments VALUES(?,?,?,?)",
+            "INSERT INTO attachments(upload_id,message_id,filename,length,view_once) VALUES(?,?,?,?,?)",
             params![
                 upload.id.to_string(),
                 id,
                 upload.filename,
-                upload.length.to_string()
+                upload.length.to_string(),
+                if v.view_once { snaps::LIVE } else { snaps::NONE }
             ],
         )?;
     }
@@ -1082,7 +1096,7 @@ async fn send_message(
         }
     }
     emit(&tx, &cid, "message.created", json!({"message_id":id}))?;
-    let result = message(&tx, &id)?;
+    let result = message(&tx, &id, &p.user.id)?;
     tx.commit()?;
     Ok(Json(result))
 }
@@ -1112,7 +1126,7 @@ async fn edit_message(
         params![v.body, now(), id],
     )?;
     emit(&tx, &cid, "message.edited", json!({"message_id":id}))?;
-    let result = message(&tx, &id)?;
+    let result = message(&tx, &id, &p.user.id)?;
     tx.commit()?;
     Ok(Json(result))
 }
@@ -1134,6 +1148,9 @@ async fn unsend(
             .collect::<Result<Vec<_>, _>>()?;
         ids
     };
+    for aid in &attachment_ids {
+        tx.execute("DELETE FROM snap_views WHERE upload_id=?", [aid])?;
+    }
     if let Some(store) = &s.media {
         for aid in attachment_ids {
             let aid = uuid::Uuid::parse_str(&aid).map_err(|_| bad("invalid stored attachment"))?;

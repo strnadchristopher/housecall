@@ -116,6 +116,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     housecall_server::dj::spawn_worker(&state);
     housecall_server::push::configure(&mut state)?;
     housecall_server::push::spawn_worker(&state);
+    housecall_server::snaps::spawn_reaper(&state);
     let static_dir = std::env::var("HOUSECALL_STATIC_DIR").unwrap_or_else(|_| "client/dist".into());
     let bind = std::env::var("HOUSECALL_BIND").unwrap_or_else(|_| "127.0.0.1:3000".into());
     let listener = tokio::net::TcpListener::bind(&bind).await?;
