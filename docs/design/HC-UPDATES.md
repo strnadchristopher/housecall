@@ -256,3 +256,49 @@ Integration setup: server creation wizard and Settings > Integrations, one share
 - Integrations are listed for members too (with the ask-owner text), so the plan's non-owner case is reachable from the UI.
 - Fixed an existing bug that the new picker row exposed: pressing ArrowDown on the closed trigger opened the list and the container handler then moved the index again (hidden before because the list had one row).
 - Skipped as unlikely or hypothetical: a second wizard opened while the first is mid-exit, and Escape while the Create server request is in flight.
+
+## Phase 7
+
+Snaps: view-once camera photos (tasks 7.1 to 7.6; 7.7 device QA is left to the release owner).
+
+### Commits
+- `8cd0b93` feat(snaps): view-once photos with open-once-per-recipient and 24h expiry (server, 7.1 to 7.3)
+- `9fe309c` feat(snaps): camera capture, tap-to-view tile and ten-second viewer (client, 7.4 to 7.6)
+- the handoff commit that adds this section
+
+### What changed
+- Server: `attachments.view_once` (0 none, 1 live, 2 expired tombstone) added with the existing column-check pattern, new table `snap_views`, new `server/src/snaps.rs`. `SendMessage.view_once` requires exactly one attachment whose kind is `image` (GIFs and files are refused); the body may be empty.
+- `POST /api/snaps/{id}/open`: member of the channel, not the author (403), view row inserted and committed before any byte is read, then the bytes are returned with `Cache-Control: no-store` and an image content type. A second open is 410. A non-snap id is 404. Opening emits `message.updated`.
+- `GET /api/media/{id}` returns 403 for any snap, including for the author.
+- Reaper: `snaps::reap` runs after every open and on an hourly tokio interval (`snaps::spawn_reaper` in `main.rs`). It deletes bytes when every other member has opened it or the message is over 24 h old, and sets the row to the tombstone (kind `snap_expired`). Opening an overdue snap deletes it and returns 410.
+- `fn message()` now takes a `viewer` argument. `codegraph impact message` listed the callers `messages`, `send_message` and `edit_message` (and `unsend`, which does not call it); all three call sites are updated. The other `message` functions codegraph found (in `push.rs` tests, `glib`, a vitest constant) are unrelated names. A snap attachment is returned as `{id, filename:"Snap", kind, length:"0", opened, opened_count, recipients}` with no `video_path` or `thumbnail_path`.
+- Unsend also deletes that message's `snap_views` rows.
+- Push payloads: `push.rs` never reads `attachments`, so no snap path or byte can reach a push payload. I did not add a test for it.
+- Client: a `snap` house icon; `Snap.tsx` with `SnapCapture` (composer camera button, hidden `capture="environment"` input, preview with "Send as snap" and Cancel), `SnapTile` and `SnapViewer`. The viewer is wrapped in `Presence` with `hc-anim-fade`, closes after 10 s (timer), on tap, on Escape or on the close button, drops the image and revokes the blob URL the moment it closes, shows seconds left, and has no save control (`draggable={false}`, `pointer-events: none` on the image, `-webkit-touch-callout: none`, `user-select: none`, context menu blocked). The progress fill animates width; under reduced motion it steps once a second.
+- Camera button shows when `usePhone()` or `(pointer: coarse)` is true, uploads are available and no message is being edited. A snap is uploaded with a separate `ResumableUpload`, so it never interferes with a file being attached. The file is renamed to `snap.<ext>` before upload, so the camera's own file name is never sent. Only JPEG, PNG and WebP are accepted by the client.
+- `client/playwright.config.ts` has the `HOUSECALL_TEST_SNAPS=1` selector (`start-server.mjs` already had SNAPS in `wantsScanner`).
+
+### Tests run (real counts)
+- `cargo test -p housecall-server --test snaps`: 7 passed, 0 failed. Covers: exact bytes on the first open, second open 410, opened/opened_count/recipients per viewer, no path in the snap JSON, bytes kept until the last recipient opens then `Store::metadata` is `NotFound` and kind `snap_expired`, `message.updated` emitted, `GET /api/media/{id}` 403 for sender, member and outsider (and a normal image still downloads), the sender 403, a non-member 403, a missing id 404, anonymous 401, validation (no photo, two photos, non-image, GIF refused; empty body accepted), 24 h expiry by moving `messages.created_at` then `reap`, opening an overdue snap deleting it, unsend removing bytes and views.
+- `bash scripts/test-server.sh`: all 6 steps passed (fmt; workspace tests with 59, 1, 2, 13, 1, 16, 1, 7, 4 passed in the non-empty suites; media; activities; sfu; clippy with `-D warnings`). This includes `route_inventory`, which now covers `POST /api/snaps/{id}/open` rejecting missing, stolen and revoked credentials.
+- `npm run build` (client): passed. `npm test` (vitest): 5 files, 50 tests passed.
+- `HOUSECALL_TEST_SNAPS=1 npx playwright test`: 1 passed, 0 failed (iPhone 13 emulation, two contexts: camera input, preview, send, "Opened by 0 of 1"; recipient sees "Tap to view" and no image, no path in the API JSON, `/api/media` 403; open once, image decoded at 96 px wide, closes after `clock.fastForward`; sign-in again shows "Opened" with no tap target and still one open request; the second open request is 410; sender sees "Opened by 1 of 1" and cannot open; Cancel sends nothing; a tap closes a second snap and removes the image).
+- `npx playwright test` (default chat.spec.ts): 1 passed.
+- `HOUSECALL_TEST_UPLOAD_VIDEO=1 npx playwright test`: 2 passed.
+- `HOUSECALL_TEST_SHELL=1 npx playwright test`: **failed in all 4 runs**, with a different set each time: run 1 2 failed and 1 passed (shell and motion failed), run 2 3 failed, run 3 2 failed and 1 passed (shell and motion failed), run 4 2 failed and 1 passed (shell and profile failed). Failures seen: `hc-msg__head intercepts pointer events` when hovering Unsend on the video message; `.hc-msg__head strong` not found for the "hello from the fixture" message; `emoji.count()` still 1 right after Escape under reduced motion. None of these touch snaps (the camera button is hidden on a desktop viewport, and the only CSS I added is `.hc-snap*` and `.hc-snapview*`), and Phase 6 already recorded this spec failing 2 of 3 on some runs. I could not run it on the commit before my client change to confirm, because `git stash` was not approved here, so treat "not caused by Phase 7" as likely but unproven.
+- `bash scripts/check-public-safe.sh`: OK.
+
+### Unverified
+- A real iPhone: that `capture="environment"` opens the camera in the Tauri WKWebView, that a real camera JPEG (EXIF orientation, 3 to 8 MB) uploads and renders upright, and the safe-area padding of the viewer. The E2E uses a generated PNG through `setInputFiles`.
+- The look of the tile, preview and viewer was not viewed in a screenshot (dark theme or light); only the DOM behaviour is tested.
+- Reduced-motion stepping of the progress fill was not exercised in a browser.
+- The hourly reaper tick itself (the interval) is not tested; the `reap` function it calls is.
+- Two copies of the page opening the same snap at the same moment: the DB mutex and the `INSERT OR IGNORE` on the primary key make the second one 410, but there is no concurrent test.
+
+### Deviations from the plan
+- The plan's "📸 Snap · Tap to view" pill is a file-card style tile with a new drawn `snap` icon and no emoji, to follow the design guidelines (no emoji or pill chips, bare icons).
+- A received snap that expired without being opened reads "Expired" (the plan said "Opened" for both).
+- A snap that nobody can receive (the sender is alone in the conversation) has 0 recipients, so the hourly reaper deletes it on its next tick.
+- Skipped as hypothetical: the author calling `POST /api/uploads/{id}/derive` on an upload before sending it as a snap to get a normal media job; `/api/media-jobs/*` for a snap id is not otherwise reachable.
+- Build note: the shared `target` directory collides with another worktree's `housecall-server` artifacts (see Phase 6). My first `cargo test --test snaps` linked a stale library without `snaps`; editing `server/src/lib.rs` forced a rebuild from this worktree and every later server run used the fresh code. The release owner should run the server gate from a clean target, as Phase 6 already asked.
+
