@@ -11,12 +11,19 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::Deserialize;
 use serde_json::{json, Value};
 pub fn init(db: &Connection) -> rusqlite::Result<()> {
-    db.execute_batch("CREATE TABLE IF NOT EXISTS servers(id TEXT PRIMARY KEY,name TEXT NOT NULL,general_channel_id TEXT NOT NULL); INSERT OR IGNORE INTO servers VALUES('home','Housecall','general'); CREATE TABLE IF NOT EXISTS server_members(server_id TEXT NOT NULL REFERENCES servers(id),user_id TEXT NOT NULL REFERENCES users(id),PRIMARY KEY(server_id,user_id)); CREATE TABLE IF NOT EXISTS roles(id TEXT PRIMARY KEY,server_id TEXT NOT NULL REFERENCES servers(id),name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS role_members(role_id TEXT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,user_id TEXT NOT NULL REFERENCES users(id),PRIMARY KEY(role_id,user_id)); CREATE TABLE IF NOT EXISTS message_roles(message_id TEXT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,role_id TEXT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,PRIMARY KEY(message_id,role_id));")?;
+    db.execute_batch("CREATE TABLE IF NOT EXISTS servers(id TEXT PRIMARY KEY,name TEXT NOT NULL,general_channel_id TEXT NOT NULL); INSERT OR IGNORE INTO servers(id,name,general_channel_id) VALUES('home','Housecall','general'); CREATE TABLE IF NOT EXISTS server_members(server_id TEXT NOT NULL REFERENCES servers(id),user_id TEXT NOT NULL REFERENCES users(id),PRIMARY KEY(server_id,user_id)); CREATE TABLE IF NOT EXISTS roles(id TEXT PRIMARY KEY,server_id TEXT NOT NULL REFERENCES servers(id),name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS role_members(role_id TEXT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,user_id TEXT NOT NULL REFERENCES users(id),PRIMARY KEY(role_id,user_id)); CREATE TABLE IF NOT EXISTS message_roles(message_id TEXT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,role_id TEXT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,PRIMARY KEY(message_id,role_id));")?;
     for (table, column, definition) in [
         ("channels", "server_id", "TEXT REFERENCES servers(id)"),
         ("invites", "server_id", "TEXT NOT NULL DEFAULT 'home'"),
         ("invites", "email", "TEXT NOT NULL DEFAULT ''"),
         ("users", "disabled", "INTEGER NOT NULL DEFAULT 0"),
+        ("users", "display_name", "TEXT"),
+        ("users", "avatar", "BLOB"),
+        ("users", "avatar_type", "TEXT"),
+        ("users", "avatar_rev", "INTEGER NOT NULL DEFAULT 0"),
+        ("servers", "icon", "BLOB"),
+        ("servers", "icon_type", "TEXT"),
+        ("servers", "icon_rev", "INTEGER NOT NULL DEFAULT 0"),
     ] {
         let mut q = db.prepare(&format!("PRAGMA table_info({table})"))?;
         let columns = q
@@ -92,8 +99,8 @@ pub fn join(db: &Connection, uid: &str, sid: &str) -> Result<(), ApiError> {
 }
 async fn list(State(s): State<AppState>, Extension(p): Extension<Principal>) -> ApiResult<Value> {
     let db = s.db.lock().unwrap();
-    let mut q=db.prepare("SELECT s.id,s.name,s.general_channel_id FROM servers s JOIN server_members m ON m.server_id=s.id WHERE m.user_id=? ORDER BY s.name")?;
-    let rows=q.query_map([p.user.id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"name":r.get::<_,String>(1)?,"general_channel_id":r.get::<_,String>(2)?})))?.collect::<Result<Vec<_>,_>>()?;
+    let mut q=db.prepare("SELECT s.id,s.name,s.general_channel_id,s.icon_rev FROM servers s JOIN server_members m ON m.server_id=s.id WHERE m.user_id=? ORDER BY s.name")?;
+    let rows=q.query_map([p.user.id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"name":r.get::<_,String>(1)?,"general_channel_id":r.get::<_,String>(2)?,"icon_rev":r.get::<_,i64>(3)?})))?.collect::<Result<Vec<_>,_>>()?;
     Ok(Json(json!({"servers":rows})))
 }
 #[derive(Deserialize)]
@@ -118,7 +125,7 @@ async fn create(
     let mut db = s.db.lock().unwrap();
     let tx = db.transaction()?;
     tx.execute(
-        "INSERT INTO servers VALUES(?,?,?)",
+        "INSERT INTO servers(id,name,general_channel_id) VALUES(?,?,?)",
         params![id, v.name, general],
     )?;
     tx.execute(

@@ -9,6 +9,7 @@ pub mod media;
 pub(crate) mod media_index;
 pub mod passkeys;
 pub mod plex;
+pub mod profile;
 pub mod push;
 pub mod servers;
 pub mod transcode;
@@ -291,6 +292,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .merge(vm_media::routes())
         .merge(vm_reset::routes())
         .merge(servers::routes())
+        .merge(profile::routes())
         .merge(media::routes())
         .merge(giphy::routes())
         .merge(gimme::routes())
@@ -298,7 +300,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .merge(push::routes())
         .merge(passkeys::private_routes())
         .merge(activities::routes())
-        .route("/me", get(me))
+        .route("/me", get(me).patch(profile::rename_me))
         .route("/invites", get(invites).post(invite))
         .route("/invites/{id}", delete(revoke_invite))
         .route("/users/{id}/sessions", delete(revoke_user_sessions))
@@ -346,7 +348,9 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
 async fn headers(request: axum::extract::Request, next: Next) -> Response {
     let mut r = next.run(request).await;
     let h = r.headers_mut();
-    for(k,v)in[("content-security-policy","default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"),("x-content-type-options","nosniff"),("referrer-policy","no-referrer"),("cache-control","no-store"),("permissions-policy","camera=(self), microphone=(self), geolocation=()")]{h.insert(axum::http::HeaderName::from_static(k),v.parse().unwrap());}
+    // Handlers that serve immutable, versioned blobs (avatars, icons) set their own cache policy.
+    let cache_set = h.contains_key(axum::http::header::CACHE_CONTROL);
+    for(k,v)in[("content-security-policy","default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"),("x-content-type-options","nosniff"),("referrer-policy","no-referrer"),("cache-control","no-store"),("permissions-policy","camera=(self), microphone=(self), geolocation=()")]{if k=="cache-control"&&cache_set{continue;}h.insert(axum::http::HeaderName::from_static(k),v.parse().unwrap());}
     r
 }
 async fn public_limit(
@@ -763,8 +767,20 @@ async fn accept(State(s): State<AppState>, Json(v): Json<Accept>) -> ApiResult<V
     Ok(Json(result))
 }
 async fn me(State(s): State<AppState>, Extension(p): Extension<Principal>) -> Json<Value> {
+    let (display_name, avatar_rev) =
+        s.db.lock()
+            .unwrap()
+            .query_row(
+                "SELECT display_name,avatar_rev FROM users WHERE id=?",
+                [&p.user.id],
+                |r| Ok((r.get::<_, Option<String>>(0)?, r.get::<_, i64>(1)?)),
+            )
+            .unwrap_or((None, 0));
+    let mut user = json!(p.user);
+    user["display_name"] = json!(display_name);
+    user["avatar_rev"] = json!(avatar_rev);
     Json(
-        json!({"user":p.user,"session_id":p.session_id,"capabilities":{"password":true,"passkeys":s.passkeys.is_some(),"chat":true,"embeds":true,"uploads":s.media.is_some(),"transcode":s.transcoder.is_some(),"plex":s.plex.is_some() && s.voice.is_some(),"voice":s.voice.is_some(),"activities":false,"activity_sync":true,"activity_playback":false,"vm_input":s.vm.is_some() && s.voice.is_some(),"vm_reset":s.vm.as_ref().is_some_and(|vm| vm.reset_socket.is_some()) && s.voice.is_some(),"vm_media":s.vm_media.configured() && s.voice.is_some(),"giphy":giphy::configured(),"gimme_dry_run":s.gimme.is_dry_run(),"dj":s.dj.is_some() && s.voice.is_some(),"push":false}}),
+        json!({"user":user,"session_id":p.session_id,"capabilities":{"password":true,"passkeys":s.passkeys.is_some(),"chat":true,"embeds":true,"uploads":s.media.is_some(),"transcode":s.transcoder.is_some(),"plex":s.plex.is_some() && s.voice.is_some(),"voice":s.voice.is_some(),"activities":false,"activity_sync":true,"activity_playback":false,"vm_input":s.vm.is_some() && s.voice.is_some(),"vm_reset":s.vm.as_ref().is_some_and(|vm| vm.reset_socket.is_some()) && s.voice.is_some(),"vm_media":s.vm_media.configured() && s.voice.is_some(),"giphy":giphy::configured(),"gimme_dry_run":s.gimme.is_dry_run(),"dj":s.dj.is_some() && s.voice.is_some(),"push":false}}),
     )
 }
 async fn devices(
@@ -865,14 +881,18 @@ async fn create_channel(
 }
 async fn members(State(s): State<AppState>) -> ApiResult<Value> {
     let db = s.db.lock().unwrap();
-    let mut q = db.prepare("SELECT id,username,is_owner FROM users ORDER BY username")?;
+    let mut q = db.prepare(
+        "SELECT id,username,is_owner,display_name,avatar_rev FROM users ORDER BY username",
+    )?;
     let rows = q
         .query_map([], |r| {
-            Ok(User {
-                id: r.get(0)?,
-                username: r.get(1)?,
-                is_owner: r.get(2)?,
-            })
+            Ok(json!({
+                "id": r.get::<_, String>(0)?,
+                "username": r.get::<_, String>(1)?,
+                "is_owner": r.get::<_, bool>(2)?,
+                "display_name": r.get::<_, Option<String>>(3)?,
+                "avatar_rev": r.get::<_, i64>(4)?,
+            }))
         })?
         .collect::<Result<Vec<_>, _>>()?;
     Ok(Json(json!({"members":rows})))
