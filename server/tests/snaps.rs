@@ -474,3 +474,78 @@ async fn unsending_a_snap_removes_its_bytes_and_views() {
     );
     assert_eq!(views.unwrap(), 0);
 }
+
+#[tokio::test]
+async fn a_snap_cannot_be_derived_into_a_media_job() {
+    let mut w = world().await;
+    w.state.transcoder = Some(Arc::new(housecall_server::transcode::Processor::new(
+        "/usr/bin/ffmpeg",
+        std::time::Duration::from_secs(5),
+    )));
+    w.api = app(w.state.clone(), None);
+    let (id, _) = snap(&w).await;
+    let derived = call(
+        &w.api,
+        "POST",
+        &format!("/api/uploads/{id}/derive"),
+        Some(&w.owner),
+        json!({}),
+    )
+    .await;
+    assert_eq!(derived.status, StatusCode::FORBIDDEN);
+    let jobs = w.state.db.lock().unwrap().query_row(
+        "SELECT COUNT(*) FROM media_jobs WHERE source_id=?",
+        [&id],
+        |r| r.get::<_, i64>(0),
+    );
+    assert_eq!(jobs.unwrap(), 0);
+}
+
+#[tokio::test]
+async fn reaping_a_snap_deletes_media_job_outputs_made_from_it() {
+    let w = world().await;
+    let (id, _) = snap(&w).await;
+    let video = upload(&w, "clip.mp4", b"derived video").await;
+    let thumb = upload(&w, "thumb.jpg", &PHOTO).await;
+    let owner_id = w.owner["user"]["id"].as_str().unwrap().to_owned();
+    w.state
+        .db
+        .lock()
+        .unwrap()
+        .execute(
+            "INSERT INTO media_jobs(id,source_id,owner_id,channel_id,status,video_id,thumbnail_id,created_at,updated_at) VALUES('job-1',?,?,?,'ready',?,?,0,0)",
+            rusqlite::params![id, owner_id, w.channel, video, thumb],
+        )
+        .unwrap();
+    assert_eq!(open(&w, &w.alice, &id).await.status, StatusCode::OK);
+    assert_eq!(open(&w, &w.bob, &id).await.status, StatusCode::OK);
+    assert!(gone(&w, &id));
+    assert!(gone(&w, &video), "derived video must go with the snap");
+    assert!(gone(&w, &thumb), "derived thumbnail must go with the snap");
+}
+
+#[tokio::test]
+async fn a_snap_cannot_be_attached_to_a_report() {
+    let w = world().await;
+    let (id, _) = snap(&w).await;
+    let report = call(
+        &w.api,
+        "POST",
+        "/api/reports",
+        Some(&w.owner),
+        json!({"kind":"bug","body":"look","screenshot_id":id,"screenshot_consent":true}),
+    )
+    .await;
+    assert_eq!(report.status, StatusCode::BAD_REQUEST, "{}", report.json());
+    assert!(report.json().to_string().contains("snap"));
+    let plain = upload(&w, "shot.png", &PHOTO).await;
+    let ok = call(
+        &w.api,
+        "POST",
+        "/api/reports",
+        Some(&w.owner),
+        json!({"kind":"bug","body":"look","screenshot_id":plain,"screenshot_consent":true}),
+    )
+    .await;
+    assert_eq!(ok.status, StatusCode::OK, "{}", ok.json());
+}

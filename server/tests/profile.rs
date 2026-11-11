@@ -209,7 +209,14 @@ async fn rename_emits_member_updated_to_peers() {
 #[tokio::test]
 async fn long_or_control_names_are_rejected() {
     let (api, _, _, alice) = fixture().await;
-    for name in ["x".repeat(33), "   ".to_owned(), "a\u{7}b".to_owned()] {
+    for name in [
+        "x".repeat(33),
+        "   ".to_owned(),
+        "a\u{7}b".to_owned(),
+        "a\u{202E}b".to_owned(),
+        "a\u{200B}b".to_owned(),
+        "\u{FEFF}ab".to_owned(),
+    ] {
         let r = call(
             &api,
             "PATCH",

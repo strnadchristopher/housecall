@@ -249,15 +249,13 @@ async fn a_second_ring_within_ten_seconds_is_refused_per_conversation() {
     let w = world().await;
     let first = call(&w.api, "POST", &ring_path(&w.dm), Some(&w.alice), json!({})).await;
     assert_eq!(first.0, StatusCode::OK);
-    // Either side ringing the same conversation counts against the same window.
-    for who in [&w.alice, &w.bob] {
-        assert_eq!(
-            call(&w.api, "POST", &ring_path(&w.dm), Some(who), json!({}))
-                .await
-                .0,
-            StatusCode::TOO_MANY_REQUESTS
-        );
-    }
+    // The same caller ringing again inside the window is refused.
+    assert_eq!(
+        call(&w.api, "POST", &ring_path(&w.dm), Some(&w.alice), json!({}))
+            .await
+            .0,
+        StatusCode::TOO_MANY_REQUESTS
+    );
     assert_eq!(count(&kinds(&w, &w.bob).await, "call.ring"), 1);
     assert_eq!(count(&kinds(&w, &w.alice).await, "call.ring"), 0);
     // Another conversation is not held up by this one.
@@ -285,12 +283,37 @@ async fn a_second_ring_within_ten_seconds_is_refused_per_conversation() {
         .0,
         StatusCode::OK
     );
-    // Once the window has passed the same conversation can be rung again.
-    w.state
-        .rings
-        .lock()
-        .unwrap()
-        .insert(w.dm.clone(), housecall_server::now() - 10_001);
+    // Once the window has passed the same caller can ring again.
+    w.state.rings.lock().unwrap().insert(
+        format!("{}:{}", w.dm, w.alice["user"]["id"].as_str().unwrap()),
+        housecall_server::now() - 10_001,
+    );
+    assert_eq!(
+        call(&w.api, "POST", &ring_path(&w.dm), Some(&w.alice), json!({}))
+            .await
+            .0,
+        StatusCode::OK
+    );
+    assert_eq!(count(&kinds(&w, &w.bob).await, "call.ring"), 2);
+}
+
+#[tokio::test]
+async fn declining_lets_the_callee_ring_back_at_once_and_a_cancel_lets_the_caller_retry() {
+    let w = world().await;
+    let decline = format!("{}/decline", ring_path(&w.dm));
+    assert_eq!(
+        call(&w.api, "POST", &ring_path(&w.dm), Some(&w.alice), json!({}))
+            .await
+            .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        call(&w.api, "POST", &decline, Some(&w.bob), json!({}))
+            .await
+            .0,
+        StatusCode::OK
+    );
+    // Bob calls Alice back straight after declining: she is rung.
     assert_eq!(
         call(&w.api, "POST", &ring_path(&w.dm), Some(&w.bob), json!({}))
             .await
@@ -298,7 +321,20 @@ async fn a_second_ring_within_ten_seconds_is_refused_per_conversation() {
         StatusCode::OK
     );
     assert_eq!(count(&kinds(&w, &w.alice).await, "call.ring"), 1);
-    assert_eq!(count(&kinds(&w, &w.bob).await, "call.ring"), 1);
+    // Alice cancels and rings again at once.
+    assert_eq!(
+        call(&w.api, "POST", &decline, Some(&w.alice), json!({}))
+            .await
+            .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        call(&w.api, "POST", &ring_path(&w.dm), Some(&w.alice), json!({}))
+            .await
+            .0,
+        StatusCode::OK
+    );
+    assert_eq!(count(&kinds(&w, &w.bob).await, "call.ring"), 2);
 }
 
 #[tokio::test]

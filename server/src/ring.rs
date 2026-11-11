@@ -11,8 +11,12 @@ use axum::{
 use rusqlite::{params, Connection};
 use serde_json::{json, Value};
 
-/// One ring per conversation in this window. Decline is not limited beyond the session limit.
+/// One ring per caller per conversation in this window. Decline is not limited beyond the session limit.
 const RING_WINDOW_MS: i64 = 10_000;
+
+fn ring_key(channel: &str, caller: &str) -> String {
+    format!("{channel}:{caller}")
+}
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -76,8 +80,9 @@ async fn ring(
             if rings.len() > 1024 {
                 rings.retain(|_, last| at - *last < RING_WINDOW_MS);
             }
+            let key = ring_key(&channel, &p.user.id);
             if rings
-                .get(&channel)
+                .get(&key)
                 .is_some_and(|last| at - *last < RING_WINDOW_MS)
             {
                 return Err(ApiError(
@@ -85,7 +90,7 @@ async fn ring(
                     "this person was just rung; wait a few seconds",
                 ));
             }
-            rings.insert(channel.clone(), at);
+            rings.insert(key, at);
         }
         let from_name = display_name(&db, &p.user.id)?;
         emit_to(
@@ -116,6 +121,12 @@ async fn decline(
 ) -> ApiResult<Value> {
     let db = s.db.lock().unwrap();
     let other = other_member(&db, &p.user.id, &channel)?;
+    {
+        // A decline or cancel ends the ring, so either side may ring again at once.
+        let mut rings = s.rings.lock().unwrap();
+        rings.remove(&ring_key(&channel, &p.user.id));
+        rings.remove(&ring_key(&channel, &other));
+    }
     emit_to(
         &db,
         &other,

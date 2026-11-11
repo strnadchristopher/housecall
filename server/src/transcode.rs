@@ -95,9 +95,20 @@ async fn start(
     Extension(p): Extension<Principal>,
     Path(id): Path<Uuid>,
 ) -> Result<(StatusCode, Json<Value>), ApiError> {
-    let engine = s.transcoder.clone().ok_or_else(unavailable)?;
     let store = s.media.clone().ok_or_else(unavailable)?;
     let source = store.inspect(id, &p.user.id)?;
+    // A snap's bytes leave only through `/snaps/{id}/open`, never through a media job.
+    if s.db.lock().unwrap().query_row(
+        "SELECT EXISTS(SELECT 1 FROM attachments WHERE upload_id=? AND view_once<>0)",
+        [id.to_string()],
+        |r| r.get::<_, bool>(0),
+    )? {
+        return Err(ApiError(
+            StatusCode::FORBIDDEN,
+            "a snap can't be processed into a media job",
+        ));
+    }
+    let engine = s.transcoder.clone().ok_or_else(unavailable)?;
     if source.status != Status::Ready {
         return Err(ApiError(
             StatusCode::LOCKED,

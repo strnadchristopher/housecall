@@ -33,9 +33,26 @@ pub fn routes() -> Router<AppState> {
         )
 }
 
+/// Format characters (Unicode Cf) that render as nothing or reorder text, so a name can't
+/// look blank or flip direction next to the real username.
+fn invisible(c: char) -> bool {
+    matches!(
+        c,
+        '\u{00AD}'
+            | '\u{061C}'
+            | '\u{180E}'
+            | '\u{200B}'..='\u{200F}'
+            | '\u{2028}'..='\u{202E}'
+            | '\u{2060}'..='\u{206F}'
+            | '\u{FEFF}'
+    )
+}
 fn clean(value: &str, max: usize) -> Result<String, ApiError> {
     let value = value.trim();
-    if value.is_empty() || value.chars().count() > max || value.chars().any(char::is_control) {
+    if value.is_empty()
+        || value.chars().count() > max
+        || value.chars().any(|c| c.is_control() || invisible(c))
+    {
         return Err(bad("invalid name"));
     }
     Ok(value.to_owned())

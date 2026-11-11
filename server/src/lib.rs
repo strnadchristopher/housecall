@@ -1064,6 +1064,15 @@ async fn send_message(
         if v.view_once && attach_kind::kind(&upload.filename, false) != "image" {
             return Err(bad("a snap must be a photo"));
         }
+        if v.view_once
+            && tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM media_jobs WHERE source_id=?)",
+                [upload_id.to_string()],
+                |r| r.get::<_, bool>(0),
+            )?
+        {
+            return Err(bad("a processed upload can't be sent as a snap"));
+        }
         if tx
             .query_row(
                 "SELECT 1 FROM attachments WHERE upload_id=?",
@@ -1343,6 +1352,14 @@ async fn report(
             .inspect(uid, &p.user.id)?;
         if upload.status != housecall_media::Status::Ready {
             return Err(bad("screenshot must pass scanning"));
+        }
+        let is_snap = s.db.lock().unwrap().query_row(
+            "SELECT EXISTS(SELECT 1 FROM attachments WHERE upload_id=? AND view_once<>0)",
+            [id],
+            |r| r.get::<_, bool>(0),
+        )?;
+        if is_snap {
+            return Err(bad("a snap can't be attached to a report"));
         }
     }
     if v.logs.as_ref().is_some_and(|v| v.len() > 65536) {

@@ -108,6 +108,10 @@ pub fn reap(s: &AppState) -> Result<usize, ApiError> {
         let Ok(id) = Uuid::parse_str(&upload) else {
             continue;
         };
+        // No media job should exist for a snap, but never leave derived bytes behind.
+        if crate::transcode::purge_source(&tx, &store, id, &author).is_err() {
+            continue;
+        }
         match store.delete(id, &author) {
             Ok(()) | Err(housecall_media::Error::NotFound) => {}
             // Leave the row live so the next pass retries.
@@ -127,6 +131,14 @@ pub fn reap(s: &AppState) -> Result<usize, ApiError> {
     }
     tx.commit()?;
     Ok(deleted)
+}
+
+/// `reap` touches the filesystem under the DB lock, so request handlers run it off the async runtime.
+async fn reap_blocking(s: &AppState) -> Result<usize, ApiError> {
+    let state = s.clone();
+    tokio::task::spawn_blocking(move || reap(&state))
+        .await
+        .map_err(|_| ApiError(StatusCode::INTERNAL_SERVER_ERROR, "media task failed"))?
 }
 
 pub fn spawn_reaper(s: &AppState) {
@@ -210,7 +222,7 @@ async fn open(
         }
     };
     let Some(target) = expired else {
-        reap(&s)?;
+        reap_blocking(&s).await?;
         return Err(gone());
     };
     let reader_store = store.clone();
@@ -229,7 +241,7 @@ async fn open(
         other => other.into(),
     })?;
     // Deleting is best effort here; the hourly pass retries any failure.
-    let _ = reap(&s);
+    let _ = reap_blocking(&s).await;
     let content_type = match target
         .filename
         .rsplit_once('.')
