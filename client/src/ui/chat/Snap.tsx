@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Attachment, ChatMessage } from "../../core/chat";
 import { useChat } from "../../core/context";
 import { copy } from "../copy";
@@ -100,9 +101,12 @@ export function SnapTile({ message, attachment }: { message: ChatMessage; attach
             aria-label={`${copy.snaps.snap}, ${copy.snaps.tap}`} onClick={() => void view()}>{body}</button>
         : <div className="hc-snap is-static" data-testid="snap-tile" data-state={message.mine ? "sent" : snap.opened ? "opened" : "expired"}>{body}</div>}
       {error && <p className="hc-error" role="alert">{error}</p>}
-      <Presence show={open}>
-        <SnapViewer src={url} onClose={close} />
-      </Presence>
+      {createPortal(
+        <Presence show={open}>
+          <SnapViewer src={url} onClose={close} />
+        </Presence>,
+        document.body,
+      )}
     </>
   );
 }
@@ -132,9 +136,12 @@ export function SnapCapture() {
       <IconButton icon="snap" label={copy.snaps.take} onClick={() => input.current?.click()} />
       <input ref={input} type="file" accept="image/*" capture="environment" className="hc-sr" tabIndex={-1} aria-hidden="true" data-testid="snap-capture"
         onChange={event => { const chosen = event.target.files?.[0]; event.target.value = ""; if (chosen) setPhoto(chosen); }} />
-      <Presence show={!!photo}>
-        <SnapPreview root={root} src={preview} busy={chat.busy} error={failed ? chat.error : ""} onSend={() => void send()} onCancel={() => setPhoto(undefined)} />
-      </Presence>
+      {createPortal(
+        <Presence show={!!photo}>
+          <SnapPreview root={root} src={preview} busy={chat.busy} error={failed ? chat.error : ""} onSend={() => void send()} onCancel={() => setPhoto(undefined)} />
+        </Presence>,
+        document.body,
+      )}
     </>
   );
 }

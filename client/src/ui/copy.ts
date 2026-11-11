@@ -102,7 +102,7 @@ export const copy = {
   setup: {
     scope: "Same for every server on this host.",
     askOwner: "Ask the server owner to set this up.",
-    ready: "Ready", needsSetup: "Needs setup", checking: "Checking",
+    ready: "Ready", needsSetup: "Needs setup", notSetUp: "Not set up", checking: "Checking",
     checkAgain: "Check again", missing: "Still missing", loadFailed: "Could not read the setup status.",
     copy: (what: string) => `Copy ${what}`,
     test: "Test microphone and camera", stopTest: "Stop test", micLevel: "Microphone level", cameraPreview: "Camera preview",
@@ -114,8 +114,7 @@ export const copy = {
     name: "Server name", created: (name: string) => `${name} is ready.`, iconFailed: "The server was created, but its icon could not be saved. Add it later in Server settings.",
     channelsIntro: "General is always there. Add more if you like.",
     general: "General", lounge: "Voice lounge", music: "Music",
-    callsIntro: "Check that your microphone and camera work before the first call.",
-    extrasIntro: "Optional. Skip any you do not need.",
+    callsIntro: "Check that your microphone and camera work before the first call.",    extrasIntro: "Optional. Skip any you do not need.",
     inviteIntro: "Share this link to bring people in.",
     next: "Next", done: "Done", leave: "Leave setup?", leaveBody: "The server is kept. You can finish setup in Settings.", leaveYes: "Leave", leaveNo: "Keep going",
   },

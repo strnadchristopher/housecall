@@ -80,6 +80,17 @@ test("a snap opens once per recipient, closes after ten seconds and is then gone
   await expect(image).toBeVisible();
   expect(await image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth)).toBe(96);
   expect(opens).toHaveLength(1);
+  // The viewer covers the whole app (nothing paints over it, not even the composer's send arrow),
+  // is opaque, and the small photo is scaled up to the screen instead of sitting at its pixel size.
+  const covered = await receiver.evaluate(() => {
+    const viewer = document.querySelector(".hc-snapview");
+    const spots = [[innerWidth - 24, innerHeight - 24], [24, innerHeight - 24], [innerWidth / 2, innerHeight - 8]];
+    return { parent: viewer?.closest(".hc-presence")?.parentElement === document.body, hits: spots.map(([x, y]) => !!viewer?.contains(document.elementFromPoint(x, y))), background: viewer ? getComputedStyle(viewer).backgroundColor : "" };
+  });
+  expect(covered.parent).toBe(true);
+  expect(covered.hits).toEqual([true, true, true]);
+  expect(covered.background).toMatch(/^rgb\(/);
+  expect((await image.boundingBox())!.width).toBeGreaterThan(300);
   await receiver.clock.fastForward(10_500);
   await expect(receiver.getByRole("dialog", { name: "Snap" })).toBeHidden();
 

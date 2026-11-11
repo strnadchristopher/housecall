@@ -82,6 +82,13 @@ export function CreateServerWizard({ onClose }: { onClose: () => void }) {
     const result = await identity.createInvite({ expiresInSeconds: 604800 });
     if (result.link) setLink(result.link);
   };
+  // The invite step shows the link as soon as it opens: one request, made once.
+  const asked = useRef(false);
+  useEffect(() => {
+    if (step !== LAST || asked.current) return;
+    asked.current = true;
+    void makeInvite();
+  }, [step]);
   const copyLink = async () => {
     try { await navigator.clipboard.writeText(link); setCopied(true); } catch { setCopied(false); }
   };
@@ -148,7 +155,7 @@ export function CreateServerWizard({ onClose }: { onClose: () => void }) {
             {slide(2, copy.wizard.steps[2], (
               <div className="hc-stack">
                 <p className="hc-muted">{copy.wizard.callsIntro}</p>
-                <IntegrationSetup only={CALL_CARDS} openFirstTodo />
+                <IntegrationSetup only={CALL_CARDS} deviceTestFirst />
               </div>
             ))}
             {slide(3, copy.wizard.steps[3], (
@@ -160,13 +167,12 @@ export function CreateServerWizard({ onClose }: { onClose: () => void }) {
             {slide(4, copy.wizard.steps[4], (
               <div className="hc-stack">
                 <p className="hc-muted">{copy.wizard.inviteIntro}</p>
-                <Button kind="primary" busy={identity.busy} onClick={() => void makeInvite()}>{copy.settings.invite}</Button>
-                {link && (
-                  <div className="hc-copy">
-                    <Field label={copy.settings.inviteLink} value={link} readOnly onFocus={event => event.target.select()} data-testid="wizard-invite-link" />
-                    <Button onClick={() => void copyLink()}>{copied ? copy.common.copied : copy.common.copy}</Button>
-                  </div>
-                )}
+                {link
+                  ? <div className="hc-copy">
+                      <Field label={copy.settings.inviteLink} value={link} readOnly onFocus={event => event.target.select()} data-testid="wizard-invite-link" />
+                      <Button onClick={() => void copyLink()}>{copied ? copy.common.copied : copy.common.copy}</Button>
+                    </div>
+                  : identity.error && <Button kind="primary" busy={identity.busy} onClick={() => void makeInvite()}>{copy.common.retry}</Button>}
               </div>
             ))}
           </div>

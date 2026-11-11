@@ -99,4 +99,6 @@ export const INTEGRATIONS: Record<IntegrationId, IntegrationCopy> = {
 /** The wizard splits the cards across two steps. */
 export const CALL_CARDS: IntegrationId[] = ["calls"];
 export const EXTRA_CARDS: IntegrationId[] = ["dj", "gimme", "plex", "giphy", "vm", "transcode"];
+/** Features other things depend on: not being ready is a problem. Everything else is optional and only "not set up". */
+export const CORE_CARDS: IntegrationId[] = ["calls", "media", "scanner"];
 export const ALL_CARDS: IntegrationId[] = ["calls", "media", "scanner", "transcode", "dj", "gimme", "plex", "giphy", "vm"];

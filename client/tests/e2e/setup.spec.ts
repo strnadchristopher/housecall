@@ -36,27 +36,38 @@ test("setup: server wizard, Settings integrations, non-owner", async ({ browser 
   await wizard.getByLabel("Voice lounge").check();
   await wizard.getByRole("button", { name: "Next", exact: true }).click();
 
-  // Step 3: calls. No call port on the test host, so it needs setup and opens by itself. The device test uses the fake camera and microphone.
+  // Step 3: calls. The device test leads (fake camera and microphone). No call port on the test host, so the
+  // host setup is "Needs setup" but stays closed until asked for.
   await expect(wizard.getByRole("heading", { name: "Calls" })).toBeVisible();
   const calls = wizard.getByTestId("integration-calls");
   await expect(calls).toContainText("Needs setup");
-  await expect(calls).toContainText("SFU_PUBLIC_IP");
+  await expect(calls.getByText("SFU_PUBLIC_IP")).toHaveCount(0);
   await expect(wizard.getByTestId("integration-setup")).toContainText("Same for every server on this host.");
-  await calls.getByRole("button", { name: "Test microphone and camera" }).click();
+  const test = wizard.getByRole("button", { name: "Test microphone and camera" });
+  const head = await calls.boundingBox();
+  expect((await test.boundingBox())!.y).toBeLessThan(head!.y);
+  await test.click();
   await expect(wizard.getByTestId("mic-meter")).toBeVisible();
   await expect.poll(() => wizard.getByTestId("camera-preview").evaluate((video: HTMLVideoElement) => video.videoWidth)).toBeGreaterThan(0);
-  await calls.getByRole("button", { name: "Stop test" }).click();
+  // The preview fits inside the scrolling step, never cut at the bottom.
+  const stage = (await wizard.locator(".hc-wizard__stage").boundingBox())!;
+  const preview = (await wizard.getByTestId("camera-preview").boundingBox())!;
+  expect(preview.y + preview.height).toBeLessThanOrEqual(stage.y + stage.height + 1);
+  await wizard.getByRole("button", { name: "Stop test" }).click();
   await expect(wizard.getByTestId("mic-meter")).toHaveCount(0);
+  await calls.getByRole("button", { name: /Calls/ }).click();
+  await expect(calls).toContainText("SFU_PUBLIC_IP");
   await wizard.getByRole("button", { name: "Next", exact: true }).click();
 
-  // Step 4: extras, each skippable.
+  // Step 4: extras, each skippable. Optional ones that are not configured read "Not set up", never "Needs setup".
   await expect(wizard.getByRole("heading", { name: "Extras" })).toBeVisible();
   for (const id of ["dj", "gimme", "plex", "giphy", "vm", "transcode"]) await expect(wizard.getByTestId(`integration-${id}`)).toBeVisible();
+  await expect(wizard.getByTestId("integration-dj")).toContainText("Not set up");
+  await expect(wizard.getByTestId("wizard-step-4")).not.toContainText("Needs setup");
   await wizard.getByRole("button", { name: "Next", exact: true }).click();
 
-  // Step 5: invite.
+  // Step 5: invite. The link is made when the step opens.
   await expect(wizard.getByRole("heading", { name: "Invite" })).toBeVisible();
-  await wizard.getByRole("button", { name: "Create invite link" }).click();
   await expect(wizard.getByTestId("wizard-invite-link")).toHaveValue(/#invite=[a-f0-9]{64}$/);
   await wizard.getByRole("button", { name: "Done", exact: true }).click();
   await expect(wizard).toHaveCount(0);
@@ -75,6 +86,8 @@ test("setup: server wizard, Settings integrations, non-owner", async ({ browser 
   await owner.getByTestId("screen-settings").getByRole("button", { name: "Integrations", exact: true }).click();
   const panel = owner.getByTestId("integration-setup");
   for (const id of CARDS) await expect(panel.getByTestId(`integration-${id}`)).toBeVisible();
+  await expect(panel.getByTestId("integration-giphy")).toContainText("Not set up");
+  await expect(panel.getByTestId("integration-calls")).toContainText("Needs setup");
   await panel.getByTestId("integration-giphy").getByRole("button", { name: /Giphy|GIFs/ }).click();
   await expect(panel.getByTestId("integration-giphy")).toContainText("GIPHY_API_KEY");
   const again = owner.waitForResponse(response => response.url().endsWith("/api/setup/status") && response.status() === 200);

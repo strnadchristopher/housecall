@@ -4,12 +4,12 @@ import type { SetupRow } from "../../core/identity";
 import { acquireMedia } from "../../transport/voice";
 import { copy } from "../copy";
 import { Button, ErrorLine, Icon, cx } from "../kit";
-import { ALL_CARDS, INTEGRATIONS, type IntegrationId, type Step } from "./steps";
+import { ALL_CARDS, CORE_CARDS, INTEGRATIONS, type IntegrationId, type Step } from "./steps";
 
 const SEGMENTS = 14;
 
 /** Microphone level and camera preview, through the same acquireMedia a call uses. Nothing is sent anywhere. */
-function DeviceTest() {
+function DeviceTest({ hero = false }: { hero?: boolean }) {
   const call = useCall();
   const [on, setOn] = useState(false);
   const [problem, setProblem] = useState("");
@@ -64,8 +64,8 @@ function DeviceTest() {
   }, [on]);
 
   return (
-    <div className="hc-devtest" data-testid="device-test">
-      <Button onClick={() => (on ? stop() : void start())}>{on ? copy.setup.stopTest : copy.setup.test}</Button>
+    <div className={cx("hc-devtest", hero && "hc-devtest--hero")} data-testid="device-test">
+      <Button kind={hero ? "primary" : undefined} onClick={() => (on ? stop() : void start())}>{on ? copy.setup.stopTest : copy.setup.test}</Button>
       {on && (
         <>
           <div className="hc-meter" role="meter" aria-label={copy.setup.micLevel} aria-valuemin={0} aria-valuemax={SEGMENTS} aria-valuenow={lit} data-testid="mic-meter">
@@ -104,14 +104,16 @@ function Steps({ steps }: { steps: Step[] }) {
   );
 }
 
-function Card({ id, row, open, onToggle, onCheck, checking }: {
-  id: IntegrationId; row?: SetupRow; open: boolean; onToggle: () => void; onCheck: () => void; checking: boolean;
+function Card({ id, row, open, onToggle, onCheck, checking, deviceTestAbove }: {
+  id: IntegrationId; row?: SetupRow; open: boolean; onToggle: () => void; onCheck: () => void; checking: boolean; deviceTestAbove: boolean;
 }) {
   const info = INTEGRATIONS[id];
   const panel = useId();
-  const state = !row ? copy.setup.checking : row.ready ? copy.setup.ready : copy.setup.needsSetup;
+  // Only features others depend on read as a problem; optional ones are just not set up.
+  const core = CORE_CARDS.includes(id);
+  const state = !row ? copy.setup.checking : row.ready ? copy.setup.ready : core ? copy.setup.needsSetup : copy.setup.notSetUp;
   return (
-    <li className="hc-card-int" data-state={!row ? "pending" : row.ready ? "ready" : "todo"} data-testid={`integration-${id}`}>
+    <li className="hc-card-int" data-state={!row ? "pending" : row.ready ? "ready" : core ? "todo" : "optional"} data-testid={`integration-${id}`}>
       <button type="button" className="hc-card-int__head" aria-expanded={open} aria-controls={panel} onClick={onToggle}>
         <span className="hc-card-int__text"><strong>{info.title}</strong><small>{info.why}</small></span>
         <span className="hc-card-int__state">{row?.ready && <Icon name="check" />}{state}</span>
@@ -122,7 +124,7 @@ function Card({ id, row, open, onToggle, onCheck, checking }: {
           {row && !row.ready && row.missing && row.missing.length > 0 && <p className="hc-muted">{copy.setup.missing}: {row.missing.join(", ")}</p>}
           {row?.detail && <p className="hc-muted">{row.detail}</p>}
           <Steps steps={info.steps} />
-          {id === "calls" && <DeviceTest />}
+          {id === "calls" && !deviceTestAbove && <DeviceTest />}
           <div className="hc-inline">
             <Button kind="primary" busy={checking} onClick={onCheck}>{checking ? copy.setup.checking : copy.setup.checkAgain}</Button>
           </div>
@@ -136,38 +138,32 @@ function Card({ id, row, open, onToggle, onCheck, checking }: {
  * Live readiness and copyable setup steps for each integration. Used by the server wizard and by
  * Settings. Readiness comes from the host's environment, so it is the same for every server.
  */
-export function IntegrationSetup({ only = ALL_CARDS, openFirstTodo = false }: { only?: IntegrationId[]; openFirstTodo?: boolean }) {
+export function IntegrationSetup({ only = ALL_CARDS, deviceTestFirst = false }: { only?: IntegrationId[]; deviceTestFirst?: boolean }) {
   const identity = useIdentity();
   const [rows, setRows] = useState<SetupRow[]>();
   const [problem, setProblem] = useState("");
   const [checking, setChecking] = useState(false);
   const [open, setOpen] = useState<Set<IntegrationId>>(new Set());
-  const seeded = useRef(false);
 
   const check = useCallback(async () => {
     setChecking(true); setProblem("");
     try {
-      const next = await identity.loadSetupStatus();
-      setRows(next);
-      if (openFirstTodo && !seeded.current) {
-        seeded.current = true;
-        const first = only.find(id => next.find(row => row.id === id && !row.ready));
-        if (first) setOpen(new Set([first]));
-      }
+      setRows(await identity.loadSetupStatus());
     } catch { setProblem(copy.setup.loadFailed); }
     finally { setChecking(false); }
-  }, [identity.loadSetupStatus, openFirstTodo, only.join()]);
+  }, [identity.loadSetupStatus]);
   useEffect(() => { if (identity.owner) void check(); }, [identity.owner]);
 
   if (!identity.owner) return <p className="hc-muted" data-testid="setup-ask-owner">{copy.setup.askOwner}</p>;
   const toggle = (id: IntegrationId) => setOpen(current => { const next = new Set(current); if (!next.delete(id)) next.add(id); return next; });
   return (
     <div className="hc-stack" data-testid="integration-setup">
+      {deviceTestFirst && only.includes("calls") && <DeviceTest hero />}
       <p className="hc-muted">{copy.setup.scope}</p>
       <ErrorLine text={problem} />
       <ul className="hc-cards-int">
         {only.map(id => (
-          <Card key={id} id={id} row={rows?.find(row => row.id === id)} open={open.has(id)} onToggle={() => toggle(id)} onCheck={() => void check()} checking={checking} />
+          <Card key={id} id={id} row={rows?.find(row => row.id === id)} open={open.has(id)} onToggle={() => toggle(id)} onCheck={() => void check()} checking={checking} deviceTestAbove={deviceTestFirst} />
         ))}
       </ul>
     </div>

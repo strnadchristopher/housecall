@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Attachment, ChatMessage } from "../../core/chat";
 import { useChat } from "../../core/context";
 import { copy } from "../copy";
@@ -52,9 +53,13 @@ function InlineImage({ attachment }: { attachment: Attachment }) {
       <button type="button" className="hc-media hc-media--image" onClick={() => setZoom(true)} aria-label={`${copy.messages.open} ${attachment.filename}`}>
         {url ? <img src={url} alt={attachment.filename} decoding="async" data-testid="inline-image" /> : <span className="hc-media__skeleton" />}
       </button>
-      <Presence show={zoom && !!url}>
-        {url && <Lightbox attachment={attachment} src={url} onClose={() => setZoom(false)} />}
-      </Presence>
+      {/* In the body: a message row is its own stacking context and would trap the overlay under the picker and composer. */}
+      {createPortal(
+        <Presence show={zoom && !!url}>
+          {url && <Lightbox attachment={attachment} src={url} onClose={() => setZoom(false)} />}
+        </Presence>,
+        document.body,
+      )}
     </>
   );
 }
