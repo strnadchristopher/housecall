@@ -23,22 +23,22 @@ Stated first because they are the ones most likely to be assumed.
 | Id | Not provided |
 |---|---|
 | L1 | **Forward secrecy for stored history.** Members and bots keep epoch keys so they can read history on any device. Anyone who gets a member's account secret `RS`, or a stored epoch key, can read all history that member was given, including old messages the server stored. There is no ratchet. |
-| L2 | **Resistance to offline password guessing after a server breach.** A party who has the server's database and its OPAQUE secret can test guesses at one Argon2id (64 MiB, 3 passes) per guess, and a cracked password yields the account root secret, which is the account on every server. |
+| L2 | **Resistance to offline password guessing after a server breach.** A party who has the server's database and its OPAQUE secret can test guesses at one Argon2id (64 MiB, 3 passes) per guess, and a cracked password yields the account root secret, which is the account on every server. One high-end GPU is estimated at about 10^3 guesses per second (to be measured, CRACK-PLAN C09), so a password estimated at 10^8 guesses (zxcvbn score 3) falls in about a day; the strength rule asks for score 4 (about 10^10). A hosting provider's disk snapshot counts as a whole-machine image. |
 | L3 | **Cryptographic enforcement of device approval.** Approval is a server rule. A malicious server, or a breached one plus the password, skips it. |
 | L4 | **Post-compromise security inside an epoch,** and protection of old content from a removed member. A removed member keeps everything they could already read. |
 | L5 | **Cryptographic device revocation.** Every device holds `RS`. Revoking a device ends its sessions, not its knowledge. Theft of an unlocked device means the account key must be replaced (PROTOCOL 8.4). |
 | L6 | **Metadata privacy from the host.** The host sees who talks to whom, when, how much, from where, who is in which call, who was @mentioned, and file sizes (PROTOCOL 19.1). |
-| L7 | **Detection of a split view that predates any cross-reference.** A host that shows two groups different member lists from the beginning is caught only when something signed crosses between the groups. First contact with a server without an invite link trusts TLS and OPAQUE only. |
+| L7 | **Detection of a split view that predates any cross-reference.** A host that shows two groups different member lists from the beginning is caught only when something signed crosses between the groups. First contact with a server without an invite link trusts TLS and OPAQUE only. The same holds for a view frozen at an old head: a server acting alone cannot keep a head fresh (PROTOCOL 3.5 item 4), but a server with an accomplice who is still listed as a member in the frozen view can. |
 | L8 | **Availability and ordering.** The host can drop, delay, reorder, withhold, or refuse service. Clients detect gaps per sender but cannot establish a global order or exact times. |
 | L9 | **Deniability.** Messages are signed with the sender's account key. A recipient can prove to a third party who wrote a message. |
 | L10 | **Erasure.** Deleting a message deletes the server's copy where the server cooperates. It does not erase copies a recipient saved, backups, SQLite free pages, or SSD remnants, and a hostile server can keep ciphertext. |
 | L11 | **Confidentiality from the host for anything a host-assisted feature covers,** and any guarantee that the host deleted keys or artifacts after a feature is turned off. The host key at rest is protected against a stolen data volume, not against a stolen whole machine in default mode or a root user on the running machine. |
-| L12 | **Protection of the web client against a hostile host.** The host serves the code. Detection after first load exists; prevention does not (PROTOCOL 20.3). |
+| L12 | **Protection of the web client against a hostile host.** The host serves the code. Prevention does not exist. Detection exists only for a swap served to everyone; a swap aimed at one user is not detected (PROTOCOL 20.3). A member who joins with an invite pasted into the web client gives the invite to the host. Other members' levels show that someone in the conversation uses the web client. |
 | L13 | **Confidentiality from a bot, its host, and the services it forwards to,** in every channel the bot is added to. |
 | L14 | **Authenticated sender inside a call,** forward secrecy inside a call, and hiding speaking activity, bitrate and participants from the SFU. Any channel member can derive any participant's media key. |
 | L15 | **Protection from a member who leaks.** Members can copy, screenshot, forward, or hand their keys to anyone. A malicious member can give a server the keys they hold. |
 | L16 | **Isolation between servers.** One account root secret serves every server, so a weak password or one breach of one server's password data endangers the account everywhere. |
-| L17 | **Recovery phrase safety.** Anyone with the phrase is the account, with no rate limit and no approval. |
+| L17 | **Recovery phrase safety.** Anyone with the phrase is the account, with no rate limit. There is no approval when the account has no active device; when it has one, the recovery waits for approval or the waiting period and every device is told (PROTOCOL 8.2), but a holder who also controls an active device approves it themselves. |
 | L18 | **Protection from a malicious admin who lies about a member's key.** Admins vouch for usernames and keys. Join requests without an invite link are protected by a spoken six-word check; a dishonest admin who does not do the check, or lies about it, can bind a username to a key of their choice. |
 | L19 | **Protection from a compromised device OS, malware on a device, hardware attacks, side channels, or coercion of a user.** |
 | L20 | **Push-metadata privacy.** The push relay and the OS push services learn when a given device is woken, and for mentions-only users, which wake-ups are mentions. |
@@ -92,17 +92,17 @@ A2b can (all of A2a, plus):
 - serve a malicious web client (A11);
 - skip device approval, release a blob to anyone who passes OPAQUE, and with enough effort attack passwords offline (L2, L3);
 - observe who joins calls and when, the SFU metadata (L6, L14);
-- insert or inject ciphertext into old epochs *for a removed member who colludes with them*: the injected messages carry that member's valid signature, and readers who backfill see them at an old position (L4, L8; PROTOCOL 10.4 rule 6 limits this to backfill);
+- insert or inject ciphertext into old epochs *for a removed member who colludes with them*: the injected messages carry that member's valid signature, and readers who backfill see them at an old position (L4, L8; PROTOCOL 10.4 rules 1 and 6 drop them as live messages, and the `closed` list in the next epoch header drops backfilled ones above what the author had accepted; only a backdated message that reuses a sequence number the member skipped is left);
 - forge host-feature records (HostRecords are unsigned; they are shown with "by the server" labels);
 - run host-assisted features on any content that the owner has authorised through the log (A9).
 
 A2b cannot:
 - **read channel text, DMs, files, call media, reactions, pins, channel names, or friend requests** without a member's key; **add a ghost member** that honest clients will wrap keys to: every epoch header is checked against the signed membership list and exact recipient set (PROTOCOL 9.4 rules 1, 2);
-- **substitute a key at join**: invite joins are signed with a secret the server never sees, and tokenless joins need the six-word check (PROTOCOL 5.2, 5.4);
+- **substitute a key at join**: invite joins are signed with a secret the server never sees (unless the joiner pastes the invite into the web client, L12), and tokenless joins need the six-word check, which contains nothing the server chooses (PROTOCOL 5.2, 5.4);
 - **forge or alter a message** (signature over the whole envelope, AEAD with identity in the AAD; PROTOCOL 10);
 - **enable host access silently**: it would need an owner signature on a log entry, or a member to wrap keys to it (A6, A9; PROTOCOL 15.8);
 - **roll back or fork the log undetected by clients that remember their head** or by clients that read any later signed object (PROTOCOL 3.5), or **replay an older epoch as the latest** (PROTOCOL 9.4 rule 4);
-- **make an honest client encrypt under an epoch that still includes a removed member** (PROTOCOL 9.3, "mandatory before send");
+- **make an honest client encrypt under an epoch that still includes a removed member** (PROTOCOL 9.3, "mandatory before send", with the fresh-head rule in 3.5 item 4 so that the client cannot be frozen at a head from before the removal). Exception: a split view that a still-listed accomplice sustains (L7);
 - **read call media** (key derived from the epoch key; the SFU only forwards; PROTOCOL 12);
 - **read the password, `RS`, or any member's private key** except through an offline attack on a password record it holds the secret for (L2), or by using the blob release it controls itself (L3).
 
@@ -112,7 +112,7 @@ Tests: C01, C02, C05, C06, C08, C11, C15, C16, C24.
 
 Can: read everything encrypted under epochs they held keys for, including messages that arrive later but were encrypted under those epochs; keep and share what they read; try to rejoin under a new key and username (blocked by bans only for the old key and name; invite-only joining is the control).
 
-Cannot: read content encrypted after the next epoch (honest clients refuse to send under the old epoch after the removal entry is verified; PROTOCOL 9.3), decrypt call media sent after the re-key (PROTOCOL 12.3), read other channels they were never in, post messages that the group accepts as live (live messages to a stale epoch are dropped; PROTOCOL 10.4 rule 6), or forge membership.
+Cannot: read content encrypted after the next epoch (honest clients refuse to send under the old epoch after the removal entry is verified; PROTOCOL 9.3), decrypt call media sent after the re-key (PROTOCOL 12.3), read other channels they were never in, post messages that the group accepts as live (live messages to a stale epoch are dropped, and a live message is checked against the reader's own head; PROTOCOL 10.4 rules 1 and 6), or forge membership.
 
 Limits: L4 (they keep what they had), L8 (a colluding server can show them ciphertext that exists, but there is none newer than the rotation unless a client violated the rules).
 
@@ -124,7 +124,7 @@ Tests: C07, C08, C12, C19.
 
 **A4a: locked or powered-off, attacker has the disk.** Can: copy encrypted files. Cannot: read `RS`, epoch keys or history without the platform store (Keychain, Android Keystore, DPAPI, Secret Service) and, where the user turned it on, the app lock. Strength depends on the OS: a Linux desktop without disk encryption and without a running keyring is weaker (PROTOCOL 24 item 8). Cannot sign in elsewhere: needs `DK` (also in the store).
 
-**A4b: unlocked, or the attacker can unlock it (A4a succeeded).** Can: read all history the device holds, read new messages until the account key is replaced, send messages as the user, open sessions, approve new devices (so approval is not a barrier, because the device is the approver), and change the password only with the old password (PROTOCOL 2.6). Cannot: make admin entries unless the user is an admin; read channels the account was never in.
+**A4b: unlocked, or the attacker can unlock it (A4a succeeded).** Can: read all history the device holds, read new messages until the account key is replaced, send messages as the user, open sessions, approve new devices (so approval is not a barrier, because the device is the approver), and change the password through the password-change path only with the old password (PROTOCOL 2.6). Holding `RS`, it can also use the recovery path (PROTOCOL 8.2) and approve that on the same stolen device, so replacing the account key is the remedy, not a password change. Cannot: make admin entries unless the user is an admin; read channels the account was never in.
 
 Control: the user (or an admin) revokes the device (ends sessions: L5 limits the benefit) and runs "Secure my account" (PROTOCOL 8.4), which replaces the account key with admin approval and rotates every channel the old key could read. Content the thief already read stays read (L1, L4). On web, `RS` is not in persistent storage unless the user chose "remember".
 
@@ -132,7 +132,7 @@ Tests: C17.
 
 ### A5. Stolen password
 
-**A5a: attacker has the password only, server honest.** Can: pass OPAQUE, create a pending device request, spam it within rate limits, and trigger a notification on every device the account has. Cannot: get the blob or `RS` (approval is required while the account has another active device; the approver must type a code shown only on the attacker's screen), approve themselves, join as a different user, or read history. After seven days without a deny, the request auto-approves (PROTOCOL 7.3 step 6): the user has been told on every device daily; if they never look, the attacker gets in. If the account has no active device (the user signed out everywhere), the password alone is enough by design.
+**A5a: attacker has the password only, server honest.** Can: pass OPAQUE, create a pending device request, spam it within rate limits, and trigger a notification on every device the account has. Cannot: get the blob or `RS` (approval is required while the account has another active device; the approver must type a code shown only on the attacker's screen), approve themselves, join as a different user, or read history. After seven days without a deny, the request auto-approves (PROTOCOL 7.3 step 6) **only if no active device of the account opened a session in that time**: the user has been told on every device daily, and a user who still uses any device blocks the auto-approval just by using it. If every device sits unused for seven days and nobody denies, the attacker gets in. A denial blocks only the requesting source and device key, never the account, so the attacker cannot use denials to lock the user out. If the account has no active device (the user signed out everywhere), the password alone is enough by design.
 
 **A5b: attacker has the password and the server (a malicious host or a breach plus password).** Can: obtain the blob without approval (L3), decrypt it, get `RS`, and be the account on every server it joined (L16). Then they need a device registered on each other server; those servers demand approval too (A5a). They can read history for which the account has wraps on any server whose data they can obtain.
 
@@ -156,7 +156,7 @@ Tests: C01, C10, C27.
 
 Can: approve anyone into the server (and choose full history for them), add bots to public channels, remove and ban members, delete messages in channels they are in, create public channels, and bind a username to a key of their choosing in a tokenless join if they skip the six-word check (L18); read every public channel they are a member of, which includes channels added to the server later.
 
-Cannot: change the feature set, roles or remove the owner (owner-only entries; PROTOCOL 3.3), add themselves to private channels they did not create (rule on kind 6), read DMs, read private channels, sign entries as the owner, replace the owner's key, or hide an entry from other admins (the log is shared and chained).
+Cannot: change the feature set, roles or remove the owner (owner-only entries; PROTOCOL 3.3), add themselves to private channels they did not create (rule on kind 6), read DMs, read private channels, sign entries as the owner, replace the owner's key or another admin's (kind 14 needs the owner, or `old_proof`), use any authority after they are removed or demoted (R1), or hide an entry from other admins (the log is shared and chained).
 
 Control: a member whose admin entries look wrong sees them in the log (client-side member and admin list is derived from it); the owner removes the admin (`role_set`, then rotation).
 
@@ -194,7 +194,7 @@ Tests: C11, C20.
 
 Can: see device tokens, which server pushes to which alias, timing and size of every push; with sealed push text on, only ciphertext; with content-free push, a fixed generic string. Mentions-only users' pushes reveal that a mention happened (L20). The relay can link a device across servers (it holds the alias-to-token map), a promise not to is not a mechanism.
 
-Cannot: read message text (content-free; or sealed to the device key), learn usernames, channel names or senders, read any chat content, or push to an alias belonging to another server.
+Cannot: read message text (content-free; or sealed to the device key), learn usernames, channel names or senders, read any chat content, or push to an alias belonging to another server (an alias is bound to its own server's push-signing key, PROTOCOL 17.1). A server cannot write notification text shown as a member's: the device shows only a message whose signature it verified (PROTOCOL 15.5).
 
 Tests: C23.
 
@@ -202,9 +202,11 @@ Tests: C23.
 
 Can: on first load, serve code that steals the password and `RS` (L12). After first load, ship a replacement service worker that stops verifying (PROTOCOL 20.3). Serve different code to different people.
 
-Cannot: make `housecall verify-web` accept an altered bundle (it checks the manifest against the project's release key, outside any browser state); or, while an honest verified service worker is installed, change the bundle that browser runs without the release key, until the browser replaces the service worker itself.
+Also can: show `housecall verify-web` a clean bundle (recognised by its user agent, lack of cookies or address) while serving altered code to one chosen user, and draw the "installed manifest version" on the first screen to read whatever it likes. So `verify-web` detects only a swap served to everyone.
 
-Control: use the desktop or mobile app; run `verify-web`; the web UI caps its security label (SECURITY-LEVELS 3).
+Cannot: while an honest verified service worker is installed, change the bundle that browser runs without the release key, until the browser replaces the service worker itself.
+
+Control: use the desktop or mobile app; run `verify-web` (catches a swap served to everyone only); the web UI caps its security label, and other members' levels show that a web user is in the conversation (SECURITY-LEVELS 3).
 
 Tests: C16.
 

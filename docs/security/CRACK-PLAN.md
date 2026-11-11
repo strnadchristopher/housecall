@@ -21,7 +21,7 @@ Each test gives the **setup**, the **steps**, and the **break**: the observable 
 | Accounts on S1 | O (owner), A (admin), M1, M2, M3 (members), R (member to be removed), X (an outsider with only an address), Steve (bot, enrolled) |
 | Channels on S1 | `#general` (public), `#side` (public), `#priv` (private: O, M1), `#bots` (public, Steve added), one DM (M1–M2), one group DM (M1, M2, M3) |
 | Devices | each account has one device; O and M1 also have a second device for approval tests |
-| Passwords | each fixture account has a password that meets the policy; one extra account uses a deliberately weak-but-allowed password (zxcvbn score 3) for C09 |
+| Passwords | each fixture account has a password that meets the policy; two extra accounts for C09: `weakish` (zxcvbn score 3, made with a client that skips the check) and `strong4` (score 4, the weakest the policy allows) |
 | Canaries | each test plants unique strings in message text, file names, channel names, passwords and URLs, and searches for them after the test |
 | Tester tools | a mitmproxy-style HTTP/WebSocket editor, a modified server (a patched copy of `housecall-server`), a modified client harness (can sign arbitrary objects and build arbitrary headers), a CBOR editor, a packet capturer, a disk-image exporter, a browser with devtools |
 
@@ -57,8 +57,9 @@ Steps (invite):
 
 Steps (tokenless):
 6. Server swaps `account_pub` in the pending request shown to A with `K`. A's client computes the six-word code from the key it was shown and compares with the words X reads out.
-7. Server swaps the key and also grinds a second key to match the first words of the code: measure how many words match after 10^9 attempts (expected: not all six).
+7. Server swaps the key and also grinds a second key to match the first words of the code: measure how many words match after 10^9 attempts (expected: not all six). Then run the **birthday variant**: the server serves X one `request_id` and the admin another, and searches pairs of values until the two codes agree. In the spec as it stands there is no server-chosen value in the code, so the search has nothing to vary except the server's own key (a 66-bit preimage). Break: any value the server chooses is an input to the code.
 8. Server relays X's `pop` for another username.
+9. Share an invite as text and open it in the web client: record that the host's page sees the token (expected, L12). Check that no screen of the app produces an `https://` invite link.
 
 Break: any log entry binds a username to a key other than the one X generated, without X's `token_priv` (steps 1, 2, 4); the entry is accepted as valid by clients; A's client allows approval when the words do not match (step 6) or has an approve-without-check path; the six-word check is computed from anything the server controls; step 3 produces a second valid join for one invite. Step 5 success is expected and not a break.
 
@@ -76,7 +77,7 @@ Steps:
 5. M1 deletes message 5. Replay message 5 afterwards.
 6. Replay an old epoch header and its wraps as if they were new; replay an old `features_set`, `member_remove` and `member_add` log entry at the head.
 7. Replay a captured session signature, a device `approve`, a friend request and a `join` submission.
-8. Replay a call `call_rekey` message from an old generation.
+8. Replay a call `call_rekey` message from an old generation. Also send, as a current member, a `call_rekey` in epoch `n+1` that names epoch `n`, and one whose generation is not the current one plus one.
 
 Break: a message shown twice; a message accepted in another channel, epoch or under another sender; a swap or drop that raises no gap indicator for the sender's sequence (observe the UI and the client's event log); the older edit overriding the newer; the deleted message reappearing; a replayed header, log entry, session signature, approval, friend request or join accepted; an old `call_rekey` lowering the call generation.
 
@@ -90,7 +91,7 @@ Steps:
 1. Alter `v` on envelopes, headers, log entries and blobs to lower and unknown values; strip `host`, `checks`, and AEAD fields; swap the AEAD or KDF label.
 2. Serve the legacy routes (`/api/login`, `/api/setup`, passkeys, email invites, plaintext message POST) and see whether any client or server path still accepts a password or plaintext.
 3. Make the server refuse every new epoch, offer a "send unencrypted" path, or claim E2EE is unsupported for a channel.
-4. In a call, make the SFU or token service report that frame encryption is off, or provide a room where the client is asked to publish without a key.
+4. In a call, make the SFU or token service report that frame encryption is off, or provide a room where the client is asked to publish without a key (PROTOCOL 12.1 rule 1: the client must refuse). Inject frames that carry the SDK's server-injected-frame marker, and frames that do not decrypt (rule 2: the client must drop them).
 5. Strip TLS on first contact (plain `http`), downgrade to an old TLS version, serve a certificate for another name.
 6. Return a feature status that says everything is off while the log shows features on, and the reverse.
 7. Offer a lower `min_version` to a client through the update manifest or web manifest.
@@ -126,8 +127,9 @@ Steps:
 4. Serve a log head that is 25 hours stale to a client that is online.
 5. Replace entry 0 (genesis) with another valid genesis (different owner).
 6. Serve a log in which entry N is changed but re-signed by an old admin key.
+7. **Frozen view.** Owner removes R at seq `r`. Serve M1 the log only up to `r-1`, with heads that keep arriving, and withhold every object with `log_seq >= r`. (a) No one signs on the frozen branch: wait 25 hours. (b) R, still listed on the frozen branch, signs `checkpoint` entries on it (expected to keep M1 fresh: a split view sustained by a listed accomplice, L7; record it). (c) A plain member other than R tries to keep it fresh with entries from before `r`. Check that M1 sends nothing under epoch `n` after the head stops being fresh in (a) and (c).
 
-Break: any client keeps level 4 after step 1, 3, 4, 5 or 6; M2 shows no alarm after step 2's cross-message; a client accepts a genesis other than its pin; a client accepts an entry signed by a signer that was not allowed at that seq.
+Break: any client keeps level 4 after step 1, 3, 4, 5 or 6; M1 keeps sending in a channel with other members after 24 hours without a fresh entry from another member in step 7(a) or (c); M2 shows no alarm after step 2's cross-message; a client accepts a genesis other than its pin; a client accepts an entry signed by a signer that was not allowed at that seq.
 
 ### C07. Removed member reads new messages
 
@@ -139,7 +141,7 @@ Steps:
 1. After the removal entry is verified, A and M1 send ten messages in each channel. One of them is sent while the rotating device is offline (lazy-rotation path).
 2. R tries to decrypt every new message with every epoch key R holds, with every wrap the server has for R, and by asking the server to wrap new epochs to R.
 3. R tries to get an honest sender to encrypt under the old epoch: server delays or refuses the new epoch; server serves the pre-removal log to A's device after the removal was verified.
-4. R forges a post-removal message with the old key into the old epoch and has the server deliver it live to M1.
+4. R forges a post-removal message with the old key into the old epoch, signed with `log_seq` from before the removal and the correct `log_head8`, in a channel that is still on epoch `n` (the rotation has not happened yet), and has the server deliver it live to M1. Repeat after rotation, with the server calling it backfill and placing it among genuine history in `server_seq` order, with a `sender_seq` above and below the `closed` number in the epoch `n+1` header.
 5. R tries to rejoin with the same key; with a new key and the same username; with an old invite.
 
 Break: R decrypts any message that was sent after the sender verified the removal; any honest sender uses the old epoch after verifying the removal; R's live message is displayed as a new message; the rejoin succeeds. R reading messages sent before the removal is expected (L4).
@@ -154,22 +156,22 @@ Steps:
 1. Server inserts messages signed by R into epoch 1 at positions earlier than the removal, with plausible `sent_at` and `sender_seq`.
 2. A fresh device (backfilling) and an online client (live) both receive them.
 
-Break: an online client displays one of R's messages as new, live traffic after it has adopted a newer epoch. Backfilled display of R's backdated messages in old epochs is the documented residual (L4, L8): record it, check that its `log_head8` and `sender_seq` are shown as unusual if they conflict with R's real sequence, and do not count it as a break unless the UI also marks it live.
+Break: an online client displays one of R's messages as new, live traffic after it has adopted a newer epoch, or after it has verified the removal; any message from R above R's `closed` number (or from a device not listed) is displayed, live or backfilled. Backfilled display of R's backdated messages in old epochs is the documented residual (L4, L8): record it, check that its `log_head8` and `sender_seq` are shown as unusual if they conflict with R's real sequence, and do not count it as a break unless the UI also marks it live.
 
 ### C09. Offline password guessing cost
 
 Property: P4. Adversary: A2a, A2b (L2).
 
-Stated parameters: OPAQUE with ristretto255 and 3DH, key-stretching function Argon2id with **m = 64 MiB (65536 KiB), t = 3, p = 1**; password policy **12 bytes minimum, zxcvbn score ≥ 3**; blob key = HKDF of the OPAQUE export key; server OPAQUE secret wrapped under `WK` outside the data volume.
+Stated parameters: OPAQUE with ristretto255 and 3DH, key-stretching function Argon2id with **m = 64 MiB (65536 KiB), t = 3, p = 1**; password policy **12 bytes minimum, zxcvbn score ≥ 4**; blob key = HKDF of the OPAQUE export key; server OPAQUE secret wrapped under `WK` outside the data volume.
 
-Setup: S1 with the fixture accounts plus `weakish` (password with zxcvbn score exactly 3). Three adversary positions: **(a)** data volume and backups only; **(b)** data volume plus `WK` (whole machine); **(c)** the account's own blob and OPAQUE record from a malicious server's view.
+Setup: S1 with the fixture accounts plus `weakish` (password with zxcvbn score exactly 3, which the policy rejects: create it with a modified client that skips the client-side check, since the server only enforces the 12-byte minimum; it stands in for the weakest password a user could ever get past a score check) and `strong4` (score exactly 4). Three adversary positions: **(a)** data volume and backups only; **(b)** data volume plus `WK` (whole machine); **(c)** the account's own blob and OPAQUE record from a malicious server's view.
 
 Steps:
 1. From the code and from running the client with timing and memory probes, confirm the actual Argon2id parameters used by registration, login, and blob key derivation on native and WASM. Capture peak memory and number of passes.
 2. Position (a): with only the data volume, try to test any password guess against any account (extract the OPAQUE record, the blob, anything else). Try to find `ServerSetup` or `WK` anywhere on the volume, in backups, in the DB, in logs, in environment dumps.
-3. Position (b): extract record, blob and `ServerSetup`. Write a guessing harness that, for each candidate password, performs the real key stretching and tries to open the blob. Measure guesses per second for one core and for the best GPU or many-core machine available. Run it against `weakish` with a dictionary that contains its password at a known rank.
+3. Position (b): extract record, blob and `ServerSetup`. Write a guessing harness that, for each candidate password, performs the real key stretching and tries to open the blob. Measure guesses per second for one core and for the best GPU or many-core machine available (the spec's estimate is about 10^3 per second for one high-end GPU; record the real figure and the memory use per guess). Run it against `weakish` and `strong4` with dictionaries that contain their passwords at known ranks, and extrapolate the time for 10^8 and 10^10 guesses.
 4. Try shortcuts: skip OPAQUE and attack the blob directly; skip the full stretch by using partial computation; check whether the blob key depends on anything cheaper than the full KSF output; check whether the client can be made to use lower parameters (server-supplied parameters, a downgrade, an old record).
-5. Try the policy: register with passwords of 11 bytes, 12 bytes with score 2, and with a Unicode-equivalent form (NFKC composed vs decomposed) and confirm the same password works on both.
+5. Try the policy: register with passwords of 11 bytes, 12 bytes with score 2, 12 bytes with score 3, and with a Unicode-equivalent form (NFKC composed vs decomposed) and confirm the same password works on both.
 6. Record the cost model: seconds per guess on the reference machine, memory per guess, and the arithmetic for 10^8 guesses (the least a score-3 password is estimated to need), 10^10 (score 4), and 10^12.
 
 Break: (i) position (a) can test any password guess; (ii) in any position a guess costs less than one full Argon2id evaluation at the stated parameters, or the measured parameters are lower than stated; (iii) a client accepts parameters from a server; (iv) the blob can be opened without the export key; (v) the policy admits a password it should reject; (vi) different NFKC forms of one password give different keys. Position (b) cracking `weakish` is expected (L2): record the time it took and the guess rate, and check it agrees with the cost model in step 6. For reference, at 0.1 s per guess per core, 10^8 guesses is about 10^7 core-seconds (about 116 core-days); at 10^10 it is about 10^9 core-seconds (about 32 core-years). The tester records the real number.
@@ -223,7 +225,7 @@ Steps:
 1. Capture the media at the SFU and try to decrypt it with everything the server and SFU know (room name, identities, tokens, DB).
 2. A removes R during the call. Measure when R's decoder stops producing output. Keep R connected to the room (server refuses to kick).
 3. Make the SFU relabel a participant's identity; add a participant with a server-minted token for a ghost identity that is not a member.
-4. Make the server mint a token for a room without frame encryption; try to publish an unencrypted track.
+4. Make the server mint a token for a room without frame encryption; try to publish an unencrypted track. Inject frames with the SDK's server-injected-frame marker through the SFU. Measure the frame count per key in a long call (spike 6) and check that `g` is bumped before it.
 5. Two members remove at the same moment (concurrent rotation). Check that the call re-keys once and all participants agree.
 6. A new member joins mid-call with `from_now` history; check that they cannot decode media from before they joined.
 7. Join with a modified client that derives sender keys from the wrong epoch.
@@ -238,7 +240,9 @@ Setup: A is an admin and uses a modified client.
 
 Steps: sign (and submit, and also serve directly to clients) each of: `features_set`, `role_set` (make A owner, make M1 admin), `member_remove` of O, `member_remove` of another admin, `channel_member_add` to `#priv`, `server_meta` changes, `member_add` for a username that is banned, `member_add` with a bad `pop`, `bot_add` with a mismatched key, an invite after A was demoted. Also: try to read `#priv`, the DM and the group DM through any API (history, wraps, search, reports, bot); try to add Steve to `#priv`; try to approve a join request without the words, and with the wrong words; use an admin to issue `full` history to X for `#priv`.
 
-Break: any accepted entry that the table in PROTOCOL 3.3 forbids; any content readable for A from `#priv` or DMs; approval with the wrong words.
+Also: A signs `key_replace` for the owner (with and without `old_proof`), for another admin, and for a member who is in `#priv` (check that the new key gets no `#priv` membership without `old_proof`); after O removes A, A submits `member_add`, `channel_member_add`, `bot_channel_add` and an invite issued before the removal; after the creator of a private channel is removed, the creator and the owner try to add members (the channel must be frozen); a `features_set` with a feature on and no host key, with a key but all features off, and with a reused `key_id`.
+
+Break: any accepted entry that the table and rules R1 to R3 in PROTOCOL 3.3 forbid; any content readable for A from `#priv` or DMs; approval with the wrong words.
 
 ### C14. Bot key theft
 
@@ -270,7 +274,7 @@ Steps:
 4. Type the wrong 6-digit code on D1 (client check), then try to get the server to accept an approval that skips the code (modified client for D1 is not an attack here, the approval is the real D1 signing; instead tamper with `device_pub` between request and the approver's screen: the code must not match).
 5. Brute-force the code: send 100 approval requests with distinct codes; check the 5-wrong-codes cancel.
 6. Race: approve and deny at once; two pending requests at once; deny and immediately request again (cooldown).
-7. Wait for the 7-day auto-approval with the clock moved forward in the test (server clock, then client clock, then a forged `created_at`): it must happen only after 7 server days, with notifications, and be marked "approved by waiting period".
+7. Wait for the 7-day auto-approval with the clock moved forward in the test (server clock, then client clock, then a forged `created_at`): it must happen only after 7 server days, with notifications, and be marked "approved by waiting period". Then repeat with D1 opening a session on day 3: the request must be discarded at day 7, not approved. Also have the attacker file a request, then check that U can still file a legitimate request from a new device (slots, and no cooldown on the account), and that denying the attacker's request does not block U.
 8. Malicious-server variant (not counted as a break): modify the server to release the blob without approval. Record that it works (L3) and what the attacker then needs (the password, so C09 applies).
 9. Sign out the only device and sign in again with the password: it must work without approval (by design).
 
@@ -288,11 +292,11 @@ Steps:
 3. Serve an older signed manifest (lower `version`).
 4. Swap the WASM; swap the service worker file for one with no verification (after the first install).
 5. Add an inline script, an external script, an external image, a form action to another origin, a frame: check the CSP and Trusted Types.
-6. **First load:** serve a malicious bundle to a browser that never visited. Record that it runs (expected, L12) and check that the first screen shows the installed manifest version and the verification link, and that `housecall verify-web <url>` run from a separate machine reports the swap.
+6. **First load:** serve a malicious bundle to a browser that never visited. Record that it runs (expected, L12) and check that the first screen shows the installed manifest version and the verification link, and that `housecall verify-web <url>` run from a separate machine reports the swap **when it is served to everyone**. Then serve the malicious bundle only to a target (by cookie or address) and a clean one to `verify-web` (by user agent): record that `verify-web` reports clean (expected, L12; PROTOCOL 20.3) and that the first screen's manifest version, drawn by the page, shows what the host chose.
 7. From a script injected into the main thread (simulating XSS), try to read `RS` or any epoch key (from memory, IndexedDB, the Worker).
-8. Check the security label while on web.
+8. Check the security label while on web, and the label a native member sees in a DM and a channel with this web user in it ("Member on web app", never level 4).
 
-Break: steps 1 to 3 accepted by the service worker; step 5 lets script or data execute or leave the origin; `verify-web` accepts a swapped bundle or a rolled-back manifest; step 7 extracts `RS`, an epoch key or the session signing capability as raw bytes (using the Worker as an oracle for decrypt/sign calls is expected: note it); the web UI shows "End-to-end encrypted" at any point. Steps 4 (service worker replacement) and 6 are expected (L12): record what the user sees.
+Break: steps 1 to 3 accepted by the service worker; step 5 lets script or data execute or leave the origin; `verify-web` accepts a swapped bundle that was served to everyone, or a rolled-back manifest; the target-only swap going undetected is expected; step 7 extracts `RS`, an epoch key or the session signing capability as raw bytes (using the Worker as an oracle for decrypt/sign calls is expected: note it); the web UI shows "End-to-end encrypted" at any point. Steps 4 (service worker replacement) and 6 are expected (L12): record what the user sees.
 
 ### C17. Stolen device
 
@@ -348,10 +352,10 @@ Steps:
 3. Image the whole machine in **passphrase mode**, server stopped. Measure the cost per passphrase guess (Argon2id with m = 256 MiB, t = 3). Check whether the passphrase appears in the environment, process arguments, shell history, unit files, logs, or swap.
 4. Take a memory dump or core dump of the running server (kill -SEGV; `gcore`; hibernation image; swap) and look for the host key and class keys. The server must have core dumps off and the key pages locked.
 5. Disable every feature through the owner client; image again (data volume and machine). Look for any remaining host key file, wraps addressed to the old host key id, derived artifacts, index remnants.
-6. Check that a **locked** host (passphrase mode, restarted, not unlocked) serves chat and calls normally, sends content-free pushes and reports host features as unavailable.
+6. Check that a **locked** host (passphrase mode, restarted, not unlocked) serves chat and calls to already-registered devices, sends content-free pushes and reports host features as unavailable, and that password sign-in, joining and registration are refused (PROTOCOL 2.5). Check that the passphrase was generated at install (8 words) and that the installer offers no way to choose one.
 7. Look at the backup procedure documented for operators: confirm that following it does not put `WK` in the same backup as the data.
 
-Break: step 1 yields the host key, a class key, an epoch key, a message plaintext or `ServerSetup`; step 3 yields the key at a cost below one Argon2id at the stated parameters per guess, or finds the passphrase anywhere on disk; step 4 yields any key (outside a debugger attached by root, which is expected); step 5 finds a host key file, a wrap addressed to the old key that still decrypts, or a derived artifact in plaintext; step 6 shows chat or calls failing, or any plaintext push; step 7's documented backup keeps `WK` with the data. Step 2 yielding the key in default mode is expected (L11).
+Break: step 1 yields the host key, a class key, an epoch key, a message plaintext or `ServerSetup`; step 3 yields the key at a cost below one Argon2id at the stated parameters per guess, or finds the passphrase anywhere on disk; step 4 yields any key (outside a debugger attached by root, which is expected); step 5 finds a host key file, a wrap addressed to the old key that still decrypts, or a derived artifact in plaintext; step 6 shows chat or calls failing for registered devices, a password sign-in or join succeeding while locked, or any plaintext push; step 7's documented backup keeps `WK` with the data. Step 2 yielding the key in default mode is expected (L11).
 
 ### C21. Username and name impersonation
 
@@ -394,7 +398,7 @@ Setup: relay in test mode with capture of every payload; two servers S1 and S2 w
 Steps:
 1. Default mode: capture every payload to the relay and from the relay to the push service. Search for canaries (message text, channel name, sender name, username, mention flag, file names).
 2. With `push_text` on: payloads must be ciphertext only. Try to decrypt at the relay with all the relay's keys. Check a device that did not register `push_decrypt`.
-3. Check that the aliases for the same device on S1 and S2 differ, and that S2 cannot push to S1's alias (the relay refuses).
+3. Check that the aliases for the same device on S1 and S2 differ, that the `push_key` the device gave S1 and S2 differs, and that S2 cannot push to S1's alias (the relay refuses: the alias is bound to S1's `relay_pub`). As S2, try to register a relay key that claims S1's `server_id` before S1 does; there must be nothing to claim. With `push_text` on, have the host seal a forged `{title: "Alice", body: …}` and a message whose signature is wrong: the device must show a content-free notification.
 4. Spam: S1 sends 10,000 pushes to one alias.
 5. Private channels and DMs with `push_text` on: payloads must stay content-free.
 6. Mention-only user: record what an observer of the relay can infer (expected: that a mention happened, L20).
@@ -431,10 +435,10 @@ Steps:
 1. Recovery path: wrong phrase, wrong checksum, valid phrase on a new device; then set a new password; check the old password fails on that server at once and still works on S2 until updated.
 2. Tester files a replace request for U's username on S1 (no old proof) and a second, valid one with `old_proof`. Check how A's client shows them, and that approving one removes the other.
 3. After approval, check old key vs new epochs, history for `from_now` and `full`, DMs (the new identity must not read old DMs).
-4. Change password with a stolen session only (no old password).
+4. Change password with a stolen session only (no old password). Then, holding only `RS` copied from an unlocked or revoked device, call `/v2/recover` on an account with an active device: the recovery must be held as a pending request, every active device must be told at once, and no password may be set before it completes. Replay a captured password-change signature to a second server and a captured one with an old version.
 5. Password-change retry on an unreachable server: check the UI and that the stale server accepts only the old password.
 
-Break: an account is replaced or a device registered without the phrase, the password with approval, or an admin's explicit signature; the new key reads history beyond what the admin chose; the new identity reads old DMs; the old key reads post-replacement content; password change succeeds without the old password; an admin client approves a replacement with no confirmation step.
+Break: an account is replaced or a device registered without the phrase, the password with approval, or an admin's explicit signature; a recovery with `RS` alone registers a device or sets a password on an account with an active device without approval or the waiting period, or without telling the other devices; the new key reads history beyond what the admin chose; the new identity reads old DMs; the old key reads post-replacement content; password change succeeds without the old password; an admin client approves a replacement with no confirmation step.
 
 ### C27. Reports and moderation
 
@@ -442,9 +446,9 @@ Property: P2. Adversary: A6, A7.
 
 Setup: M1 posts in `#general`; M2 reports it; A moderates.
 
-Steps: M2 modifies the plaintext in the report; discloses `mk` for another message; includes a message from another channel; A tries to read context beyond the disclosed messages; A tries to read a report from `#priv` they are not in; A deletes a message in a channel they are not in.
+Steps: M2 modifies the plaintext in the report; discloses `mk` for another message; includes a message from another channel; A tries to read context beyond the disclosed messages; A tries to read a report from `#priv` they are not in; A deletes a message in a channel they are not in. Delete the blobs of another member's message as a member who is neither the sender nor an admin; delete them as the sender and as an admin in the channel.
 
-Break: A accepts a report whose plaintext does not match the signed ciphertext; an `mk` reveals anything besides its own message; A reads anything not disclosed; A deletes in a channel they are not a member of.
+Break: a blob deleted by someone other than the sender or an admin of the channel; A accepts a report whose plaintext does not match the signed ciphertext; an `mk` reveals anything besides its own message; A reads anything not disclosed; A deletes in a channel they are not a member of.
 
 ### C28. DMs, friends and group DMs
 
@@ -452,9 +456,9 @@ Property: P1, P3. Adversary: A2b, A6.
 
 Setup: M1–M2 DM, M1–M2–M3 group DM, M1 and Y share only S2.
 
-Steps: server serves a different `AccountPub` for M2 when M1 starts a DM; adds a third recipient to a DM header; serves a host entry in a DM header; M3 (non-creator) adds M4 to the group DM; the creator adds a non-friend, a non-member of the home server, an eleventh member; M2's key is replaced; the home server moves; a blocked sender sends mail; mail is replayed; friend request from an account that shares no server with the target.
+Steps: server serves a different `AccountPub` for M2 when M1 starts a DM; adds a third recipient to a DM header; serves a host entry in a DM header; M3 (non-creator) adds M4 to the group DM; the creator adds a non-friend, a non-member of the home server, an eleventh member; M2's key is replaced; the home server moves (check that the same pair gets a different `dm_id` and fresh epoch state on the new server, and that epoch 0 there is accepted without disturbing the old thread's rollback guard); a blocked sender sends mail; mail is replayed; friend request from an account that shares no server with the target; a friend request, DM or group-DM add that involves Steve's key (must be refused by server and client); the creator of a group DM leaves the server (the group must be frozen).
 
-Break: a DM or group DM key is wrapped to anyone but the listed members; non-creator add accepted; blocking bypassed; mail with a wrong `from`, or to a non-shared account, delivered; any DM state shown as level 4 after a key change.
+Break: a bot accepted as a friend or DM partner; a DM or group DM key is wrapped to anyone but the listed members; non-creator add accepted; blocking bypassed; mail with a wrong `from`, or to a non-shared account, delivered; any DM state shown as level 4 after a key change.
 
 ### C29. Plaintext leak sweep
 

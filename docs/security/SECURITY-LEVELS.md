@@ -8,9 +8,10 @@ The bar has four segments. A level is the number of filled segments, 0 to 4.
 
 | Level | Label (at most four words) | Means |
 |---|---|---|
-| 4 | **End-to-end encrypted** | Only the people in this conversation hold the keys. No host feature and no bot can read it. The signed member list and key history checked out. |
+| 4 | **End-to-end encrypted** | Only the people in this conversation hold the keys, and nobody in it uses the web version. No host feature and no bot can read it. The signed member list and key history checked out. |
 | 3 | **Server sees links** | The server can read the web addresses members send, so it can make link previews. Everything else is end-to-end encrypted. |
-| 3 | **Host serves this app** | (Web client only.) The conversation is encrypted, but the web page that does the encrypting came from the server's host, who could change it. |
+| 3 | **Host serves this app** | (Viewer on the web client.) The conversation is encrypted, but the web page that does the encrypting came from the server's host, who could change it. |
+| 3 | **Member on web app** | Someone else in this conversation uses the web version. Their page came from the server's host, who could change it and read what that person reads, which is everything they can see here. |
 | 2 | **Server sees files** | The server can read file contents, names and sizes (virus scanning, thumbnails, conversion). Message text is end-to-end encrypted. |
 | 2 | **Server sees files, links** | Both of the above. |
 | 1 | **Server reads messages** | The server can read message text (notification text, search). Files are covered too if the file features are also on. |
@@ -22,7 +23,7 @@ The bar has four segments. A level is the number of filled segments, 0 to 4.
 
 The text "End-to-end encrypted" appears only at level 4. No other state may display it, abbreviate it, or use a lock or "safe" colour. Level 0 is drawn as an empty bar.
 
-Why bots are level 1: a bot reads everything in its channel, exactly as much as a host that reads messages does. It is a visible, named member that an admin chose per channel, so the label says "Bot", not "Server". Why web is level 3: nothing is read by design, but the host can change the page. Why links are level 3, files level 2, messages level 1: the levels order how much a non-member can read by design.
+Why bots are level 1: a bot reads everything in its channel, exactly as much as a host that reads messages does. It is a visible, named member that an admin chose per channel, so the label says "Bot", not "Server". Why web is level 3: nothing is read by design, but the host can change the page. The same applies to every conversation a web user is in, not only to the web user's own view, so a web participant lowers the bar for everyone in the conversation (the "Member on web app" row). Why links are level 3, files level 2, messages level 1: the levels order how much a non-member can read by design.
 
 ## 2. Inputs
 
@@ -30,7 +31,7 @@ All inputs come from the client's own verification. If any needed input is missi
 
 | Input | Source |
 |---|---|
-| `log_verified` | The client has verified the log from genesis, its head is not older than 24 hours while online, the pin matches, and no rollback or fork has been seen (PROTOCOL 3.5). |
+| `log_verified` | The client has verified the log from genesis, its head is fresh (it contains an entry from another active member made within the last 24 hours, PROTOCOL 3.5 item 4; exempt if the viewer is the only human member), the pin matches, and no rollback or fork has been seen (PROTOCOL 3.5). |
 | `features` | The latest verified `features_set` entry; all off if none (PROTOCOL 15). |
 | `kind(C)` | `public`, `private`, `dm` or `gdm`, from the log or the DM objects. |
 | `epoch` | The current epoch's header for channel C, verified (PROTOCOL 9.4). |
@@ -42,6 +43,7 @@ All inputs come from the client's own verification. If any needed input is missi
 | `epoch_alert(C)` | An epoch header was seen and rejected (unexpected recipient, unauthorised host entry, equivocation). |
 | `peer_key_changed(C)` | For `dm` and `gdm`: a member's `account_id` for a remembered contact differs from the pinned one and the user has not accepted it. |
 | `client` | `native` or `web`. |
+| `web_member(C)` | Some account that is a member of C (for a DM or group DM, a party) has an active device certificate with `platform = web` in the certificates the server returned for it (PROTOCOL 1.2). A hostile host can withhold a certificate, so this input can only add a warning, never remove one. |
 
 ## 3. Channel level
 
@@ -64,6 +66,7 @@ if epoch.bots not empty or log_bots(C) not empty:
                                factors += (1, "Bot can read")
 
 if client == web:              factors += (3, "Host serves this app")
+if web_member(C):              factors += (3, "Member on web app")
 
 if factors is empty:           return (4, "End-to-end encrypted")
 level = min level in factors
@@ -77,7 +80,7 @@ Notes:
 - Every factor that applies is listed in the detail sheet (section 6). The bar and label show only the lowest.
 - If `H` has T and F but not U, the label is "Server reads messages". The detail sheet still lists files.
 - Features never apply to private channels, DMs or group DMs (PROTOCOL 15.2), so `H` is 0 for them. A header that says otherwise is rejected and sets `epoch_alert`.
-- Web caps every view at level 3, including DMs.
+- Web caps every view at level 3, including DMs. A web member of the conversation caps it at level 3 for everyone in it.
 
 ## 4. Server level
 
@@ -114,7 +117,8 @@ Strings (exact; translate later):
 
 | Condition | Sheet text |
 |---|---|
-| Level 4 | "Only the people in this conversation can read it. Member keys are vouched for by this server's admins; compare safety numbers with someone to be sure." |
+| Level 4 | "Only the people in this conversation can read it, as long as everyone in it uses the app. Member keys are vouched for by this server's admins; compare safety numbers with someone to be sure." |
+| Member on web | "<Name> uses the web version. That page came from this server's host, who could change it and read what <Name> reads, including this conversation. The host can also hide that someone uses the web version." |
 | `H` has T | "The server owner turned on <push notification text / search>. The server can read message text in public channels, from <date> on." |
 | `H` has F only | "The server owner turned on <file checks / file conversion>. The server can read files and their names in public channels, from <date> on." |
 | `H` has U | "The server owner turned on link previews. The server can read web addresses sent in public channels, from <date> on." |
@@ -126,12 +130,13 @@ Strings (exact; translate later):
 
 ## 7. Reasons for "Not verified"
 
-The detail sheet shows the one that applies: "can't reach the server to check", "the server's member list failed its checks", "the server's history changed", "this is not the server you joined", "the server showed different people different things", "the server's key information doesn't match the member list", "the server shows a different setting than the signed one". The mapping from the client's internal condition to the sentence is a table in the client; every condition maps to exactly one sentence.
+The detail sheet shows the one that applies: "can't reach the server to check", "the server's member list failed its checks", "the server's history changed", "this is not the server you joined", "the server showed different people different things", "nobody else has been seen active on this server for a day", "the server's key information doesn't match the member list", "the server shows a different setting than the signed one". The mapping from the client's internal condition to the sentence is a table in the client; every condition maps to exactly one sentence.
 
 ## 8. Notices
 
 - When a verified `features_set` entry changes the feature set, each affected channel gets a non-dismissible notice at that log position (PROTOCOL 15.7). The level changes at the same moment.
 - When a bot is added or removed, a notice says so.
+- When a `key_replace` entry has no `old_proof` (an admin replaced someone's key without the old key's consent), every channel the old account was in shows a notice at that log position: "<Name> now has a new key chosen by an admin." (PROTOCOL 3.3 kind 14).
 - When the level of a channel drops, the app also shows it once on the next open of that channel as a bar-change, not only as a small icon.
 
 ## 9. Activity chips (not levels)
@@ -140,7 +145,7 @@ Plex watch parties, the Shared Browser, and other server-played streams are made
 
 ## 10. Calls
 
-A call has its own label because host features cannot read call media. The call bar uses section 3 with only these factors: `log_verified`, `epoch_alert`, `epoch_exposed`, bots in the channel (a bot can derive the call key), and the web cap. The call label reads "End-to-end encrypted" only at level 4 and says "Call" in its detail sheet title. A participant who is not a member in the log is shown with "Unverified person" and is never included in a count of participants who are covered.
+A call has its own label because host features cannot read call media. The call bar uses section 3 with only these factors: `log_verified`, `epoch_alert`, `epoch_exposed`, bots in the channel (a bot can derive the call key), the web cap, and `web_member(C)`. The call label reads "End-to-end encrypted" only at level 4 and says "Call" in its detail sheet title. A participant who is not a member in the log is shown with "Unverified person" and is never included in a count of participants who are covered.
 
 ## 11. Fixtures every implementation must pass
 
@@ -150,6 +155,7 @@ Provided as TV-17. Expected results:
 |---|---|
 | All features off, no bots, native, log verified, epoch ok | 4, End-to-end encrypted |
 | Same, web | 3, Host serves this app |
+| Same, native viewer, one other participant on web | 3, Member on web app |
 | `link_preview` on, public channel | 3, Server sees links |
 | `scan` on, public | 2, Server sees files |
 | `scan` and `link_preview` on, public | 2, Server sees files, links |
@@ -166,8 +172,9 @@ Provided as TV-17. Expected results:
 | Log rollback seen | 0, Not verified |
 | Epoch header with a host entry for a DM | 0, Not verified |
 | DM peer key changed, not accepted | 0, Key changed |
-| Log older than 24 hours while online | 0, Not verified |
+| Head not fresh (no entry from another member in 24 hours) while online | 0, Not verified |
+| Head frozen before a removal, no fresh entry from another member | 0, Not verified |
 
 ## 12. What the level does not claim
 
-It does not say the people in the conversation are who they claim to be, that no member will leak, that the host cannot see metadata, that the app on the device is uncompromised, that deleted content is gone, or that the admins are honest about whom they let in. The detail sheet says so for the first and the last.
+It does not say the people in the conversation are who they claim to be, that no member will leak, that the host cannot see metadata, that the app on the device is uncompromised, that nobody in the conversation uses the web version (a hostile host can hide that), that deleted content is gone, or that the admins are honest about whom they let in. The detail sheet says so for the first and the last.

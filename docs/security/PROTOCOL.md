@@ -14,13 +14,13 @@ Contents: 0 Conventions · 1 Keys and identifiers · 2 Password, OPAQUE and the 
 
 - All structured data is CBOR (RFC 8949) with deterministic encoding (section 4.2.1 of the RFC): definite lengths, shortest integer forms, map keys sorted bytewise. Maps use small integers as keys. Field tables below are written `key name: type`.
 - **Signed objects are byte strings.** A signed object is `{payload: bstr, sig: bstr(64)}`. The signature covers the exact `payload` bytes as transmitted. A verifier must verify the signature over the received bytes first and only then parse `payload`. It must never re-encode and then verify.
-- A parser must reject: duplicate map keys, indefinite lengths, non-shortest integers, trailing bytes, unknown map keys inside signed objects of a known version, and any object whose `v` is higher than the client implements (fail closed, show "update required").
-- Time is milliseconds since the Unix epoch. No security decision depends on a wall clock except the TTLs in 0.4, and those tolerate 5 minutes of skew.
+- A parser must reject: duplicate map keys, indefinite lengths, non-shortest integers, trailing bytes, unknown map keys inside signed objects of a known version, and any object whose `v` is not exactly 1 (a v1 client accepts `v = 1` only; for a higher value it fails closed and shows "update required"). A later version states the minimum `v` it accepts for each object type and never accepts a lower one by default.
+- Time is milliseconds since the Unix epoch. No security decision depends on a wall clock except the TTLs in 0.4 and the fresh-head rule in 3.5 item 4, and those tolerate 5 minutes of skew.
 - Lengths: `bstr32` means exactly 32 bytes.
 
 ### 0.2 Domain separation
 
-Every hash, signature, KDF call and AEAD associated-data string starts with a label from the list in 0.6. Labels are ASCII, start with `hc/v1/`, and are never reused for two purposes.
+Every hash, signature, KDF call and AEAD associated-data string starts with a label from the list in 0.6. Labels are ASCII and start with `hc/v1/`. A label names one object or purpose. The signature over an object and the hash of the same object may share its label (`log-entry`, `epoch-header`, `replace-proof`, `invite-pop`, `pwchange`, `join-pop`, `dev-session`, `dev-approve`, `recover`), because `H`, `Sign`, `KDF` and AEAD encode their inputs differently and cannot be confused with each other. A label is never used for two different objects, and never for two different KDF or AEAD purposes. Every `H(…)` call in this document has a label as its first argument.
 
 - `H(label, p1, p2, …)` = SHA-256( u8(len(label)) ‖ label ‖ for each part: u32be(len(p)) ‖ p ).
 - `Sign(sk, label, payload)` = Ed25519 over ( u8(len(label)) ‖ label ‖ payload ). Plain Ed25519 (RFC 8032), not Ed25519ph.
@@ -59,8 +59,8 @@ No primitive in this document is new. Where two standard pieces are combined (OP
 | Name | Value |
 |---|---|
 | Argon2id (OPAQUE KSF and key blob) | m = 65536 KiB, t = 3, p = 1, output 64 bytes (what `opaque-ke` asks for). The spike may only raise these. |
-| Argon2id (host-key passphrase mode) | m = 262144 KiB, t = 3, p = 1 |
-| Password | 12 to 256 bytes after NFKC; zxcvbn score ≥ 3 |
+| Argon2id (host-key passphrase mode) | m = 262144 KiB, t = 3, p = 1. The passphrase is generated at install (2.5), never chosen by the operator. |
+| Password | 12 to 256 bytes after NFKC; zxcvbn score ≥ 4 (about 10^10 guesses or more; DECISIONS 28) |
 | Username | `^[a-z0-9_-]{2,32}$` (already lowercase; the client lowercases input) |
 | Display name | NFC, 1 to 32 code points, no control or bidirectional-override characters |
 | Session access token TTL | 15 minutes |
@@ -79,14 +79,14 @@ No primitive in this document is new. Where two standard pieces are combined (OP
 |---|---|
 | `AccountPub` | CBOR `{1: ed25519_pub bstr32, 2: x25519_pub bstr32}` |
 | `account_id` | `H("hc/v1/acct", AccountPub bytes)`, 32 bytes. The stable name of an account everywhere in the protocol. |
-| `fingerprint` | First 20 bytes of `account_id`, shown as Crockford base32 in 8 groups of 4. Also used as the "safety number" input (13.5). |
+| `fingerprint` | First 20 bytes of `account_id`, shown as Crockford base32 in 8 groups of 4. The safety number is a different display of the two accounts' keys (13.5). |
 | `server_id` | `entry_hash` of the server's genesis log entry (3.2). 32 bytes. The name of a server. A URL is only a hint. |
 | `channel_id`, `msg_id`, `device_id`, `file_id`, `call_id`, `invite_id` | 16 random bytes each |
-| `dm_id` | `H("hc/v1/dm", min(a,b), max(a,b))[0..16]` for accounts a, b |
+| `dm_id` | `H("hc/v1/dm", home_server, min(a,b), max(a,b))[0..16]` for accounts a, b on home server `home_server` (13.3). The same pair has a different `dm_id` on each server. |
 
 ### 0.6 Label list
 
-`hc/v1/acct`, `setup-token`, `replace-proof`, `pwchange`, `grant`, `ak-sign`, `ak-dh`, `state`, `blob`, `devcert`, `dev-session`, `dev-approve`, `sas`, `recover`, `log-entry`, `join-pop`, `invite-cert`, `invite-pop`, `epoch-header`, `wrap`, `key-check`, `mk`, `msg`, `msg/t`, `msg/f`, `msg/u` (the AEAD AAD label for class `c` is `msg/c`), `hostrec`, `eph`, `file`, `call`, `call/sender`, `room`, `dm`, `friend-req`, `friend-acc`, `mail`, `hostkey-file`, `host-at-rest`, `push-seal`, `release-manifest`, `fp`. All prefixed `hc/v1/`.
+`hc/v1/acct`, `setup-token`, `replace-proof`, `pwchange` (signatures and their hashes), `pwchange-ctx` (the OPAQUE context for a password-change login), `login` (the OPAQUE context for a normal login), `bot-pop`, `grant`, `ak-sign`, `ak-dh`, `state`, `blob`, `devcert`, `dev-session`, `dev-approve`, `sas`, `recover`, `log-entry`, `join-pop`, `invite-cert`, `invite-pop`, `epoch-header`, `wrap`, `key-check`, `mk`, `msg`, `msg/t`, `msg/f`, `msg/u` (the AEAD AAD labels for class `c`; the class-key KDF labels are `classkey/t`, `classkey/f`, `classkey/u`), `hostrec`, `eph`, `file`, `call`, `call/sender`, `room`, `dm`, `friend-req`, `friend-acc`, `mail`, `hostkey-file`, `host-at-rest/key` (wraps the host key file), `host-at-rest/opaque` (wraps the OPAQUE `ServerSetup`), `host-at-rest/<feature>` (one per host feature: `push_text`, `search`, `scan`, `transcode`, `link_preview`), `host-at-rest/bot` (bot key storage, 16.3), `push-seal`, `release-manifest`, `fp`. All prefixed `hc/v1/`.
 
 ---
 
@@ -112,16 +112,16 @@ Each device generates, on first run:
 
 - `DK`: an Ed25519 key pair for authenticating sessions. Stored in the platform secure store when one exists (Keychain, Android Keystore-wrapped file, DPAPI, Secret Service). A hardware-bound non-exportable key is not used because Secure Enclave and Android StrongBox do not support Ed25519 (see DECISIONS).
 - `device_id`: 16 random bytes.
-- `push_key`: an X25519 key pair used only for sealed push payloads (17.3).
+- `push_key`: an X25519 key pair used only for sealed push payloads (17.3). One pair per (device, server), generated when the device first registers for push with that server, so two servers never hold the same `push_key_pub`.
 
 `DeviceCert` is a signed object under `ak_sign`, label `hc/v1/devcert`:
 
 ```
 payload { 1 v:1, 2 account_id:bstr32, 3 device_id:bstr16, 4 device_pub:bstr32,
-          5 created_at:uint }
+          5 created_at:uint, 6 platform:"native"|"web" }
 ```
 
-The certificate is not tied to one server, so one device registers it at every server it joins.
+The certificate is not tied to one server, so one device registers it at every server it joins. `platform` is signed. Other members read the certificates of an account from `GET /v2/members/<account_id>/devices` to work out whether anyone in a conversation uses the web client (SECURITY-LEVELS 3). A hostile host can withhold a certificate, so that check can miss a web device; it can only raise the warning, never lower it.
 
 **What a device key is for.** Every device also holds `RS` (that is how it reads history). So `DK` gives per-device session authentication and per-device server-side revocation. It does not give cryptographic device revocation: a revoked device that was ever unlocked still knows `RS` (see Threat model, L5, and 8.4).
 
@@ -139,7 +139,7 @@ The password never reaches any server. The server learns nothing it can use to t
 
 ### 2.1 Password and username rules
 
-- The client NFKC-normalises the password, rejects it if shorter than 12 bytes, longer than 256, or zxcvbn score < 3, and does not trim whitespace.
+- The client NFKC-normalises the password, rejects it if shorter than 12 bytes, longer than 256, or zxcvbn score < 4, and does not trim whitespace.
 - Usernames: see 0.4. A username is unique per server and chosen at account creation time on the device. The same username may belong to different accounts on different servers (13.6).
 
 ### 2.2 OPAQUE registration (per server)
@@ -169,7 +169,7 @@ Blob { 1 v:1, 2 version:uint, 3 nonce:bstr24, 4 ct:bstr }
 
 The server stores `{username, opaque_record, blob, account_pub, version}`. `version` increases with each password change. After decrypting, the client must check that `account_pub` derived from the decrypted `RS` equals the `account_pub` that the signed log (3.3) lists for this username. If not, it aborts and shows "this server does not know you". This catches a server that serves another account's blob or a mismatched record.
 
-**Honest limit.** `export_key` is a function of the password and the server's OPAQUE secret. Anyone who has the stored record, the blob, and the server's OPAQUE `ServerSetup` can test password guesses offline, each costing one Argon2id evaluation (m = 64 MiB, t = 3). A breached server with the OPAQUE setup therefore gets an offline attack on every user's password, and a guessed password yields `RS` for that account, which is the account on every server. Mitigations: the strength rule (2.1), the memory-hard parameters, and the at-rest wrap of `ServerSetup` under a key kept off the data volume (2.5). This limit is listed as L2 in the threat model.
+**Honest limit.** `export_key` is a function of the password and the server's OPAQUE secret. Anyone who has the stored record, the blob, and the server's OPAQUE `ServerSetup` can test password guesses offline, each costing one Argon2id evaluation (m = 64 MiB, t = 3). Each evaluation moves roughly 0.5 GB through memory, so one current high-end GPU manages in the order of 10^3 guesses per second (an estimate; CRACK-PLAN C09 measures it). A password with zxcvbn score 3 (about 10^8 guesses) would then fall in about a day on one GPU and in minutes on a rented rack, which is why the rule asks for score 4 (about 10^10 guesses, 100 times the cost). A breached server with the OPAQUE setup therefore gets an offline attack on every user's password, and a guessed password yields `RS` for that account, which is the account on every server. Mitigations: the strength rule (2.1), the memory-hard parameters, and the at-rest wrap of `ServerSetup` under a key kept off the data volume (2.5). This limit is listed as L2 in the threat model.
 
 ### 2.4 OPAQUE login
 
@@ -188,14 +188,14 @@ S→C  login_ok      { status: "granted" | "approval_required", pending_id? , bl
 
 ### 2.5 Server-side protection of OPAQUE secrets
 
-The server has a 32-byte **at-rest wrap key `WK`**. It is created at install time and stored outside the data volume and outside backups (default: a root-owned `0400` file in a separate directory, `HOUSECALL_WRAP_KEY_FILE`; hardened mode: a passphrase entered at start, stretched with Argon2id at the host parameters in 0.4). The OPAQUE `ServerSetup` is stored AEAD-encrypted under a key derived from `WK`. A stolen data volume or backup alone therefore does not enable offline guessing against any password. A stolen whole machine image does, unless passphrase mode is used. If `WK` is lost, every password record is unusable; users with a device still signed in re-register (2.6), others use the recovery phrase (8.2) or admin re-approval (8.3). Backing up `WK` separately from the data is a documented operator duty.
+The server has a 32-byte **at-rest wrap key `WK`**. It is created at install time and stored outside the data volume and outside backups (default: a root-owned `0400` file in a separate directory, `HOUSECALL_WRAP_KEY_FILE`; hardened mode: a passphrase, stretched with Argon2id at the host parameters in 0.4 with a random 16-byte `wrap_salt` kept in the server's config file; the salt is not secret). In hardened mode the passphrase is **generated at install** (8 words from the BIP-39 list, 88 bits, shown once) and typed by the operator at each start; the server never accepts a passphrase the operator chose. The OPAQUE `ServerSetup` is stored AEAD-encrypted under `KDF(WK, label "host-at-rest/opaque")`. A stolen data volume or backup alone therefore does not enable offline guessing against any password. A stolen whole machine image does, unless passphrase mode is used; a hosting provider's disk snapshot counts as a whole machine image, because it puts `WK` next to the data in default mode. **While a passphrase-mode server is locked** (started, passphrase not yet typed) it cannot open `ServerSetup`: password sign-in, registration, joining, join requests, replacement requests and setting a password after recovery are refused (503, "server locked"), and devices that are already registered keep working through signed sessions (6.1). If `WK` is lost, every password record is unusable; users with a device still signed in re-register (2.6), others use the recovery phrase (8.2) or admin re-approval (8.3). Backing up `WK` separately from the data is a documented operator duty.
 
 ### 2.6 Password change
 
 Requires an authenticated device session **and** a fresh OPAQUE login of the old password (so an unlocked stolen device cannot silently change it).
 
-1. Client logs in with the old password (2.4, context `"hc/v1/pwchange"`).
-2. Client runs a new OPAQUE registration with the new password, builds a new `Blob` with `version + 1`, and sends `POST /v2/password` with `{upload, blob, sig}` where `sig` is `Sign(DK, "hc/v1/pwchange", H(upload, blob))`.
+1. Client logs in with the old password (2.4, with the OPAQUE context `"hc/v1/pwchange-ctx" ‖ server_id ‖ device_pub`).
+2. Client runs a new OPAQUE registration with the new password, builds a new `Blob` with `version + 1`, and sends `POST /v2/password` with `{upload, blob, sig}` where `sig` is `Sign(DK, "hc/v1/pwchange", H("hc/v1/pwchange", server_id, login_id, u32be(version + 1), upload, blob))`. `login_id` is the id from step 1 (the recovery session id in 8.2). The server accepts the request only inside a session of the same device on the same server, and checks `sig` against that device's key, so a signature made for one server, login or version cannot be replayed to another.
 3. The server replaces the record and blob atomically and, if the request asks for it, revokes all other devices.
 4. The client repeats this on every server the account has joined. Servers it cannot reach are queued and retried; until then the old password still works on those servers. The UI states this.
 
@@ -230,12 +230,12 @@ The signer's public key is not inside the entry; the verifier looks it up from t
 
 ### 3.3 Entry kinds and who may sign them
 
-The verifier maintains a state: `members{account_id → {pub, username, display, role ∈ owner|admin|member|bot, joined_seq, history_mode, status}}`, `banned{ids, usernames}`, `channels{channel_id → {kind: public|private, creator, members, bots, archived}}`, `invites{invite_id → {issuer, used_by?, revoked}}`, `features`, `host_key`, `origin_hint`, `name`. An entry is valid only if every check in its row passes against the state **immediately before** it. An invalid entry makes the log invalid at that seq; the client stops, keeps the last valid prefix, and shows "Not verified" (SECURITY-LEVELS 7).
+The verifier maintains a state: `members{account_id → {pub, username, display, role ∈ owner|admin|member|bot, joined_seq, history_mode, status}}`, `banned{ids, usernames}`, `channels{channel_id → {kind: public|private, creator, members, bots, archived}}`, `invites{invite_id → {issuer, used_by?, revoked}}`, `features`, `host_key`, `origin_hint`, `name`. An entry is valid only if every check in its row passes against the state **immediately before** it, and the three general rules below pass for every entry except genesis. **R1:** the signer must have `status = active` in that state, and its `role` must satisfy the row. Removal (`member_remove`, `key_replace`) sets `status = removed` and the role to none, and demotion sets the role to `member`, so a removed or demoted account holds no authority and neither does anything it could do only as an admin (the issuer test for invites in kind 2 reads the issuer's role at that seq). **R2:** every account an entry adds or names (to the server, to a channel, to a bot list) must be an active member of the server (an active bot, for bot entries). **R3:** a private channel whose creator is no longer active is **frozen**: no `channel_member_add`, `bot_channel_add` or `bot_channel_remove` is valid for it, and its members may only leave. Nobody inherits the creator's rights, because an inheriting admin or owner could read a private channel they were never added to. A group DM whose creator is gone is frozen the same way (13.4). An invalid entry makes the log invalid at that seq; the client stops, keeps the last valid prefix, and shows "Not verified" (SECURITY-LEVELS 7).
 
 | # | Kind | Signer | Body | Extra checks |
 |---|---|---|---|---|
 | 0 | `genesis` | the owner | `{owner:AccountPub, username, display, name, origin_hint, features_version:1}` | `seq` 0; `server_id` zero; `prev` zero. Only one genesis exists. All features off. No host key. |
-| 1 | `member_add` | admin or owner | `{account:AccountPub, username, display, history:"full"|"from_now", pop:bstr64}` | `pop` = `Sign(new ak_sign, "hc/v1/join-pop", H(server_id, username, AccountPub))`. Username unused, not banned. Account not already a member. Role starts as `member`. |
+| 1 | `member_add` | admin or owner | `{account:AccountPub, username, display, history:"full"|"from_now", pop:bstr64}` | `pop` = `Sign(new ak_sign, "hc/v1/join-pop", H("hc/v1/join-pop", server_id, username, AccountPub))`. Username unused, not banned. Account not already a member. Role starts as `member`. |
 | 2 | `member_join` | the joiner | `{account:AccountPub, username, display, invite:SignedObject(InviteCert), invite_pop:bstr64}` | Invite issuer is an admin or owner at this seq; invite not revoked, not already used by an earlier entry; `invite.server_id` matches; `invite_pop` verifies under `invite.token_pub` over `H("hc/v1/invite-pop", server_id, invite_id, AccountPub, username)`. History mode comes from the invite. Expiry is enforced by the server only (see below). |
 | 3 | `member_remove` | admin or owner; or the member themself | `{account_id, reason:"kick"|"leave"|"ban"}` | Owner cannot be removed. Admins can be removed only by the owner. A member can remove only themself (`leave`). `ban` adds the account id and its username to `banned`. |
 | 4 | `role_set` | owner | `{account_id, role:"admin"|"member"}` | Target is a human member. |
@@ -243,13 +243,15 @@ The verifier maintains a state: `members{account_id → {pub, username, display,
 | 6 | `channel_member_add` | private: the creator only | `{channel_id, account_id, history:"full"|"from_now"}` | Server admins who are not the creator cannot sign this (they cannot add themselves to private channels). Applies to humans and bots. |
 | 7 | `channel_member_remove` | private: creator, or the member themself | `{channel_id, account_id}` | |
 | 8 | `channel_archive` | admin or owner; private: creator | `{channel_id}` | |
-| 9 | `features_set` | owner only | `{features:{push_text,scan,transcode,search,link_preview: bool}, host_key: null | {key_id:bstr16, pub:bstr32}, reason:text≤200}` | See 15.2 for the transition rules. |
-| 10 | `bot_add` | admin or owner | `{account:AccountPub, name, kind:"steve", pop:bstr64}` | Bot gets role `bot`. A bot cannot sign any entry except `profile_set`. |
+| 9 | `features_set` | owner only | `{features:{push_text,scan,transcode,search,link_preview: bool}, host_key: null | {key_id:bstr16, pub:bstr32}, reason:text≤200}` | Valid only if all of these hold. (a) Any feature is on if and only if `host_key ≠ null`. (b) A `key_id` that differs from the current host key's has not appeared in any earlier entry (a destroyed key is never reused); the `pub` for a `key_id` never changes. (c) The entry changes the features or the host key. Changing the features, rotating the key, or both in one entry is allowed. 15.2 describes the owner-side states; `ARMING` exists only inside the server and has no log form. |
+| 10 | `bot_add` | admin or owner | `{account:AccountPub, name, kind:"steve", pop:bstr64}` | `pop` = `Sign(bot ak_sign, "hc/v1/bot-pop", H("hc/v1/bot-pop", server_id, name, AccountPub))`, made by the bot runner at enrolment (16.1). Bot gets role `bot`. A bot cannot sign any entry except `profile_set`. |
 | 11 | `bot_channel_add` / 12 `bot_channel_remove` | public channel: admin or owner. private: creator | `{bot_id, channel_id, history}` | Bots are never implicit members of public channels. |
 | 13 | `invite_revoke` | the issuer, or admin or owner | `{invite_id}` | |
-| 14 | `key_replace` | admin or owner | `{old_id, new:AccountPub, username, display, history, new_pop:bstr64, old_proof?:bstr64}` | Atomically removes `old_id` (reason `replace`) and adds `new` with the same username. `old_proof`, when present, is a signature by the old account key under label `hc/v1/replace-proof` over `H("hc/v1/replace-proof", server_id, new account_id)`. History mode as chosen by the admin. |
+| 14 | `key_replace` | admin or owner (see targets) | `{old_id, new:AccountPub, username, display, history, new_pop:bstr64, old_proof?:bstr64}` | Atomically removes `old_id` (reason `replace`) and adds `new` with the same username. `old_proof`, when present, is a signature by the old account key under label `hc/v1/replace-proof` over `H("hc/v1/replace-proof", server_id, new account_id)`. History mode as chosen by the signer. **Targets.** If `old_id` is the owner, the entry is valid only if the owner signs it and `old_proof` is present (the owner's good device signs; an admin cannot replace the owner). If `old_id` is an admin, it must be signed by the owner, or by an admin with `old_proof` present. Otherwise any admin or owner may sign it for a plain member. **What carries over.** With `old_proof`, the new account inherits the old role (including owner) and the old account's private-channel and bot-list memberships, with this entry's history mode (for a private channel `full` means members' devices grant the older epochs, 9.6). Without `old_proof`, the new account is a plain `member` in no private channel; creators re-add it with `channel_member_add`. Every channel the old account was in shows a notice when the entry has no `old_proof` (SECURITY-LEVELS 8). |
 | 15 | `profile_set` | the member | `{display}` | Rate limit 5 per hour. |
 | 16 | `server_meta` | owner | `{name?, origin_hint?}` | |
+| 17 | `checkpoint` | any active human member | `{}` | No state change. A client signs one when the head has no entry newer than 12 hours (3.5 item 4). The server accepts one only if the head entry is older than 6 hours, so that clients do not all sign at once. |
+| 18 | `channel_rekey` | public: admin or owner. private: any member of it | `{channel_id}` | No state change. Every client rotates the channel before its next send (9.3). Rate limit 5 per hour per channel. |
 
 Unknown `kind` → the log is invalid at that point (fail closed). Ownership transfer is not defined in v1: the owner cannot leave and cannot be replaced. A lost owner key is handled by the owner's recovery phrase (8.1); with neither, the server has no owner and its host-assisted features can never be changed again (they can stay off).
 
@@ -264,10 +266,10 @@ Unknown `kind` → the log is invalid at that point (fail closed). Ownership tra
 
 Each client stores per server: `server_id`, the highest verified `seq`, and its `entry_hash` (the **head**).
 
-1. **Pinning.** `server_id` is fixed when a server is first added (from the invite link, 5.2, or from the blob for new devices, 7.3). On every connection the client fetches entry 0, computes its hash, and compares with the pin. A mismatch is a hard stop: "This is not the server you joined." There is no override except removing the server and adding it again.
+1. **Pinning.** `server_id` is fixed when a server is first added: from the invite link (5.2); or, for a new device of an account that already has this server, from the account's `State` (7.3 step 3); or, with neither, from the log the server presents on first contact (trust on first use under TLS and OPAQUE, 7.3 step 7). The OPAQUE login (server identity) and the blob's AAD (2.3) both contain `server_id`, so a server that presents a `server_id` other than the one the account registered under cannot complete login or have its blob decrypt. On every connection the client fetches entry 0, computes its hash, and compares with the pin. A mismatch is a hard stop: "This is not the server you joined." There is no override except removing the server and adding it again.
 2. **Rollback.** A client never accepts a log whose head `seq` is lower than the one it has stored, nor one where entry `seq` differs in hash from what it stored. Either is shown as "Not verified" with the reason "server changed history."
 3. **Cross-checking through signed messages.** Every message and epoch header carries `log_seq` (the highest log entry its author had verified) and every message carries `log_head8` (first 8 bytes of that entry's hash). A reader who has verified a different hash at that `seq` has seen a fork: show "Not verified", keep both entries as evidence, offer to export them. A reader who sees `log_seq` above their own head must fetch the missing entries; if the server withholds them for more than 30 seconds, the reader treats the server as hiding changes (level "Not verified").
-4. **Fresh heads.** A client that has not obtained a log head from the server in the last 24 hours while online shows "Not verified" until it does.
+4. **Fresh heads.** A head is **fresh** only if the log contains an entry signed by an active human account other than the reader, with `created_at` within 24 hours of the reader's clock (5 minutes of skew tolerated). A server cannot forge another member's entry, and a real entry chains onto every earlier entry, including a removal. A client that cannot show a fresh head while online shows "Not verified" and sends nothing in any channel that has other members until it can. To keep heads fresh, any active member's client signs a `checkpoint` (kind 17) when the head has no entry newer than 12 hours. A reader who is the only active human member of the server is exempt. **Limit:** a member who is still listed in a frozen view and colludes with the server can sign the fresh entries on that frozen branch, so this rule stops a server acting alone, not a server with a listed accomplice (L7).
 5. **Residual.** A server that shows two groups of members different logs from the first moment (a split view that predates any cross-group message) is not detected until a message or epoch header crosses between the groups. See threat model L7.
 6. **Moving servers.** The owner can publish a new `origin_hint` (`server_meta`). A client follows only a new origin that is named in a verified entry. If the old host is gone, the user adds the server again from a new invite link; the embedded `server_id` matches, so the client merges it with the existing entry.
 
@@ -316,10 +318,9 @@ It uploads the `InviteCert` to the server (`POST /v2/invites`) and shows the lin
 
 ```
 housecall://join?o=<origin>&s=<server_id base32>&i=<invite_id base32>&t=<token_seed base32>
-https://<origin>/join#o=…&s=…&i=…&t=…        (web form; everything is in the fragment so it is never sent to a server)
 ```
 
-`token_seed` never goes to the server. The server holds `InviteCert` only, which contains `token_pub`.
+The same fields are also shown as copyable text (`housecall-invite:` followed by the same fields) for pasting into a client. An invite is **never** shared as an `https://` link to the server: the page behind such a link is served by the host, whose script can read the fragment and so learn `token_seed`, and a recipient's browser opens such a link even if they mean to join with the app. The web client accepts only pasted invite text, and a member who joins with the web client gives the invite to the host (20.3, L12). `token_seed` never goes to the server by the app's own requests. The server holds `InviteCert` only, which contains `token_pub`.
 
 **Why this shape.** The link carries (a) the server's identity (`s`), so first contact is pinned to what the admin saw; (b) a secret that only the link's holder can use. The join signature (`invite_pop`) is made with `token_priv`, which the server never saw, so the server cannot make its own join for this invite, and it cannot replace the joiner's public key without breaking the signature.
 
@@ -348,9 +349,9 @@ Failure cases: invite expired/used/revoked (409/410, message "invite no longer v
 REQUEST → PENDING → APPROVED | DENIED | EXPIRED
 ```
 
-1. REQUEST. Client does OPAQUE registration (2.2) and sends `POST /v2/join-requests { username, display, account_pub, device_cert, reg_upload, blob, pop, note≤140 }`. `pop` = `Sign(ak_sign, "hc/v1/join-pop", H(server_id, username, AccountPub))`. The server returns `{request_id, pending_token}` (a random bearer used only to poll this request).
-2. The client computes and shows the **join code**: `H("hc/v1/sas", "join", request_id, AccountPub)` mapped to 6 words from the BIP-39 list (66 bits; a 44-bit code could be ground by a hostile server in days). It says: "Read these words to the admin."
-3. An admin's client shows the pending request: username, display, note, fingerprint, and a field for the 6 words. The admin enters the words the requester reads out. The client computes the code from the `account_pub` the **server supplied** and compares. A mismatch means the server swapped the key; approval is blocked and the request is flagged. There is no "approve without checking" button.
+1. REQUEST. Client does OPAQUE registration (2.2) and sends `POST /v2/join-requests { username, display, account_pub, device_cert, reg_upload, blob, pop, note≤140 }`. `pop` = `Sign(ak_sign, "hc/v1/join-pop", H("hc/v1/join-pop", server_id, username, AccountPub))`. The server returns `{request_id, pending_token}` (a random bearer used only to poll this request).
+2. The client computes and shows the **join code**: `H("hc/v1/sas", "join", server_id, AccountPub)` mapped to 6 words from the BIP-39 list (66 bits; a 44-bit code could be ground by a hostile server in days). No value the server chooses goes into the code: with a server-chosen `request_id` in it, a hostile server could grind two requests (one for the requester's key, one for its own) to a common code by a birthday search of about 2^33 hashes, whereas with only `server_id` and the requester's key it needs a 66-bit preimage for its own key. It says: "Read these words to the admin."
+3. An admin's client shows the pending request: username, display, note, fingerprint, and a field for the 6 words. The admin enters the words the requester reads out. The client computes the code from the `account_pub` the **server supplied** and the `server_id` it has pinned, and compares. A mismatch means the server swapped the key; approval is blocked and the request is flagged. There is no "approve without checking" button.
 4. On match the admin chooses history (`full` / `from now on`, default `from now on`) and the admin's device signs `member_add` (3.3 kind 1) including the `pop` from the request. The server appends it; the request becomes `APPROVED`.
 5. DENIED: the server deletes the request, the record and the blob. EXPIRED: after 7 days, same.
 
@@ -374,7 +375,7 @@ A device authenticates by signing a server-supplied challenge with `DK`. There a
 C→S  POST /v2/session/challenge { device_id }
 S→C  { nonce: bstr32, server_time }
 C→S  POST /v2/session { device_id, nonce, sig }
-        sig = Sign(DK, "hc/v1/dev-session", H(server_id, origin, device_id, nonce))
+        sig = Sign(DK, "hc/v1/dev-session", H("hc/v1/dev-session", server_id, origin, device_id, nonce))
 S→C  { token: bstr32, expires_at }
 ```
 
@@ -425,13 +426,13 @@ APPROVED/AUTO_APPROVED → REGISTER → ACTIVE
 
 1. **PENDING.** The server creates `{pending_id, device_pub, device_name, created_at, expires_at = +10 min, auto_at = +7 days, source_ip_class}` and notifies every active device (WebSocket, and push if on). The new device shows a 6-digit **code**: `u32be(first 4 bytes of H("hc/v1/sas", "device", device_pub, pending_id)) mod 1000000`, zero-padded (TV-12). The new device polls `GET /v2/devices/pending/<id>`.
 2. **Approver.** An existing device shows: device name, time, approximate network location of the request, and asks the user to **type the 6-digit code shown on the new device**. The approver's client computes the code from the `device_pub` the server gave it and compares with the typed code. On match, it signs:
-   - `DeviceApproval = Sign(DK_approver, "hc/v1/dev-approve", H(server_id, pending_id, device_pub, approver_device_id))`
+   - `DeviceApproval = Sign(DK_approver, "hc/v1/dev-approve", H("hc/v1/dev-approve", server_id, pending_id, device_pub, approver_device_id))`
    - `DeviceCert` for the new device (1.2), signed by `ak_sign` (the approver holds `RS`).
    and sends both to `POST /v2/devices/pending/<id>/approve`. The server verifies the approval signature against an **active** device key of the same account, then marks the request `APPROVED`.
 3. **Release.** On `APPROVED` the server returns `{blob, cert}` to the pending session. The new device decrypts the blob with its `export_key`, derives `AccountPub`, compares it with the cert and with the log (2.3), and calls `POST /v2/devices` to register `device_id`, `device_pub`, `cert`. The server activates it. The device then fetches `State` (7.5), which holds the pins this account recorded earlier, and compares the `server_id` pin for this server with entry 0 of the log it just verified; a mismatch is a hard stop. If the state has no pin (first device on this server), the device pins now.
-4. **DENIED.** An approver can deny; the request is deleted; the account gets a 24-hour cooldown for new requests; all devices are told.
+4. **DENIED.** An approver can deny; the request is deleted; the requesting source and `device_pub` get a 24-hour cooldown for new requests (the account does not, so a stolen password cannot be used to block the user's own requests); all devices are told.
 5. **EXPIRED.** After 10 minutes the request can no longer be approved by a device (the approver is expected to be present). It is not deleted; it stays pending for auto-approval.
-6. **AUTO_APPROVED.** Seven days after `created_at`, if nobody denied, the server releases the blob exactly as in step 3 but without a `DeviceApproval`. Every active device is notified when the request is created, once a day, and when it auto-approves. The device list marks the new device "approved by waiting period". This path exists so that a user who lost their only device and has no recovery phrase can still get in with the password; the delay is the price. (DECISIONS item 14.)
+6. **AUTO_APPROVED.** Seven days after `created_at`, if nobody denied **and no active device of the account opened a session between `created_at` and `auto_at`**, the server releases the blob exactly as in step 3 but without a `DeviceApproval`. If an active device did open a session in that window, the request is discarded at `auto_at` instead: the user has a working device and can approve, so the waiting period is not for them, and a stolen password cannot be turned into access just because the user ignored a notice. Every active device is notified when the request is created, once a day, and when it auto-approves. The device list marks the new device "approved by waiting period". This path exists so that a user who lost their only device and has no recovery phrase can still get in with the password; the delay is the price. (DECISIONS item 14.)
 7. **Pin on a new device.** On first contact the device has no earlier knowledge of this server. It relies on TLS plus OPAQUE (a server that does not hold the record cannot complete login). A hostile server that does hold the record is treated as "the server" (threat model A2). Pins carried in `State` protect later devices.
 
 **What the code is and is not.** The 6-digit code has about 20 bits. It makes the approver prove they are looking at the screen of the device that is asking, which defeats an attacker who has only the password. It does **not** defend against a malicious server, which can grind a key pair whose code matches in about a million tries.
@@ -446,7 +447,7 @@ From another device (or the device itself): `DELETE /v2/devices/<device_id>` wit
 
 ### 7.5 Account state blob (private, synced)
 
-Per server, an opaque blob `State { version:uint, nonce, ct }` where `ct = AEAD(K_state, nonce, CBOR(state), aad = H("hc/v1/state", server_id, account_id, u32be(version)))`. Content: server pins, friend list and petnames, per-channel notification settings, read pointers, bot-notice flags. Written with compare-and-swap on `version`. Merge rule across servers: per-record last-writer-wins by `(lamport, device_id)`; friend records merge by union with state precedence `blocked > friend > pending`. The server sees its size and update times.
+Per server, an opaque blob `State { version:uint, nonce, ct }` where `ct = AEAD(K_state, nonce, CBOR(state), aad = H("hc/v1/state", server_id, account_id, u32be(version)))`. Content: server pins, friend list and petnames, per-channel notification settings, read pointers, bot-notice flags. Written with compare-and-swap on `version`. Merge rule across servers: per-record last-writer-wins by `(lamport, device_id)`; friend records merge by union with state precedence `blocked > friend > pending`. The server sees its size and update times. **Rollback.** Each client stores the highest `State` version it has seen per server and rejects a lower one. `State` also carries a Lamport counter that is merged across the account's servers; a new device fetches `State` from every server it can reach and takes the one with the highest counter. A server can therefore roll a state back only for a device that has never seen a newer one and cannot reach another server of the account.
 
 ---
 
@@ -461,10 +462,16 @@ Offered at account creation, skippable. The phrase is the 24-word BIP-39 encodin
 ```
 C→S  POST /v2/recover/challenge { username }              → { nonce }
 C→S  POST /v2/recover { username, nonce, device_pub, device_cert, device_name,
-                        sig = Sign(ak_sign, "hc/v1/recover", H(server_id, nonce, device_pub)) }
+                        sig = Sign(ak_sign, "hc/v1/recover", H("hc/v1/recover", server_id, nonce, device_pub)) }
 ```
 
-The server verifies `sig` against the stored `account_pub` for that username. On success it registers the device with no approval and no password. The client then sets a new password (OPAQUE registration, authorised by a signature from `ak_sign` over the registration upload and a new blob). A phrase holder is the account; the phrase is the strongest credential and has no rate limit beyond the generic one.
+The server verifies `sig` against the stored `account_pub` for that username. Whoever holds `RS` can make this signature, and `RS` is also held by stolen and revoked devices (L5), so a signature alone must not take over an account silently:
+
+- If the account has **no active device**, the server registers the device with no approval and no password.
+- If the account has an **active device**, the recovery is held as a pending request under 7.3 (the same approval, 7-day waiting period, notices and cooldowns, with the 6-digit code on the new device). The phrase is then immediate only when no device is active.
+- In both cases every active device is told at once ("Account recovery on a new device", by WebSocket and by push if on).
+
+The client then sets a new password only after the device is registered, inside a session of that device: OPAQUE registration plus a new blob, signed as in 2.6 step 2 with the recovery session id as `login_id`. A phrase holder is the account; the phrase is the strongest credential and has no rate limit beyond the generic one. A device that holds `RS` and also controls an active device can approve its own recovery, so after theft the remedy is still 8.4.
 
 ### 8.3 Forgot the password, no phrase, no usable device
 
@@ -474,7 +481,7 @@ The user has no `RS`. They create a new account key (new `RS'`, new identity) wi
 C→S  POST /v2/replace-requests { username, new_pub, new_pop, device_cert, reg_upload, blob, note }
 ```
 
-An admin's client shows: "Alice says they lost their password. Old fingerprint X, new fingerprint Y. Confirm with Alice in person or by phone, then compare these six words." The word check is the same as in 5.4 (computed from `new_pub`). The admin chooses history `full` or `from_now` and signs a `key_replace` entry (3.3 kind 14, no `old_proof`). Effects:
+An admin's client shows: "Alice says they lost their password. Old fingerprint X, new fingerprint Y. Confirm with Alice in person or by phone, then compare these six words." The word check is `H("hc/v1/sas", "replace", server_id, new_pub)` as six words, with no server-chosen value in it (see 5.4). The admin chooses history `full` or `from_now` and signs a `key_replace` entry (3.3 kind 14, no `old_proof`). Without `old_proof` the new account is a plain member in no private channel, an admin's replacement needs the owner, and the owner cannot be replaced this way (kind 14). Effects:
 
 - The old account is removed; **all epochs it was in rotate** (9.3 trigger `member_removed`).
 - The new account is added with the chosen history. With `full`, an existing member's device wraps the old epochs' keys to the new key (9.6). With `from_now`, the user starts empty.
@@ -483,7 +490,7 @@ An admin's client shows: "Alice says they lost their password. Old fingerprint X
 
 ### 8.4 "Secure my account": replacing the account key from a good device
 
-Used after theft of an unlocked device, or after the recovery phrase leaks. The user's good device creates `RS'` and a new device key, and for each server sends a `key_replace` request that **includes `old_proof`** (a signature by the old `ak_sign`, showing the old key is under the requester's control). The admin approves as in 8.3 (an attacker who holds the old key may also send a replace request; two conflicting requests for one username are shown to the admin as a warning). After this, the old key is a removed member: epochs rotate and it cannot read new content. It can still read everything it had keys for. The user's good device still holds the old epoch keys and can grant them to the new key when the entry says `history: full`. Contacts see "key changed" and must re-verify (13.5).
+Used after theft of an unlocked device, or after the recovery phrase leaks. The user's good device creates `RS'` and a new device key, and for each server sends a `key_replace` request that **includes `old_proof`** (a signature by the old `ak_sign`, showing the old key is under the requester's control). The admin approves as in 8.3 (an attacker who holds the old key may also send a replace request; two conflicting requests for one username are shown to the admin as a warning). Because `old_proof` is present, the new account keeps the old role and its private-channel memberships (kind 14); for an admin the entry is signed by the owner or by an admin, and for the owner by the owner's good device. After this, the old key is a removed member: epochs rotate and it cannot read new content. It can still read everything it had keys for. The user's good device still holds the old epoch keys and can grant them to the new key when the entry says `history: full`. Contacts see "key changed" and must re-verify (13.5).
 
 ---
 
@@ -497,9 +504,9 @@ Class keys derived from `EK_n` (HKDF-SHA256, salt = `channel_id`):
 
 | Key | Label | Who may hold it |
 |---|---|---|
-| `K_text` | `KDF(EK_n, channel_id, "msg/t", u32be(n), 32)` | Every reader. The host only if a text feature is on (15). |
-| `K_file` | `… "msg/f" …` | Every reader. The host only if a file feature is on. |
-| `K_url` | `… "msg/u" …` | Every reader. The host only if link preview is on. |
+| `K_text` | `KDF(EK_n, channel_id, "classkey/t", u32be(n), 32)` | Every reader. The host only if a text feature is on (15). |
+| `K_file` | `… "classkey/f" …` | Every reader. The host only if a file feature is on. |
+| `K_url` | `… "classkey/u" …` | Every reader. The host only if link preview is on. |
 | `K_eph` | `… "eph" …` | Every reader (typing indicators) |
 | `K_call` (not a key itself, see 12) | uses `EK_n` directly | Members and bots only. Never the host. |
 
@@ -511,11 +518,13 @@ payload { 1 v:1, 2 server_id, 3 channel_id, 4 epoch:uint, 5 prev_hash:bstr32,
           6 log_seq:uint, 7 reason:uint, 8 recipients:[account_id…],
           9 host: null | {key_id:bstr16, classes:uint},     classes bit 1=T, 2=F, 4=U
          10 checks: {0: bstr16, 1?: bstr16, 2?: bstr16, 4?: bstr16},
-         11 author:account_id, 12 created_at }
+         11 author:account_id, 12 created_at,
+         13 closed:[[account_id, device_id, uint]…] }       closes epoch n-1; empty for epoch 0
 header_hash = H("hc/v1/epoch-header", payload, sig)
 check_k = first 16 bytes of HMAC-SHA256(key_k, "hc/v1/key-check")        key_0 = EK_n; key_1 = K_text; key_2 = K_file; key_4 = K_url
 prev_hash = header_hash of epoch n-1 (zero for epoch 0)
-reason: 0 create, 1 member_removed, 2 member_added_from_now, 3 feature_change, 4 manual, 5 bot_change, 6 key_replace
+reason: 0 create, 1 member_removed, 2 member_added_from_now, 3 feature_change, 4 channel_rekey, 5 bot_change, 6 key_replace
+closed (epoch n header, closing epoch n-1): for each account that was a recipient of epoch n-1 and is not a recipient of epoch n (removed, banned, left, replaced, or a bot taken out), and for each device of it from which the author accepted a message in epoch n-1, the highest `sender_seq` the author accepted. Readers apply it under 10.4 rule 6.
 Wrap { 1 header_hash, 2 recipient:account_id|"host", 3 class:uint (0=EK, 1=T, 2=F, 4=U), 4 enc:bstr, 5 ct:bstr }
   HPKE base mode, recipient's ak_dh (or the host key), info = H("hc/v1/wrap", header_hash, recipient, class), aad = header_hash,
   plaintext = the 32-byte key.
@@ -528,11 +537,11 @@ The wrap itself is not signed. Authenticity comes from `header_hash` being in HP
 1. Verify the log up to its head (3.5). Compute the **expected recipients** for this channel at that `log_seq`:
    - Public channel: all non-removed human members (roles owner, admin, member), plus bots explicitly added to this channel.
    - Private channel: the creator, members added by `channel_member_add`, plus bots explicitly added.
-   - Never: removed, banned, or replaced accounts; accounts that joined `from_now` after this header's `log_seq`.
+   - Never: removed, banned, or replaced accounts. (An account that joined `from_now` is a recipient of the first epoch created after its join and of nothing earlier; it is not in the log at an earlier `log_seq`, so the expected set at that `log_seq` cannot contain it.)
 2. Compute the **expected host classes** (15.2). Always empty for private channels and DMs.
-3. Generate `EK_{n+1}`; derive class keys and checks.
+3. Generate `EK_{n+1}`; derive class keys and checks; compute `closed` (9.1) from the messages this device accepted in epoch `n`.
 4. Build and sign the header; build one HPKE wrap per recipient (class 0), and one wrap to the host key per class in `host.classes`.
-5. `POST /v2/channels/<id>/epochs { header, wraps }`. The server accepts only epoch `n+1` where `n` is its current epoch (compare-and-swap); else 409.
+5. `POST /v2/channels/<id>/epochs { header, wraps }`. The server accepts only epoch `n+1` where `n` is its current epoch (compare-and-swap); else 409. It also runs rules 1 to 4 of 9.4 on the header against its own copy of the log and rejects a failing header with 422, so a malicious member cannot park an invalid header at `n+1` on an honest server. Clients never rely on this check.
 
 ### 9.3 When to rotate
 
@@ -543,14 +552,28 @@ The wrap itself is not signed. Authenticity comes from `header_hash` being in HP
 | Bot removed from a channel | That channel |
 | Host feature change that changes `host.classes` or `host.key_id` | Every public channel |
 | New member joined with `from_now` | Every public channel (the newcomer must not read earlier epochs) |
-| Manual (admin or private-channel creator) | That channel |
+| New member joined with `full` | None. The newcomer receives every earlier epoch, the current one included, through history grants (9.6). |
+| Manual: a `channel_rekey` log entry (3.3 kind 18) | That channel |
 
 There is no periodic rotation. Random 192-bit nonces mean an epoch has no message-count limit.
+
+**Which log entries affect a channel.** The phrase "an entry affecting this channel" in 9.3, 9.4 rule 4, 9.7 and the new-device rule means exactly this table:
+
+| Entry | Affects |
+|---|---|
+| `member_remove`, `key_replace` | every public channel, and every private channel the account was in |
+| `member_remove` of a bot | every channel the bot was in |
+| `member_add`, `member_join`, `channel_member_add`, `bot_channel_add` with history `from_now` | every public channel (for a channel add: that channel) |
+| the same entries with history `full` | none (grants, 9.6) |
+| `channel_member_remove`, `bot_channel_remove` | that channel |
+| `features_set` that changes `host.classes` or `host.key_id` | every public channel |
+| `channel_rekey` | that channel |
+| all other kinds (`genesis`, `role_set`, `profile_set`, `channel_create`, `channel_archive`, `bot_add` alone, invites, `server_meta`, `checkpoint`) | none |
 
 Rotation is **eager for the signer and lazy for everyone else**:
 
 - The device that signs the triggering log entry rotates every affected channel that has had a message in the last 30 days, in the background.
-- **Mandatory before send.** A client must not encrypt a message under epoch `n` if the verified log contains a membership or feature change affecting that channel at a `seq` greater than epoch `n`'s `log_seq`. It first creates epoch `n+1`. If the server will not accept the new epoch, sending fails with "Can't secure this channel right now". It never falls back to the old epoch.
+- **Mandatory before send.** A client must not encrypt a message under epoch `n` if the verified log contains a membership or feature change affecting that channel at a `seq` greater than epoch `n`'s `log_seq`. (Entries "affecting" a channel are those in the table above.) It first creates epoch `n+1`. If the server will not accept the new epoch, sending fails with "Can't secure this channel right now". It never falls back to the old epoch.
 - **Active calls.** Any client in a call on a channel that sees a removal affecting it rotates that channel within 5 seconds (jitter by rank of `account_id`, so one winner) and then re-keys the call (12.3).
 - **Concurrent rotations.** The server's compare-and-swap picks the first header for each `(channel, n+1)`. A loser that sees a different valid header adopts it, then re-evaluates whether it still meets the expected recipients and features; if not it creates `n+2`.
 
@@ -558,10 +581,12 @@ Rotation is **eager for the signer and lazy for everyone else**:
 
 A client adopts a header only if all of these hold, else it ignores it and flags the server:
 
-1. The signature verifies and `author` is a current member of the channel in the verified log at `log_seq`.
+Rules 1 to 3 are evaluated against the log **as of the header's `log_seq`**; rule 4 is evaluated against the **reader's own verified head**.
+
+1. The signature verifies and `author` is an active member of the channel in the verified log at `log_seq`.
 2. `recipients` equals exactly the expected recipients at `log_seq` (not a superset, not a subset). A superset is the ghost-member signature.
-3. `host` equals exactly the expected host classes and `key_id` the log's current host key (15). A header with a host entry the log does not authorise is rejected.
-4. `epoch` is `prev + 1` and `prev_hash` matches the header it already holds; `epoch` is higher than the highest the client has stored for the channel (rollback guard); `log_seq` is not lower than the `seq` of the last log entry affecting this channel that the client has verified.
+3. `host` equals exactly the expected host classes and `key_id` the host key of the log at `log_seq` (15). A header with a host entry the log does not authorise is rejected.
+4. `epoch` is `prev + 1` and `prev_hash` matches the header it already holds; `epoch` is higher than the highest the client has stored for the channel (rollback guard); `log_seq` is not lower than the `seq` of the last log entry affecting this channel (table in 9.3) in the reader's verified log. This is what stops a removed member from authoring a header with an old `log_seq`.
 5. Its own wrap decrypts, and `check_0` matches `HMAC(EK, …)`.
 6. If the client has already stored a different header for the same `(channel, epoch)` it flags **equivocation** and keeps the first.
 
@@ -581,7 +606,7 @@ payload { 1 v:1, 2 header_hash:bstr32, 3 recipient:account_id, 4 log_seq:uint, 5
 + Wrap { header_hash, recipient, class 0, enc, ct }
 ```
 
-Valid only if the log shows `recipient` is a member whose entry says `history: full` (or a private-channel add with `history: full`) at or before `log_seq`, the grantor is a current member holding that epoch, and the recipient's check matches (`check_0`). A `from_now` member receives nothing older than the first epoch that lists them. Grants are issued by whichever member device first comes online and sees an outstanding full-history member; duplicates are harmless.
+Valid only if the log shows `recipient` is a member whose entry (`member_add`, `member_join`, `key_replace`, `channel_member_add` or `bot_channel_add`) says `history: full` at or before `log_seq`, the grantor is a current member holding that epoch, and the recipient's check matches (`check_0`). A `from_now` member receives nothing older than the first epoch that lists them. Grants are issued by whichever member device first comes online and sees an outstanding full-history member; duplicates are harmless.
 
 If no current member still holds an old epoch (all their devices were lost), that epoch is gone for newcomers. This is availability, not safety.
 
@@ -589,11 +614,14 @@ If no current member still holds an old epoch (all their devices were lost), tha
 
 ```
 NO_KEYS → HAVE_EPOCH(n)
-HAVE_EPOCH(n) --verified log change affecting channel--> STALE(n)      send blocked
+HAVE_EPOCH(n) --verified log entry affecting channel (table in 9.3)--> STALE(n)   send blocked
 STALE(n) --create or adopt epoch n+1 meeting expected set--> HAVE_EPOCH(n+1)
 STALE(n) --server refuses new epoch--> STALE(n)                         "can't secure this channel"
 HAVE_EPOCH(n) --header n+1 with unexpected recipients or host--> ALERT  keep n, flag server
+ALERT --a valid header n+1 is adopted (from any member or from the server)--> HAVE_EPOCH(n+1)
 ```
+
+`ALERT` ends only that way. The level stays "Not verified" while it lasts (SECURITY-LEVELS). Because an honest server validates headers before storing them (9.2 step 5), only a malicious server can hold an invalid header at `n+1` and refuse a valid one; that is refusal of service (L8), and clients fail closed.
 
 ---
 
@@ -645,18 +673,18 @@ ct_c = AEAD(mk_c, nonce_c, pad(plaintext_c),
 1. Channel is `HAVE_EPOCH(n)` (9.7). Take the highest verified epoch.
 2. Fill `sender_seq`, `log_seq` (own verified head), `log_head8`, `msg_id`, `nonce`s.
 3. Encrypt classes, build payload, sign.
-4. `POST /v2/channels/<id>/messages`. The server checks: session, channel membership (from its log view), `epoch` equals the current epoch (else 409 "stale epoch", the client rotates or re-fetches and retries), `sender` matches the session's account, size limits, `msg_id` unused. It stores the bytes and fans out.
+4. `POST /v2/channels/<id>/messages`. The server checks: session, channel membership (from its log view), `epoch` equals the current epoch (else 409 "stale epoch", the client rotates or re-fetches and retries), `sender` matches the session's account, size limits, `msg_id` unused. It stores the bytes and fans out. The POST body also carries a clear, unsigned `blobs` list: the `blob_id`s of the message's attachments (11.7). The server checks that each was uploaded by this session's account for this channel and is not attached to another message, and stores the `msg_id → blob_id` mapping.
 
 ### 10.4 Receiving and verifying
 
 A reader accepts a message only if:
 
-1. The signature verifies under the sender's `ak_sign` from the verified log, and `sender` was a member of the channel at `log_seq` per the log.
+1. The signature verifies under the sender's `ak_sign` from the verified log, and `sender` was a member of the channel at `log_seq` per the log. For a **live** message the sender must also be an active member at the reader's own verified head, because a removed member can claim an old `log_seq`. A live message that fails only this second check is not shown as live: it is held, and shown as backfill only if it passes the `closed` list in the header of the next epoch (rule 6) when that header arrives.
 2. `epoch` is an epoch the reader holds; decryption succeeds with the AAD above.
 3. `msg_id` is new (else drop; same `msg_id` with different bytes is equivocation).
 4. `(sender, device_id)`'s `sender_seq` is greater than the last accepted one for live messages; a gap is shown as "1 message missing" (the server may be dropping messages); a repeat or lower number is dropped. Backfilled history is ordered by `server_seq` and gaps are flagged the same way.
 5. `log_head8` agrees with the reader's verified hash at `log_seq` (3.5 item 3).
-6. **Live messages to a stale epoch are dropped.** If the reader has adopted epoch `m > epoch`, a live message arriving in epoch `epoch` is dropped (the sender is told to retry). Backfilled history is exempt.
+6. **Live messages to a stale epoch are dropped.** If the reader has adopted epoch `m > epoch`, a live message arriving in epoch `epoch` is dropped (the sender is told to retry). **Closed epochs apply to backfill too.** The header of epoch `epoch + 1` lists, for each departed account and device, the highest `sender_seq` its author accepted in `epoch` (9.1 `closed`). A message in `epoch` from a departed account whose device is not listed, or whose `sender_seq` is above the listed number, is dropped and flagged, whether live or backfilled, so the server cannot slip a removed member's late messages into old history by calling them backfill. Limit: this cannot stop a departed member's backdated message that reuses a `sender_seq` it never sent before the removal; rule 4 has already shown that number as a gap, and the case remains the residual in L4 and L8.
 7. `sent_at` more than 10 minutes from the reader's clock is displayed with "time unverified".
 
 Edits (`kind 1`) and deletes (`kind 2`) are valid only if `sender` equals the target message's sender (or the sender is an admin or owner who is a member of the channel, for moderation). Among edits of one target, the edit with the highest `sender_seq` from that sender wins; an older edit arriving later is ignored. A delete is final: a message that was deleted stays deleted when it, or an older edit of it, is replayed. Reactions and pins are messages too, so the server cannot see who reacted to what.
@@ -697,7 +725,7 @@ Per-channel read pointers live in the encrypted account state (7.5). Unread coun
 4. Upload: `POST /v2/blobs { channel_id, size }` → `blob_id`; `PUT /v2/blobs/<id>` with the bytes (resumable by offset, as today). The server checks membership and the cap; it stores the bytes as given. The existing server-held `HOUSECALL_MEDIA_KEY` encryption becomes optional extra at-rest encryption (it protects nothing from the host, which can read the blob anyway, but the blob is already ciphertext).
 5. The descriptor (with `file_key`, name, mime, size) is in the message's `ct_f` (10.2). The server never sees `file_key`.
 6. Download: `GET /v2/blobs/<id>` with Range support. A client verifies every chunk on read; a bad tag aborts and shows "file was altered".
-7. Deleting a message deletes its blobs on the server (authorised by the delete message's outer `target`, 10.1). This is best effort and not erasure (threat model L10).
+7. Deleting a message deletes its blobs on the server. The server finds them through the `msg_id → blob_id` list it stored when the message was sent (10.3; the blob ids inside `ct_f` are not visible to it). Only the message's sender, or an admin or owner who is a member of the channel, may delete a message's blobs, authorised by the delete message's outer `target` (10.1) and the session. This is best effort and not erasure (threat model L10).
 8. Clients show the real size and file type, never auto-open and never execute files. No server malware scanning exists unless the owner enables the scan feature (15), and even then the verdict is advisory.
 
 ---
@@ -707,6 +735,12 @@ Per-channel read pointers live in the encrypted account state (7.5). Unread coun
 ### 12.1 Model
 
 Audio and video go through LiveKit (SFU plus TURN). The SFU forwards media it cannot decrypt. Encryption is LiveKit's frame encryption (AES-GCM on encoded frames) with keys that this protocol supplies. Nothing about call keys is chosen by the server.
+
+Rules the client enforces:
+
+1. A client must not join, publish or subscribe in a room unless frame encryption is active with a key from 12.2. If the token service or the SFU offers a room without it, or the webview lacks the browser feature the SDK needs for it, the client refuses ("Calls aren't available here") and never falls back to clear media.
+2. A client drops every received frame that does not decrypt with the sender's key, and turns off any pass-through the SDK offers for frames that are not encrypted, including frames that carry the SDK's "server-injected frame" marker if it has one. Otherwise the SFU could inject audio or video that plays as a participant's.
+3. The frame cipher's IV is built by the SDK, not by this protocol. Spike 6 (24) confirms how it is built, sets a maximum number of frames per `sender_key`, and the client increments `g` (12.3) before reaching it.
 
 ### 12.2 Key derivation
 
@@ -727,7 +761,7 @@ Consequences: a participant whose identity is not a member in the log is shown a
 
 - Join: a participant who joins mid-call derives `ck` for the current `(n, g)` announced in the latest `call_start` or `call_rekey` message. Late joiners cannot decrypt earlier media (no one records it).
 - Leave: no re-key (a leaver is still a channel member and can derive the key of any call in the channel).
-- **Epoch change** (member removed, banned, left; bot removed; from-now join): after adopting epoch `n+1`, a participant sends `call_rekey {call_id, epoch: n+1, generation: g+1}` (a signed channel message), sets the new sender key at index `(g+1) mod 16`, switches sending to it immediately, and keeps decrypting with the old key for 10 seconds for in-flight frames. The first rekey message seen for a given `generation` wins.
+- **Epoch change** (member removed, banned, left; bot removed; from-now join): after adopting epoch `n+1`, a participant sends `call_rekey {call_id, epoch: n+1, generation: g+1}` (a signed channel message), sets the new sender key at index `(g+1) mod 16`, switches sending to it immediately, and keeps decrypting with the old key for 10 seconds for in-flight frames. A `call_rekey` is accepted only if its `generation` is the current generation plus one, and its `epoch` equals both the epoch of the message that carries it and the reader's highest adopted epoch; anything else is ignored, so no message can move a call back to an older epoch's key. The first valid `call_rekey` for a generation wins.
 - The server removes the removed member from the LiveKit room (availability). Confidentiality relies on the re-key, not on the removal.
 - Not provided: re-keying on a timer, forward secrecy inside a call, hiding who speaks or their bitrate from the SFU.
 
@@ -763,7 +797,7 @@ FriendAccept  = SignedObject, label "hc/v1/friend-acc", payload { v, from:accoun
           request_hash:bstr32, created_at }
 ```
 
-Each is sealed to the recipient: `HPKE(to.ak_dh, info = H("hc/v1/mail", from_id, to_id), plaintext = the signed object)` and delivered through the shared server's mailbox: `POST /v2/mail { to, sealed }`. The server sees sender, recipient, size and time. It enforces: both are current members; rate limit; the recipient has not blocked the sender.
+Each is sealed to the recipient: `HPKE(to.ak_dh, info = H("hc/v1/mail", from_id, to_id), plaintext = the signed object)` and delivered through the shared server's mailbox: `POST /v2/mail { to, sealed }`. The server sees sender, recipient, size and time. It enforces: both are current members and neither has role `bot` in the shared server's log (a bot can be neither a friend nor a DM partner, so a stolen bot key cannot be used to phish members privately; 13.3 and 13.4 apply the same rule); rate limit; the recipient has not blocked the sender. The recipient's client drops a request that involves a bot even if the server delivers it.
 
 The recipient verifies the signature, that `from` hashes to the sender id the server claims, and that this account is a member of the shared server per the log. The UI shows `display_seen` and `username_seen` as **claims** next to the fingerprint-derived colour avatar. Accepting creates a friend record in the encrypted state (7.5) with `first_seen_pub`.
 
@@ -775,7 +809,7 @@ DMCreate = SignedObject (initiator), label "hc/v1/dm", payload { v, dm_id, a:acc
 DMAccept = same, signed by the other party
 ```
 
-- `dm_id` is derived from the two account ids (0.5). One thread per pair per home server.
+- `dm_id` is derived from the home server and the two account ids (0.5), so it differs on every server. One thread per pair per home server; a client keeps epoch state per `(home_server, dm_id)`, and a conversation restarted on another server is a different thread with its own epoch 0. Neither account may have role `bot` in the home server's log (13.2). A DM has no log: in its headers and messages `log_seq` is 0 and `log_head8` is 8 zero bytes, and readers skip the checks of 3.5 item 3 and 9.4 rule 4 that need a log.
 - The initiator authors epoch 0 with `recipients = [a, b]`, no host entry ever, and wraps to both `ak_dh` keys. The peer's client accepts the header only if the author is a party and `recipients` is exactly `{a, b}`.
 - Messages and attachments are as in 10 and 11 with `channel_id = dm_id`.
 - There is no admin and no log for a two-person DM: the set cannot change. If either side's account key is replaced, the new `account_id` produces a new `dm_id` and a new thread; the old thread stays on devices that have it.
@@ -784,11 +818,11 @@ DMAccept = same, signed by the other party
 
 ### 13.4 Group DMs (up to 10)
 
-A group DM has its own mini log with the same entry format and its own `server_id` (the hash of its genesis, signed by the creator). Allowed kinds: `genesis` (creator), `member_add` (creator only; the added account must be a friend of the creator and a member of the home server), `member_remove` (creator, or self), `profile_set`. Everything else (epochs, messages, calls) is as for channels, with `log_seq` meaning this mini log. The creator is the only one who can add or remove people. A group DM must live on a server where every member is present; a member leaving that server is removed from the group by the server's routing and by an automatic `member_remove` signed by the creator's client when it sees it.
+A group DM has its own mini log with the same entry format and its own `server_id` (the hash of its genesis, signed by the creator). Allowed kinds: `genesis` (creator), `member_add` (creator only; the added account must be a friend of the creator and a member of the home server), `member_remove` (creator, or self), `profile_set`. Everything else (epochs, messages, calls) is as for channels, with `log_seq` meaning this mini log. The creator is the only one who can add or remove people, and neither the creator nor any added account may have role `bot` (13.2). If the creator leaves or is removed from the home server, the group is frozen (3.3 R3): nobody can be added or removed except by leaving, and members who want a changed group start a new one. A group DM must live on a server where every member is present; a member leaving that server is removed from the group by the server's routing and by an automatic `member_remove` signed by the creator's client when it sees it.
 
 ### 13.5 Safety numbers and key changes
 
-`safety_number(a, b)` = decimal of `H("hc/v1/fp", min(a_pub,b_pub), max(a_pub,b_pub))`, first 15 bytes, in 6 groups of 5 digits. Shown in the contact screen with a "Mark as verified" button that sets `verified = true` in the friend record. When a friend's `account_id` for a username changes (13.6) the friend record is not updated; a new contact is created, flagged, and DMs to it stay in a new thread until the user accepts.
+`safety_number(a, b)`: let `d = H("hc/v1/fp", min(a_pub,b_pub), max(a_pub,b_pub))`. Take the first 30 bytes of `d` as six 5-byte chunks; each chunk, read as a big-endian integer, is reduced mod 100000 and written as 5 digits. The result is 6 groups of 5 digits (about 99.7 bits). Shown in the contact screen with a "Mark as verified" button that sets `verified = true` in the friend record. When a friend's `account_id` for a username changes (13.6) the friend record is not updated; a new contact is created, flagged, and DMs to it stay in a new thread until the user accepts.
 
 ### 13.6 Username impersonation across servers
 
@@ -853,7 +887,7 @@ ON(F) --owner rotates the host key--> ON(F) with new key_id
 ON(F) --owner disables the last feature--> OFF, host key destroyed
 ```
 
-Transitions are always a `features_set` entry (3.3 kind 9) signed by the owner's `ak_sign`. The server's console, config files and environment variables have **no** way to change the feature set; the server code must not read any such setting. A feature that the log says is off must not be active in the server process; a feature the log says is on is active only for epochs that carry the matching wrap.
+`ARMING` is internal to the server and the owner's client (the key exists but is not yet published); it has no log form, and the validity rules for the entry itself are in 3.3 kind 9. Transitions are always a `features_set` entry (3.3 kind 9) signed by the owner's `ak_sign`. The server's console, config files and environment variables have **no** way to change the feature set; the server code must not read any such setting. A feature that the log says is off must not be active in the server process; a feature the log says is on is active only for epochs that carry the matching wrap.
 
 ### 15.3 Generating the host key
 
@@ -866,28 +900,28 @@ There is no host key on a server where features have never been enabled. A serve
 ### 15.4 Storing the host key at rest
 
 ```
-HostKeyFile {  1 v:1, 2 key_id, 3 server_id, 4 mode:"file"|"passphrase", 5 salt?:bstr16,
-               6 nonce:bstr24, 7 ct:bstr }
-  wrap_key = KDF(WK, salt = key_id, label "host-at-rest", 32)       WK from 2.5
+HostKeyFile {  1 v:1, 2 key_id, 3 server_id, 4 mode:"file"|"passphrase",
+               5 nonce:bstr24, 6 ct:bstr }
+  wrap_key = KDF(WK, salt = key_id, label "host-at-rest/key", 32)       WK from 2.5 (one WK, one `wrap_salt`, kept with the wrap-key configuration, not in this file)
   ct = AEAD(wrap_key, nonce, host_private(32 bytes), aad = H("hc/v1/hostkey-file", key_id, server_id))
 ```
 
-- `WK` is the server's at-rest wrap key (2.5), not stored on the data volume or in backups, in `file` mode as a separate root-owned file, in `passphrase` mode derived at start with Argon2id.
+- `WK` is the server's at-rest wrap key (2.5), not stored on the data volume or in backups, in `file` mode as a separate root-owned file, in `passphrase` mode derived at start with Argon2id from the generated passphrase (2.5).
 - The file lives in the data directory. It is useless without `WK`.
 - The private key is held in process memory only while the host key is active and unlocked: pages are `mlock`ed where the OS allows, core dumps are disabled (`prctl(PR_SET_DUMPABLE, 0)` on Linux), memory is zeroized on drop, the key is never logged, never returned by any API, never put in an environment variable.
-- Everything derived with host access that touches disk is encrypted: the search index, thumbnails, transcodes and preview cache are encrypted under `KDF(WK, salt=key_id, label "host-at-rest" ‖ feature name)` and deleted when the feature is turned off.
+- Everything derived with host access that touches disk is encrypted: the search index, thumbnails, transcodes and preview cache are encrypted under `KDF(WK, salt=key_id, label "host-at-rest/<feature>")` and deleted when the feature is turned off.
 - Plaintext class keys the host unwraps are kept in memory only, for the life of the process, bounded by an LRU, and re-derived from the stored wraps on demand. They are not written to the database.
-- In `passphrase` mode, after a restart the host is **locked** until the operator supplies the passphrase on the console. While locked, host features pause: push becomes content-free, search returns "unavailable", uploads are accepted but not scanned or transcoded (and the UI says so). Chat, calls and everything else work normally.
+- In `passphrase` mode, after a restart the host is **locked** until the operator supplies the passphrase on the console. While locked, host features pause: push becomes content-free, search returns "unavailable", uploads are accepted but not scanned or transcoded (and the UI says so). Chat and calls work normally for devices that are already registered. A locked server also cannot open the OPAQUE `ServerSetup` (2.5), so password sign-in, registration, joining, join requests and replacement requests are refused until it is unlocked.
 
-What this protects and what it does not: a stolen data volume, snapshot or backup does not yield the host key (the wrap key is elsewhere). A stolen whole-machine image in `file` mode does yield it (the wrap key is on the same machine). In `passphrase` mode it costs one Argon2id evaluation (m = 256 MiB, t = 3) per passphrase guess. A running process with root can read process memory. Documented as threat model L11.
+What this protects and what it does not: a stolen data volume, snapshot or backup does not yield the host key (the wrap key is elsewhere). A stolen whole-machine image in `file` mode does yield it (the wrap key is on the same machine). In `passphrase` mode it costs one Argon2id evaluation (m = 256 MiB, t = 3) per guess at a generated 88-bit passphrase (2.5), which is out of reach; an operator-chosen passphrase is not allowed because a short one would fall quickly on a GPU. A hosting provider's disk snapshot counts as a stolen whole-machine image. A running process with root can read process memory. Documented as threat model L11.
 
 ### 15.5 Using the host key
 
 - The server's host component loads wraps addressed to its `key_id` for the epochs of public channels, unwraps class keys with the host private key, derives `mk_c` for a message, decrypts only the class it is authorised for, and passes the plaintext to the specific feature. A feature never gets a key class it does not need.
-- `push_text`: builds a preview `{channel_id, msg_id, title, body ≤ 140 chars}` and HPKE-seals it to each recipient device's `push_key` (17.3). The relay and the push services see only ciphertext. It is sent only to devices that registered `push_decrypt = true`.
+- `push_text`: HPKE-seals the original **signed `Message`** (when the whole sealed payload fits in 3 KiB) to each recipient device's `push_key` (17.3). The relay and the push services see only ciphertext. It is sent only to devices that registered `push_decrypt = true`. The host writes no title or body of its own, because text written by the host cannot be authenticated and would be shown as the member's: the device's notification handler verifies the sender's signature, decrypts the message with the epoch keys in the app's shared storage, and shows only what it verified. A message that does not fit, or does not verify, gives a content-free notification. In v1 `push_text` still counts as a text feature (class T, level "Server reads messages"), although for a message that fits the host no longer needs to read it; whether to drop the T wrap for `push_text` is a question for the product owner (DECISIONS E).
 - `search`: indexes tokens in an index encrypted at rest (15.4). A query is sent over the session; the server returns message ids and the client decrypts and checks them. The query text reaches the server.
 - `scan`: decrypts `ct_f`, gets `file_key`, decrypts the blob in a sandboxed scanner, discards plaintext. It stores a **HostRecord** `{msg_id, file_id, verdict, scanner, at}` AEAD-sealed under `K_file`'s per-message key. Clients display the verdict as "Checked by the server (advisory)" and never treat "clean" as a promise.
-- `transcode`: writes a derived blob under a fresh key; stores a `HostRecord` carrying `{derived_blob_id, key, mime, w, h}` sealed under the file class. Clients prefer a derivative when present.
+- `transcode`: writes a derived blob under a fresh key; stores a `HostRecord` carrying `{derived_blob_id, key, mime, w, h}` sealed under the file class. Clients show the sender's original by default. A derivative is used only when this device cannot play or render the original, and it is labelled "Converted by the server"; it is never shown as the sender's file, because a HostRecord is unsigned.
 - `link_preview`: decrypts `ct_u`, fetches each URL with the existing SSRF protections, builds `{url, title, desc}`, seals it under the U class as a `HostRecord`. Clients label it "Preview fetched by the server".
 - `HostRecord = { msg_id, kind, host_key_id, nonce, ct }`, `ct = AEAD(mk_c, nonce, …, aad = H("hc/v1/hostrec", server_id, channel_id, msg_id, kind))`. Not signed by any member, so a hostile server can forge them; the UI labelling reflects that, and the content is never trusted for anything but display.
 
@@ -923,7 +957,7 @@ Clients render system notices **from the verified log**, never from server messa
 
 A bot is an account with its own `RS_bot`, generated **on the bot host** (the machine running the Chord runner), never on an admin's device and never on the server unless the host chooses to run both on one machine. It has `AccountPub`, `account_id`, a device key and a device certificate, and a role `bot` in the log.
 
-1. The runner generates `RS_bot` and prints `bot_pub` fingerprint and a 6-word enrolment code `H("hc/v1/sas", "bot", AccountPub)` on its console.
+1. The runner generates `RS_bot` and prints `bot_pub` fingerprint and a 6-word enrolment code `H("hc/v1/sas", "bot", AccountPub)` on its console. It also signs the `bot_add` `pop` (3.3 kind 10) and sends it with its enrolment.
 2. The server stores the runner's pending enrolment. An admin's client lists it and asks the admin to type the 6 words from the runner's console (same check as 5.4; this stops a hostile server from substituting a key).
 3. The admin signs `bot_add` (3.3 kind 10). The bot is now a server member with role `bot`, in no channels.
 4. Per channel: an admin signs `bot_channel_add { bot_id, channel_id, history }` for a public channel (a private channel needs its creator). The default `history` is `from_now`. The next epoch of that channel lists the bot in `recipients` (class 0 wrap to the bot's `ak_dh`).
@@ -932,13 +966,13 @@ A bot is an account with its own `RS_bot`, generated **on the bot host** (the ma
 
 Can: read all content (and in calls, media) of the channels it was added to, from the epoch that lists it (or all history if `full`), sign messages as itself, join calls of those channels as a participant with `sender_key`.
 
-Cannot: read any channel it was not added to; read DMs or group DMs (bots can never be added there: no `channel_member_add` kind for DMs accepts a bot); sign any log entry except its own `profile_set`; approve devices, join requests or invites; change features; add other members or bots.
+Cannot: read any channel it was not added to; read DMs or group DMs (a bot can be neither a friend nor a DM or group-DM partner: 13.2 to 13.4 reject any request or add that involves an account with role `bot`); sign any log entry except its own `profile_set`; approve devices, join requests or invites; change features; add other members or bots.
 
 Bots appear in the member list with a "Bot" tag. Steve's configured chat endpoint and speech endpoint are shown to members in the channel's security details: anything Steve reads may be sent to them (SECURITY-LEVELS 6).
 
 ### 16.3 Storage of bot keys
 
-`RS_bot`, epoch keys it was granted, and its device key are stored in the runner's data directory encrypted with AEAD under `KDF(BWK, "host-at-rest" ‖ "bot")` where `BWK` is a bot wrap key supplied the same way as `WK` (separate file, `0400`, outside the data and backup paths; passphrase mode optional). The runner keeps epoch keys only for channels it is in.
+`RS_bot`, epoch keys it was granted, and its device key are stored in the runner's data directory encrypted with AEAD under `KDF(BWK, label "host-at-rest/bot")` where `BWK` is a bot wrap key supplied the same way as `WK` (separate file, `0400`, outside the data and backup paths; passphrase mode optional). The runner keeps epoch keys only for channels it is in.
 
 ### 16.4 Removal and theft
 
@@ -955,13 +989,13 @@ Gimme and Shared Browser do not read chat and do not hold channel keys. Their re
 
 ### 17.1 Registration
 
-1. The device registers its OS push token **directly with the relay** (operated by Maple Avenue Labs): `POST relay/v1/register { platform, token, app_id }` → `{alias}` (128-bit random). The alias is created per (device, server): the device passes the server's `server_id` so the relay can bind it.
-2. The device sends `{alias, push_key_pub, push_decrypt: bool}` to its server (`POST /v2/push`).
+1. The device registers its OS push token **directly with the relay** (operated by Maple Avenue Labs): `POST relay/v1/register { platform, token, app_id, server_relay_pub }` → `{alias}` (128-bit random). `server_relay_pub` is the push-signing public key that the server publishes as `relay_pub` in `GET /v2/server`, which the device fetched after verifying the log (3.5). The alias is created per (device, server) and is bound to that key.
+2. The device sends `{alias, push_key_pub, push_decrypt: bool}` to its server (`POST /v2/push`); `push_key` is a fresh pair for this (device, server) (1.2).
 3. The server stores `{device_id, alias, push_key_pub, push_decrypt}`. It never sees the OS token. Two servers that share a user get different aliases for the same device and cannot link the user by token.
 
 ### 17.2 Content-free default (D2)
 
-The server sends `POST relay/v1/push { server_id, alias, collapse_id, payload }` authenticated by a server key registered with the relay. The default payload is `{"t":"wake"}` plus a fixed generic alert string ("New activity"). It contains no channel, no sender, no text, no mention flag. The relay maps `alias → token` and calls APNs or FCM. It rejects an alias whose bound `server_id` is not the caller's. A server registers its relay key by answering a challenge the relay sends to the server's `origin_hint`; the details belong in the push-relay document (`docs/PUSH.md`, to be revised).
+The server sends `POST relay/v1/push { alias, collapse_id, payload, sig }` with `sig` made by its push-signing key. The default payload is `{"t":"wake"}` plus a fixed generic alert string ("New activity"). It contains no channel, no sender, no text, no mention flag. The relay maps `alias → token` and calls APNs or FCM. The relay accepts a push to an alias only if `sig` verifies under the `server_relay_pub` that alias is bound to, so no server can push to another server's aliases. The relay keeps no registry of server ids, so none can be claimed or squatted. A server that changes its push-signing key publishes a new `relay_pub` and each device re-registers its alias. The details belong in the push-relay document (`docs/PUSH.md`, to be revised).
 
 For mentions-only users the server uses the cleartext `mentions` field (10.1, 19.1) to decide whether to send; the payload is identical, but the *existence* of the push reveals a mention to the relay and to APNs/FCM. Stated in 19.2.
 
@@ -969,7 +1003,7 @@ Private channels, DMs and group DMs are always content-free.
 
 ### 17.3 Sealed text (only with `push_text`)
 
-For each recipient device with `push_decrypt = true`: `payload = {"t":"msg", "s": HPKE(push_key_pub, info = H("hc/v1/push-seal", alias, msg_id), plaintext = CBOR{channel_id, msg_id, title, body≤140})}` ≤ 3 KiB. The app's notification extension (iOS) or background handler (Android) decrypts and shows it. The relay, APNs and FCM see only the ciphertext. Plaintext in the push payload is never allowed. If a platform cannot decrypt, it receives content-free pushes. If no platform at launch can decrypt, the `push_text` feature is not offered. (DECISIONS item 16.)
+For each recipient device with `push_decrypt = true`: `payload = {"t":"msg", "s": HPKE(push_key_pub, info = H("hc/v1/push-seal", alias, msg_id), plaintext = CBOR{channel_id, msg_id, message: the original signed Message bytes})}` ≤ 3 KiB. The app's notification extension (iOS) or background handler (Android) decrypts it, verifies the message signature and decrypts the message with keys and the verified member list from the app's shared storage (iOS app group), and shows only the verified result (15.5). If the signed message does not fit, or does not verify, the notification is content-free. The relay, APNs and FCM see only the ciphertext. Plaintext in the push payload is never allowed. If a platform cannot decrypt, it receives content-free pushes. If no platform at launch can decrypt, the `push_text` feature is not offered. (DECISIONS item 16.)
 
 ### 17.4 What the relay observes
 
@@ -989,7 +1023,7 @@ The current limiter (`AppState::limited` in `server/src/lib.rs`) uses one global
 |---|---|
 | OPAQUE `login_start` | 20 / min / source; 600 / min global |
 | OPAQUE `login_finish` failure, per username | 5 consecutive failures → lock the **password path** for that username for 10 min, doubling on each further 5 failures, to a maximum of 24 h; counter decays after 24 h with no failure. Registered devices keep working: they use the signed session path, not the password path. |
-| Device-approval requests | 1 outstanding per account; 3 per day; 24 h cooldown after a deny |
+| Device-approval requests (and recoveries held under 8.2) | 1 outstanding per `device_pub`, at most 3 outstanding per account; 3 per day per source; a 24 h cooldown for the source and `device_pub` after a deny, never for the account; a denied or expired request frees its slot |
 | Pending-code attempts on the approver | 5 wrong codes → request cancelled |
 | `join` with invite | 5 / hour / source; 10 failed invite ids / hour / source |
 | `join-requests` | 5 / hour / source; 20 pending per server; 1 per username |
@@ -1010,7 +1044,7 @@ Online guessing against one username through the password path is therefore at m
 
 ### 19.1 Server (the host)
 
-**Sees in plaintext:** usernames and display names; every account's public keys; the full signed log (membership, roles, bans, channel ids and kinds, bot list, feature set, invites); which channels exist; each member's channel membership (public channels: everyone; private channels: the list in the log); device list with device names, creation and last-seen times; IP addresses and user agents; when each account is online; message metadata: channel, epoch, sender account and device, `sender_seq`, send time, size of each ciphertext class, which messages are edits and deletes and what they target, **who was @mentioned** (the `mentions` field is clear by design, so mentions-only notifications can work); who sends mail (friend requests) to whom, and when; which friends talk to which (DM membership, volumes and times); attachment sizes and upload times; typing events and their timing; call room names, participants, durations, track types, rates; push aliases; the activity of Chords (Plex, Shared Browser).
+**Sees in plaintext:** usernames and display names; every account's public keys; the full signed log (membership, roles, bans, channel ids and kinds, bot list, feature set, invites); which channels exist; each member's channel membership (public channels: everyone; private channels: the list in the log); device list with device names, creation and last-seen times; IP addresses and user agents; when each account is online; message metadata: channel, epoch, sender account and device, `sender_seq`, send time, size of each ciphertext class, which messages are edits and deletes and what they target, **who was @mentioned** (the `mentions` field is clear by design, so mentions-only notifications can work); who sends mail (friend requests) to whom, and when; which friends talk to which (DM membership, volumes and times); attachment sizes and upload times, and which blobs belong to which message (the `blobs` list, 10.3); typing events and their timing; call room names, participants, durations, track types, rates; push aliases; the activity of Chords (Plex, Shared Browser).
 
 **Cannot see (default configuration):** message text, edits, reactions, pins, replies, channel names and topics (they are messages), file names and contents, thumbnails, link URLs, call media, friend request text, read state, notification settings, friend lists, petnames, passwords, `RS`, any private key, the recovery phrase.
 
@@ -1046,11 +1080,11 @@ The release key is an Ed25519 key held by the project (offline). Its public half
 - CSP `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`; no inline scripts or styles; Trusted Types required; SRI attributes on every script; no third-party origins, analytics or fonts; `Cross-Origin-Opener-Policy: same-origin`; `Referrer-Policy: no-referrer`.
 - All crypto in a dedicated Worker; `RS` never in the main thread (1.3).
 - A service worker caches the signed bundle. On each navigation it fetches the manifest and signature, verifies the signature with the release public key **baked into the service worker file**, rejects a `version` lower than the one it has stored (rollback), verifies each file's hash before caching, and switches to the new bundle atomically. If verification fails it keeps the old bundle and shows "This server's web app failed verification".
-- An audit command (part of the desktop app and a small CLI): `housecall verify-web <url>` fetches the served bundle and manifest and verifies it against the release key independently of any browser state. Owners are told to run it after every update, and members can run it at any time.
+- An audit command (part of the desktop app and a small CLI): `housecall verify-web <url>` fetches the served bundle and manifest and verifies it against the release key independently of any browser state. Owners are told to run it after every update, and members can run it at any time. It catches a swap that the host serves to everyone. It cannot catch a swap aimed at one user (20.3).
 
 ### 20.3 The limit, stated plainly
 
-The first time a browser loads the web client, the code comes from the host. If the host is malicious at that moment, it can serve code that steals the password and `RS`; nothing in the browser can detect this. After the first load, the service worker checks later bundles against the release key, but **the service worker script itself is also fetched from the host** and the browser replaces it when the file changes: a malicious host can ship a replacement service worker that skips verification. The signed bundle therefore gives detection (through `verify-web`, and through the page showing the manifest hash that the project publishes), not prevention. The security level on web is capped for this reason (SECURITY-LEVELS 3). Desktop and mobile apps are the recommended clients: their code comes from signed GitHub releases and never from the server.
+The first time a browser loads the web client, the code comes from the host. If the host is malicious at that moment, it can serve code that steals the password and `RS`; nothing in the browser can detect this. After the first load, the service worker checks later bundles against the release key, but **the service worker script itself is also fetched from the host** and the browser replaces it when the file changes: a malicious host can ship a replacement service worker that skips verification. The signed bundle therefore gives no prevention, and detection of one kind only: a swap served to everyone, which `verify-web` finds. A host can serve a clean bundle to `verify-web` (recognisable by its user agent, its lack of cookies or its unfamiliar address) and altered code to a chosen user, and the manifest version shown on the web client's first screen is drawn by the page itself, so altered code can show whatever the host wants. There is therefore no detection of a swap aimed at one user. A member who joins or signs in with the web client gives the invite, the password and `RS` to the host if the host serves hostile code; this includes invite text pasted into the web client (5.2). The security level on web is capped for this reason (SECURITY-LEVELS 3), and a conversation with a web user in it shows it to the other members. Desktop and mobile apps are the recommended clients: their code comes from signed GitHub releases and never from the server.
 
 The web client must also show, on its first screen, the installed manifest version and a link to the verification instructions.
 
@@ -1062,12 +1096,12 @@ All JSON bodies are CBOR in practice, written here as names. Paths are relative 
 
 | Area | Routes |
 |---|---|
-| Server | `GET /v2/server` (public: state, entry 0, head); `POST /v2/claim` (public, setup token) |
+| Server | `GET /v2/server` (public: state, entry 0, head, `relay_pub`); `POST /v2/claim` (public, setup token) |
 | Log | `GET /v2/log?after=`, `POST /v2/log` |
 | Auth | `POST /v2/login/start`, `/finish` (public); `POST /v2/session/challenge`, `/session`; `POST /v2/recover/challenge`, `/recover` (public); `POST /v2/password` |
 | Join | `POST /v2/invites`, `GET /v2/invites/<id>` (public), `DELETE`; `POST /v2/join` (public); `POST /v2/join-requests` (public), `GET` (admin), `POST /<id>/approve` or `/deny` (admin) |
 | Replace | `POST /v2/replace-requests` (public); admin lists and decides |
-| Devices | `GET/POST /v2/devices`, `DELETE /v2/devices/<id>`; `GET /v2/devices/pending/<id>`; `POST /v2/devices/pending/<id>/approve`, `/deny` |
+| Devices | `GET/POST /v2/devices`, `DELETE /v2/devices/<id>`; `GET /v2/members/<account_id>/devices` (certificates, for the web-app check); `GET /v2/devices/pending/<id>`; `POST /v2/devices/pending/<id>/approve`, `/deny` |
 | State | `GET/PUT /v2/state` |
 | Channels | `POST /v2/channels/<id>/epochs`; `GET /v2/wraps?since=`; `POST /v2/channels/<id>/grants`; `GET/POST /v2/channels/<id>/messages`; `DELETE` via message kind 2 |
 | Blobs | `POST /v2/blobs`, `PUT/GET/DELETE /v2/blobs/<id>` |
@@ -1100,7 +1134,7 @@ The implementer fills the values and publishes them as JSON in `docs/security/ve
 | TV-10 | Call keys | `EK_n`, `call_id`, `channel_id`, `n`, `g` ∈ {0,1}, two participant identities | `room_name`, `ck`, `sender_key` for each |
 | TV-11 | Device session | `device_id`, nonce, `server_id`, origin | signed bytes, signature |
 | TV-12 | Device approval | `pending_id`, `device_pub`, approver `device_id` | 6-digit code, `DeviceApproval` bytes and signature |
-| TV-13 | Join code and bot code | `request_id`, `AccountPub` | 6 words |
+| TV-13 | Join code, replace code and bot code | `server_id`, `AccountPub` (the new key for the replace code) | 6 words each |
 | TV-14 | Friend request | keys, payload | signed object, HPKE sealed bytes (fixed ephemeral), unsealed |
 | TV-15 | Host key file | `WK`, `key_id`, `server_id`, host private key, nonce | `wrap_key`, file bytes; and `passphrase` mode with salt |
 | TV-16 | Host record | `K_file`, `msg_id`, content | `mk_f`, `ct`, AAD |
@@ -1149,7 +1183,7 @@ Each must fail in the stated way. They belong in the implementation's test suite
 25. A reused or expired challenge nonce fails.
 26. A revoked device's token stops working immediately, including open sockets.
 27. 5 failed password logins lock the password path; a registered device can still open a session.
-28. A weak password (< 12 bytes or zxcvbn < 3) is rejected on the client; the server also rejects anything under 12 bytes.
+28. A weak password (< 12 bytes or zxcvbn < 4) is rejected on the client; the server also rejects anything under 12 bytes.
 
 **Epochs and wraps**
 29. A header with a recipient not in the expected set (ghost), or missing one that is expected, is rejected.
@@ -1191,7 +1225,7 @@ Each must fail in the stated way. They belong in the implementation's test suite
 57. Enabling a feature produces headers with only the needed classes; the host cannot decrypt `ct_t` with an `F`-only wrap and cannot derive `K_call`.
 58. After disabling, new epochs carry no host wrap and the key file and derived artifacts are gone.
 59. The host key file does not decrypt without `WK`; no plaintext host key, class key or `EK` appears in the database, WAL, logs, crash dumps or swap-backed config in a scan after a test run.
-60. A locked host (passphrase mode, no passphrase) serves chat normally and degrades features as specified.
+60. A locked host (passphrase mode, no passphrase) serves chat and calls to already-registered devices, degrades features as specified, and refuses password sign-in, joining and registration.
 
 **Web client**
 61. A bundle with a hash not in the manifest, a manifest with a bad signature, or a lower `version` is refused by the service worker.
@@ -1199,6 +1233,20 @@ Each must fail in the stated way. They belong in the implementation's test suite
 
 **Rate limits**
 63. Limits in section 18 hold across a process restart; one source cannot exhaust another source's budget; an invalid request does not reveal whether a username exists.
+
+**Added by the review of 2026-11-11**
+64. A `key_replace` for the owner not signed by the owner with `old_proof`, one for an admin signed by an admin without `old_proof`, and one without `old_proof` that tries to carry over a role or a private-channel membership, are invalid.
+65. An entry signed by a removed or demoted account, a `channel_member_add` by a removed creator, an add of an account that is not an active member, and any add to a frozen private channel, are invalid.
+66. A live message from a removed member with an old `log_seq` is not shown as live; a backfilled message from a departed account above its `closed` number, or from a device not listed, is dropped.
+67. A client whose only head is one the server froze before a removal (no fresh entry from another member) shows "Not verified" and does not send in a channel with other members.
+68. A recovery (8.2) on an account with an active device is held as a pending request and notifies every active device; a password set after recovery without the recovery session, or signed for another server or version, is rejected.
+69. A `features_set` with a feature on and `host_key` null, with all features off and a non-null key, with a reused `key_id`, or with a changed `pub` for a known `key_id`, is invalid.
+70. A friend request, `DMCreate` or group-DM add involving an account with role `bot` is rejected.
+71. A `call_rekey` whose `epoch` is not the carrying message's epoch and the reader's highest epoch, or whose generation is not current plus one, is ignored; a client does not join a room without frame encryption.
+72. A sealed push whose signed message fails verification, or does not fit, produces a content-free notification; a server cannot push to an alias bound to another server's `relay_pub`.
+73. A request to delete another member's blobs by someone who is neither the sender nor an admin in the channel is refused.
+74. A `State` version lower than the highest the client has seen is rejected.
+75. A `dm_id` is different for the same two accounts on two servers, and epoch state is kept per home server.
 
 ---
 
@@ -1211,6 +1259,6 @@ These must be settled before the matching code is written (Task 0.6 and the Live
 3. `chacha20poly1305` with `aead::stream` compiles to WASM; confirm the XChaCha20 STREAM nonce prefix is 19 bytes.
 4. Strict CBOR: choose between `ciborium` and `minicbor` and write the strict pre-check.
 5. `zxcvbn` size and WASM compile.
-6. LiveKit per-participant keys with `BaseKeyProvider`: five webviews, key-index rotation, 30 participants, and the Rust SDK for the Steve DJ.
-7. iOS notification service extension that can decrypt sealed pushes (17.3). If not shipped, `push_text` stays unavailable at launch.
+6. LiveKit per-participant keys with `BaseKeyProvider`: five webviews, key-index rotation, 30 participants, and the Rust SDK for the Steve DJ. Also: how the SDK treats frames that are not encrypted or that carry a server-injected-frame marker (12.1 rule 2); how the frame IV is built and whether it stays unique across a long call and RTP timestamp wrap-around; the maximum number of frames per key (12.1 rule 3).
+7. iOS notification service extension that can decrypt sealed pushes, verify the signed message and read epoch keys and the member list from the app group (17.3). If not shipped, `push_text` stays unavailable at launch.
 8. Platform secure storage for `RS` on Linux without a keyring running (headless desktop sessions).
