@@ -14,9 +14,9 @@ export async function setup(page: Page, name: string) {
   await expect(page.getByTestId("screen-composer")).toBeVisible();
 }
 
-export async function signIn(page: Page, name: string) {
+export async function signIn(page: Page, name: string, secret = password) {
   await page.getByLabel("Username", { exact: true }).fill(name);
-  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByLabel("Password", { exact: true }).fill(secret);
   await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByTestId("screen-composer")).toBeVisible();
 }

@@ -20,7 +20,7 @@ const child = spawn(binary, [], {
       ? { HOUSECALL_CLAMD_SOCKET: resolve("../.runtime/scan/clamd.sock") }
       : {}),
     HOUSECALL_BIND: "127.0.0.1:3031",
-    ...(process.env.HOUSECALL_TEST_VOICE === "1" || process.env.HOUSECALL_TEST_SHELL === "1"
+    ...(process.env.HOUSECALL_TEST_VOICE === "1" || process.env.HOUSECALL_TEST_SHELL === "1" || process.env.HOUSECALL_TEST_SHOTS === "1"
       ? { SFU_BIND: "127.0.0.1:50010", SFU_PUBLIC_IP: "127.0.0.1" }
       : {}),
     ...(process.env.HOUSECALL_TEST_PLEX === "1"

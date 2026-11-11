@@ -1,5 +1,6 @@
 import { test, expect, type BrowserContext } from "@playwright/test";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
+import { signIn } from "./helpers";
 const password = "correct horse battery staple";
 test("three live voice peers browse and synchronously play real HLS from a synthetic Plex provider", async ({
   browser,
@@ -31,7 +32,7 @@ test("three live voice peers browse and synchronously play real HLS from a synth
       const invitation = await (
         await request.post("/api/invites", {
           headers,
-          data: { email: "fixture@example.test", expires_in_seconds: 3600 },
+          data: { expires_in_seconds: 3600 },
         })
       ).json();
       expect(
@@ -53,57 +54,34 @@ test("three live voice peers browse and synchronously play real HLS from a synth
       const page = await context.newPage();
       page.setDefaultTimeout(10000);
       await page.goto("/");
-      await page.getByLabel("Username", { exact: true }).fill(username);
-      await page.getByLabel("Password (at least 12 characters)").fill(password);
-      await page
-        .getByTestId("screen-login")
-        .getByRole("button", { name: "Sign in", exact: true })
-        .first()
-        .click();
-      await expect(page.getByTestId("screen-composer")).toBeVisible({
-        timeout: 30000,
-      });
+      await signIn(page, username);
     }
     for (const context of contexts) {
       const page = context.pages()[0];
-      await page
-        .getByRole("button", { name: "Voice and video", exact: true })
-        .click();
-      await page
-        .getByRole("button", { name: "Join with microphone and camera" })
-        .click();
-      await expect(page.getByTestId("screen-voice")).toContainText("live", {
+      const bar = page.getByTestId("call-bar");
+      await bar.getByRole("button", { name: "Join", exact: true }).click();
+      await expect(bar).toHaveAttribute("data-phase", "live", {
         timeout: 30000,
       });
     }
+    // Everyone opens the Gimme Chord (the film plays in its panel); the host starts Watch.
+    for (const context of contexts) {
+      const page = context.pages()[0];
+      await page.getByRole("tab", { name: "Chords", exact: true }).click();
+      await page.getByTestId("chords").getByRole("button", { name: /Gimme/ }).click();
+    }
     const host = contexts[0].pages()[0];
-    await host.getByRole("button", { name: "Activity controls", exact: true }).click();
-    await host
-      .getByRole("button", { name: "Start plex control session", exact: true })
-      .click();
-    await expect(
-      host.getByRole("button", { name: "Browse Plex library", exact: true }),
-    ).toBeEnabled();
-    await host
-      .getByRole("button", { name: "Browse Plex library", exact: true })
-      .click();
-    await host
-      .getByRole("button", { name: "Browse library", exact: true })
-      .click();
-    await expect(host.getByTestId("screen-plex")).toContainText(
-      "Synthetic Plex fixture",
-    );
-    await host
-      .getByRole("button", { name: "Watch together", exact: true })
-      .click();
+    const gimme = host.getByTestId("screen-gimme");
+    await gimme.getByRole("button", { name: "Start Watch", exact: true }).click();
+    await gimme.getByRole("button", { name: "Browse library", exact: true }).click();
+    await gimme.getByRole("button", { name: "Fixture Movies", exact: true }).click();
+    await expect(gimme).toContainText("Synthetic Plex fixture");
+    await gimme.getByRole("button", { name: "Watch Now", exact: true }).click();
     for (const context of contexts)
       await expect(context.pages()[0].getByTestId("plex-media")).toBeAttached({
         timeout: 30000,
       });
-    await host
-      .getByTestId("screen-activities")
-      .getByRole("button", { name: "Play", exact: true })
-      .click();
+    await gimme.getByRole("button", { name: "Play", exact: true }).click();
     for (const context of contexts)
       await expect
         .poll(
@@ -121,10 +99,7 @@ test("three live voice peers browse and synchronously play real HLS from a synth
         .toEqual({ ready: true, playing: true, advanced: true });
     const playing=await Promise.all(contexts.map(context=>context.pages()[0].getByTestId('plex-media').evaluate((element:HTMLVideoElement)=>element.currentTime)));
     expect(Math.max(...playing)-Math.min(...playing)).toBeLessThan(0.5);
-    await host
-      .getByTestId("screen-activities")
-      .getByRole("button", { name: "Pause", exact: true })
-      .click();
+    await gimme.getByRole("button", { name: "Pause", exact: true }).click();
     for (const context of contexts)
       await expect
         .poll(() =>
@@ -151,13 +126,7 @@ test("three live voice peers browse and synchronously play real HLS from a synth
       Math.max(...paused.map((peer) => peer.time)) -
         Math.min(...paused.map((peer) => peer.time)),
     ).toBeLessThan(0.5);
-    await host
-      .getByLabel("Control command (select, enqueue, seek, handoff)")
-      .fill("seek");
-    await host.getByLabel("Seek position in milliseconds").fill("6000");
-    await host
-      .getByRole("button", { name: "Apply control command", exact: true })
-      .click();
+    await gimme.getByLabel("Position", { exact: true }).fill("6000");
     for (const context of contexts)
       await expect
         .poll(() =>
@@ -169,6 +138,7 @@ test("three live voice peers browse and synchronously play real HLS from a synth
             ),
         )
         .toBeLessThan(0.5);
+    await mkdir("../evidence", { recursive: true });
     await writeFile(
       "../evidence/client-plex-three-user.json",
       JSON.stringify(

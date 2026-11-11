@@ -2,7 +2,8 @@ import { test, expect, type Browser } from "@playwright/test";
 import { accept, invite, password, send, setupToken, signIn } from "./helpers";
 
 // Evidence run: seeds invented people and messages, then captures the app.
-// Runs with the shell spec: HOUSECALL_TEST_SHELL=1 npm run e2e
+// Rewrites the tracked PNGs in design/shots, so it has its own flag and never
+// runs with the acceptance specs: HOUSECALL_TEST_SHOTS=1 npm run e2e
 const out = "../design/shots";
 
 async function open(browser: Browser, width: number, height: number, scheme: "dark" | "light", url = "/") {

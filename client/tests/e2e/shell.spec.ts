@@ -63,7 +63,14 @@ test("shell: picker, channel, call, composer, tabs, direct messages", async ({ p
   await expect(page.getByTestId("upload")).toContainText("notes.txt");
   await page.getByRole("button", { name: "Remove notes.txt" }).click();
   await composer.getByRole("button", { name: /Emoji/ }).click();
-  await page.getByRole("option", { name: "🎉" }).click();
+  // The emoji grid takes focus on open and Escape closes it, returning focus to its button.
+  const emoji = page.getByRole("group", { name: "Emoji" });
+  await expect(emoji.getByRole("button").first()).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(emoji).toHaveCount(0);
+  await expect(composer.getByRole("button", { name: /Emoji/ })).toBeFocused();
+  await composer.getByRole("button", { name: /Emoji/ }).click();
+  await page.getByRole("button", { name: "🎉" }).click();
   await expect(composer.getByLabel("Message", { exact: true })).toHaveValue("🎉");
   await composer.getByRole("button", { name: /Emoji/ }).click();
   await composer.getByRole("button", { name: /GIF/ }).click();
@@ -87,9 +94,8 @@ test("shell: picker, channel, call, composer, tabs, direct messages", async ({ p
   await expect(page.getByTestId("call-dock")).toBeVisible();
 
   // Right column tabs.
-  await page.getByRole("tab", { name: "Chords" }).click();
-  await expect(page.getByTestId("chords").locator("button")).toHaveCount(0);
-  await page.getByRole("tab", { name: "People" }).click();
+  // No Chord is configured in this fixture, so there is no Chords tab to land on an empty pane.
+  await expect(page.getByRole("tab", { name: "Chords" })).toHaveCount(0);
   await expect(page.getByTestId("people").locator("li")).toHaveCount(1);
 
   // The mail icon opens the direct-message view.

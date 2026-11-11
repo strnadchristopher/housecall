@@ -1,8 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
+import { act, signIn } from "./helpers";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 const execute = promisify(execFile);
@@ -13,7 +14,7 @@ test("scanned upload transcodes, streams to a member before full buffering, and 
   const headers = (s: any) => ({ Authorization: `Bearer ${s.token}`, "X-Device-Key": s.device_key });
   const owner = await (await request.post("/api/setup", { data: { setup_token: "test-setup-token-at-least-32-characters", username: "video_owner", password, device_name: "fixture" } })).json();
   async function invite(username: string) {
-    const link = await (await request.post("/api/invites", { headers: headers(owner), data: { email: "fixture@example.test", expires_in_seconds: 300 } })).json();
+    const link = await (await request.post("/api/invites", { headers: headers(owner), data: { expires_in_seconds: 300 } })).json();
     return (await request.post("/api/invites/accept", { data: { token: link.token, username, password, device_name: "fixture" } })).json();
   }
   const friend = await invite("video_friend"), stranger = await invite("video_stranger");
@@ -21,9 +22,9 @@ test("scanned upload transcodes, streams to a member before full buffering, and 
   const contexts = await Promise.all([browser.newContext(), browser.newContext()]);
   const pages = await Promise.all(contexts.map(c => c.newPage()));
   async function login(page: Page, username: string) {
-    await page.goto("/"); await page.getByLabel("Username", { exact: true }).fill(username);
-    await page.getByLabel("Password (at least 12 characters)").fill(password);
-    await page.getByTestId("screen-login").locator("button[type=submit]").click();
+    await page.goto("/");
+    await signIn(page, username, password);
+    await page.getByRole("button", { name: "Direct messages", exact: true }).click();
     await page.getByRole("button", { name: "Open Private video", exact: true }).click();
   }
   try {
@@ -31,13 +32,12 @@ test("scanned upload transcodes, streams to a member before full buffering, and 
     await execute("ffmpeg", ["-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=10", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000", "-t", "60", "-c:v", "libvpx", "-deadline", "realtime", "-cpu-used", "8", "-threads", "1", "-b:v", "150k", "-c:a", "libopus", source], { timeout: 30000 });
     const [a, b] = pages;
     await login(a, "video_owner"); await login(b, "video_friend");
-    await a.getByRole("button", { name: "Upload file", exact: true }).click();
-    await a.getByLabel("File", { exact: true }).setInputFiles(source);
-    await a.getByRole("button", { name: "Upload", exact: true }).click();
-    await expect(a.getByTestId("screen-uploads")).toContainText("bytes (ready)", { timeout: 30000 });
-    await a.getByRole("button", { name: "Prepare video and thumbnail", exact: true }).click();
-    await expect(a.getByTestId("screen-uploads")).toContainText("Video: ready", { timeout: 30000 });
-    await a.getByRole("button", { name: "Attach to message", exact: true }).click();
+    // A scanned upload is attached to the draft by the composer; video preparation is offered once it is ready.
+    await a.getByTestId("screen-composer").locator('input[type="file"]').setInputFiles(source);
+    const attached = a.getByTestId("attached");
+    await expect(attached).toContainText("fixture.webm", { timeout: 30000 });
+    await a.getByRole("button", { name: "Prepare video", exact: true }).click();
+    await expect(attached).toContainText("Video ready", { timeout: 30000 });
     await a.getByTestId("screen-composer").getByLabel("Message", { exact: true }).fill("Private streamed video");
     await a.getByRole("button", { name: "Send", exact: true }).click();
     await b.getByRole("button", { name: "Play fixture.webm", exact: true }).click();
@@ -63,11 +63,13 @@ test("scanned upload transcodes, streams to a member before full buffering, and 
     }
     const thumbnail = await request.get(attachment.thumbnail_path, { headers: headers(friend) });
     expect(thumbnail.status()).toBe(200); expect(thumbnail.headers()["content-type"]).toBe("image/jpeg");
-    await a.getByRole("button", { name: "Unsend", exact: true }).click();
+    await act(a, "Private streamed video", "Unsend");
+    await a.getByRole("button", { name: "Unsend for everyone", exact: true }).click();
     await expect(video).toHaveCount(0);
     expect((await request.get(attachment.video_path, { headers: headers(friend) })).status()).toBe(409);
     expect((await request.get(`${attachment.video_path}/seek?time=55`, { headers: headers(friend) })).status()).toBe(409);
     expect((await request.get(`/api/media/${attachment.id}`, { headers: headers(friend) })).status()).toBe(404);
+    await mkdir("../evidence", { recursive: true });
     await writeFile(`../evidence/media-upload-seek-${randomUUID()}.json`, JSON.stringify({ passed: true, sourceSeconds: 60, decodedBeforeFullBuffer: state, lateSeek: late, checks: ["real ClamAV upload", "real FFmpeg encrypted video+thumbnail", "authenticated MSE decode before full buffering", "forward seek beyond retained buffer and backward seek to evicted fragment", "cross-user and anonymous denial", "thumbnail content type", "unsend stops client and deletes derivative"], limitations: "Actual browser decoder checks cover forward/backward seeks with bounded buffering; native WebView and ManagedMediaSource require separate proper-device execution." }, null, 2) + "\n", { flag: "wx" });
   } finally { for (const context of contexts) await context.close(); await rm(directory, { recursive: true, force: true }); }
 });

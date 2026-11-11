@@ -6,8 +6,10 @@ export default defineConfig({
       ? "**/native-push.spec.ts"
       : process.env.HOUSECALL_TEST_UPLOAD_VIDEO === "1"
       ? "**/upload-video.spec.ts"
+      : process.env.HOUSECALL_TEST_SHOTS === "1"
+      ? "**/shots.spec.ts" // rewrites the tracked PNGs in design/shots; never part of an acceptance run
       : process.env.HOUSECALL_TEST_SHELL === "1"
-      ? ["**/shell.spec.ts", "**/shots.spec.ts"]
+      ? "**/shell.spec.ts"
       : process.env.HOUSECALL_TEST_REPORTS === "1"
       ? "**/reports.spec.ts"
       : process.env.HOUSECALL_TEST_PLEX === "1"

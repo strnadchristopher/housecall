@@ -52,6 +52,19 @@ test("three private users: invitation, realtime mentions, unsend/retraction, edi
   await bob.getByTestId("screen-settings").getByRole("button", { name: "Close", exact: true }).click();
 
   await send(bob, "Editable message");
+  // Keyboard: one message row is the tab stop, its toolbar is entered with Enter, and Tab reaches the composer.
+  const stop = bob.locator("li.hc-msg[tabindex='0']");
+  await expect(stop).toHaveCount(1);
+  await expect(bob.locator(".hc-msg__bar button:not([tabindex='-1'])")).toHaveCount(0);
+  await stop.focus();
+  await bob.keyboard.press("Enter");
+  await expect(stop.locator(".hc-msg__bar button").first()).toBeFocused();
+  await bob.keyboard.press("Escape");
+  await expect(stop).toBeFocused();
+  const composerInput = bob.getByTestId("screen-composer").getByLabel("Message", { exact: true });
+  let presses = 0;
+  while (!(await composerInput.evaluate(node => node === document.activeElement)) && presses < 6) { await bob.keyboard.press("Tab"); presses++; }
+  expect(presses).toBeLessThan(6);
   await act(bob, "Editable message", "Edit");
   await bob.getByTestId("screen-composer").getByLabel("Message", { exact: true }).fill("Edited message");
   await bob.getByRole("button", { name: "Save edit" }).click();
@@ -62,7 +75,7 @@ test("three private users: invitation, realtime mentions, unsend/retraction, edi
   await act(owner, "Edited message", "Pin");
   await expect(row(bob, "Edited message")).toContainText("Pinned");
   await act(owner, "Edited message", "React");
-  await row(owner, "Edited message").getByRole("option", { name: "🎉" }).click();
+  await row(owner, "Edited message").getByRole("group", { name: "Emoji" }).getByRole("button", { name: "🎉", exact: true }).click();
   await expect(row(carol, "Edited message").getByRole("button", { name: "🎉 1" })).toBeVisible();
 
   await owner.getByRole("button", { name: "Search", exact: true }).click();
@@ -75,9 +88,7 @@ test("three private users: invitation, realtime mentions, unsend/retraction, edi
 
   // Nothing is configured in this fixture, so the Chords tab is empty.
   for (const page of [owner, bob, carol]) {
-    await page.getByRole("tab", { name: "Chords" }).click();
-    await expect(page.getByTestId("chords").locator("button")).toHaveCount(0);
-    await page.getByRole("tab", { name: "People" }).click();
+    await expect(page.getByRole("tab", { name: "Chords" })).toHaveCount(0);
     await expect(page.getByTestId("people").locator("li")).toHaveCount(3);
   }
 

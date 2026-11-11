@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { signIn } from "./helpers";
 
 // The native command is instrumented here; Kotlin/Keystore/FCM/device tests are separate gates.
 test("native push opt-in and cleanup failures cross the real app session boundary", async ({ page, request }) => {
@@ -32,14 +33,16 @@ test("native push opt-in and cleanup failures cross the real app session boundar
   const consoleErrors: string[] = [];
   page.on("pageerror", error => consoleErrors.push(error.name));
   await page.goto("/");
-  await page.getByLabel("Username", { exact: true }).fill("native_fixture");
-  await page.getByLabel("Password (at least 12 characters)").fill(password);
-  await page.getByTestId("screen-login").locator("button[type=submit]").click();
-  await expect(page.getByTestId("screen-composer")).toBeVisible();
-  await page.getByRole("button", { name: "Notifications", exact: true }).click();
+  // The injected Tauri bridge makes this a native build, which asks for the server address.
+  await page.getByLabel("Server address", { exact: true }).fill("http://localhost:1420");
+  await signIn(page, "native_fixture", password);
+  const settings = page.getByTestId("screen-settings");
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await settings.getByRole("button", { name: "Notifications", exact: true }).click();
   expect(await page.evaluate(() => (window as any).nativePushFixture.actions.includes("enable"))).toBe(false);
   await page.getByRole("button", { name: "Enable background notifications", exact: true }).click();
-  await expect(page.getByTestId("screen-notifications")).toContainText("Background notifications are unavailable in this app build");
+  // Errors show at the top of the settings pane.
+  await expect(settings).toContainText("Background notifications are unavailable in this app build");
   await page.evaluate(() => { (window as any).nativePushFixture.configured = true; });
   await page.getByRole("button", { name: "Enable background notifications", exact: true }).click();
   await expect(page.getByRole("button", { name: "Disable background notifications", exact: true })).toBeVisible();
@@ -52,13 +55,14 @@ test("native push opt-in and cleanup failures cross the real app session boundar
   await page.evaluate(() => { (window as any).nativePushFixture.clearFails = true; });
   let sessionDeletes = 0;
   page.on("request", req => { if (req.method() === "DELETE" && new URL(req.url()).pathname.startsWith("/api/devices/")) sessionDeletes++; });
+  await settings.getByRole("button", { name: "Account", exact: true }).click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
-  await expect(page.getByTestId("screen-notifications")).toContainText("Fixture native cleanup failed");
+  await expect(settings).toContainText("Fixture native cleanup failed");
   expect(sessionDeletes).toBe(0);
   await page.screenshot({ path: "../evidence/recovery-native-push-cleanup-error.png" });
   await page.evaluate(() => { (window as any).nativePushFixture.clearFails = false; });
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
-  await expect(page.getByTestId("screen-login")).toBeVisible();
+  await expect(page.getByTestId("screen-sign-in")).toBeVisible();
   expect(sessionDeletes).toBe(1);
   expect(await page.evaluate(() => (window as any).nativePushFixture.enabled)).toBe(false);
   expect(consoleErrors).toEqual([]);
