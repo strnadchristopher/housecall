@@ -3,7 +3,8 @@
  * Neutral black at night (equal R, G and B, no warm cast); amber is the lit
  * doorway and is reserved for small solid live and primary elements. Never
  * mix the accent into a surface: hover and selected rows step in lightness.
- * Light scheme is a cool grey paper with a warm ink and accent.
+ * Light scheme is the counterpart: neutral paper and ink (equal R, G and B),
+ * with the amber only on small live and primary elements.
  * --hc-line is at least 3:1 against surface and raised (field boundaries).
  *
  * The property list is fixed by PLAN Task 0.9. Directions B and C override
@@ -89,16 +90,16 @@
 
 @media (prefers-color-scheme: light) {
   :root {
-    --hc-bg: #dde2e5;
-    --hc-surface: #eaeef0;
-    --hc-surface-raised: #f7f9fa;
-    --hc-line: #727d85;
-    --hc-text: #2b1d15;
-    --hc-text-muted: #6a5143;
+    --hc-bg: #e6e6e6;
+    --hc-surface: #f1f1f1;
+    --hc-surface-raised: #fbfbfb;
+    --hc-line: #6e6e6e;
+    --hc-text: #1a1a1a;
+    --hc-text-muted: #595959;
     --hc-accent: #8a4a00;
-    --hc-on-accent: #fff6ea;
+    --hc-on-accent: #ffffff;
     --hc-live: #8a4a00;
     --hc-danger: #a12a1a;
-    --hc-focus: #2b1d15;
+    --hc-focus: #1a1a1a;
   }
 }

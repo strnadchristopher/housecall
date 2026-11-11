@@ -33,6 +33,8 @@ export interface CallState {
   conversationName?: string;
   /** Known only while this client is in the call (backend limit). */
   participants: CallParticipant[];
+  /** Who is in a call right now, by conversation id, for every conversation you can open. Read before joining. */
+  active: Record<string, { personId: string; name: string }[]>;
   media: CallMedia[];
   /** When this client joined, in epoch milliseconds. */
   joinedAt?: number;

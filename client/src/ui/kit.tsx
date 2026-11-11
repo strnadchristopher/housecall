@@ -8,6 +8,7 @@ import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react
 const ICONS = {
   search: "M9 3.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11M13.2 13.2L17 17",
   settings: "M3 6.5h2M9 6.5h8M3 13.5h8M15 13.5h2M7 4.5a2 2 0 1 0 0 4a2 2 0 0 0 0-4M13 11.5a2 2 0 1 0 0 4a2 2 0 0 0 0-4",
+  gear: "M10 7.4a2.6 2.6 0 1 0 0 5.2a2.6 2.6 0 0 0 0-5.2M10 2.8v2M10 15.2v2M2.8 10h2M15.2 10h2M4.9 4.9l1.4 1.4M13.7 13.7l1.4 1.4M4.9 15.1l1.4-1.4M13.7 6.3l1.4-1.4",
   mail: "M5 5h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2M3.6 6.4L10 11l6.4-4.6",
   plus: "M10 4v12M4 10h12",
   emoji: "M10 3a7 7 0 1 0 0 14a7 7 0 0 0 0-14M7 11.6c.8 1.2 1.8 1.8 3 1.8s2.2-.6 3-1.8M7.6 8v.4M12.4 8v.4",

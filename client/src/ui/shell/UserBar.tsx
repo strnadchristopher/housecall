@@ -18,7 +18,7 @@ export function UserBar() {
         <IconButton icon="mail" label={copy.userBar.messages} active={nav.left === "dm"} onClick={() => nav.set({ left: nav.left === "dm" ? "channels" : "dm", screen: "list" })} />
         {dmMentions > 0 && <span className="hc-dot" role="img" aria-label={copy.channels.mentions(dmMentions)} />}
       </span>
-      <IconButton icon="settings" label={copy.userBar.settings} active={nav.main === "settings"}
+      <IconButton icon="gear" label={copy.userBar.settings} active={nav.main === "settings"}
         onClick={() => nav.set(nav.main === "settings" ? { main: "chat" } : { main: "settings", section: "account", screen: "main" })} />
     </footer>
   );

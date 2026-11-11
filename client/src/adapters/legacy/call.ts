@@ -29,6 +29,7 @@ export function useLegacyCall(c: Housecall) {
   const [bitrate, setBitrate] = useState(510000);
   const [noiseSuppression, setNoiseSuppression] = useState(false);
   const [peers, setPeers] = useState<Peer[]>([]);
+  const [rooms, setRooms] = useState<Record<string, string[]>>({});
 
   const reset = () => { setMuted(false); setDeafened(false); setCamera(false); setChannelId(undefined); setJoinedAt(undefined); setPeers([]); };
   useEffect(() => () => voice.close(), [voice]);
@@ -36,7 +37,23 @@ export function useLegacyCall(c: Housecall) {
     if (!c.auth) { voice.close(); reset(); setSelected({}); setDevices([]); setError(""); }
   }, [c.auth, voice]);
 
-  // The server reports who is in a call only to a session that is in it.
+  // Who is in which call, for the list and the call bar before anyone joins.
+  const voiceAvailable = c.capabilities.voice === true && !!c.auth;
+  useEffect(() => {
+    if (!voiceAvailable) { setRooms({}); return; }
+    let stopped = false;
+    const tick = async () => {
+      try {
+        const result = await c.api.get<{ rooms: Record<string, string[]> }>("/api/voice/rooms");
+        if (!stopped) setRooms(result.rooms);
+      } catch { /* keep the last answer; the next tick retries */ }
+    };
+    void tick();
+    const timer = setInterval(() => void tick(), 4000);
+    return () => { stopped = true; clearInterval(timer); };
+  }, [voiceAvailable, c.api]);
+
+  // The per-peer roster is reported only to a session that is in the call.
   useEffect(() => {
     if (status.phase !== "live" || !channelId) { setPeers([]); return; }
     let stopped = false;
@@ -65,6 +82,7 @@ export function useLegacyCall(c: Housecall) {
     participants: status.phase !== "live" ? []
       : members.length ? members.map(peer => ({ id: String(peer.peer_id), personId: peer.user_id, name: nameOf(peer.user_id), me: peer.current_session, connected: peer.connected }))
       : c.auth ? [{ id: status.peerId ?? "self", personId: c.auth.user.id, name: c.auth.user.username, me: true, connected: true }] : [],
+    active: Object.fromEntries(Object.entries(rooms).map(([room, ids]) => [room, ids.map(id => ({ personId: id, name: nameOf(id) }))])),
     media: status.streams
       .filter(stream => !publishers.has(status.sourcePeers?.[stream.id] ?? ""))
       .map(stream => ({ id: stream.id, stream, participantId: status.sourcePeers?.[stream.id] || undefined, video: stream.getVideoTracks().length > 0 })),

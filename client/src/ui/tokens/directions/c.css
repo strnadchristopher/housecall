@@ -1,6 +1,6 @@
 /*
- * Direction C, "Roofline". Green-black surfaces with one terracotta accent;
- * light scheme is pale sage. Large panel radius, slow settle with a visible
+ * Direction C, "Roofline". The same neutral surfaces as A with one terracotta
+ * accent, its own type and a large panel radius, slow settle with a visible
  * overshoot. Selected with ?direction=c.
  */
 @font-face {
@@ -26,12 +26,12 @@
 }
 
 :root[data-direction="c"] {
-  --hc-bg: #0e1411;
-  --hc-surface: #151d19;
-  --hc-surface-raised: #202b25;
-  --hc-line: #6a7a71;
-  --hc-text: #e8efe5;
-  --hc-text-muted: #9faea2;
+  --hc-bg: #0c0c0c;
+  --hc-surface: #151515;
+  --hc-surface-raised: #212121;
+  --hc-line: #787878;
+  --hc-text: #ededed;
+  --hc-text-muted: #a6a6a6;
   --hc-accent: #dd8f6e;
   --hc-on-accent: #1e0f07;
   --hc-live: #dd8f6e;
@@ -71,16 +71,16 @@
 
 @media (prefers-color-scheme: light) {
   :root[data-direction="c"] {
-    --hc-bg: #dde5d9;
-    --hc-surface: #ebf1e7;
-    --hc-surface-raised: #f8fbf4;
-    --hc-line: #798575;
-    --hc-text: #132019;
-    --hc-text-muted: #4c5f53;
+    --hc-bg: #e6e6e6;
+    --hc-surface: #f1f1f1;
+    --hc-surface-raised: #fbfbfb;
+    --hc-line: #6e6e6e;
+    --hc-text: #1a1a1a;
+    --hc-text-muted: #595959;
     --hc-accent: #9c4626;
-    --hc-on-accent: #fff5ee;
+    --hc-on-accent: #ffffff;
     --hc-live: #9c4626;
     --hc-danger: #a81d3a;
-    --hc-focus: #132019;
+    --hc-focus: #1a1a1a;
   }
 }

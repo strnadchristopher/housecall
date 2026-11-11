@@ -164,6 +164,9 @@ enum Control {
         session: String,
         reply: oneshot::Sender<Result<Vec<Stats>>>,
     },
+    Rooms {
+        reply: oneshot::Sender<Vec<(String, String)>>,
+    },
 }
 impl Sfu {
     pub fn start(bind: SocketAddr, public_ip: IpAddr, authorize: Authorize) -> Result<Self> {
@@ -246,6 +249,17 @@ impl Sfu {
             .await
             .map_err(|_| Error::Busy)?
             .map_err(|_| Error::Busy)?
+    }
+    /// (room, user) for every interactive peer. No diagnostics; the caller filters by membership.
+    pub async fn rooms(&self) -> Result<Vec<(String, String)>> {
+        let (reply, rx) = oneshot::channel();
+        self.tx
+            .try_send(Control::Rooms { reply })
+            .map_err(|_| Error::Busy)?;
+        tokio::time::timeout(Duration::from_secs(5), rx)
+            .await
+            .map_err(|_| Error::Busy)?
+            .map_err(|_| Error::Busy)
     }
     pub async fn stats(&self, room: String, session: String) -> Result<Vec<Stats>> {
         let (reply, rx) = oneshot::channel();
@@ -455,6 +469,15 @@ fn run(
                     } else {
                         Err(Error::Forbidden)
                     });
+                }
+                Ok(Control::Rooms { reply }) => {
+                    let _ = reply.send(
+                        clients
+                            .iter()
+                            .filter(|c| !c.publisher)
+                            .map(|c| (c.room.clone(), c.user.clone()))
+                            .collect(),
+                    );
                 }
                 Ok(Control::Stats {
                     room,

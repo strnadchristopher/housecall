@@ -99,7 +99,6 @@ export const Message = memo(function Message({ message, grouped, me, day, stop }
             <Button kind="text" onClick={() => setPanel("")}>{copy.common.cancel}</Button>
           </div>
         )}
-      </div>
       <div className="hc-msg__bar" role="toolbar" aria-label={copy.messages.label}>
         <IconButton tabIndex={toolTab} icon="reply" label={copy.messages.reply} onClick={() => chat.reply(message.id)} />
         <IconButton tabIndex={toolTab} icon="emoji" label={copy.messages.react} active={panel === "react"} onClick={() => setPanel(panel === "react" ? "" : "react")} />
@@ -107,6 +106,7 @@ export const Message = memo(function Message({ message, grouped, me, day, stop }
         {message.link && !preview && <IconButton tabIndex={toolTab} icon="link" label={copy.messages.preview} onClick={() => void chat.preview(message.id).then(setPreview)} />}
         {message.canEdit && <IconButton tabIndex={toolTab} icon="edit" label={copy.messages.edit} onClick={() => chat.edit(message.id)} />}
         {message.canUnsend && <IconButton tabIndex={toolTab} icon="trash" className="hc-ibtn--danger" label={copy.messages.unsend} active={panel === "unsend"} onClick={() => setPanel(panel === "unsend" ? "" : "unsend")} />}
+      </div>
       </div>
     </li>
   );

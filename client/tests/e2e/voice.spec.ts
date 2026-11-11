@@ -107,6 +107,12 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
       await expect(
         bar.getByRole("button", { name: "Camera off", exact: true }),
       ).toBeVisible();
+      if (context === contexts[0] && contexts.length > 1) {
+        // Finding 2: someone who has not joined sees the running call, in the bar and in the list.
+        const other = contexts[1].pages()[0];
+        await expect(other.getByTestId("call-bar")).toHaveAttribute("data-running", "", { timeout: 15000 });
+        await expect(other.getByTestId("channel-call")).toBeVisible({ timeout: 15000 });
+      }
     }
     const evidence = [];
     for (const context of contexts) {

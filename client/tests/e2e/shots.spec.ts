@@ -62,15 +62,62 @@ test("screenshots", async ({ browser }) => {
       } else await signIn(page, "owner");
       await expect(page.getByTestId("screen-conversation")).toContainText("good blanket");
       await page.waitForTimeout(600);
+      // Park the pointer off the message list so no hover band or toolbar is in the shot.
+      await page.mouse.move(2, 2);
       await page.screenshot({ path: `${out}/main-${size}-${scheme}.png`, animations: "disabled" });
+      if (width >= 600 && scheme === "dark") {
+        // Hover state, on purpose: the toolbar sits at the top right of the message, the day label stays clear.
+        const first = page.locator(".hc-msg").first();
+        await first.hover();
+        await page.waitForTimeout(300);
+        await page.screenshot({ path: `${out}/main-1440-dark-hover.png`, animations: "disabled" });
+        await page.mouse.move(2, 2);
+        // Settings and direct messages.
+        await page.getByRole("button", { name: "Settings", exact: true }).click();
+        await expect(page.getByTestId("screen-settings")).toBeVisible();
+        await page.waitForTimeout(400);
+        await page.screenshot({ path: `${out}/settings-1440-dark.png`, animations: "disabled" });
+        await page.getByRole("button", { name: "Settings", exact: true }).click();
+        await page.getByRole("button", { name: "Direct messages", exact: true }).click();
+        await expect(page.getByTestId("screen-direct-messages")).toBeVisible();
+        await page.waitForTimeout(400);
+        await page.screenshot({ path: `${out}/dm-1440-dark.png`, animations: "disabled" });
+        // Offline.
+        await context.setOffline(true);
+        await page.evaluate(() => window.dispatchEvent(new Event("offline")));
+        await page.waitForTimeout(600);
+        await page.screenshot({ path: `${out}/offline-1440-dark.png`, animations: "disabled" });
+        await context.setOffline(false);
+      }
       await context.close();
     }
+
+  // The 1100 px breakpoint and phone landscape (844x390).
+  for (const [width, height, name] of [[1100, 800, "1100"], [844, 390, "844x390"]] as const) {
+    const { context, page } = await open(browser, width, height, "dark");
+    await signIn(page, "owner");
+    await expect(page.getByTestId("screen-conversation")).toContainText("good blanket");
+    await page.waitForTimeout(600);
+    await page.mouse.move(2, 2);
+    await page.screenshot({ path: `${out}/main-${name}-dark.png`, animations: "disabled" });
+    await context.close();
+  }
 
   for (const direction of ["b", "c"]) {
     const { context, page } = await open(browser, 1440, 900, "dark", `/?direction=${direction}`);
     await signIn(page, "owner");
     await expect(page.getByTestId("screen-conversation")).toContainText("good blanket");
+    await page.mouse.move(2, 2);
     await page.screenshot({ path: `${out}/main-1440-dark-${direction}.png` });
+    await context.close();
+  }
+  // Direction C was the one with tinted surfaces; its light scheme is shot too.
+  {
+    const { context, page } = await open(browser, 1440, 900, "light", "/?direction=c");
+    await signIn(page, "owner");
+    await expect(page.getByTestId("screen-conversation")).toContainText("good blanket");
+    await page.mouse.move(2, 2);
+    await page.screenshot({ path: `${out}/main-1440-light-c.png` });
     await context.close();
   }
   await seed.page.goto("/?direction=a");

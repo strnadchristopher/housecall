@@ -7,5 +7,5 @@
 | message the friend | 5 | ok |
 
 - invite screen offers: Join | Sign in
-- live call visible on the list before opening the channel: false
-- call bar before joining reads: "Call Join"
+- live call visible on the list before opening the channel: true
+- call bar before joining reads: "O Call in progress owner Join"

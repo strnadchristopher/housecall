@@ -37,7 +37,7 @@ export const copy = {
     gifSearch: "Search GIFs", gifSource: "Powered by GIPHY", noGifs: "No GIFs", role: "role",
   },
   call: {
-    label: "Call", join: "Join", joining: "Joining", leave: "Leave", mute: "Mute", unmute: "Unmute",
+    label: "Call", inProgress: "Call in progress", join: "Join", joining: "Joining", leave: "Leave", mute: "Mute", unmute: "Unmute",
     deafen: "Deafen", undeafen: "Undeafen", cameraOn: "Camera on", cameraOff: "Camera off",
     share: "Share screen", stopShare: "Stop sharing", devices: "Audio and video",
     people: (n: number) => (n === 1 ? "1 person" : `${n} people`), failed: "Call failed", inCallIn: (name: string) => `In call in ${name}`, switchCall: "Switch call",

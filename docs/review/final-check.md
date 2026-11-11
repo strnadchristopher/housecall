@@ -64,3 +64,34 @@ Scope: `hc-ui` at `abbb902` (shots, tokens, fix log) and the security documents 
 ## Not checked
 
 Device behaviour (iOS safe areas, WebKit composer growth), the Tauri shells, the test suites (not re-run), `PROTOCOL.md` outside sections 3.3, 3.5, 15 and 16, `CRACK-PLAN.md`, and `THREAT-MODEL.md` beyond the lines cited.
+
+## Fix log (UI and code items)
+
+Applied on `hc-ui`. Only the [UI] findings were in scope; the [SPEC] findings (9 to 15) were not touched.
+
+| # | Finding | Status | What changed |
+|---|---|---|---|
+| 1 | In-call phone capture looks broken | **Fixed, was a real bug** | Not a mid-transition capture. After Join on 390x844 the shell was scrolled 658 px up: the off-screen People sheet (`translateY(100%)`, 78% of 844) gave `.hc-shell` scrollable overflow, and a programmatic scroll moved the whole shell, so `.hc-center` sat at y=-658. `.hc-shell` is now `overflow: clip` on phones (`index.css`). `dana.spec.ts` asserts the header is on screen (y >= 0) and the bar sits between header and composer; the new `2-in-call.png` shows the normal layout. |
+| 2 | Live call invisible before Join | **Fixed** | Server: `GET /api/voice/rooms` (`server/src/voice.rs`, `Sfu::rooms` in `crates/sfu`) returns user ids per channel, only for channels the caller belongs to, with no peer ids or diagnostics. Client: `CallState.active`, polled every 4 s; `ChannelList` shows the avatars on the row and `CallBar` shows "Call in progress" with names before Join. `voice.spec.ts` now asserts a member who has not joined sees both. |
+| 3 | Hard outline on every container | **Fixed, one exception** | Removed the `--hc-line` border from the centre panel, sign-in card, message toolbar, server picker list and emoji/GIF panels; they take their edge from the tonal step (toolbar and picker get a soft shadow). `--hc-line` stays for inputs. Exception: the composer row keeps it, because it is the message input and needs a 3:1 boundary (fix 14). Say if you want it removed too. |
+| 4 | Light scheme is the banned slop grey | **Fixed** | Neutral paper `#e6e6e6 / #f1f1f1 / #fbfbfb`, neutral ink `#1a1a1a`, muted `#595959`, line `#6e6e6e`; amber `#8a4a00` only on the accent, live and primary elements. |
+| 5 | Direction C tinted surfaces | **Fixed** | C uses the same neutral surfaces and text as A in both schemes; it keeps its terracotta accent, type and radii. |
+| 6 | Hover band and toolbar over the day label | **Fixed** | The day label is row 1 of the message grid; the hover band is a `::before` on row 2 only. The toolbar moved into the message body, anchored top right. Shots are taken with the pointer parked; a deliberate hover shot was added. |
+| 7 | Flat weight, Google Fonts face | **Not done** | Needs the owner's choice of typeface (B or C, or a medium cut for A). |
+| 8 | Minor group | **Partly fixed** | Done: tap highlight set to transparent and a pressed state on icon buttons; the user bar now uses a new `gear` icon, the header keeps the sliders; the private path removed from `ui-review.md`; new shots for settings, DM, offline, 844x390, 1100 px and a hover state. Not done: "Set up a new server" for everyone (needs a product decision), Watch Now at 8 taps (owner's decision on a Watch entry), and a committed image of an in-call desktop view. The in-call and sheet phone shots are in `docs/ux/phase-2`, refreshed by the Dana run. |
+
+Other changes: `npm run test:dana` and `npm run shots` scripts in `client/package.json`.
+
+### Test results (run on this tree, after the last change)
+
+| Command | Result |
+|---|---|
+| `npm run build` (client) | passes (tsc and vite) |
+| `npm test` (client) | 2 files, 26 tests passed |
+| `npm run e2e` (client, chat suite) | 1 passed |
+| `HOUSECALL_TEST_VOICE=1 npm run e2e` | 1 passed, including the new live-call assertion |
+| `npm run test:dana` | 1 passed (phone run, header and layout assertions) |
+| `npm run shots` | 1 passed, refreshed `design/shots` |
+| `cargo test --workspace` | all suites passed (51, 16, 4, 1, 1, 1 tests; 1 ignored) |
+
+Not run: the Plex, load, upload-video, native-push, shell and reports e2e suites, and `scripts/check-public-safe.sh`. The test server uses the prebuilt `target/debug/housecall-server`, so rebuild it before running the e2e suites after server changes (`cargo build -p housecall-server`).

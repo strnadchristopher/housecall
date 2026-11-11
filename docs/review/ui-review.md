@@ -2,7 +2,7 @@
 
 **Verdict: ship after fixes.** Fix findings 1 and 2 before any deploy. Fix 3 to 9 before a native or iOS build goes out.
 
-Reviewed against `~/.hermes/plans/housecall/brief-ui.md`, `.brief/UIDesignGuidelines.md`, `.brief/PLAN.md` (1, 3.4, 4.3, 4.4, 0.8, 0.9, Phase 2) and `.brief/DECISIONS-1111.md`. "Reviewer capture" means a screenshot I took with a temporary Playwright script against the real test server (`tests/start-server.mjs`, fictional users `owner` and `mara`). Those images are in `client/test-results/review-shots/`, which git ignores, so they are not committed.
+Reviewed against `.brief/UIDesignGuidelines.md`, `.brief/PLAN.md` (1, 3.4, 4.3, 4.4, 0.8, 0.9, Phase 2) and `.brief/DECISIONS-1111.md`. "Reviewer capture" means a screenshot I took with a temporary Playwright script against the real test server (`tests/start-server.mjs`, fictional users `owner` and `mara`). Those images are in `client/test-results/review-shots/`, which git ignores, so they are not committed.
 
 ## Findings
 

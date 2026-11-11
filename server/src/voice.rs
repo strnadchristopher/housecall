@@ -13,6 +13,7 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/channels/{id}/voice/join", post(join))
         .route("/channels/{id}/voice/stats", get(stats))
+        .route("/voice/rooms", get(rooms))
         .route("/channels/{id}/voice/{peer}", delete(leave))
 }
 /// Enable explicitly with the UDP bind address and routable advertised IP from environment.
@@ -82,6 +83,25 @@ async fn join(
         .await
         .map_err(error)?;
     Ok(Json(json!(joined)))
+}
+/// Who is in a call, per channel the caller belongs to. User ids only: no peer ids, no diagnostics.
+async fn rooms(State(s): State<AppState>, Extension(p): Extension<Principal>) -> ApiResult<Value> {
+    let Some(engine) = s.voice.clone() else {
+        return Ok(Json(json!({"rooms":{}})));
+    };
+    let peers = engine.rooms().await.map_err(error)?;
+    let db = s.db.lock().unwrap();
+    let mut rooms: std::collections::BTreeMap<String, Vec<String>> = Default::default();
+    for (room, user) in peers {
+        if member(&db, &p.user.id, &room).is_err() {
+            continue;
+        }
+        let users = rooms.entry(room).or_default();
+        if !users.contains(&user) {
+            users.push(user);
+        }
+    }
+    Ok(Json(json!({"rooms":rooms})))
 }
 async fn stats(
     State(s): State<AppState>,

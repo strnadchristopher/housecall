@@ -15,7 +15,9 @@ export function ChannelList() {
       <ul>
         {channels.map(channel => {
           const here = channel.id === chat.current?.id;
-          const live = call.phase === "live" && call.conversationId === channel.id;
+          const mine = call.phase === "live" && call.conversationId === channel.id;
+          const inCall = mine ? call.participants.map(p => ({ personId: p.personId, name: p.name })) : call.active[channel.id] ?? [];
+          const live = inCall.length > 0;
           return (
             <li key={channel.id}>
               <button type="button" className={cx("hc-channel", here && "is-current", channel.mentions > 0 && "is-unread")}
@@ -26,10 +28,10 @@ export function ChannelList() {
               </button>
               {live && (
                 <div className="hc-channel__call" data-testid="channel-call" role="group" aria-label={copy.channels.inCall}>
-                  {call.participants.slice(0, 6).map(participant => (
-                    <span key={participant.id} title={participant.name}><Avatar name={participant.name} size="sm" /></span>
+                  {inCall.slice(0, 6).map(participant => (
+                    <span key={participant.personId} title={participant.name}><Avatar name={participant.name} size="sm" /></span>
                   ))}
-                  {call.participants.length > 6 && <span className="hc-channel__more">+{call.participants.length - 6}</span>}
+                  {inCall.length > 6 && <span className="hc-channel__more">+{inCall.length - 6}</span>}
                 </div>
               )}
             </li>

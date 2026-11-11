@@ -3,7 +3,7 @@ import { useCall, useChat } from "../../core/context";
 import { CallControls } from "../call/CallControls";
 import { copy } from "../copy";
 import { clock } from "../format";
-import { Avatar, Button, Icon } from "../kit";
+import { Avatar, Button, Icon, cx } from "../kit";
 
 /**
  * The one voice entry point. Idle: Join. In this channel's call: who is in
@@ -36,14 +36,21 @@ export function CallBar() {
         <CallControls />
       </section>
     );
-  if (!here)
+  if (!here) {
+    const running = call.active[chat.current.id] ?? [];
     return (
-      <section className="hc-callbar" data-testid="call-bar" aria-label={copy.call.label}>
-        <span className="hc-callbar__mark"><Icon name="phone" /></span>
-        <strong className="hc-callbar__title">{copy.call.label}</strong>
+      <section className={cx("hc-callbar", running.length > 0 && "is-live")} data-testid="call-bar" data-running={running.length > 0 ? "" : undefined} aria-label={copy.call.label}>
+        {running.length > 0
+          ? <div className="hc-callbar__people">{running.slice(0, 5).map(person => <span key={person.personId} title={person.name}><Avatar name={person.name} size="sm" /></span>)}</div>
+          : <span className="hc-callbar__mark"><Icon name="phone" /></span>}
+        <div className="hc-callbar__title">
+          <strong>{running.length > 0 ? copy.call.inProgress : copy.call.label}</strong>
+          {running.length > 0 && <small>{running.map(person => person.name).join(", ")}</small>}
+        </div>
         <Button kind="primary" onClick={() => void call.join(chat.current!.id)}>{copy.call.join}</Button>
       </section>
     );
+  }
   return (
     <section className="hc-callbar is-live" data-testid="call-bar" data-phase={call.phase} aria-label={copy.call.label}>
       <div className="hc-callbar__people">

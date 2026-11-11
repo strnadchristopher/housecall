@@ -11,7 +11,9 @@
     "e2e": "playwright test",
     "tauri": "tauri",
     "test:voice": "node tests/run-voice.mjs",
-    "test:plex": "node tests/run-plex.mjs"
+    "test:plex": "node tests/run-plex.mjs",
+    "test:dana": "node tests/run-dana.mjs",
+    "shots": "node tests/run-shots.mjs"
   },
   "dependencies": {
     "@tauri-apps/plugin-process": "^2.4.0",

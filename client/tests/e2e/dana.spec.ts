@@ -62,6 +62,16 @@ test("dana: join from a link, find the live call, send a GIF, start Watch Now, m
   await shot("2-conversation-before-join");
   await tap(bar.getByRole("button", { name: "Join", exact: true }));
   await expect(bar).toHaveAttribute("data-phase", "live", { timeout: 30000 });
+  // Final-check finding 1: the layout must not collapse after Join. The header sits above the call bar,
+  // the composer below it, and the bar is not at the top of the screen. Wait out transitions before the shot.
+  await dana.waitForTimeout(800);
+  const header = await dana.locator(".hc-header").boundingBox();
+  const barBox = await bar.boundingBox();
+  const composerBox = await dana.getByTestId("screen-composer").boundingBox();
+  expect(header && barBox && composerBox).toBeTruthy();
+  expect(header!.y).toBeGreaterThanOrEqual(0); // the shell was once scrolled 658px up by the hidden sheet's overflow
+  expect(header!.y + header!.height).toBeLessThanOrEqual(barBox!.y + 1);
+  expect(barBox!.y + barBox!.height).toBeLessThanOrEqual(composerBox!.y + 1);
   await shot("2-in-call");
 
   // 3. Send a GIF.
