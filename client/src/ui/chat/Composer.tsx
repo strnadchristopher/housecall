@@ -1,188 +1,92 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import type { ScreenProps } from '../../contracts/ui';
-import { Icon } from '../icons/Icon';
-import { Alert, emitAs, find, readValues, setNativeValue, useEmit } from '../contract';
-import { Avatar, Menu, cx } from '../primitives';
-import { useUi } from '../store';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useChat } from "../../core/context";
+import { copy } from "../copy";
+import { bytes } from "../format";
+import { Button, IconButton } from "../kit";
+import { EmojiPicker } from "./EmojiPicker";
+import { GifPicker } from "./GifPicker";
 
-const EMOJI = ['👍', '😂', '❤️', '🔥', '👀', '🎉', '😭', '🫡', '🙏', '💀', '🤝', '🍿', '🎬', '🎶', '🕹️', '💯', '😎', '🤔', '🫠', '☕'];
+/** Attach, text, emoji, GIF. Uploads, replies, edits and mention suggestions sit above the field. */
+export function Composer() {
+  const chat = useChat();
+  const [panel, setPanel] = useState<"" | "emoji" | "gif">("");
+  const input = useRef<HTMLTextAreaElement>(null);
+  const picker = useRef<HTMLInputElement>(null);
+  const upload = chat.upload;
+  useEffect(() => { if (chat.replyingTo || chat.editing) input.current?.focus(); }, [chat.replyingTo?.id, chat.editing?.id]);
+  useEffect(() => setPanel(""), [chat.current?.id]);
+  if (!chat.current) return null;
 
-/**
- * The composer. App.tsx owns the draft (it listens to input events on the
- * `body` input), mention candidates arrive as items, and the form submits
- * the body. Picking a candidate emits its own action; App rewrites the draft
- * and remounts the composer with the completed text.
- *
- * `/gimme movie|show <title>` is routed to the Gimme screen's submit intent
- * instead of being posted as text.
- */
-export function ComposerScreen(props: ScreenProps) {
-  const emit = useEmit(props);
-  const channel = useUi(s => s.channelTitle);
-  const form = useRef<HTMLFormElement>(null);
-  const input = useRef<HTMLInputElement>(null);
-  const listId = useId();
-  const [sel, setSel] = useState(0);
-  const [dismissed, setDismissed] = useState(false);
-  const [menu, setMenu] = useState<'add' | 'emoji' | null>(null);
-  const [hint, setHint] = useState('');
-  const field = props.fields?.find(f => f.name === 'body');
-  const cancel = find(props.actions, 'cancel');
-  const candidates = props.items ?? [];
-  const showList = candidates.length > 0 && !dismissed;
-  const mode = props.title === 'Edit message' ? 'edit' : props.title === 'Reply to message' ? 'reply' : 'new';
-  const [empty, setEmpty] = useState(!field?.value);
+  const submit = (event?: FormEvent) => {
+    event?.preventDefault();
+    if (chat.draft.trim() || chat.attached.length) void chat.send();
+  };
+  const onKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); }
+    if (event.key === "Escape" && (chat.replyingTo || chat.editing)) { event.preventDefault(); chat.cancelCompose(); }
+  };
+  const uploadState = upload && { uploading: copy.composer.uploading, paused: copy.composer.paused, held: copy.composer.held, ready: copy.composer.ready, failed: copy.composer.failed }[upload.state];
 
-  useEffect(() => {
-    // App remounts the composer after send, edit or a picked mention; keep focus in the box.
-    const el = input.current;
-    if (!el || matchMedia('(hover: none)').matches) return;
-    const active = document.activeElement;
-    if (!active || active === document.body || mode !== 'new' || field?.value) {
-      el.focus({ preventScroll: true });
-      const end = el.value.length;
-      el.setSelectionRange(end, end);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  function pick(i: number) {
-    const item = candidates[i];
-    const action = item?.actions?.[0];
-    if (item && action && !action.disabled) void emit(action.id, item.id);
-  }
-
-  function key(e: KeyboardEvent<HTMLInputElement>) {
-    if (showList) {
-      if (e.key === 'ArrowDown') { e.preventDefault(); setSel(s => (s + 1) % candidates.length); return; }
-      if (e.key === 'ArrowUp') { e.preventDefault(); setSel(s => (s - 1 + candidates.length) % candidates.length); return; }
-      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); pick(Math.min(sel, candidates.length - 1)); return; }
-      if (e.key === 'Escape') { e.preventDefault(); setDismissed(true); return; }
-    }
-    if (e.key === 'Escape' && cancel) { e.preventDefault(); void emit('cancel'); }
-  }
-
-  function submit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const values = readValues(e.currentTarget, props.fields);
-    const body = String(values.body ?? '').trim();
-    if (!body) return;
-    const cmd = /^\/gimme(?:\s+(movie|show|tv))?\s+(.+)$/i.exec(body);
-    if (cmd) {
-      const tv = !!cmd[1] && cmd[1].toLowerCase() !== 'movie';
-      void emitAs(props, 'gimme', 'submit', { query: cmd[2].trim(), tv });
-      setNativeValue(input.current, '');
-      setEmpty(true);
-      setHint(`Asked Gimme for ${cmd[2].trim()}. Its status shows at the top of this channel.`);
-      return;
-    }
-    if (/^\/gimme\s*$/i.test(body)) { setHint('Try /gimme movie Arrival, or /gimme show Severance.'); return; }
-    setHint('');
-    void emit('submit', undefined, values);
-  }
-
-  function insert(text: string) {
-    const el = input.current;
-    if (!el) return;
-    const at = el.selectionStart ?? el.value.length;
-    setNativeValue(el, el.value.slice(0, at) + text + el.value.slice(el.selectionEnd ?? at));
-    setEmpty(false);
-    el.focus();
-    el.setSelectionRange(at + text.length, at + text.length);
-  }
-
-  const where = channel ? `#${channel}` : 'this conversation';
   return (
-    <section data-testid="screen-composer" aria-busy={props.busy} className={cx('cc-composer', `is-${mode}`)}>
-      <Alert error={props.error} />
-      {mode !== 'new' && (
-        <div className="cc-replybar">
-          <Icon name={mode === 'edit' ? 'edit' : 'reply'} size={15} />
-          <span>{mode === 'edit' ? 'Editing your message' : 'Replying to a message'}</span>
-          {cancel && (
-            <button type="button" className="cc-btn cc-btn--quiet" disabled={props.busy || cancel.disabled} onClick={() => void emit('cancel')}>
-              <span>{cancel.label}</span>
-            </button>
-          )}
+    <form className="hc-composer" data-testid="screen-composer" onSubmit={submit}>
+      {(chat.replyingTo || chat.editing) && (
+        <div className="hc-composer__context">
+          <span>{chat.editing ? copy.composer.editing : copy.composer.replying(chat.replyingTo!.authorName)}</span>
+          <Button kind="text" onClick={chat.cancelCompose}>{copy.common.cancel}</Button>
         </div>
       )}
-      {showList && (
-        <div className="cc-ac" role="listbox" id={listId} aria-label="Mention someone">
-          <p className="cc-ac__head" aria-hidden>Mention</p>
-          <ul>
-            {candidates.map((c, i) => {
-              const a = c.actions?.[0];
-              const role = c.id.startsWith('role-');
-              const label = c.text.replace(/ \(role\)$/, '');
-              return (
-                <li key={c.id} data-item-id={c.id} role="presentation">
-                  <button type="button" role="option" id={`${listId}-${i}`} aria-selected={i === sel} aria-label={a?.label ?? c.text}
-                    className={cx('cc-ac__item', i === sel && 'is-sel')} disabled={props.busy || a?.disabled}
-                    onMouseDown={e => e.preventDefault()} onMouseEnter={() => setSel(i)} onClick={() => pick(i)}>
-                    {role ? <Icon name="at" size={18} className="cc-ac__glyph" /> : <Avatar name={label.slice(1)} size={24} presence={false} />}
-                    <span className="cc-ac__label">{label}</span>
-                    <span className="cc-ac__detail">{role ? 'role' : ''}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          <p className="cc-ac__foot" aria-hidden><kbd>↑</kbd><kbd>↓</kbd> choose <kbd>Enter</kbd> insert <kbd>Esc</kbd> close</p>
+      {chat.suggestions.length > 0 && (
+        <ul className="hc-composer__suggest" aria-label={copy.side.people}>
+          {chat.suggestions.map(suggestion => (
+            <li key={`${suggestion.kind}-${suggestion.id}`}>
+              <button type="button" onClick={() => { chat.complete(suggestion); input.current?.focus(); }}>
+                @{suggestion.label}{suggestion.kind === "role" && <small> {copy.composer.role}</small>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {upload && upload.state !== "ready" && (
+        <div className="hc-upload" data-testid="upload" data-state={upload.state}>
+          <span className="hc-upload__name"><strong>{upload.filename}</strong><small>{uploadState} · {bytes(upload.sent)} / {bytes(upload.total)}</small></span>
+          {upload.note && <span className="hc-upload__note">{upload.note}</span>}
+          {upload.state === "uploading" && <Button kind="text" onClick={chat.pauseUpload}>{copy.composer.pause}</Button>}
+          {(upload.state === "paused" || upload.state === "failed") && <Button kind="text" onClick={() => void chat.resumeUpload()}>{copy.composer.resume}</Button>}
+          {upload.state === "held" && <Button kind="text" onClick={() => void chat.checkScan()}>{copy.composer.checkScan}</Button>}
+          {upload.state === "held" && upload.canRetryScan && <Button kind="text" onClick={() => void chat.retryScan()}>{copy.composer.retryScan}</Button>}
+          <IconButton icon="close" label={`${copy.common.remove} ${upload.filename}`} onClick={chat.discardUpload} />
         </div>
       )}
-      <form ref={form} className="cc-composer__box" onSubmit={submit}>
-        <div className="cc-composer__add">
-          <button type="button" className={cx('cc-ibtn', menu === 'add' && 'is-active')} aria-label="Add to message" aria-haspopup="menu" aria-expanded={menu === 'add'} onClick={() => setMenu(m => (m === 'add' ? null : 'add'))}>
-            <Icon name="plus" size={20} />
-          </button>
-          {menu === 'add' && (
-            <Menu label="Add to message" className="cc-composer__menu" onClose={() => setMenu(null)}
-              items={[
-                { id: 'uploads', label: 'Attach a file', icon: 'upload', hint: 'any size' },
-                { id: 'gifs', label: 'Find a GIF', icon: 'sparkle' },
-                { id: 'gimme', label: 'Ask Gimme for a movie or show', icon: 'film' },
-                { id: 'activities', label: 'Start an activity', icon: 'disc' },
-              ]}
-              onPick={id => void emitAs(props, 'shell', id)} />
-          )}
-        </div>
-        <label htmlFor={`${listId}-in`} className="cc-sr">{field?.label ?? 'Message'}</label>
-        <input
-          ref={input}
-          id={`${listId}-in`}
-          name="body"
-          type="text"
-          autoComplete="off"
-          defaultValue={field?.value}
-          required={field?.required}
-          disabled={props.busy}
-          placeholder={mode === 'edit' ? 'Edit message' : `Message ${where}`}
-          role="combobox"
-          aria-autocomplete="list"
-          aria-expanded={showList}
-          aria-controls={showList ? listId : undefined}
-          aria-activedescendant={showList ? `${listId}-${sel}` : undefined}
-          onKeyDown={key}
-          onInput={e => { setDismissed(false); setSel(0); setEmpty(!e.currentTarget.value.trim()); }}
-        />
-        <div className="cc-composer__tools">
-          <button type="button" className={cx('cc-ibtn', menu === 'emoji' && 'is-active')} aria-label="Insert emoji" data-tip="Emoji" aria-expanded={menu === 'emoji'} onClick={() => setMenu(m => (m === 'emoji' ? null : 'emoji'))}>
-            <Icon name="smile" size={19} />
-          </button>
-          <button type="button" className="cc-gifbtn" aria-label="Add a GIF" data-tip="GIFs" onClick={() => void emitAs(props, 'shell', 'gifs')}>GIF</button>
-          <button type="submit" className={cx('cc-send', !empty && 'is-ready')} aria-label={props.submitLabel ?? 'Send'} data-tip={props.submitLabel ?? 'Send'} disabled={props.busy}>
-            <Icon name={mode === 'edit' ? 'check' : 'send'} size={18} />
-          </button>
-        </div>
-        {menu === 'emoji' && (
+      {chat.attached.length > 0 && (
+        <ul className="hc-composer__files">
+          {chat.attached.map(item => (
+            <li key={item.id} className="hc-upload" data-testid="attached">
+              <span className="hc-upload__name"><strong>{item.filename}</strong>
+                <small>{upload?.video ? copy.composer.video[upload.video.state] : copy.composer.ready}{upload?.video?.error ? ` · ${upload.video.error}` : ""}</small>
+              </span>
+              {upload?.canPrepareVideo && upload.filename === item.filename && <Button kind="text" onClick={() => void chat.prepareVideo()}>{copy.composer.prepareVideo}</Button>}
+              <IconButton icon="close" label={`${copy.common.remove} ${item.filename}`} onClick={() => chat.removeAttached(item.id)} />
+            </li>
+          ))}
+        </ul>
+      )}
+      {panel === "emoji" && <EmojiPicker onPick={emoji => { chat.setDraft(chat.draft + emoji); input.current?.focus(); }} />}
+      {panel === "gif" && <GifPicker onDone={() => setPanel("")} />}
+      <div className="hc-composer__row">
+        {chat.can.attach && (
           <>
-            <div className="cc-away" onMouseDown={() => setMenu(null)} aria-hidden />
-            <div className="cc-emoji-pop" role="dialog" aria-label="Insert emoji" onKeyDown={e => e.key === 'Escape' && setMenu(null)}>
-              {EMOJI.map((e, i) => <button key={e} type="button" aria-label={`Insert ${e}`} autoFocus={i === 0} onClick={() => { insert(e); setMenu(null); }}>{e}</button>)}
-            </div>
+            <IconButton icon="plus" label={copy.composer.attach} onClick={() => picker.current?.click()} />
+            <input ref={picker} type="file" className="hc-sr" tabIndex={-1} aria-label={copy.composer.attach}
+              onChange={event => { const chosen = event.target.files?.[0]; event.target.value = ""; if (chosen) void chat.attach(chosen); }} />
           </>
         )}
-      </form>
-      <p className="cc-composer__hint" aria-live="polite">{hint}</p>
-    </section>
+        <textarea ref={input} rows={1} name="body" aria-label={copy.composer.label} placeholder={copy.composer.placeholder(chat.current.name)}
+          value={chat.draft} onChange={event => chat.setDraft(event.target.value)} onKeyDown={onKey} />
+        <IconButton icon="emoji" label={copy.composer.emoji} active={panel === "emoji"} onClick={() => setPanel(panel === "emoji" ? "" : "emoji")} />
+        {chat.can.gif && <IconButton icon="gif" label={copy.composer.gif} active={panel === "gif"} onClick={() => setPanel(panel === "gif" ? "" : "gif")} />}
+        <IconButton icon="send" className="hc-composer__send" label={chat.editing ? copy.composer.saveEdit : copy.composer.send} type="submit"
+          disabled={chat.busy || !(chat.draft.trim() || chat.attached.length)} />
+      </div>
+    </form>
   );
 }

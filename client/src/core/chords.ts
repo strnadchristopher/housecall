@@ -52,10 +52,10 @@ export interface Song {
 
 export interface BrowserState {
   phase: string;
-  live: boolean;
   canStop: boolean;
   streams: MediaStream[];
-  reset?: { state: "running" | "done" | "pending" | "unknown"; message: string; canRetry: boolean };
+  /** Outcome of the last reset the server remembers, if any. */
+  resetOutcome?: string;
 }
 
 export interface ChordState {
@@ -64,8 +64,8 @@ export interface ChordState {
   inCall: boolean;
   session?: SharedSession;
   error: string;
-  gimme: { canRequest: boolean; canWatch: boolean; requests: RequestCard[]; libraries: Library[]; items: LibraryItem[]; subtitles: boolean; playerReady: boolean };
-  steve: { results: Song[]; playerReady: boolean };
+  gimme: { canRequest: boolean; canWatch: boolean; requests: RequestCard[]; libraries: Library[]; items: LibraryItem[]; subtitles: boolean; player?: string };
+  steve: { results: Song[]; player?: string };
   browser?: BrowserState;
 }
 
@@ -76,6 +76,7 @@ export interface ChordRegistry extends ChordState {
   openLibrary(id: string): Promise<void>;
   watch(itemId: string): Promise<void>;
   toggleSubtitles(): void;
+  /** Binds the shared film to a player element; returns a disposer. */
   bindWatch(element: HTMLVideoElement): () => void;
   startMusic(): Promise<void>;
   searchSongs(query: string): Promise<void>;
@@ -89,5 +90,4 @@ export interface ChordRegistry extends ChordState {
   stop(): Promise<void>;
   stopBrowser(): Promise<void>;
   checkBrowserReset(): Promise<void>;
-  retryBrowserReset(): Promise<void>;
 }

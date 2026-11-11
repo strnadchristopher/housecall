@@ -99,7 +99,7 @@ export interface IdentityProvider extends IdentityState {
   revokeDevice(id: string): Promise<void>;
   enableNotifications(): Promise<void>;
   disableBackgroundNotifications(): Promise<void>;
-  createInvite(input: { email?: string }): Promise<InviteResult>;
+  createInvite(input: { email?: string; expiresInSeconds: number }): Promise<InviteResult>;
   loadRoles(): Promise<void>;
   createRole(name: string): Promise<void>;
   assignRole(roleId: string, personId: string): Promise<void>;

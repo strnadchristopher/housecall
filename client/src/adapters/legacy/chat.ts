@@ -190,7 +190,7 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
       .filter(channel => channel.kind !== "channel" || channel.server_id === serverId)
       .map(channel => ({ id: channel.id, name: channel.name, kind: kindOf(channel), mentions: mentionsBy.get(channel.id) ?? 0 })),
     current: current ? { id: current.id, name: current.name, kind: kindOf(current), mentions: mentionsBy.get(current.id) ?? 0 } : undefined,
-    people, messages,
+    people, friends: serverPeople.map(person), messages,
     typing: c.typers.map(nameOf),
     requests: c.gimmeRequests.map((request): RequestCard => ({
       id: request.id, title: request.result?.title ?? request.request.query, media: request.request.media,

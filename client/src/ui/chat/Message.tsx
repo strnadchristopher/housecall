@@ -1,116 +1,94 @@
-import { memo, useRef, useState } from 'react';
-import type { Item } from '../../contracts/ui';
-import { Icon, ObeliskMark } from '../icons/Icon';
-import { Avatar, Sheet, cx } from '../primitives';
-import { ACTION_ICON, type Emit } from '../contract';
-import { parseMessage } from '../parse';
-import { MessageBody, excerpt, plainText } from './Markdown';
+import { memo, useEffect, useRef, useState } from "react";
+import type { ChatMessage, LinkPreview } from "../../core/chat";
+import { useChat } from "../../core/context";
+import { copy } from "../copy";
+import { bytes, time } from "../format";
+import { Avatar, Button, Icon, IconButton, cx } from "../kit";
+import { EmojiPicker } from "./EmojiPicker";
+import { GifClip } from "./GifPicker";
+import { MessageBody } from "./Markdown";
 
-/**
- * One message, rendered from a contract Item. The text content of the row is
- * kept equal to item.text (author, ": ", body, flags, reactions) so search,
- * screen readers and the E2E suite read the same sentence; the visible
- * treatment is layered on with aria-hidden decoration.
- */
-export const MessageRow = memo(function MessageRow({ item, emit, busy, grouped, me, owner }: {
-  item: Item; emit: Emit; busy?: boolean; grouped: boolean; me?: string; owner?: boolean;
-}) {
-  const [sheet, setSheetState] = useState<false | 'actions' | 'confirm'>(false);
-  const closedAt = useRef(0);
-  const setSheet = (s: false | 'actions' | 'confirm') => { if (!s) closedAt.current = Date.now(); setSheetState(s); };
-  const p = parseMessage(item.text, item.richText ? plainText(item.richText) : undefined);
-  const actions = item.actions ?? [];
-  const plays = actions.filter(a => a.id.startsWith('play-attachment:'));
-  const tools = actions.filter(a => !a.id.startsWith('play-attachment:') && a.id !== 'unsend');
-  const unsend = actions.find(a => a.id === 'unsend');
-  const mine = !!me && p.author === me;
-  const mentionsMe = !mine && !!me && new RegExp(`(^|[^\\w@])@(${escapeRe(me)}|everyone|here)(?![\\w-])`, 'i').test(p.body);
-
+function Player({ messageId, attachmentId, onClose }: { messageId: string; attachmentId: string; onClose: () => void }) {
+  const chat = useChat();
+  const element = useRef<HTMLVideoElement>(null);
+  const [error, setError] = useState("");
+  useEffect(() => (element.current ? chat.playVideo(element.current, messageId, attachmentId, setError) : undefined), [messageId, attachmentId]);
   return (
-    <li data-item-id={item.id}
-      className={cx('cc-msg', grouped && 'is-grouped', mentionsMe && 'is-mention', mine && 'is-mine', sheet && 'is-open', p.pinned && 'is-pinned')}
-      onClick={e => {
-        // Touch: tapping a message opens its actions as a bottom sheet (no hover toolbar on phones).
-        if ((e.target as HTMLElement).closest('button, a, .cc-scrim') || Date.now() - closedAt.current < 450) return;
-        if (matchMedia('(hover: none)').matches && (tools.length || unsend)) setSheet('actions');
-      }}>
-      {mentionsMe && <span className="cc-msg__shard" aria-hidden />}
-      <div className="cc-msg__gutter" aria-hidden>
-        {!grouped && <Avatar name={p.author || '?'} size={36} presence={false} />}
-      </div>
-      <div className="cc-msg__main">
-        {p.reply && <span className="cc-msg__replymark" aria-hidden><Icon name="reply" size={13} /> reply</span>}
-        <div className={cx('cc-msg__head', grouped && 'cc-sr')}>
-          <span className="cc-msg__name">{p.author}</span>
-          <span className="cc-sr">: </span>
-          {owner && <span className="cc-msg__owner" aria-hidden><ObeliskMark size={12} /></span>}
-          {p.pinned && <Icon name="pin" size={12} className="cc-msg__pinmark" />}
-        </div>
-        <MessageBody nodes={item.richText} text={p.body} me={me} />
-        <span className="cc-sr">{p.suffix}</span>
-        {p.reactions.length > 0 && (
-          <div className="cc-reacts" aria-hidden>
-            {p.reactions.map(r => <span key={r.emoji} className="cc-react"><span className="cc-react__e">{r.emoji}</span><span className="cc-num">{r.count}</span></span>)}
+    <div className="hc-player">
+      <video ref={element} controls playsInline data-testid="uploaded-media" aria-label={copy.messages.video} />
+      {error && <p className="hc-error" role="alert">{error}</p>}
+      <Button kind="text" onClick={onClose}>{copy.messages.closeVideo}</Button>
+    </div>
+  );
+}
+
+/** One message. Actions show on hover or focus (desktop) and on tap (touch). */
+export const Message = memo(function Message({ message, grouped, me }: { message: ChatMessage; grouped: boolean; me: string }) {
+  const chat = useChat();
+  const [open, setOpen] = useState(false);
+  const [panel, setPanel] = useState<"" | "react" | "unsend">("");
+  const [preview, setPreview] = useState<LinkPreview>();
+  const [playing, setPlaying] = useState<string>();
+  const onlyGif = message.gifs.length === 1 && /^https:\/\/giphy\.com\/gifs\/\w+$/.test(message.body.trim());
+  return (
+    <li className={cx("hc-msg", grouped && "is-grouped", message.mentionsMe && "is-mention", open && "is-open")} data-message-id={message.id}
+      onClick={event => { if (!(event.target as HTMLElement).closest("button, a, video, input")) setOpen(value => !value); }}>
+      <div className="hc-msg__gutter">{!grouped && <Avatar name={message.authorName} />}</div>
+      <div className="hc-msg__main">
+        {message.replyTo && (
+          <p className="hc-msg__reply"><Icon name="reply" /><strong>{message.replyTo.authorName}</strong><span>{message.replyTo.excerpt}</span></p>
+        )}
+        {!grouped && (
+          <p className="hc-msg__head">
+            <strong>{message.authorName}</strong>
+            <time dateTime={new Date(message.createdAt).toISOString()}>{time(message.createdAt)}</time>
+            {message.pinned && <span className="hc-msg__flag"><Icon name="pin" />{copy.messages.pinned}</span>}
+          </p>
+        )}
+        {!onlyGif && <MessageBody nodes={message.nodes} text={message.body} me={me} />}
+        {grouped && message.pinned && <span className="hc-msg__flag"><Icon name="pin" />{copy.messages.pinned}</span>}
+        {message.editedAt && <small className="hc-msg__edited">{copy.messages.edited}</small>}
+        {message.gifs.map(id => <GifClip key={id} id={id} title={copy.messages.gif} />)}
+        {message.attachments.map(attachment => (
+          <div key={attachment.id} className="hc-file">
+            <Icon name={attachment.video ? "film" : "file"} />
+            <span><strong>{attachment.filename}</strong><small>{bytes(attachment.size)}</small></span>
+            {attachment.video && <IconButton icon="play" label={`${copy.messages.play} ${attachment.filename}`} onClick={() => setPlaying(attachment.id)} />}
+            <IconButton icon="download" label={`${copy.messages.download} ${attachment.filename}`} onClick={() => void chat.download(attachment)} />
+          </div>
+        ))}
+        {playing && <Player messageId={message.id} attachmentId={playing} onClose={() => setPlaying(undefined)} />}
+        {preview && (
+          <a className="hc-preview" href={preview.url} target="_blank" rel="noopener noreferrer nofollow">
+            <small>{preview.hostname}</small><strong>{preview.title}</strong><span>{preview.description}</span>
+          </a>
+        )}
+        {message.reactions.length > 0 && (
+          <div className="hc-reacts">
+            {message.reactions.map(reaction => (
+              <button key={reaction.emoji} type="button" className={cx("hc-react", reaction.mine && "is-mine")}
+                aria-label={`${reaction.emoji} ${reaction.count}`} onClick={() => void chat.react(message.id, reaction.emoji)}>
+                <span>{reaction.emoji}</span><span>{reaction.count}</span>
+              </button>
+            ))}
           </div>
         )}
-        {plays.map(a => {
-          const name = a.label.replace(/^Play /, '');
-          return (
-            <div key={a.id} className="cc-file cc-file--video">
-              <Icon name="film" size={20} />
-              <div><strong>{name}</strong><span>Video, streamed from this server</span></div>
-              <button type="button" className="cc-file__play" aria-label={a.label} disabled={busy || a.disabled} onClick={() => void emit(a.id, item.id)}>
-                <Icon name="play" size={16} /><span aria-hidden>Play</span>
-              </button>
-            </div>
-          );
-        })}
+        {panel === "react" && <EmojiPicker onPick={emoji => { setPanel(""); void chat.react(message.id, emoji); }} />}
+        {panel === "unsend" && (
+          <div className="hc-msg__confirm">
+            <Button kind="danger" onClick={() => { setPanel(""); void chat.unsend(message.id); }}>{copy.messages.unsendConfirm}</Button>
+            <Button kind="text" onClick={() => setPanel("")}>{copy.common.cancel}</Button>
+          </div>
+        )}
       </div>
-      {(tools.length > 0 || unsend) && (
-        <div className="cc-msg__bar" role="toolbar" aria-label="Message actions">
-          {tools.map(a => (
-            <button key={a.id} type="button" className="cc-ibtn" aria-label={a.label} data-tip={a.label} disabled={busy || a.disabled} onClick={() => void emit(a.id, item.id)}>
-              <Icon name={ACTION_ICON[a.id] ?? 'diamond'} size={17} />
-            </button>
-          ))}
-          {unsend && (
-            <button type="button" className="cc-ibtn cc-ibtn--danger cc-msg__unsend" aria-label={unsend.label} data-tip="Unsend for everyone" disabled={busy || unsend.disabled} onClick={() => void emit(unsend.id, item.id)}>
-              <Icon name="unsend" size={17} />
-            </button>
-          )}
-        </div>
-      )}
-      {sheet && (
-        <Sheet title={sheet === 'confirm' ? 'Unsend for everyone?' : `${p.author || 'Message'}`} onClose={() => setSheet(false)}>
-          {sheet === 'actions' ? (
-            <div className="cc-actsheet">
-              <p className="cc-actsheet__quote">{excerpt(p.body, 120)}</p>
-              {tools.map(a => (
-                <button key={a.id} type="button" className="cc-actsheet__btn" disabled={busy || a.disabled} onClick={() => { setSheet(false); void emit(a.id, item.id); }}>
-                  <Icon name={ACTION_ICON[a.id] ?? 'diamond'} size={20} /><span>{a.label}</span>
-                </button>
-              ))}
-              {unsend && (
-                <button type="button" className="cc-actsheet__btn is-danger" disabled={busy || unsend.disabled} onClick={() => setSheet('confirm')}>
-                  <Icon name="unsend" size={20} /><span>{unsend.label}</span>
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="cc-actsheet">
-              <p className="cc-actsheet__note">It disappears from every device, and its notifications are pulled back where the device allows.</p>
-              <button type="button" className="cc-actsheet__btn is-danger is-solid" disabled={busy} onClick={() => { setSheet(false); void emit(unsend!.id, item.id); }}>
-                <Icon name="unsend" size={20} /><span>Unsend for everyone</span>
-              </button>
-              <button type="button" className="cc-actsheet__btn" onClick={() => setSheet('actions')}>
-                <Icon name="chevronLeft" size={20} /><span>Keep it</span>
-              </button>
-            </div>
-          )}
-        </Sheet>
-      )}
+      <div className="hc-msg__bar" role="toolbar" aria-label={copy.messages.label}>
+        <IconButton icon="reply" label={copy.messages.reply} onClick={() => chat.reply(message.id)} />
+        <IconButton icon="emoji" label={copy.messages.react} active={panel === "react"} onClick={() => setPanel(panel === "react" ? "" : "react")} />
+        <IconButton icon="pin" off={message.pinned} label={message.pinned ? copy.messages.unpin : copy.messages.pin} onClick={() => void chat.pin(message.id)} />
+        {message.link && !preview && <IconButton icon="link" label={copy.messages.preview} onClick={() => void chat.preview(message.id).then(setPreview)} />}
+        {message.canEdit && <IconButton icon="edit" label={copy.messages.edit} onClick={() => chat.edit(message.id)} />}
+        {message.canUnsend && <IconButton icon="trash" className="hc-ibtn--danger" label={copy.messages.unsend} active={panel === "unsend"} onClick={() => setPanel(panel === "unsend" ? "" : "unsend")} />}
+      </div>
     </li>
   );
 });
-
-function escapeRe(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }

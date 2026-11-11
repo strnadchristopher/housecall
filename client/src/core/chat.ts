@@ -114,6 +114,8 @@ export interface ChatState {
   current?: Conversation;
   /** Members of the current conversation's server. The backend reports no presence. */
   people: Person[];
+  /** Everyone on this server you can message or add to a channel. */
+  friends: Person[];
   messages: ChatMessage[];
   typing: string[];
   requests: RequestCard[];
