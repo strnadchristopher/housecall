@@ -97,3 +97,51 @@ All commands were run from the `hc-ui` worktree root on 2026-11-11. Disk before 
 | Token contrast computed for directions A, B and C, dark and light | All text pairs at or above 4.5:1. Field borders 1.38:1 to 1.54:1 (finding 14). |
 
 Not verified: the Tauri desktop, Android and iOS shells (no bundle builds, per D4); upload to message with a scanner; Gimme, DJ and shared-browser panels with live integrations; Add Server across two hosts.
+
+## Fix log
+
+Commits (short hashes): A `dc46a79`, B `f881f3e`, C `5c7e185`, D `891311e`, E `c5b7705`, F `b8f3bce`, G `30c65f2`.
+
+| # | Result |
+|---|---|
+| 1 | Fixed (A). Stale line reworded. The Grep tool with the script's pattern finds only the allow-listed upstream URL. `scripts/check-public-safe.sh` itself was refused by the harness, so I did not see `public-safe: OK` printed. Run it once. |
+| 2 | Fixed (B). In another conversation the call bar reads "In call in <name>" with mute, deafen, camera, share and leave; on a phone in settings the dock is shown in the pane. Shell spec checks it at 390x844. |
+| 3 | Fixed (B), without a test. An inactive host now leaves its call, so the microphone never runs with no controls. There is no confirm. No React-level test harness exists and the web e2e has one host. |
+| 4 | Fixed (B). New 1100 px breakpoint: the right column is a sheet; safe-area padding now on `.hc-root` for all layouts. Not checked on a device or re-captured at 844x390. |
+| 5 | Fixed (B): `viewport-fit=cover`. Not verified on an iPhone. |
+| 6 | Fixed (D). Icons regenerated from the logo. I also committed the tracked platform icon images under `src-tauri/gen/android` and `gen/apple`, which the review did not list; no config changed. |
+| 7 | Fixed (E, plus runner in G). All four specs ported; screenshot run has its own flag (`HOUSECALL_TEST_SHOTS`, `tests/run-shots.mjs`). Plex and native-push pass. Reports and upload-video are ported but **not run**: no ClamAV socket here. |
+| 8 | Partly fixed (F). Written: `docs/ux/phase-2.md` (scripted Dana run, not a person), `SCREENS.md`, `COMPONENTS.md`; `SURFACES.md` and `HANDOFF.md` corrected. The Dana run finds: Watch Now takes 8 taps (RED) and a live call is not visible before joining. Neither is fixed (flow redesign / needs the LiveKit adapter). |
+| 9 | Fixed (B). Roving tabindex, arrows, Enter/Escape for the toolbar, skip link. Chat spec asserts it. |
+| 10 | Fixed (B). Light scheme is cool grey with warm ink; screenshots refreshed (G). |
+| 11 | Not fixed, recorded as a known deviation in `design/directions/README.md` for the owner's direction pick (a non-Google face cannot be sourced here). |
+| 12 | Not fixed. `/api/channels` returns no member list, so it needs a server change. |
+| 13 | Fixed (B). Join elsewhere asks "Switch call" and leaves properly first; deafen closes and restores the microphone. |
+| 14 | Fixed (B). Composer focus ring; `--hc-line` at least 3:1 against surface and raised in all directions (computed). |
+| 15 | Fixed (B, C). Tabs pattern, emoji group with focus and Escape, decorative logo hidden, aside labelled "Details", day label moved into the message item. |
+| 16 | Partly fixed (C). Server enums (browser phase, reset outcome, report status, capability ids) map through `copy.ts`. Adapter error strings are still in the adapters (larger refactor). |
+| 17 | Fixed (C). About lists six member-facing features. |
+| 18 | Partly fixed (C). No setup link with an invite token; one "Reconnecting" label. Hiding setup otherwise needs the server to report it is unclaimed, which it does not. |
+| 19 | Fixed (C). Passkey flows, their test and the dependency removed; `cancelNativePasskey` kept. `reducedMotion`/`duration` removed (B). |
+| 20 | Fixed (C). Email path removed; helper asserts the link. |
+| 21 | Fixed (B). Chords tab hidden when empty; Check reset gated on `vm_reset`. |
+| 22 | Fixed (C). `attempt` returns success; forms act only on success; "Loading" label while a conversation opens. |
+| 23 | Fixed (B). Subtitle removed. |
+| 24 | Fixed (F). Initials use Apfel Grotezk (round O); glyph sheet checked A to Z against 0 to 9. |
+| 25 | Fixed (B). Script fallback when `field-sizing` is missing. Not verified on WebKit. |
+
+### Test results (2026-11-11, from `client`)
+
+| Command | Result |
+|---|---|
+| `npm run build` | exit 0 (chunk-size warning only) |
+| `npm test` | 2 files, 26 tests passed (the passkey test file was removed with finding 19) |
+| `npm run e2e` | chat: 1 passed |
+| `HOUSECALL_TEST_SHELL=1 npm run e2e` | shell: 1 passed |
+| `HOUSECALL_TEST_VOICE=1 npm run e2e` | voice: 1 passed |
+| `npm run test:plex` | plex: 1 passed |
+| `HOUSECALL_TEST_NATIVE_PUSH=1 npm run e2e` | native-push: 1 passed |
+| `node tests/run-dana.mjs` | 1 passed (results in `docs/ux/phase-2.md`) |
+| `node tests/run-shots.mjs` | 1 passed; 14 images in `design/shots/` refreshed |
+| `HOUSECALL_TEST_REPORTS=1` / `HOUSECALL_TEST_UPLOAD_VIDEO=1` | not run: need a ClamAV socket (`.runtime/scan/clamd.sock`), absent |
+| `scripts/check-public-safe.sh` | not run (refused); Grep with its pattern: only the allow-listed upstream URL |
