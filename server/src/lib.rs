@@ -11,6 +11,8 @@ pub mod passkeys;
 pub mod plex;
 pub mod profile;
 pub mod push;
+/// 1:1 calls: ring and decline in a direct conversation.
+pub mod ring;
 pub mod servers;
 pub mod setup;
 /// View-once photos: open once per recipient, deleted when everyone has or after 24 hours.
@@ -107,6 +109,8 @@ pub struct AppState {
     pub vm_media: Arc<vm_media::Publisher>,
     pub vm_operations: Arc<tokio::sync::Mutex<()>>,
     pub invite_mail: Arc<InviteMailConfig>,
+    /// Last ring time (ms) per conversation, for the one-ring-per-10-seconds limit.
+    pub rings: Arc<Mutex<HashMap<String, i64>>>,
 }
 #[derive(Clone)]
 pub struct InviteMailConfig {
@@ -254,6 +258,7 @@ impl AppState {
                 mail_from: None,
                 public_url: "http://localhost:1420".into(),
             }),
+            rings: Default::default(),
         })
     }
     fn limited(&self, key: String, max: u32) -> bool {
@@ -292,6 +297,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .merge(plex::routes())
         .merge(transcode::routes())
         .merge(voice::routes())
+        .merge(ring::routes())
         .merge(vm::routes())
         .merge(vm_media::routes())
         .merge(vm_reset::routes())

@@ -3,7 +3,7 @@ use crate::{now, ApiError, ApiResult, AppState, Principal};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    routing::{get, post},
+    routing::{get, post, put},
     Extension, Json, Router,
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
@@ -218,6 +218,7 @@ pub fn init(db: &Connection) -> rusqlite::Result<()> {
     db.execute_batch("CREATE TABLE IF NOT EXISTS push_devices(id TEXT PRIMARY KEY,session_id TEXT NOT NULL UNIQUE REFERENCES sessions(id) ON DELETE CASCADE,user_id TEXT NOT NULL REFERENCES users(id),provider TEXT NOT NULL CHECK(provider IN ('apns','fcm')),token_hash TEXT NOT NULL,token_cipher BLOB NOT NULL,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,UNIQUE(provider,token_hash));
     CREATE TABLE IF NOT EXISTS push_events(id TEXT PRIMARY KEY,device_id TEXT NOT NULL REFERENCES push_devices(id) ON DELETE CASCADE,user_id TEXT NOT NULL REFERENCES users(id),message_id TEXT NOT NULL,channel_id TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,kind TEXT NOT NULL CHECK(kind IN ('alert','retract')),state TEXT NOT NULL CHECK(state IN ('queued','inflight','accepted','acknowledged','failed')),attempts INTEGER NOT NULL DEFAULT 0,next_at INTEGER NOT NULL,lease_until INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,last_error TEXT,UNIQUE(device_id,message_id,kind));
     CREATE INDEX IF NOT EXISTS push_due ON push_events(state,next_at);CREATE INDEX IF NOT EXISTS push_message ON push_events(message_id);
+    CREATE TABLE IF NOT EXISTS voip_devices(session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,user_id TEXT NOT NULL,token_hash TEXT NOT NULL UNIQUE,token_cipher BLOB NOT NULL,created_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS push_meta(id INTEGER PRIMARY KEY CHECK(id=1),overflow_count INTEGER NOT NULL DEFAULT 0);INSERT OR IGNORE INTO push_meta(id) VALUES(1);")
 }
 fn insert_event(
@@ -316,6 +317,7 @@ pub fn routes() -> Router<AppState> {
         .route("/push/device", get(device).put(register).delete(unregister))
         .route("/push/events", get(events))
         .route("/push/events/{id}/ack", post(acknowledge))
+        .route("/push/voip", put(register_voip).delete(unregister_voip))
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -399,6 +401,101 @@ async fn register(
     Ok(Json(
         json!({"registered":true,"id":id,"provider":input.provider,"delivery_enabled":true}),
     ))
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct VoipRegistration {
+    token: String,
+}
+/// iOS PushKit token for this session, used only to ring a 1:1 call. Stored encrypted with the
+/// push token key, bound to the session, and never returned. The same phone signing in as
+/// someone else moves its token to the new session so it rings for the account in use.
+async fn register_voip(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Json(input): Json<VoipRegistration>,
+) -> ApiResult<Value> {
+    let key = s.push.key.as_ref().ok_or_else(unavailable)?;
+    if s.push.provider("apns").is_none() {
+        return Err(unavailable());
+    }
+    if !token_valid(Kind::Apns, &input.token) {
+        return Err(crate::bad("invalid push token"));
+    }
+    let token = input.token.to_ascii_lowercase();
+    let token_hash = crate::hash(&token);
+    let cipher = seal_token(key, &p.session_id, &token).map_err(|_| unavailable())?;
+    let mut db = s.db.lock().unwrap();
+    let tx = db.transaction()?;
+    tx.execute("DELETE FROM voip_devices WHERE session_id IN (SELECT id FROM sessions WHERE expires_at<=?1)",[now()])?;
+    tx.execute(
+        "DELETE FROM voip_devices WHERE token_hash=?1 AND session_id<>?2",
+        params![token_hash, p.session_id],
+    )?;
+    tx.execute("INSERT INTO voip_devices(session_id,user_id,token_hash,token_cipher,created_at) VALUES(?1,?2,?3,?4,?5) ON CONFLICT(session_id) DO UPDATE SET user_id=excluded.user_id,token_hash=excluded.token_hash,token_cipher=excluded.token_cipher",params![p.session_id,p.user.id,token_hash,cipher,now()])?;
+    tx.commit()?;
+    Ok(Json(json!({"registered":true})))
+}
+async fn unregister_voip(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+) -> ApiResult<Value> {
+    s.db.lock().unwrap().execute(
+        "DELETE FROM voip_devices WHERE session_id=?1 AND user_id=?2",
+        params![p.session_id, p.user.id],
+    )?;
+    Ok(Json(json!({"ok":true})))
+}
+/// Rings every iOS device of `user` through APNs. Best effort and never retried: a ring that
+/// arrives late is worse than none. Tokens and provider replies are never logged.
+pub(crate) async fn send_voip_ring(s: &AppState, user: &str, channel: &str, from: &str) {
+    let (Some(key), Some(provider)) = (s.push.key.as_ref(), s.push.provider("apns")) else {
+        return;
+    };
+    let rows = {
+        let db = s.db.lock().unwrap();
+        let found = db
+            .prepare("SELECT v.session_id,v.token_cipher FROM voip_devices v JOIN sessions s ON s.id=v.session_id WHERE v.user_id=?1 AND s.expires_at>?2")
+            .and_then(|mut q| {
+                q.query_map(params![user, now()], |r| Ok((r.get::<_, String>(0)?, r.get::<_, Vec<u8>>(1)?)))?
+                    .collect::<rusqlite::Result<Vec<_>>>()
+            });
+        match found {
+            Ok(rows) => rows,
+            Err(_) => {
+                tracing::warn!("VoIP device lookup failed");
+                return;
+            }
+        }
+    };
+    if rows.is_empty() {
+        return;
+    }
+    let bearer = match provider.bearer(&s.push.http).await {
+        Ok(bearer) => bearer,
+        Err(_) => {
+            tracing::warn!("VoIP ring skipped: APNs credentials unusable");
+            return;
+        }
+    };
+    for (session, cipher) in rows {
+        let Ok(token) = open_token(key, &session, &cipher) else {
+            continue;
+        };
+        match provider
+            .send_voip(&s.push.http, &bearer, &token, channel, from)
+            .await
+        {
+            Outcome::Accepted => {}
+            Outcome::InvalidToken => {
+                let _ =
+                    s.db.lock()
+                        .unwrap()
+                        .execute("DELETE FROM voip_devices WHERE session_id=?1", [&session]);
+            }
+            _ => tracing::warn!("VoIP ring was not accepted by APNs"),
+        }
+    }
 }
 async fn device(State(s): State<AppState>, Extension(p): Extension<Principal>) -> ApiResult<Value> {
     let db = s.db.lock().unwrap();
@@ -668,6 +765,50 @@ impl Provider {
             || status == reqwest::StatusCode::INTERNAL_SERVER_ERROR
         {
             return Outcome::Retry(delay, "provider_retryable");
+        }
+        Outcome::Failed("provider_rejected")
+    }
+    /// A VoIP push wakes the app and must be reported to CallKit at once, so it is sent at
+    /// priority 10, expires after 30 seconds and carries only who is calling and where.
+    async fn send_voip(
+        &self,
+        http: &reqwest::Client,
+        bearer: &str,
+        token: &str,
+        channel: &str,
+        from: &str,
+    ) -> Outcome {
+        let Ok(url) = self.origin.join(&format!("3/device/{token}")) else {
+            return Outcome::Failed("invalid_device_token");
+        };
+        let response = match http
+            .post(url)
+            .bearer_auth(bearer)
+            .header("apns-topic", format!("{}.voip", self.credentials.topic))
+            .header("apns-push-type", "voip")
+            .header("apns-priority", "10")
+            .header("apns-id", Uuid::new_v4().to_string())
+            .header("apns-expiration", (now() / 1000 + 30).to_string())
+            .json(&json!({"housecall":{"kind":"ring","channel_id":channel,"from":from}}))
+            .send()
+            .await
+        {
+            Ok(response) => response,
+            Err(_) => return Outcome::Failed("delivery_outcome_unknown"),
+        };
+        if !self.fixture && response.version() != reqwest::Version::HTTP_2 {
+            return Outcome::Failed("apns_requires_http2");
+        }
+        let status = response.status();
+        if status == reqwest::StatusCode::OK {
+            return Outcome::Accepted;
+        }
+        let value: Value = match bounded_body(response).await {
+            Ok(body) => serde_json::from_slice(&body).unwrap_or(Value::Null),
+            Err(_) => Value::Null,
+        };
+        if status == reqwest::StatusCode::GONE && value["reason"] == "Unregistered" {
+            return Outcome::InvalidToken;
         }
         Outcome::Failed("provider_rejected")
     }
@@ -1203,6 +1344,232 @@ mod tests {
         assert!(!cipher
             .windows(32)
             .any(|v| v == b"11111111111111111111111111111111"));
+    }
+    async fn put_voip(s: &AppState, actor: Option<char>, token: String) -> StatusCode {
+        call(s, actor, "PUT", "/api/push/voip", json!({"token":token}))
+            .await
+            .0
+    }
+    #[tokio::test]
+    async fn voip_tokens_need_a_session_are_encrypted_and_follow_the_phone() {
+        let mut s = seed(":memory:");
+        let token = "ab".repeat(32);
+        assert_eq!(
+            put_voip(&s, Some('b'), token.clone()).await,
+            StatusCode::SERVICE_UNAVAILABLE
+        );
+        s.push = worker(Kind::Apns, "http://127.0.0.1:9/");
+        for (method, body) in [("PUT", json!({"token":token})), ("DELETE", json!(null))] {
+            assert_eq!(
+                call(&s, None, method, "/api/push/voip", body).await.0,
+                StatusCode::UNAUTHORIZED
+            );
+        }
+        assert_eq!(
+            put_voip(&s, None, token.clone()).await,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            put_voip(&s, Some('b'), "not-hex".into()).await,
+            StatusCode::BAD_REQUEST
+        );
+        let (status, body) = call(
+            &s,
+            Some('b'),
+            "PUT",
+            "/api/push/voip",
+            json!({"token":token.to_uppercase()}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(!body.to_string().contains(&token));
+        {
+            let db = s.db.lock().unwrap();
+            let (user, hash, cipher): (String, String, Vec<u8>) = db
+                .query_row(
+                    "SELECT user_id,token_hash,token_cipher FROM voip_devices WHERE session_id='bob'",
+                    [],
+                    |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+                )
+                .unwrap();
+            assert_eq!(user, "bob");
+            assert_eq!(hash, crate::hash(&token));
+            assert!(!cipher.windows(16).any(|v| v == &token.as_bytes()[..16]));
+            assert_eq!(open_token(&[42; 32], "bob", &cipher).unwrap(), token);
+            assert!(open_token(&[42; 32], "alice", &cipher).is_err());
+        }
+        // Registering again from the same session replaces, not duplicates.
+        assert_eq!(put_voip(&s, Some('b'), token.clone()).await, StatusCode::OK);
+        // The same phone signing in on another session takes the token over.
+        assert_eq!(put_voip(&s, Some('d'), token.clone()).await, StatusCode::OK);
+        {
+            let db = s.db.lock().unwrap();
+            let sessions: Vec<String> = db
+                .prepare("SELECT session_id FROM voip_devices")
+                .unwrap()
+                .query_map([], |r| r.get(0))
+                .unwrap()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            assert_eq!(sessions, vec!["bob2".to_owned()]);
+        }
+        // Another session cannot remove it; the owning one can.
+        call(&s, Some('a'), "DELETE", "/api/push/voip", json!(null)).await;
+        call(&s, Some('b'), "DELETE", "/api/push/voip", json!(null)).await;
+        let count = |s: &AppState| -> i64 {
+            s.db.lock()
+                .unwrap()
+                .query_row("SELECT count(*) FROM voip_devices", [], |r| r.get(0))
+                .unwrap()
+        };
+        assert_eq!(count(&s), 1);
+        call(&s, Some('d'), "DELETE", "/api/push/voip", json!(null)).await;
+        assert_eq!(count(&s), 0);
+        // Deleting the session removes its token with it.
+        assert_eq!(put_voip(&s, Some('b'), token).await, StatusCode::OK);
+        s.db.lock()
+            .unwrap()
+            .execute("DELETE FROM sessions WHERE id='bob'", [])
+            .unwrap();
+        assert_eq!(count(&s), 0);
+    }
+    #[tokio::test]
+    async fn ring_sends_a_voip_push_with_the_right_type_topic_priority_and_payload() {
+        let fixture = Fixture::new(vec![], false);
+        let mut s = seed(":memory:");
+        s.push = worker(Kind::Apns, &fixture.origin);
+        let token = "1".repeat(64);
+        assert_eq!(
+            call(
+                &s,
+                Some('b'),
+                "PUT",
+                "/api/push/voip",
+                json!({"token":token})
+            )
+            .await
+            .0,
+            StatusCode::OK
+        );
+        let (_, dm) = call(
+            &s,
+            Some('a'),
+            "POST",
+            "/api/channels",
+            json!({"name":"pair","kind":"dm","member_ids":["bob"]}),
+        )
+        .await;
+        let channel = dm["id"].as_str().unwrap().to_owned();
+        let before = now() / 1000;
+        let (status, _) = call(
+            &s,
+            Some('a'),
+            "POST",
+            &format!("/api/channels/{channel}/ring"),
+            json!({}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        fixture.wait_arrived().await;
+        let request = fixture
+            .seen
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|v| !v.starts_with("POST /token "))
+            .cloned()
+            .unwrap();
+        let (head, _) = request.split_once("\r\n\r\n").unwrap();
+        assert!(head.starts_with(&format!("POST /3/device/{token} ")));
+        let header = |name: &str| {
+            head.lines().find_map(|line| {
+                let (key, value) = line.split_once(':')?;
+                key.eq_ignore_ascii_case(name)
+                    .then(|| value.trim().to_owned())
+            })
+        };
+        assert_eq!(header("apns-push-type").as_deref(), Some("voip"));
+        assert_eq!(
+            header("apns-topic").as_deref(),
+            Some("com.housecall.fixture.voip")
+        );
+        assert_eq!(header("apns-priority").as_deref(), Some("10"));
+        let expiry: i64 = header("apns-expiration").unwrap().parse().unwrap();
+        assert!((before + 29..=before + 35).contains(&expiry), "{expiry}");
+        assert!(header("authorization")
+            .unwrap()
+            .to_ascii_lowercase()
+            .starts_with("bearer "));
+        assert_eq!(
+            fixture.payloads(),
+            vec![json!({"housecall":{"kind":"ring","channel_id":channel,"from":"alice"}})]
+        );
+        // The caller's own phone is never rung: Alice has no token, and Bob's ring went once.
+        assert_eq!(fixture.payloads().len(), 1);
+    }
+    #[tokio::test]
+    async fn ring_still_works_without_push_and_drops_a_gone_token() {
+        let (mut s, dm) = {
+            let s = seed(":memory:");
+            let (_, dm) = call(
+                &s,
+                Some('a'),
+                "POST",
+                "/api/channels",
+                json!({"name":"pair","kind":"dm","member_ids":["bob"]}),
+            )
+            .await;
+            let dm = dm["id"].as_str().unwrap().to_owned();
+            (s, dm)
+        };
+        // APNs not configured: the in-app ring is delivered and nothing else is attempted.
+        let path = format!("/api/channels/{dm}/ring");
+        assert_eq!(
+            call(&s, Some('a'), "POST", &path, json!({})).await.0,
+            StatusCode::OK
+        );
+        let rings: i64 =
+            s.db.lock()
+                .unwrap()
+                .query_row(
+                    "SELECT count(*) FROM events WHERE kind='call.ring' AND user_id='bob'",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap();
+        assert_eq!(rings, 1);
+        // APNs says the token is gone (410 Unregistered): the row is deleted.
+        let fixture = Fixture::new(vec![410], false);
+        s.push = worker(Kind::Apns, &fixture.origin);
+        call(
+            &s,
+            Some('b'),
+            "PUT",
+            "/api/push/voip",
+            json!({"token":"2".repeat(64)}),
+        )
+        .await;
+        s.rings.lock().unwrap().clear();
+        assert_eq!(
+            call(&s, Some('a'), "POST", &path, json!({})).await.0,
+            StatusCode::OK
+        );
+        fixture.wait_arrived().await;
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                let rows: i64 =
+                    s.db.lock()
+                        .unwrap()
+                        .query_row("SELECT count(*) FROM voip_devices", [], |r| r.get(0))
+                        .unwrap();
+                if rows == 0 {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
     }
     #[test]
     fn jwt_signatures_and_encrypted_tokens_use_expected_algorithms() {
