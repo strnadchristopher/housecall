@@ -200,9 +200,9 @@ test("motion: settings and pickers slide out and are gone at once under reduced 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(settings).toBeVisible();
   await settings.getByRole("button", { name: "Close", exact: true }).click();
-  expect(await settings.count()).toBe(0);
+  await expect(settings).toHaveCount(0, { timeout: 250 });
   await page.getByTestId("screen-composer").getByRole("button", { name: "Emoji", exact: true }).click();
   await expect(emoji).toBeVisible();
   await page.keyboard.press("Escape");
-  expect(await emoji.count()).toBe(0);
+  await expect(emoji).toHaveCount(0, { timeout: 250 });
 });

@@ -42,7 +42,8 @@ test("scanned upload transcodes, streams to a member before full buffering, and 
     await a.getByRole("button", { name: "Send", exact: true }).click();
     // The video is in the message already: no Play click and no download.
     const video = b.getByTestId("uploaded-media");
-    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState)).toBeGreaterThanOrEqual(2);
+    // preload="metadata" may stop at HAVE_METADATA until playback is requested, so wait for metadata, then play.
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState)).toBeGreaterThanOrEqual(1);
     await video.evaluate((v: HTMLVideoElement) => v.play());
     await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime)).toBeGreaterThan(1);
     const state = await video.evaluate((v: HTMLVideoElement) => ({ time: v.currentTime, bufferedEnd: v.buffered.end(v.buffered.length - 1), frames: v.getVideoPlaybackQuality().totalVideoFrames, error: v.error?.code ?? 0 }));

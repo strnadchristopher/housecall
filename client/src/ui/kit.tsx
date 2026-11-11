@@ -120,7 +120,8 @@ export function Presence({ show, children, ms = 190 }: { show: boolean; children
     if (show) { setMounted(true); return; }
     return afterExit(ms, prefersReducedMotion(), () => setMounted(false));
   }, [show, ms]);
-  if (!show && !mounted) return null;
+  // Reduced motion unmounts in the same commit as the close, not a frame later in the effect.
+  if (!show && (!mounted || prefersReducedMotion())) return null;
   return <div className="hc-presence" data-state={show ? "enter" : "exit"} inert={!show}>{children}</div>;
 }
 
