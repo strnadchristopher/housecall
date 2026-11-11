@@ -43,7 +43,7 @@ a { color: var(--hc-accent); }
 .hc-avatar {
   display: inline-grid; place-items: center; flex: none; width: var(--hc-space-6); height: calc(var(--hc-space-6) * 1.125);
   border-radius: 50% 50% var(--hc-radius-sm) var(--hc-radius-sm) / 44.4% 44.4% var(--hc-radius-sm) var(--hc-radius-sm);
-  font-size: var(--hc-text-sm); font-weight: var(--hc-weight-bold); line-height: 1; color: var(--hc-text);
+  font-family: var(--hc-font-initial); font-size: var(--hc-text-sm); font-weight: var(--hc-weight-bold); line-height: 1; color: var(--hc-text);
   padding-top: calc(var(--hc-space-1) / 2);
   background: color-mix(in oklab, var(--hc-accent) 32%, var(--hc-surface-raised));
 }

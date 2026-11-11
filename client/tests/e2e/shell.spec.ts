@@ -101,5 +101,24 @@ test("shell: picker, channel, call, composer, tabs, direct messages", async ({ p
   // The mail icon opens the direct-message view.
   await page.getByRole("button", { name: "Direct messages", exact: true }).click();
   await expect(page.getByTestId("screen-direct-messages")).toBeVisible();
+
+  // Call elsewhere, on a phone: another conversation says where the call is and keeps mute and leave
+  // in reach (the dock lives in the hidden list there). Joining here asks before leaving the call.
+  await page.getByRole("button", { name: "Server settings", exact: true }).click();
+  await page.getByTestId("screen-settings").getByRole("button", { name: "Channels", exact: true }).click();
+  await page.getByLabel("Channel name", { exact: true }).fill("garden");
+  await page.getByRole("button", { name: "Create channel", exact: true }).click();
+  await expect(page.getByTestId("screen-settings")).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  // A phone shows the list first, where the dock is in view; open the other conversation from there.
+  await expect(page.getByTestId("call-dock")).toBeVisible();
+  await page.getByRole("button", { name: "Open garden", exact: true }).click();
+  await expect(bar).toHaveAttribute("data-elsewhere", "");
+  await expect(bar).toContainText("In call in");
+  await expect(bar.getByRole("button", { name: "Mute", exact: true })).toBeVisible();
+  await bar.getByRole("button", { name: "Join", exact: true }).click();
+  await expect(bar.getByRole("button", { name: "Switch call", exact: true })).toBeVisible();
+  await bar.getByRole("button", { name: "Cancel", exact: true }).click();
   await bar.getByRole("button", { name: "Leave", exact: true }).click();
+  await expect(bar.getByRole("button", { name: "Join", exact: true })).toBeVisible();
 });

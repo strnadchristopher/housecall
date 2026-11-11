@@ -10,12 +10,12 @@ passkey screens, the theme picker, the create-server screen.
 
 | # | Old surface | New home |
 |---|---|---|
-| 1 | Sign in (username, password) | `onboarding/SignIn.tsx` |
+| 1 | Sign in (username, password) | `onboarding/Onboarding.tsx` (mode `sign-in`) |
 | 2 | Server URL field on sign-in, invite and setup | Same screens, "Server address" field. Shown on native builds; on web it is hidden because the page host is the server |
-| 3 | Accept invitation (token, display name, password, three-step indicator) | `onboarding/JoinServer.tsx`. The token field is hidden when the link supplied it. The step indicator is dropped (the form is one step) |
-| 4 | First-run setup (setup token, username, password) | `onboarding/CreateAccount.tsx` (first-admin setup) |
+| 3 | Accept invitation (token, display name, password, three-step indicator) | `onboarding/Onboarding.tsx` (mode `join`). The token field is hidden when the link supplied it. The step indicator is dropped (the form is one step) |
+| 4 | First-run setup (setup token, username, password) | `onboarding/Onboarding.tsx` (mode `setup`, first admin). The link to it is not offered with an invite token |
 | 5 | Mode switch (Sign in, Use invitation, First-run setup) | Text links under each onboarding form |
-| 6 | Invite deep link and `#invite=` prefill | `adapters/legacy/identity.ts` keeps `subscribeInviteLinks`; opens `JoinServer` |
+| 6 | Invite deep link and `#invite=` prefill | `adapters/legacy/identity.ts` keeps `subscribeInviteLinks`; opens the `join` mode of `onboarding/Onboarding.tsx` |
 | 7 | "Sign in with passkey", "Passkeys coming soon on desktop" | Removed by plan |
 | 8 | Password length hint | Field label "Password, 12 or more characters" |
 | 9 | Error alert, busy state | Inline error line and busy button in every onboarding form |
@@ -39,15 +39,15 @@ passkey screens, the theme picker, the create-server screen.
 | 22 | Together: Gimme request | `chords/gimme/GimmePanel.tsx` |
 | 23 | Together: Upload file | Attach control in `chat/Composer.tsx` |
 | 24 | Together: Giphy picker | `chat/GifPicker.tsx` in the composer |
-| 25 | "Run the place": Issue invitation | `settings/Invites.tsx` |
-| 26 | "Run the place": Review reports | `settings/Reports.tsx` |
-| 27 | "Run the place": Create channel | `settings/Channels.tsx` |
-| 28 | "Run the place": Manage roles | `settings/Roles.tsx` |
-| 29 | You: Notifications | `settings/Notifications.tsx` |
-| 30 | You: Devices | `settings/Devices.tsx` |
-| 31 | You: Capabilities | `settings/About.tsx` |
-| 32 | You: Report a problem | `settings/ReportProblem.tsx` |
-| 33 | You: Sign out | `settings/SettingsView.tsx` |
+| 25 | "Run the place": Issue invitation | `Invites` in `settings/sections.tsx` |
+| 26 | "Run the place": Review reports | `Reports` in `settings/sections.tsx` |
+| 27 | "Run the place": Create channel | `Channels` in `settings/sections.tsx` |
+| 28 | "Run the place": Manage roles | `Roles` in `settings/sections.tsx` |
+| 29 | You: Notifications | `Notifications` in `settings/sections.tsx` |
+| 30 | You: Devices | `Devices` in `settings/sections.tsx` |
+| 31 | You: Capabilities | `About` in `settings/sections.tsx`, member-facing features only |
+| 32 | You: Report a problem | `ReportProblem` in `settings/sections.tsx` |
+| 33 | You: Sign out | Account section of `settings/SettingsView.tsx` |
 | 34 | User plate (avatar, name, online or offline) | `shell/UserBar.tsx` |
 | 35 | Call dock "Return to call" | `shell/CallDock.tsx` with mute, deafen, camera, screen share, leave |
 | 36 | Phone tab bar (Chats, Call, Together, More) and drawer | Stack navigation in `shell/AppShell.tsx`; the "Together" tab is removed by plan |
@@ -81,19 +81,19 @@ passkey screens, the theme picker, the create-server screen.
 
 | # | Old surface | New home |
 |---|---|---|
-| 57 | Invite a friend (email, expiry, link or "sent" state) | `settings/Invites.tsx`: copyable link; email field appears only when the server asks for one |
+| 57 | Invite a friend (email, expiry, link or "sent" state) | `Invites` in `settings/sections.tsx`: expiry and a copyable link. The email path is removed (PLAN 1) |
 | 58 | Members list | `side/PeopleTab.tsx` |
 | 59 | Search messages | `side/SearchPanel.tsx` |
 | 60 | Pinned messages | `side/SearchPanel.tsx` |
-| 61 | Device sessions with Revoke | `settings/Devices.tsx` |
+| 61 | Device sessions with Revoke | `Devices` in `settings/sections.tsx` |
 | 62 | Add passkey | Removed by plan |
-| 63 | Notifications list | `settings/Notifications.tsx` |
-| 64 | Enable desktop notifications, enable or disable background notifications | `settings/Notifications.tsx` |
-| 65 | Create channel (name, server, members) | `settings/Channels.tsx` (member picker instead of typed ids; server is the current one) |
-| 66 | Roles: create, assign member, delete | `settings/Roles.tsx` |
-| 67 | Bug report or feature suggestion (description, kind, logs and consent, screenshot and consent) | `settings/ReportProblem.tsx` |
-| 68 | Review reports (list, download screenshot, resolve) | `settings/Reports.tsx` |
-| 69 | Server capabilities | `settings/About.tsx` |
+| 63 | Notifications list | `Notifications` in `settings/sections.tsx` |
+| 64 | Enable desktop notifications, enable or disable background notifications | `Notifications` in `settings/sections.tsx` |
+| 65 | Create channel (name, server, members) | `Channels` in `settings/sections.tsx` (member picker instead of typed ids; server is the current one) |
+| 66 | Roles: create, assign member, delete | `Roles` in `settings/sections.tsx` |
+| 67 | Bug report or feature suggestion (description, kind, logs and consent, screenshot and consent) | `ReportProblem` in `settings/sections.tsx` |
+| 68 | Review reports (list, download screenshot, resolve) | `Reports` in `settings/sections.tsx` |
+| 69 | Server capabilities | `About` in `settings/sections.tsx`: Calls, File uploads, GIF search, Watch, DJ, Shared browser only |
 | 70 | Resumable upload (choose, upload, pause, resume, progress) | Upload chip in `chat/Composer.tsx` |
 | 71 | Upload scan state, Check scan status, Retry scanning | Upload chip in `chat/Composer.tsx` |
 | 72 | Prepare video and thumbnail, job status | Upload chip in `chat/Composer.tsx` |
@@ -128,7 +128,7 @@ Recorded at the end of the work; see the bottom of this file.
 
 ## Result of the end check (2026-11-11)
 
-- Every file named in the "new home" column exists under `client/src/ui/`.
+- Every file named in the "new home" column exists under `client/src/ui/` (corrected after the review: the settings sections are components in `settings/sections.tsx`, and the onboarding modes are in `onboarding/Onboarding.tsx`; earlier drafts named per-section files that do not exist).
 - `grep -rn -i "together" client/src/ui` prints nothing; row 88 is a Plex panel control whose label no longer uses that word.
 - Rows removed by plan (Together row, separate voice entries, passkey screens, theme picker, create-server screen) are not rendered. Row 93 and row 75 are left out under the no-dead-controls rule.
 - Exercised by end-to-end tests: sign in, setup, invite accept, send, edit, reply, pin, react, unsend, search, pins, direct messages, device revoke, call join and leave, picker, composer attach, emoji and GIF, People and Chords tabs. Not exercised by tests and checked only by reading the code: settings sections other than Notifications, Devices and Invites, the Chord panels with live integrations, the updater banners.

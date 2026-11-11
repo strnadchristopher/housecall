@@ -46,6 +46,8 @@
   --hc-focus: #f7d9a8;
 
   --hc-font: "Inria Sans", system-ui, sans-serif;
+  /* Avatar initials: a face whose O is clearly round, so "O" does not read as the digit 0 (Inria Sans O is a narrow oval). */
+  --hc-font-initial: "Apfel Grotezk", var(--hc-font);
 
   --hc-text-xs: 0.75rem;
   --hc-text-sm: 0.875rem;

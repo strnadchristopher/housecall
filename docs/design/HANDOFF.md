@@ -15,7 +15,7 @@ Branch `hc-ui`. Implementation finish after the designer's stop; identity, token
 ## Changes in this session
 
 - `client/tests/e2e/shell.spec.ts` (new), `shots.spec.ts` (new, evidence run), `helpers.ts`, `chat.spec.ts`, `voice.spec.ts` finished against the new UI.
-- `HOUSECALL_TEST_SHELL=1` now also starts the SFU in `tests/start-server.mjs` and selects `shell.spec.ts` and `shots.spec.ts` in `playwright.config.ts`.
+- `HOUSECALL_TEST_SHELL=1` now also starts the SFU in `tests/start-server.mjs` and selects `shell.spec.ts`. The screenshot run has its own flag, `HOUSECALL_TEST_SHOTS=1` (it rewrites tracked PNGs in `design/shots/`).
 - `Composer.tsx`: the hidden file input is `aria-hidden` (it repeated the button's accessible name).
 - `styles/index.css`: `.hc-people span` also matched the avatar and pushed its initial to the top; now excludes `.hc-avatar`.
 - `docs/design/SURFACES.md`: end-check result appended.
@@ -27,10 +27,10 @@ Branch `hc-ui`. Implementation finish after the designer's stop; identity, token
 - **GIF** is tested with the capability flag and the three provider routes answered by Playwright; no real Giphy key or network was used.
 - **Uploads** are tested only to the "held" state (no virus scanner in the fixture). The attach-to-message path after a scan is not covered here.
 - **Shared browser controls** that were rendered disabled in the old UI (start video, request control, reset) are not rendered (no backend).
-- **Invite `link` field**: the UI renders `link` when the server returns it and falls back to the email form otherwise. The test server still takes the fallback path, so the `link`-present path ran only through the helper's `#invite=` check on the returned URL, not against a server that omits the email.
+- **Invite `link` field**: the server always returns `link` and needs no email (`server/src/lib.rs`, invite creation). The UI renders `link`; the email path and its copy were removed after the review, and the e2e helper asserts the link directly. (An earlier version of this note said the test server took an email fallback; that was wrong.)
 - **Add Server and multiple hosts** (Tauri) are implemented but not exercised; the tests run the web build only.
-- **Adversarial UX test (Dana persona, `docs/ux/phase-2.md`) was not run.** Not in this session's brief; nothing is recorded as tested.
-- **Touch-target size** (44 px) and safe-area insets were not measured; only reviewed in screenshots.
+- **Dana persona**: run as a script at 390x844 after the review; see `docs/ux/phase-2.md`. It is a scripted client, not a person.
+- **Touch-target size** (44 px) was measured by the reviewer (none under 44 px on the phone screens). Safe-area insets now apply (`viewport-fit=cover`, padding on `.hc-root`) but were not checked on a device with a notch.
 
 ## New dependencies
 
@@ -59,7 +59,7 @@ Cargo was not used, so the disk guard did not apply.
 
 `main-1440-{dark,light}.png`, `main-390-{dark,light}.png`, `list-390-{dark,light}.png`, `sign-in-{1440,390}-{dark,light}.png`, `invite-390-{dark,light}.png`, `main-1440-dark-b.png`, `main-1440-dark-c.png`. Regenerate with `HOUSECALL_TEST_SHELL=1 npm run e2e --prefix client`. Settings, call stage with tiles and the server picker open are not in the set.
 
-Seen while checking them: in direction A the owner avatar's "O" is narrow enough to read as a zero; B and C render it as a letter. Not changed.
+Regenerate with `HOUSECALL_TEST_SHOTS=1 npm run e2e --prefix client` (not `HOUSECALL_TEST_SHELL`). Avatar initials now use `--hc-font-initial` (Apfel Grotezk in A), whose O is round; Inria Sans's O read as a zero.
 
 ## To check by hand
 

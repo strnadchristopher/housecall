@@ -26,6 +26,7 @@
   --hc-focus: #0d0d0d;
 
   --hc-font: "Martian Grotesk", system-ui, sans-serif;
+  --hc-font-initial: var(--hc-font);
 
   --hc-text-xs: 0.6875rem;
   --hc-text-sm: 0.8125rem;
