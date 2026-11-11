@@ -4,6 +4,7 @@ import { copy } from "../copy";
 import { ErrorLine, IconButton, cx } from "../kit";
 import { useNav, type SettingsSection } from "../shell/nav";
 import { usePhone } from "../tokens/motion";
+import { IntegrationSetup } from "../setup/IntegrationSetup";
 import { About, Account, Channels, ServerProfile, Devices, Invites, Notifications, ReportProblem, Reports, Roles } from "./sections";
 
 /** Account and server settings in one place; owner-only sections appear for the owner. */
@@ -17,6 +18,7 @@ export function SettingsView() {
   ];
   const server: [SettingsSection, string][] = [
     ...(identity.owner ? [["server", copy.settings.serverProfile], ["invites", copy.settings.invites], ["channels", copy.settings.channels], ["roles", copy.settings.roles], ["reports", copy.settings.reports]] as [SettingsSection, string][] : []),
+    ["integrations", copy.settings.integrations],
     ["about", copy.settings.about],
   ];
   const item = ([id, label]: [SettingsSection, string]) => (
@@ -51,6 +53,7 @@ export function SettingsView() {
           {nav.section === "channels" && <Channels />}
           {nav.section === "roles" && <Roles />}
           {nav.section === "reports" && <Reports />}
+          {nav.section === "integrations" && <IntegrationSetup />}
           {nav.section === "about" && <About />}
         </section>
       </div>

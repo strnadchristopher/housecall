@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { IdentityProvider, InviteResult, UpdateState } from "../../core/identity";
+import type { IdentityProvider, InviteResult, SetupRow, UpdateState } from "../../core/identity";
 import type { Role } from "../../data/types";
 import { subscribeInviteLinks } from "../../transport/deepLinks";
 import { clearNativePush, enableNativePush, nativePushStatus, type NativePushStatus } from "../../transport/nativePush";
@@ -108,6 +108,7 @@ export function useLegacyIdentity(
       } else if ("Notification" in window) { await Notification.requestPermission(); bump(n => n + 1); }
     }),
     disableBackgroundNotifications: () => c.run(async () => { await clearNativePush(); setPush(await nativePushStatus()); }),
+    loadSetupStatus: async () => (await c.api.get<{ integrations: SetupRow[] }>("/api/setup/status")).integrations,
     createInvite: async input => {
       let result: InviteResult = {};
       await c.run(async () => {

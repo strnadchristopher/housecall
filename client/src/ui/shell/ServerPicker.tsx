@@ -2,7 +2,9 @@ import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent 
 import { useChat, useIdentity } from "../../core/context";
 import { Logo } from "../brand/Logo";
 import { copy } from "../copy";
-import { Avatar, Button, ErrorLine, Field, Icon, cx } from "../kit";
+import { createPortal } from "react-dom";
+import { Avatar, Button, ErrorLine, Field, Icon, Presence, cx } from "../kit";
+import { CreateServerWizard } from "../setup/CreateServerWizard";
 
 /**
  * The server picker. The list stays mounted and is moved with transform and
@@ -24,7 +26,10 @@ export function ServerPicker() {
   const id = useId();
   const current = chat.servers.find(server => server.current);
   const manyHosts = new Set(chat.servers.map(server => server.host)).size > 1;
-  const rows = chat.servers.length + (identity.native ? 1 : 0);
+  const [creating, setCreating] = useState(false);
+  const addRow = identity.native ? chat.servers.length : -1;
+  const createRow = identity.owner ? chat.servers.length + (identity.native ? 1 : 0) : -1;
+  const rows = chat.servers.length + (identity.native ? 1 : 0) + (identity.owner ? 1 : 0);
 
   const close = (refocus = true) => {
     setOpen(false); setAdding(false); setAddError("");
@@ -50,6 +55,7 @@ export function ServerPicker() {
 
   const choose = (at: number) => {
     const server = chat.servers[at];
+    if (at === createRow) { close(); setCreating(true); return; }
     if (!server) { setAdding(true); return; }
     close();
     if (!server.current) void chat.selectServer(server.key);
@@ -79,7 +85,7 @@ export function ServerPicker() {
     <div className="hc-picker" data-open={open ? "" : undefined} onKeyDown={onKey}>
       <button ref={trigger} type="button" className="hc-picker__trigger" aria-haspopup="listbox" aria-expanded={open} aria-controls={id}
         aria-label={`${copy.picker.label}: ${current?.name ?? identity.serverName}`}
-        onClick={toggle} onKeyDown={event => { if (!open && (event.key === "ArrowDown" || event.key === "ArrowUp")) { event.preventDefault(); toggle(); } }}>
+        onClick={toggle} onKeyDown={event => { if (!open && (event.key === "ArrowDown" || event.key === "ArrowUp")) { event.preventDefault(); event.stopPropagation(); toggle(); } }}>
         {current?.iconUrl ? <Avatar name={current.name} src={current.iconUrl} shape="squircle" /> : <Logo open={open} label="" />}
         <span className="hc-picker__name">
           <strong>{current?.name ?? identity.serverName}</strong>
@@ -100,9 +106,15 @@ export function ServerPicker() {
           </button>
         ))}
         {identity.native && !adding && (
-          <button type="button" role="option" aria-selected={false} data-index={chat.servers.length} tabIndex={index === chat.servers.length ? 0 : -1}
-            className="hc-picker__row hc-picker__add" style={{ ["--i" as string]: chat.servers.length }} onClick={() => choose(chat.servers.length)}>
+          <button type="button" role="option" aria-selected={false} data-index={addRow} tabIndex={index === addRow ? 0 : -1}
+            className="hc-picker__row hc-picker__add" style={{ ["--i" as string]: addRow }} onClick={() => choose(addRow)}>
             <Icon name="plus" /><strong>{copy.picker.add}</strong>
+          </button>
+        )}
+        {identity.owner && !adding && (
+          <button type="button" role="option" aria-selected={false} data-index={createRow} tabIndex={index === createRow ? 0 : -1}
+            className="hc-picker__row hc-picker__add" style={{ ["--i" as string]: createRow }} onClick={() => choose(createRow)}>
+            <Icon name="plus" /><strong>{copy.picker.create}</strong>
           </button>
         )}
         {identity.native && adding && (
@@ -113,6 +125,10 @@ export function ServerPicker() {
           </form>
         )}
       </div>
+      {createPortal(
+        <Presence show={creating}><CreateServerWizard onClose={() => setCreating(false)} /></Presence>,
+        document.body,
+      )}
     </div>
   );
 }

@@ -451,6 +451,47 @@ a { color: var(--hc-accent); }
   @keyframes hc-fade-out { to { opacity: 0; } }
 }
 
+/* Integration cards: tonal rows. State is words (and a check), not a coloured chip. */
+.hc-cards-int { display: flex; flex-direction: column; gap: var(--hc-space-2); }
+.hc-card-int { border-radius: var(--hc-radius-md); background: color-mix(in oklab, var(--hc-text) 8%, var(--hc-surface)); }
+.hc-card-int__head {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto var(--hc-space-5); align-items: center; gap: var(--hc-space-3);
+  width: 100%; min-height: var(--hc-space-8); padding: var(--hc-space-3) var(--hc-space-4); text-align: start; border-radius: inherit; color: var(--hc-text);
+}
+.hc-card-int__text { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.hc-card-int__text small { color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-card-int__state { display: inline-flex; align-items: center; gap: var(--hc-space-1); font-size: var(--hc-text-sm); font-weight: var(--hc-weight-medium); }
+.hc-card-int[data-state="ready"] .hc-card-int__state, .hc-card-int[data-state="pending"] .hc-card-int__state { color: var(--hc-text-muted); font-weight: var(--hc-weight-regular); }
+.hc-card-int__chev { display: grid; place-items: center; color: var(--hc-text-muted); transition: transform var(--hc-dur-base) var(--hc-ease-out); }
+.hc-card-int__chev.is-open { transform: rotate(180deg); }
+.hc-card-int__body { display: flex; flex-direction: column; gap: var(--hc-space-3); padding: var(--hc-space-1) var(--hc-space-4) var(--hc-space-4); }
+.hc-steps { display: flex; flex-direction: column; gap: var(--hc-space-2); margin: 0; padding-inline-start: var(--hc-space-5); font-size: var(--hc-text-sm); }
+.hc-steps li::marker { color: var(--hc-text-muted); }
+.hc-snippet { display: flex; align-items: flex-start; gap: var(--hc-space-2); margin-top: var(--hc-space-1); padding: var(--hc-space-2) var(--hc-space-2) var(--hc-space-2) var(--hc-space-3); border-radius: var(--hc-radius-sm); background: var(--hc-bg); }
+.hc-snippet pre { flex: 1; min-width: 0; margin: 0; overflow-x: auto; font: var(--hc-text-sm) / 1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.hc-devtest { display: flex; flex-direction: column; align-items: flex-start; gap: var(--hc-space-3); }
+.hc-devtest__video { width: min(100%, 22rem); aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--hc-radius-md); background: var(--hc-bg); }
+.hc-meter { display: flex; align-items: center; gap: var(--hc-space-1); height: var(--hc-space-4); }
+.hc-meter i { width: var(--hc-space-2); height: 100%; border-radius: var(--hc-radius-sm); background: color-mix(in oklab, var(--hc-text) 16%, var(--hc-bg)); transition: background-color var(--hc-dur-fast) var(--hc-ease-out); }
+.hc-meter i[data-on] { background: var(--hc-accent); }
+
+/* Create-server wizard: a full-screen layer on the page background. Steps share one grid cell so a leaving step slides out in place. */
+.hc-wizard { position: fixed; inset: 0; z-index: 40; display: flex; justify-content: center; background: var(--hc-bg); color: var(--hc-text); }
+.hc-wizard__panel { position: relative; display: flex; flex-direction: column; gap: var(--hc-space-4); width: min(100%, 38rem); height: 100%; padding: var(--hc-space-5) var(--hc-space-4); }
+.hc-wizard__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--hc-space-3); }
+.hc-wizard__head h1 { font-size: var(--hc-text-xl); line-height: 1.2; }
+.hc-wizard__dots { display: flex; align-items: center; gap: var(--hc-space-2); margin: 0; padding: 0; list-style: none; }
+.hc-wizard__dots li { width: var(--hc-space-2); height: var(--hc-space-2); border-radius: 50%; background: color-mix(in oklab, var(--hc-text) 22%, var(--hc-bg)); font-size: 0; transition: background-color var(--hc-dur-base) var(--hc-ease-out); }
+.hc-wizard__dots li.is-done { background: var(--hc-text-muted); }
+.hc-wizard__dots li.is-current { background: var(--hc-accent); }
+/* Padding keeps focus rings clear of the clip; overflow-x hides the slide-in travel instead of scrolling. */
+.hc-wizard__stage { display: grid; flex: 1; grid-template-columns: minmax(0, 1fr); align-content: start; min-height: 0; overflow-x: hidden; overflow-y: auto; padding: var(--hc-space-2); margin-inline: calc(var(--hc-space-2) * -1); }
+.hc-wizard__step { grid-area: 1 / 1; display: flex; flex-direction: column; gap: var(--hc-space-3); min-width: 0; }
+.hc-wizard__step h2 { font-size: var(--hc-text-lg); }
+.hc-wizard__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--hc-space-3); padding-top: var(--hc-space-2); }
+.hc-wizard__confirm { display: flex; flex-direction: column; gap: var(--hc-space-3); padding: var(--hc-space-4); border-radius: var(--hc-radius-md); background: var(--hc-surface-raised); }
+@media (max-width: 720px) { .hc-wizard__panel { padding-inline: var(--hc-space-3); } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }

@@ -355,6 +355,21 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
       await c.refresh();
       await c.select(created.id);
     }),
+    createServer: async (name, icon) => {
+      let result: { id: string; iconFailed: boolean } | undefined;
+      await c.attempt(async () => {
+        const created = await c.api.post<{ id: string; general_channel_id: string }>("/api/servers", { name });
+        let iconFailed = false;
+        if (icon) {
+          try { await c.api.putBlob(`/api/servers/${encodeURIComponent(created.id)}/icon`, icon); } catch { iconFailed = true; }
+        }
+        result = { id: created.id, iconFailed };
+        await c.refresh();
+        setServerId(created.id);
+        await c.select(created.general_channel_id);
+      });
+      return result;
+    },
     createChannel: (name, memberIds) => c.attempt(async () => {
       const created = await c.api.post<{ id: string }>("/api/channels", { name, kind: "channel", server_id: serverId, member_ids: memberIds });
       await c.refresh();

@@ -180,4 +180,9 @@ export interface ChatStore extends ChatState {
   /** These resolve to whether the request succeeded; callers navigate or clear forms only on success. */
   startDirect(memberIds: string[], name: string): Promise<boolean>;
   createChannel(name: string, memberIds: string[]): Promise<boolean>;
+  /**
+   * Owner only. Creates the server, saves its icon, then makes it the current server.
+   * A failed icon does not undo the server: the result carries `iconFailed` instead.
+   */
+  createServer(name: string, icon?: Blob): Promise<{ id: string; iconFailed: boolean } | undefined>;
 }

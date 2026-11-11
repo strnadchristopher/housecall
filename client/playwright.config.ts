@@ -2,7 +2,9 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch:
-    process.env.HOUSECALL_TEST_NATIVE_PUSH === "1"
+    process.env.HOUSECALL_TEST_SETUP === "1"
+      ? "**/setup.spec.ts"
+      : process.env.HOUSECALL_TEST_NATIVE_PUSH === "1"
       ? "**/native-push.spec.ts"
       : process.env.HOUSECALL_TEST_UPLOAD_VIDEO === "1"
       ? "**/upload-video.spec.ts"

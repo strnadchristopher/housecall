@@ -86,7 +86,12 @@ export interface IdentityState {
   update?: UpdateState;
 }
 
+/** One integration's live state. Names and booleans only; the server never sends a config value. */
+export interface SetupRow { id: string; ready: boolean; missing?: string[]; detail?: string }
+
 export interface IdentityProvider extends IdentityState {
+  /** Owner only. Readiness is instance-wide (host environment), not per server. */
+  loadSetupStatus(): Promise<SetupRow[]>;
   clearError(): void;
   signIn(input: { address: string; username: string; password: string }): Promise<void>;
   join(input: { address: string; token: string; name: string; password: string }): Promise<void>;
