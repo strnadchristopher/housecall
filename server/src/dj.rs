@@ -248,6 +248,11 @@ pub fn configure(state: &mut AppState) -> Result<(), String> {
         Ok("true" | "1") => {}
         _ => return Err("DJ_ENABLED must be true or false".into()),
     }
+    let switchboard_url = std::env::var("SWITCHBOARD_URL").unwrap_or_default();
+    if switchboard_url.trim().is_empty() {
+        return Err("DJ_ENABLED requires SWITCHBOARD_URL (chat-completions endpoint)".into());
+    }
+    let switchboard_url = switchboard_url.trim().to_owned();
     let store = state
         .media
         .clone()
@@ -336,8 +341,13 @@ pub fn configure(state: &mut AppState) -> Result<(), String> {
             js_runtime: std::env::var("DJ_JS_RUNTIME").unwrap_or_else(|_| "node".into()),
         },
         downloader: AudioDownloader::default(),
-        switchboard: Switchboard::new(std::env::var("SWITCHBOARD_API_KEY").ok())
-            .map_err(|_| "invalid Switchboard configuration")?,
+        switchboard: Switchboard::new(
+            &switchboard_url,
+            std::env::var("SWITCHBOARD_API_KEY")
+                .ok()
+                .filter(|key| !key.is_empty()),
+        )
+        .map_err(|_| "invalid SWITCHBOARD_URL")?,
         tts,
         ffmpeg: std::env::var("FFMPEG_BIN")
             .unwrap_or_else(|_| "ffmpeg".into())
