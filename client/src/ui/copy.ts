@@ -23,7 +23,7 @@ export const copy = {
   header: { search: "Search", pins: "Pins", people: "People", settings: "Server settings", in: (server: string) => `in ${server}` },
   messages: {
     label: "Messages", skip: "Skip to message box", reply: "Reply", react: "React", pin: "Pin", unpin: "Unpin", edit: "Edit", unsend: "Unsend",
-    unsendConfirm: "Unsend for everyone", preview: "Preview link", play: "Play", closeVideo: "Close video",
+    unsendConfirm: "Unsend for everyone", preview: "Preview link", play: "Play", closeVideo: "Close video", open: "Open", closeImage: "Close image", processingVideo: "Processing video",
     download: "Download", edited: "edited", pinned: "Pinned", replyTo: (name: string) => `Reply to ${name}`,
     typing: (names: string[]) => (names.length === 1 ? `${names[0]} is typing` : `${names.join(", ")} are typing`),
     today: "Today", yesterday: "Yesterday", gif: "GIF", video: "Video",
