@@ -391,19 +391,68 @@ async fn message_attachments_carry_a_display_kind() {
     s.scanner = Arc::new(Clean);
     let api = app(s, None);
     let (_, a) = json_req(&api, "POST", "/api/setup", None, json!({"setup_token":"bootstrap-long-enough-for-test-secret","username":"owner","password":"password-long-enough","device_name":"test"})).await;
-    let (_, channel) = json_req(&api, "POST", "/api/channels", Some(&a), json!({"name":"pics","kind":"channel"})).await;
+    let (_, channel) = json_req(
+        &api,
+        "POST",
+        "/api/channels",
+        Some(&a),
+        json!({"name":"pics","kind":"channel"}),
+    )
+    .await;
     let cid = channel["id"].as_str().unwrap();
     let mut kinds = Vec::new();
     for name in ["picture.png", "loop.gif", "clip.mov", "notes.pdf"] {
-        let (ok, u) = json_req(&api, "POST", "/api/uploads", Some(&a), json!({"channel_id":cid,"filename":name,"length":"1000"})).await;
+        let (ok, u) = json_req(
+            &api,
+            "POST",
+            "/api/uploads",
+            Some(&a),
+            json!({"channel_id":cid,"filename":name,"length":"1000"}),
+        )
+        .await;
         assert_eq!(ok, StatusCode::OK, "{u}");
         let id = u["id"].as_str().unwrap();
         let path = format!("/api/uploads/{id}");
-        assert_eq!(request(&api, "PATCH", &path, Some(&a), vec![1; 1000], Some(("upload-offset", "0"))).await.0, StatusCode::OK);
-        assert_eq!(json_req(&api, "POST", &format!("{path}/complete"), Some(&a), json!({})).await.0, StatusCode::OK);
-        let (status, message) = json_req(&api, "POST", &format!("/api/channels/{cid}/messages"), Some(&a), json!({"body":"","attachment_ids":[id]})).await;
+        assert_eq!(
+            request(
+                &api,
+                "PATCH",
+                &path,
+                Some(&a),
+                vec![1; 1000],
+                Some(("upload-offset", "0"))
+            )
+            .await
+            .0,
+            StatusCode::OK
+        );
+        assert_eq!(
+            json_req(
+                &api,
+                "POST",
+                &format!("{path}/complete"),
+                Some(&a),
+                json!({})
+            )
+            .await
+            .0,
+            StatusCode::OK
+        );
+        let (status, message) = json_req(
+            &api,
+            "POST",
+            &format!("/api/channels/{cid}/messages"),
+            Some(&a),
+            json!({"body":"","attachment_ids":[id]}),
+        )
+        .await;
         assert_eq!(status, StatusCode::OK, "{message}");
-        kinds.push(message["attachments"][0]["kind"].as_str().unwrap().to_string());
+        kinds.push(
+            message["attachments"][0]["kind"]
+                .as_str()
+                .unwrap()
+                .to_string(),
+        );
     }
     assert_eq!(kinds, ["image", "gif", "video_pending", "file"]);
 }
