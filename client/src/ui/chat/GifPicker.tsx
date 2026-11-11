@@ -32,7 +32,7 @@ export function GifPicker({ onDone }: { onDone: () => void }) {
     return () => clearTimeout(timer);
   }, [query]);
   return (
-    <div className="hc-gifs">
+    <div className="hc-gifs hc-anim-pop">
       <Field label={copy.composer.gifSearch} hideLabel placeholder={copy.composer.gifSearch} value={query} onChange={event => setQuery(event.target.value)} autoFocus inputMode="search" />
       {results && results.length === 0 && <p className="hc-muted">{copy.composer.noGifs}</p>}
       <div className="hc-gifs__grid">

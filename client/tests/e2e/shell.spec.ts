@@ -167,3 +167,32 @@ test("profile: display name and avatar show in the user bar and on new messages;
   await expect(message.locator(".hc-msg__head strong")).toHaveText("Ada Fixture");
   await expect(message.locator(".hc-avatar img")).toBeVisible();
 });
+
+test("motion: settings and pickers slide out and are gone at once under reduced motion", async ({ page }) => {
+  page.setDefaultTimeout(15000);
+  await page.goto("/");
+  await signIn(page, "owner");
+  const settings = page.getByTestId("screen-settings");
+  const emoji = page.getByRole("group", { name: "Emoji", exact: true });
+
+  // Normal motion: the exit plays, then the panel is gone, and clicks underneath work meanwhile.
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(settings).toBeVisible();
+  await settings.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByTestId("screen-composer").getByRole("button", { name: "Emoji", exact: true }).click();
+  await expect(emoji).toBeVisible();
+  await expect(settings).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(emoji).toHaveCount(0);
+
+  // Reduced motion: no exit timers, the panel is gone as soon as it is closed.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(settings).toBeVisible();
+  await settings.getByRole("button", { name: "Close", exact: true }).click();
+  expect(await settings.count()).toBe(0);
+  await page.getByTestId("screen-composer").getByRole("button", { name: "Emoji", exact: true }).click();
+  await expect(emoji).toBeVisible();
+  await page.keyboard.press("Escape");
+  expect(await emoji.count()).toBe(0);
+});

@@ -15,8 +15,13 @@ export function EmojiPicker({ onPick, onClose }: { onPick: (emoji: string) => vo
   const group = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
-    group.current?.querySelector("button")?.focus();
-    return () => { if (opener?.isConnected) opener.focus(); };
+    const node = group.current;
+    node?.querySelector("button")?.focus();
+    // Unmounting waits for the exit animation, so only take focus back if nothing else has it by then.
+    return () => {
+      const active = document.activeElement;
+      if (opener?.isConnected && (!active || active === document.body || node?.contains(active))) opener.focus();
+    };
   }, []);
   const onKey = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "Escape") return;
@@ -25,7 +30,7 @@ export function EmojiPicker({ onPick, onClose }: { onPick: (emoji: string) => vo
     onClose();
   };
   return (
-    <div ref={group} className="hc-emoji" role="group" aria-label={copy.composer.emoji} onKeyDown={onKey}>
+    <div ref={group} className="hc-emoji hc-anim-pop" role="group" aria-label={copy.composer.emoji} onKeyDown={onKey}>
       {EMOJI.map(emoji => (
         <button key={emoji} type="button" aria-label={emoji} onClick={() => onPick(emoji)}>{emoji}</button>
       ))}

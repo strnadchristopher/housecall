@@ -3,7 +3,7 @@ import type { Attachment, ChatMessage } from "../../core/chat";
 import { useChat } from "../../core/context";
 import { copy } from "../copy";
 import { bytes } from "../format";
-import { Icon, IconButton } from "../kit";
+import { Icon, IconButton, Presence } from "../kit";
 import { useMediaUrl } from "./useMediaUrl";
 
 const INLINE_IMAGE_LIMIT = 25 * 1024 * 1024;
@@ -32,7 +32,7 @@ function Lightbox({ attachment, src, onClose }: { attachment: Attachment; src: s
     return () => { document.removeEventListener("keydown", onKey, true); previous?.focus?.(); };
   }, []);
   return (
-    <div className="hc-lightbox" role="dialog" aria-modal="true" aria-label={attachment.filename} onClick={onClose}>
+    <div className="hc-lightbox hc-anim-fade" role="dialog" aria-modal="true" aria-label={attachment.filename} onClick={onClose}>
       <img src={src} alt={attachment.filename} onClick={event => event.stopPropagation()} data-testid="lightbox-image" />
       <div className="hc-lightbox__bar" ref={close} onClick={event => event.stopPropagation()}>
         <IconButton icon="close" label={copy.messages.closeImage} onClick={onClose} />
@@ -51,7 +51,9 @@ function InlineImage({ attachment }: { attachment: Attachment }) {
       <button type="button" className="hc-media hc-media--image" onClick={() => setZoom(true)} aria-label={`${copy.messages.open} ${attachment.filename}`}>
         {url ? <img src={url} alt={attachment.filename} decoding="async" data-testid="inline-image" /> : <span className="hc-media__skeleton" />}
       </button>
-      {zoom && url && <Lightbox attachment={attachment} src={url} onClose={() => setZoom(false)} />}
+      <Presence show={zoom && !!url}>
+        {url && <Lightbox attachment={attachment} src={url} onClose={() => setZoom(false)} />}
+      </Presence>
     </>
   );
 }

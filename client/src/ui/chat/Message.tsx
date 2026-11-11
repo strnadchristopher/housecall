@@ -3,7 +3,7 @@ import type { ChatMessage, LinkPreview } from "../../core/chat";
 import { useChat } from "../../core/context";
 import { copy } from "../copy";
 import { time } from "../format";
-import { Avatar, Button, Icon, IconButton, cx } from "../kit";
+import { Avatar, Button, Icon, IconButton, Presence, cx } from "../kit";
 import { Attachments } from "./Attachments";
 import { EmojiPicker } from "./EmojiPicker";
 import { GifClip } from "./GifPicker";
@@ -70,13 +70,15 @@ export const Message = memo(function Message({ message, grouped, me, day, stop }
             ))}
           </div>
         )}
-        {panel === "react" && <EmojiPicker onClose={() => setPanel("")} onPick={emoji => { setPanel(""); void chat.react(message.id, emoji); }} />}
-        {panel === "unsend" && (
-          <div className="hc-msg__confirm">
+        <Presence show={panel === "react"}>
+          <EmojiPicker onClose={() => setPanel("")} onPick={emoji => { setPanel(""); void chat.react(message.id, emoji); }} />
+        </Presence>
+        <Presence show={panel === "unsend"}>
+          <div className="hc-msg__confirm hc-anim-pop">
             <Button kind="danger" onClick={() => { setPanel(""); void chat.unsend(message.id); }}>{copy.messages.unsendConfirm}</Button>
             <Button kind="text" onClick={() => setPanel("")}>{copy.common.cancel}</Button>
           </div>
-        )}
+        </Presence>
       <div className="hc-msg__bar" role="toolbar" aria-label={copy.messages.label}>
         <IconButton tabIndex={toolTab} icon="reply" label={copy.messages.reply} onClick={() => chat.reply(message.id)} />
         <IconButton tabIndex={toolTab} icon="emoji" label={copy.messages.react} active={panel === "react"} onClick={() => setPanel(panel === "react" ? "" : "react")} />

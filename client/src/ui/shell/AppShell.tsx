@@ -9,7 +9,7 @@ import { DmView } from "../dm/DmView";
 import { RightPanel } from "../side/RightPanel";
 import { SettingsView } from "../settings/SettingsView";
 import { copy } from "../copy";
-import { ErrorLine, cx } from "../kit";
+import { ErrorLine, Presence, cx } from "../kit";
 import { usePhone, useSheet } from "../tokens/motion";
 import { ServerPicker } from "./ServerPicker";
 import { ChannelList } from "./ChannelList";
@@ -55,7 +55,10 @@ export function AppShell() {
           <UserBar />
         </nav>
         <main className="hc-center" inert={phone && nav.screen !== "main"}>
-          {nav.main === "settings" ? <><CallStage away /><SettingsView />{phone && <CallDock />}</> : staged ? (
+          <Presence show={nav.main === "settings"}>
+            <div className="hc-settings-layer hc-anim-slide-right"><CallStage away /><SettingsView />{phone && <CallDock />}</div>
+          </Presence>
+          {nav.main === "settings" ? null : staged ? (
             <>
               <ChannelHeader />
               {!chat.online && <p className="hc-offline" role="status">{copy.state.reconnecting}</p>}
@@ -77,7 +80,9 @@ export function AppShell() {
         </main>
         {nav.main === "chat" && (
           <>
-            {sheet && nav.sheet && <button type="button" className="hc-scrim" aria-label={copy.common.close} onClick={() => set({ sheet: false })} />}
+            <Presence show={sheet && nav.sheet}>
+              <button type="button" className="hc-scrim hc-anim-fade" aria-label={copy.common.close} onClick={() => set({ sheet: false })} />
+            </Presence>
             <aside className="hc-right" aria-label={copy.side.label} inert={sheet && !nav.sheet}>
               <RightPanel />
             </aside>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import { useChat } from "../core/context";
 import { copy } from "./copy";
+import { afterExit, prefersReducedMotion } from "./tokens/motion";
 
 /**
  * House icons: 20 unit grid, one stroke weight, round caps. The recurring
@@ -105,6 +106,21 @@ export function Avatar({ name, src, size = "md", shape = "arch" }: { name: strin
       {picture ? <img src={picture} alt="" /> : (name.trim()[0] ?? "?").toUpperCase()}
     </span>
   );
+}
+
+/**
+ * Keeps `children` mounted while they play their exit animation (`data-state="exit"` selects it in CSS).
+ * The exiting copy is inert and ignores the pointer, so it never blocks a click on what is underneath.
+ * With reduced motion it unmounts at once. `ms` matches `--hc-dur-base`.
+ */
+export function Presence({ show, children, ms = 190 }: { show: boolean; children: ReactNode; ms?: number }) {
+  const [mounted, setMounted] = useState(show);
+  useEffect(() => {
+    if (show) { setMounted(true); return; }
+    return afterExit(ms, prefersReducedMotion(), () => setMounted(false));
+  }, [show, ms]);
+  if (!show && !mounted) return null;
+  return <div className="hc-presence" data-state={show ? "enter" : "exit"} inert={!show}>{children}</div>;
 }
 
 const DROP_COPY = copy.dropzone;

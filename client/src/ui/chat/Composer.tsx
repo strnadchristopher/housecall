@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 
 import { useChat } from "../../core/context";
 import { copy } from "../copy";
 import { bytes } from "../format";
-import { Button, IconButton, cx } from "../kit";
+import { Button, IconButton, Presence, cx } from "../kit";
 import { EmojiPicker } from "./EmojiPicker";
 import { GifPicker } from "./GifPicker";
 
@@ -80,8 +80,10 @@ export function Composer({ compact }: { compact?: boolean }) {
           ))}
         </ul>
       )}
-      {panel === "emoji" && <EmojiPicker onClose={() => setPanel("")} onPick={emoji => { chat.setDraft(chat.draft + emoji); input.current?.focus(); }} />}
-      {panel === "gif" && <GifPicker onDone={() => setPanel("")} />}
+      <Presence show={panel === "emoji"}>
+        <EmojiPicker onClose={() => setPanel("")} onPick={emoji => { chat.setDraft(chat.draft + emoji); input.current?.focus(); }} />
+      </Presence>
+      <Presence show={panel === "gif"}><GifPicker onDone={() => setPanel("")} /></Presence>
       <div className="hc-composer__row">
         {chat.can.attach && (
           <>

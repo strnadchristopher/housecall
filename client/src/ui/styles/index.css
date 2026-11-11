@@ -127,7 +127,7 @@ a { color: var(--hc-accent); }
 .hc-shell { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--hc-col-left) minmax(0, 1fr) auto; }
 .hc-left { display: flex; flex-direction: column; min-height: 0; padding: var(--hc-space-3) var(--hc-space-2) var(--hc-space-2) var(--hc-space-3); gap: var(--hc-space-2); }
 .hc-center {
-  display: flex; flex-direction: column; min-width: 0; min-height: 0; margin-block: var(--hc-space-2);
+  position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; margin-block: var(--hc-space-2);
   background: var(--hc-surface); border-radius: var(--hc-radius-lg); overflow: hidden;
 }
 .hc-right { width: var(--hc-col-right); display: flex; flex-direction: column; min-height: 0; padding: var(--hc-space-3); }
@@ -428,6 +428,27 @@ a { color: var(--hc-accent); }
   .hc-settings__pane { padding-top: var(--hc-space-4); }
   .hc-onb { padding: var(--hc-space-3); place-items: start center; padding-top: var(--hc-space-6); }
   .hc-onb__form { padding: var(--hc-space-5); }
+}
+
+/* Enter/exit motion for things that mount and unmount (see Presence in kit.tsx). Opacity and transform only.
+   The animation runs on the element itself, so with no animation support the element is simply there. */
+.hc-presence { display: contents; }
+.hc-presence[data-state="exit"] { pointer-events: none; }
+.hc-composer .hc-anim-pop { --hc-pop-y: var(--hc-space-1); transform-origin: bottom left; }
+.hc-settings-layer { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; background: var(--hc-surface); }
+@media (prefers-reduced-motion: no-preference) {
+  .hc-anim-slide-right { animation: hc-slide-in var(--hc-dur-base) var(--hc-ease-out); }
+  .hc-anim-pop { --hc-pop-y: calc(var(--hc-space-1) * -1); transform-origin: top left; animation: hc-pop-in var(--hc-dur-base) var(--hc-ease-out); }
+  .hc-anim-fade { animation: hc-fade-in var(--hc-dur-base) var(--hc-ease-out); }
+  .hc-presence[data-state="exit"] > .hc-anim-slide-right { animation: hc-slide-out var(--hc-dur-base) var(--hc-ease-in) forwards; }
+  .hc-presence[data-state="exit"] > .hc-anim-pop { animation: hc-pop-out var(--hc-dur-base) var(--hc-ease-in) forwards; }
+  .hc-presence[data-state="exit"] > .hc-anim-fade { animation: hc-fade-out var(--hc-dur-base) var(--hc-ease-in) forwards; }
+  @keyframes hc-slide-in { from { opacity: 0; transform: translateX(var(--hc-space-4)); } }
+  @keyframes hc-slide-out { to { opacity: 0; transform: translateX(var(--hc-space-4)); } }
+  @keyframes hc-pop-in { from { opacity: 0; transform: translateY(var(--hc-pop-y)) scale(0.96); } }
+  @keyframes hc-pop-out { to { opacity: 0; transform: translateY(var(--hc-pop-y)) scale(0.96); } }
+  @keyframes hc-fade-in { from { opacity: 0; } }
+  @keyframes hc-fade-out { to { opacity: 0; } }
 }
 
 @media (prefers-reduced-motion: reduce) {
