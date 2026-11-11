@@ -34,7 +34,7 @@ No test was failing before my change. Not run: Playwright e2e/voice/Plex, `cargo
 ## Remaining public-safe hits (forbidden paths, owned by another worker)
 
 - `client/src/ui/Onboarding.tsx:10`, `client/src/ui/Shell.tsx:102`, `client/src/ui/screens/Media.tsx:257`: copy that names the owner.
-- `client/src/ui/workbench/fixture-api.mjs:12`, `fixtures.ts` (lines 13, 69, 262, 267, 275), `ui.spec.ts` (lines 12, 30): fixture username `christopher` and a `chat.littleobelisk.com` fixture link.
+- The old workbench fixtures and `ui.spec.ts` that carried a personal fixture username and hostname were removed with the old UI on `hc-ui`.
 
 The CI `public-safe` job will fail until those are scrubbed.
 
