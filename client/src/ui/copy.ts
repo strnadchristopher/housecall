@@ -40,7 +40,7 @@ export const copy = {
     label: "Call", inProgress: "Call in progress", join: "Join", joining: "Joining", leave: "Leave", mute: "Mute", unmute: "Unmute",
     deafen: "Deafen", undeafen: "Undeafen", cameraOn: "Camera on", cameraOff: "Camera off",
     share: "Share screen", stopShare: "Stop sharing", devices: "Audio and video",
-    people: (n: number) => (n === 1 ? "1 person" : `${n} people`), failed: "Call failed", inCallIn: (name: string) => `In call in ${name}`, switchCall: "Switch call",
+    people: (n: number) => (n === 1 ? "1 person" : `${n} people`), failed: "Call failed", dismiss: "Dismiss", inCallIn: (name: string) => `In call in ${name}`, switchCall: "Switch call",
     microphone: "Microphone", camera: "Camera", defaultDevice: "System default", refresh: "Refresh devices",
     bitrate: "Audio bitrate (bit/s)", noise: "Noise suppression", apply: "Apply", stage: "Call stage",
     remoteVideo: "Remote video", remoteAudio: "Remote audio", dock: "Current call", open: (name: string) => `Open ${name}`,

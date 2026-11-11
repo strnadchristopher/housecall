@@ -249,6 +249,9 @@ a { color: var(--hc-accent); }
 .hc-callbar__mark { display: grid; color: var(--hc-text-muted); }
 .hc-callbar.is-live .hc-callbar__title strong { color: var(--hc-live); }
 .hc-callbar__title { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.hc-callbar__warning { display: flex; align-items: baseline; gap: var(--hc-space-2); color: var(--hc-text); }
+.hc-callbar__dismiss { padding: 0; background: none; border: 0; color: var(--hc-text-muted); text-decoration: underline; cursor: pointer; }
+.hc-callbar__dismiss:hover { color: var(--hc-text); }
 .hc-callbar__people { display: flex; gap: var(--hc-space-1); }
 .hc-callbar__people > span { display: grid; }
 

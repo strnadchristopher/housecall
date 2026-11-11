@@ -19,6 +19,8 @@ export function CallBar() {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [here, call.joinedAt]);
+  const [dismissed, setDismissed] = useState("");
+  useEffect(() => { if (call.phase === "idle" || call.phase === "connecting") setDismissed(""); }, [call.phase]);
   const [confirming, setConfirming] = useState(false);
   useEffect(() => setConfirming(false), [chat.current?.id]);
   if (!chat.current) return null;
@@ -62,6 +64,12 @@ export function CallBar() {
           {call.phase === "live" && call.joinedAt && <time data-testid="call-duration"> · {clock(Math.max(0, (now - call.joinedAt) / 1000))}</time>}
         </strong>
         {call.error && <small>{call.error}</small>}
+        {call.warning && call.warning !== dismissed && (
+          <small role="status" className="hc-callbar__warning">
+            {call.warning}
+            <button type="button" className="hc-callbar__dismiss" onClick={() => setDismissed(call.warning)}>{copy.call.dismiss}</button>
+          </small>
+        )}
       </div>
       <CallControls />
     </section>

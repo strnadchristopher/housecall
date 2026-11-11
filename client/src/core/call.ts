@@ -43,6 +43,8 @@ export interface CallState {
   camera: boolean;
   sharing: boolean;
   error: string;
+  /** Non-fatal notice, e.g. a saved device was replaced by the default. */
+  warning: string;
   devices: CallDevice[];
   selected: { microphone?: string; camera?: string };
   bitrate: number;

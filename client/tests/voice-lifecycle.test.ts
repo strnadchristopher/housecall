@@ -154,3 +154,51 @@ it("deletes numeric peer zero when leaving the first server call", async () => {
   expect(remove).toHaveBeenCalledExactlyOnceWith("/api/channels/room/voice/0");
   expect(updates.at(-1)?.phase).toBe("idle");
 });
+
+function notFound() { return Object.assign(new Error("Requested device not found"), { name: "NotFoundError" }); }
+
+it("falls back to the default devices when a saved device id no longer exists", async () => {
+  const calls: MediaStreamConstraints[] = [];
+  const { session, updates, media } = fixture(async () => { throw notFound(); });
+  media.getUserMedia.mockImplementation((async (c: MediaStreamConstraints) => {
+    calls.push(c);
+    const a = c.audio as MediaTrackConstraints, v = c.video as MediaTrackConstraints | false;
+    if ((a && "deviceId" in a) || (v && "deviceId" in v)) throw notFound();
+    return stream([track("audio"), ...(v ? [track("video")] : [])]);
+  }) as never);
+  await session.join("room", true, { microphone: "gone-mic", camera: "gone-cam" });
+  expect(calls).toHaveLength(2);
+  expect(updates.at(-1)?.phase).not.toBe("failed");
+  expect(updates.at(-1)?.warning).toMatch(/default/i);
+});
+
+it("joins with microphone only when no camera exists", async () => {
+  const { session, updates, media } = fixture(async () => stream([track("audio")]));
+  media.getUserMedia.mockImplementation((async (c: MediaStreamConstraints) => {
+    if (c.video) throw notFound();
+    return stream([track("audio")]);
+  }) as never);
+  await session.join("room", true);
+  expect(updates.at(-1)?.phase).not.toBe("failed");
+  expect(updates.at(-1)?.camera).toBe(false);
+  expect(updates.at(-1)?.warning).toMatch(/camera/i);
+});
+
+it("fails with a human message when there is no microphone at all", async () => {
+  const { session, updates } = fixture(async () => { throw notFound(); });
+  await expect(session.join("room", false)).rejects.toThrow();
+  expect(updates.at(-1)?.phase).toBe("failed");
+  expect(updates.at(-1)?.error).toBe("No microphone found. Plug one in or allow microphone access, then try again.");
+});
+
+it("turning the camera on retries with the default camera when the saved one is gone", async () => {
+  const { session, updates, media } = fixture(async () => stream([track("audio")]));
+  await session.join("room", false);
+  media.getUserMedia.mockImplementation((async (c: MediaStreamConstraints) => {
+    if ((c.video as MediaTrackConstraints).deviceId) throw notFound();
+    return stream([track("video")]);
+  }) as never);
+  await session.camera(true, "gone-cam");
+  expect(media.getUserMedia).toHaveBeenCalledTimes(3);
+  expect(updates.at(-1)?.warning).toMatch(/camera/i);
+});

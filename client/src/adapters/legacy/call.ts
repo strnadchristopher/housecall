@@ -90,6 +90,7 @@ export function useLegacyCall(c: Housecall) {
     muted, deafened, camera,
     sharing: voice.sharing,
     error: error || (status.phase === "failed" ? status.error ?? "" : ""),
+    warning: active ? status.warning ?? "" : "",
     devices: devices.map(device => ({ id: device.id, label: device.label, kind: device.kind === "audioinput" ? "microphone" as const : "camera" as const })),
     selected, bitrate, noiseSuppression,
     stats: { receivedBytes: status.receivedBytes, decodedFrames: status.decodedFrames },
@@ -128,7 +129,20 @@ export function useLegacyCall(c: Housecall) {
         setStatus(current => ({ ...current }));
       } catch (reason) { if (!(reason instanceof DOMException && reason.name === "NotAllowedError")) fail(reason); }
     },
-    refreshDevices: async () => { try { setDevices(await availableVoiceInputs()); } catch (reason) { fail(reason); } },
+    refreshDevices: async () => {
+      try {
+        const found = await availableVoiceInputs();
+        setDevices(found);
+        // A saved id that is no longer present must not stick around and pin the next join.
+        // Ids are blank until capture permission is granted; then nothing can be judged stale.
+        const known = found.some(device => device.id);
+        const has = (id?: string) => !id || !known || found.some(device => device.id === id);
+        setSelected(current => has(current.microphone) && has(current.camera) ? current : {
+          microphone: has(current.microphone) ? current.microphone : undefined,
+          camera: has(current.camera) ? current.camera : undefined,
+        });
+      } catch (reason) { fail(reason); }
+    },
     selectDevices: next => setSelected(next),
     setAudio: async (nextBitrate, nextNoise) => {
       setError("");

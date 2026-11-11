@@ -17,6 +17,9 @@ export interface VoiceStatus {
   decodedFrames: number;
   roundTripSeconds?: number;
   error?: string;
+  /** Non-fatal notice, e.g. a saved device was replaced by the default. */
+  warning?: string;
+  camera?: boolean;
 }
 export function opusFullband(sdp: string, bitrate = 510000) {
   const payloads = [...sdp.matchAll(/a=rtpmap:(\d+) opus\/48000/gi)].map(
@@ -72,6 +75,26 @@ async function gathered(pc: RTCPeerConnection, signal: AbortSignal) {
     pc.addEventListener("icegatheringstatechange", listener);
   });
 }
+const MISSING = new Set(["NotFoundError", "OverconstrainedError", "NotReadableError"]);
+const missing = (error: unknown) => error instanceof Error && MISSING.has(error.name);
+
+/** getUserMedia that degrades instead of failing: saved device → default device → no camera. */
+export async function acquireMedia(audio: MediaTrackConstraints, video: MediaTrackConstraints | false, inputs: VoiceInputs) {
+  const pinned = (base: MediaTrackConstraints, id?: string) => (id ? { ...base, deviceId: { exact: id } } : base);
+  const attempts: [MediaTrackConstraints, MediaTrackConstraints | false, string | undefined][] = [
+    [pinned(audio, inputs.microphone), video && pinned(video, inputs.camera), undefined],
+  ];
+  if (inputs.microphone || (video && inputs.camera)) attempts.push([audio, video, "Saved device not found. Using the default device."]);
+  if (video) attempts.push([audio, false, "No camera found. Joined with microphone only."]);
+  let last: unknown;
+  for (const [a, v, warning] of attempts) {
+    try { return { stream: await navigator.mediaDevices.getUserMedia({ audio: a, video: v }), warning, camera: !!v }; }
+    catch (error) { last = error; if (!missing(error)) throw error; }
+  }
+  if (missing(last)) throw new Error("No microphone found. Plug one in or allow microphone access, then try again.");
+  throw last;
+}
+
 export class VoiceSession {
   private generation = 0;
   private cancellation = new AbortController();
@@ -110,30 +133,18 @@ export class VoiceSession {
     this.channelId = channelId;
     this.update({ phase: "connecting", error: undefined, streams: [] });
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 2,
-          sampleRate: 48000,
-          noiseSuppression: false,
-          echoCancellation: false,
-          autoGainControl: false,
-          ...(inputs.microphone ? { deviceId: { exact: inputs.microphone } } : {}),
-        },
-        video: camera
-          ? {
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-              frameRate: { ideal: 30 },
-              ...(inputs.camera ? { deviceId: { exact: inputs.camera } } : {}),
-            }
-          : false,
-      });
+      const { stream, warning, camera: cameraOn } = await acquireMedia(
+        { channelCount: 2, sampleRate: 48000, noiseSuppression: false, echoCancellation: false, autoGainControl: false },
+        camera ? { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } } : false,
+        inputs,
+      );
       if (generation !== this.generation) {
         for (const track of stream.getTracks()) track.stop();
         return;
       }
       this.local.push(stream);
       this.cameraTrack = stream.getVideoTracks()[0];
+      this.update({ warning, camera: cameraOn });
       const pc = new RTCPeerConnection({
         iceServers: [],
         bundlePolicy: "max-bundle",
@@ -141,7 +152,7 @@ export class VoiceSession {
       this.pc = pc;
       for (const track of stream.getTracks())
         pc.addTransceiver(track, { direction: "sendonly", streams: [stream] });
-      if (!camera) pc.addTransceiver("video", { direction: "sendonly" });
+      if (!cameraOn) pc.addTransceiver("video", { direction: "sendonly" });
       pc.ontrack = (event) => {
         if (this.pc !== pc) return;
         const remote = new MediaStream([event.track]);
@@ -272,10 +283,15 @@ export class VoiceSession {
       return;
     }
     if (this.cameraTrack?.readyState === "live") return;
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 }, ...(deviceId ? { deviceId: { exact: deviceId } } : {}) },
-    });
+    const base = { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } };
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: deviceId ? { ...base, deviceId: { exact: deviceId } } : base });
+    } catch (error) {
+      if (!deviceId || !missing(error)) throw error;
+      stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: base });
+      this.update({ warning: "Saved camera not found. Using the default camera." });
+    }
     const track = stream.getVideoTracks()[0];
     if (this.pc !== pc || !track) { for (const item of stream.getTracks()) item.stop(); return; }
     this.local.push(stream);
