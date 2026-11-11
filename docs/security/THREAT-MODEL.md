@@ -2,7 +2,7 @@
 
 Status: draft for the v1 protocol in `PROTOCOL.md`. It replaces the trusted-server assumptions in `docs/THREAT-MODEL.md` (plaintext chat, server-side scanning, passkeys); that older file needs a pass to remove the rows this one supersedes. Nothing here has had an independent audit. `CRACK-PLAN.md` describes how the implemented system will be attacked; its results go in `CRACK-REPORT.md`.
 
-Section numbers like "PROTOCOL 9.4" point into `PROTOCOL.md`. Limit ids `L1` to `L23` are defined in section 4 and are the ids the other documents cite.
+Section numbers like "PROTOCOL 9.4" point into `PROTOCOL.md`. Limit ids `L1` to `L23` are defined in section 2 and are the ids the other documents cite.
 
 ## 1. What Housecall promises
 
@@ -52,7 +52,7 @@ Stated first because they are the ones most likely to be assumed.
 - **The device is not compromised** at the OS level while the user is using it, and the OS secure store protects the stored key from other apps.
 - **The CSPRNG works** (`getrandom`).
 - **TLS** (WebPKI) protects metadata and first contact in transit. It is not what protects message confidentiality.
-- **The Rust crates implement their standards correctly** (section 6 of `PROTOCOL.md` lists them, and which are audited).
+- **The Rust crates implement their standards correctly** (`PROTOCOL.md` 0.3 lists them, and which are audited).
 - **The owner holds their account key.** The owner is trusted with features, roles and admins. A malicious owner is covered in A9.
 - **Members choose passwords that pass the strength check and do not reuse them in other places.** Otherwise L2 and A5 get easier.
 
@@ -200,9 +200,9 @@ Tests: C23.
 
 ### A11. Malicious web host (the server's operator, or anyone who can change the files the server serves, when the user uses the web client)
 
-Can: on first load, serve code that steals the password and `RS` (L12). After first load, ship a replacement service worker that stops verifying (PROTOCOL 20.3). Serve different code to different people. Cannot silently pass verification by the project's release key on `housecall verify-web`, which fails for any altered bundle.
+Can: on first load, serve code that steals the password and `RS` (L12). After first load, ship a replacement service worker that stops verifying (PROTOCOL 20.3). Serve different code to different people.
 
-Cannot (installed, verified service worker, within the browser's guarantees): change the bundle that this browser has already verified without the release key, until the browser replaces the service worker itself.
+Cannot: make `housecall verify-web` accept an altered bundle (it checks the manifest against the project's release key, outside any browser state); or, while an honest verified service worker is installed, change the bundle that browser runs without the release key, until the browser replaces the service worker itself.
 
 Control: use the desktop or mobile app; run `verify-web`; the web UI caps its security label (SECURITY-LEVELS 3).
 
