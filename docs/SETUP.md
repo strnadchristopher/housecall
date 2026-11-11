@@ -52,7 +52,7 @@ The Tauri client project shares the web transport/state layer. Linux needs WebKi
 
 ## Testing
 
-Run `cargo test --workspace`, `cargo test --manifest-path crates/media/Cargo.toml`, `cargo test --manifest-path crates/activities/Cargo.toml`, and client scripts in package.json. The explicitly ignored media `multi_gib_interrupted_upload` test writes >2 GiB and must be invoked with `-- --ignored --nocapture` separately. Its scanner drains fixture bytes; it proves storage/resume/integrity, not malware detection. Evidence retains this distinction. No keys are printed into logs.
+Run `bash scripts/test-server.sh` for every server check CI runs (fmt, workspace tests, the media, activities and sfu crates that the workspace excludes, and clippy; `cargo test --workspace` alone skips those three crates), and the client scripts in package.json. The explicitly ignored media `multi_gib_interrupted_upload` test writes >2 GiB and must be invoked with `-- --ignored --nocapture` separately. Its scanner drains fixture bytes; it proves storage/resume/integrity, not malware detection. Evidence retains this distinction. No keys are printed into logs.
 
 Native dependency note: patches/glib contains the exact upstream pointer-mutability safety correction required by Tauri's GTK3 dependency graph. See patches/README.md and evidence/client-cargo-audit.log. Cargo audit skips registry matching for the local path override, so retain the original glib advisory receipt; the patch must be checked and the native target rebuilt before release. No global advisory suppressions are applied.
 

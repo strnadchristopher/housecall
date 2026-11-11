@@ -4,15 +4,10 @@
 
 These are the commands CI runs (`.github/workflows/ci.yml`).
 
-Server and crates (needs `ffmpeg`, `pkg-config`, `libssl-dev`):
+Server and crates (needs `ffmpeg`, `pkg-config`, `libssl-dev`). `bash scripts/test-server.sh` runs fmt, the workspace tests, the media, activities and sfu crates (excluded from the workspace, so `cargo test --workspace` skips them) and clippy, in CI's order:
 
 ```sh
-cargo fmt --all --check
-cargo test --locked --workspace
-cargo test --locked --manifest-path crates/media/Cargo.toml
-cargo test --locked --manifest-path crates/activities/Cargo.toml
-cargo test --locked --manifest-path crates/sfu/Cargo.toml
-cargo clippy --workspace --all-targets -- -D warnings
+bash scripts/test-server.sh
 cargo audit && cargo deny check
 ```
 
