@@ -88,6 +88,8 @@ export function useLegacyCall(c: Housecall) {
     media: status.streams
       .filter(stream => !publishers.has(status.sourcePeers?.[stream.id] ?? ""))
       .map(stream => ({ id: stream.id, stream, participantId: status.sourcePeers?.[stream.id] || undefined, video: stream.getVideoTracks().length > 0 })),
+    speaking: status.phase === "live" ? status.speaking ?? [] : [],
+    localVideo: status.phase === "live" ? voice.localPicture() : undefined,
     joinedAt: status.phase === "live" ? joinedAt : undefined,
     muted, deafened, camera,
     sharing: voice.sharing,

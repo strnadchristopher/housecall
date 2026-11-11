@@ -2,13 +2,14 @@ import { useEffect, useLayoutEffect, useRef, useState, type FocusEvent, type Key
 import { useChat } from "../../core/context";
 import { copy } from "../copy";
 import { day } from "../format";
+import { cx } from "../kit";
 import { GimmeCard } from "./GimmeCard";
 import { Message } from "./Message";
 
 const GROUP_WINDOW_MS = 5 * 60 * 1000;
 
 /** Messages oldest first, grouped by author, pinned to the newest unless the reader scrolled up. */
-export function MessageList() {
+export function MessageList({ compact }: { compact?: boolean }) {
   const chat = useChat();
   const scroller = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -42,7 +43,7 @@ export function MessageList() {
     if (last && stick.current && chat.current?.mentions && document.visibilityState === "visible") void chat.markRead();
   }, [last, chat.current?.mentions]);
   return (
-    <div ref={scroller} className="hc-messages" data-testid="screen-conversation"
+    <div ref={scroller} className={cx("hc-messages", compact && "is-compact")} data-testid="screen-conversation"
       onScroll={event => { const node = event.currentTarget; stick.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; }}>
       <button type="button" className="hc-sr hc-skip" onClick={() => document.querySelector<HTMLTextAreaElement>(".hc-composer textarea")?.focus()}>{copy.messages.skip}</button>
       <ol aria-label={copy.messages.label} onFocus={remember} onKeyDown={navigate}>

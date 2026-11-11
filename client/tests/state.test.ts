@@ -276,3 +276,31 @@ describe("bounded video initialization", () => {
     }
   });
 });
+
+import { sideTabs, isStaged } from "../src/ui/shell/nav";
+import { isSpeaking, SPEAKING_LEVEL } from "../src/core/call";
+describe("call stage navigation", () => {
+  it("shows Chat in the right column only while the stage owns the center", () => {
+    expect(sideTabs(true, true)).toEqual(["chat", "people", "chords"]);
+    expect(sideTabs(true, false)).toEqual(["chat", "people"]);
+    expect(sideTabs(false, true)).toEqual(["people", "chords"]);
+    expect(sideTabs(false, false)).toEqual(["people"]);
+  });
+  it("stages the call only for its own conversation, in a live or connecting call, outside Settings", () => {
+    const live = { phase: "live", conversationId: "a" };
+    expect(isStaged(live, "a", "chat")).toBe(true);
+    expect(isStaged({ phase: "connecting", conversationId: "a" }, "a", "chat")).toBe(true);
+    expect(isStaged(live, "b", "chat")).toBe(false);
+    expect(isStaged(live, "a", "settings")).toBe(false);
+    expect(isStaged({ phase: "failed", conversationId: "a" }, "a", "chat")).toBe(false);
+    expect(isStaged({ phase: "idle" }, "a", "chat")).toBe(false);
+    expect(isStaged(live, undefined, "chat")).toBe(false);
+  });
+  it("counts a participant as speaking only above the level threshold", () => {
+    expect(isSpeaking(undefined)).toBe(false);
+    expect(isSpeaking(0)).toBe(false);
+    expect(isSpeaking(SPEAKING_LEVEL)).toBe(false);
+    expect(isSpeaking(SPEAKING_LEVEL + 0.001)).toBe(true);
+    expect(isSpeaking(0.5)).toBe(true);
+  });
+});

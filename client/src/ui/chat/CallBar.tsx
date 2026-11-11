@@ -4,6 +4,8 @@ import { CallControls } from "../call/CallControls";
 import { copy } from "../copy";
 import { clock } from "../format";
 import { Avatar, Button, Icon, cx } from "../kit";
+import { useNav } from "../shell/nav";
+import { useSheet } from "../tokens/motion";
 
 /**
  * The one voice entry point. Idle: Join. In this channel's call: who is in
@@ -12,6 +14,8 @@ import { Avatar, Button, Icon, cx } from "../kit";
 export function CallBar() {
   const call = useCall();
   const chat = useChat();
+  const nav = useNav();
+  const sheet = useSheet();
   const here = call.phase !== "idle" && call.conversationId === chat.current?.id;
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -71,6 +75,12 @@ export function CallBar() {
           </small>
         )}
       </div>
+      {sheet && (
+        <Button kind="plain" className="hc-callbar__chat" aria-label={chat.current.mentions > 0 ? copy.call.chatUnread(chat.current.mentions) : copy.call.chat}
+          onClick={() => nav.set({ side: { kind: "tabs", tab: "chat" }, sheet: true })}>
+          {copy.call.chat}{chat.current.mentions > 0 && <span className="hc-count" aria-hidden="true">{chat.current.mentions}</span>}
+        </Button>
+      )}
       <CallControls />
     </section>
   );

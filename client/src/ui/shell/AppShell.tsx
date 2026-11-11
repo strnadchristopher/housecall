@@ -15,7 +15,7 @@ import { ServerPicker } from "./ServerPicker";
 import { ChannelList } from "./ChannelList";
 import { CallDock } from "./CallDock";
 import { UserBar } from "./UserBar";
-import { NavContext, type Nav } from "./nav";
+import { NavContext, isStaged, type Nav } from "./nav";
 
 /**
  * Three columns on desktop; one column with stack navigation on a phone
@@ -37,6 +37,14 @@ export function AppShell() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // The call stage owns the center while you look at the call's conversation: Chat moves to the right column.
+  const staged = isStaged(call, chat.current?.id, nav.main);
+  const inCall = call.phase === "live" || call.phase === "connecting";
+  useEffect(() => {
+    if (staged) setNav(current => ({ ...current, side: { kind: "tabs", tab: "chat" } }));
+    else if (!inCall) setNav(current => current.side.kind === "tabs" && current.side.tab === "chat" ? { ...current, side: { kind: "tabs", tab: "people" } } : current);
+  }, [staged, inCall, call.conversationId]);
+
   return (
     <NavContext.Provider value={{ ...nav, set }}>
       <div className={cx("hc-shell", phone && "is-phone")} data-screen={nav.screen} data-sheet={nav.sheet ? "" : undefined}>
@@ -47,7 +55,15 @@ export function AppShell() {
           <UserBar />
         </nav>
         <main className="hc-center" inert={phone && nav.screen !== "main"}>
-          {nav.main === "settings" ? <><CallStage away /><SettingsView />{phone && <CallDock />}</> : (
+          {nav.main === "settings" ? <><CallStage away /><SettingsView />{phone && <CallDock />}</> : staged ? (
+            <>
+              <ChannelHeader />
+              {!chat.online && <p className="hc-offline" role="status">{copy.state.reconnecting}</p>}
+              <CallStage full />
+              <ErrorLine text={chat.error} onDismiss={chat.clearError} dismissLabel={copy.common.dismiss} />
+              <CallBar />
+            </>
+          ) : (
             <>
               <ChannelHeader />
               {!chat.online && <p className="hc-offline" role="status">{copy.state.reconnecting}</p>}

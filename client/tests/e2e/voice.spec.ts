@@ -360,7 +360,101 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
   }
 });
 
-test("joins and shows a warning when a saved device is missing", async ({ browser, request }) => {
+test("call stage owns center", async ({ browser, request }) => {
+  test.setTimeout(120000);
+  let owner = await request.post("/api/setup", {
+    data: { setup_token: "test-setup-token-at-least-32-characters", username: "owner", password, device_name: "stage fixture" },
+  });
+  if (owner.status() === 409) owner = await request.post("/api/login", { data: { username: "owner", password, device_name: "stage fixture" } });
+  expect(owner.ok()).toBeTruthy();
+  const session = await owner.json();
+  const headers = { Authorization: `Bearer ${session.token}`, "X-Device-Key": session.device_key };
+  const me = await (await request.get("/api/me", { headers })).json();
+  test.skip(me.capabilities.voice !== true, "SFU transport not configured in this backend binary");
+  const invitation = await (await request.post("/api/invites", { headers, data: { email: "fixture@example.test", expires_in_seconds: 3600 } })).json();
+  expect((await request.post("/api/invites/accept", { data: { token: invitation.token, username: "stage_erin", password, device_name: "stage fixture" } })).ok()).toBeTruthy();
+  const contexts: BrowserContext[] = [];
+  try {
+    for (const username of ["owner", "stage_erin"]) {
+      const context = await browser.newContext({ permissions: ["camera", "microphone"] });
+      contexts.push(context);
+      const page = await context.newPage();
+      await page.goto("/");
+      await page.getByLabel("Username", { exact: true }).fill(username);
+      await page.getByLabel("Password", { exact: true }).fill(password);
+      await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).first().click();
+      await expect(page.getByTestId("screen-composer")).toBeVisible({ timeout: 30000 });
+    }
+    const [host, guest] = contexts.map(context => context.pages()[0]);
+    for (const page of [host, guest]) {
+      const bar = page.getByTestId("call-bar");
+      await bar.getByRole("button", { name: "Join", exact: true }).click();
+      await expect(bar).toHaveAttribute("data-phase", "live", { timeout: 30000 });
+    }
+    // The stage is the center; the composer and the message list moved to the right column's Chat tab.
+    await expect(host.locator(".hc-center [data-testid=call-stage]")).toBeVisible();
+    await expect(host.locator(".hc-center [data-testid=screen-composer]")).toHaveCount(0);
+    await expect(host.getByRole("tab", { name: "Chat", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(host.locator(".hc-center [data-testid=call-tile]")).toHaveCount(2, { timeout: 15000 });
+    await expect(host.locator(".hc-center [data-testid=call-bar]")).toBeVisible();
+    // A camera-off participant shows an avatar; turning the camera on shows the picture.
+    const guestTile = host.locator(".hc-center [data-testid=call-tile]").filter({ hasText: "stage_erin" });
+    await expect(guestTile).not.toHaveAttribute("data-picture", "");
+    await guest.getByTestId("call-bar").getByRole("button", { name: "Camera on", exact: true }).click();
+    await expect(guestTile).toHaveAttribute("data-picture", "", { timeout: 30000 });
+    await expect(host.locator("[data-testid=remote-media]").first()).toBeAttached();
+    // Chat from the side tab reaches the other participant's side tab.
+    const text = `stage hello ${Date.now()}`;
+    await host.locator(".hc-right textarea").fill(text);
+    await host.locator(".hc-right textarea").press("Enter");
+    await expect(host.locator(".hc-right").getByText(text)).toBeVisible();
+    await expect(guest.locator(".hc-right").getByText(text)).toBeVisible({ timeout: 15000 });
+    // Pin spotlights a tile; unpin returns to the grid.
+    await guestTile.getByRole("button", { name: /^Pin / }).click();
+    await expect(host.locator(".hc-stage__spot")).toBeVisible();
+    await host.locator(".hc-stage__spot").getByRole("button", { name: /^Unpin / }).click();
+    await expect(host.locator(".hc-stage__spot")).toHaveCount(0);
+    // Leaving restores the normal layout.
+    await host.getByTestId("call-bar").getByRole("button", { name: "Leave", exact: true }).click();
+    await expect(host.locator(".hc-center [data-testid=screen-composer]")).toBeVisible();
+    await expect(host.getByRole("tab", { name: "Chat", exact: true })).toHaveCount(0);
+    await expect(host.getByTestId("call-bar").getByRole("button", { name: "Join", exact: true })).toBeVisible();
+  } finally {
+    for (const context of contexts) await context.close();
+  }
+});
+
+test("call stage on a phone: stage is the screen, chat opens as the sheet", async ({ browser, request }) => {
+  test.setTimeout(120000);
+  const setup = await request.post("/api/setup", {
+    data: { setup_token: "test-setup-token-at-least-32-characters", username: "owner", password, device_name: "phone stage fixture" },
+  });
+  expect([200, 201, 409]).toContain(setup.status());
+  const context = await browser.newContext({ permissions: ["camera", "microphone"], viewport: { width: 390, height: 800 } });
+  try {
+    const page = await context.newPage();
+    await page.goto("/");
+    await page.getByLabel("Username", { exact: true }).fill("owner");
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).first().click();
+    await page.getByRole("button", { name: /^Open / }).first().click();
+    const bar = page.getByTestId("call-bar");
+    await bar.getByRole("button", { name: "Join", exact: true }).click();
+    await expect(bar).toHaveAttribute("data-phase", "live", { timeout: 30000 });
+    await expect(page.locator(".hc-center [data-testid=call-stage]")).toBeVisible();
+    await expect(page.locator(".hc-center [data-testid=screen-composer]")).toHaveCount(0);
+    await bar.getByRole("button", { name: "Chat", exact: true }).click();
+    await expect(page.locator(".hc-right [data-testid=screen-composer]")).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Chat", exact: true })).toHaveAttribute("aria-selected", "true");
+    await page.locator(".hc-right").getByRole("button", { name: "Close", exact: true }).click();
+    await bar.getByRole("button", { name: "Leave", exact: true }).click();
+    await expect(page.locator(".hc-center [data-testid=screen-composer]")).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
+
+test("joins and shows a warning when a saved device is missing",async ({ browser, request }) => {
   const setup = await request.post("/api/setup", {
     data: { setup_token: "test-setup-token-at-least-32-characters", username: "owner", password, device_name: "missing device fixture" },
   });

@@ -44,9 +44,11 @@ export const copy = {
     microphone: "Microphone", camera: "Camera", defaultDevice: "System default", refresh: "Refresh devices",
     bitrate: "Audio bitrate (bit/s)", noise: "Noise suppression", apply: "Apply", stage: "Call stage",
     remoteVideo: "Remote video", remoteAudio: "Remote audio", dock: "Current call", open: (name: string) => `Open ${name}`,
+    localVideo: "Your video", you: "you", chat: "Chat", chatUnread: (n: number) => `Chat, ${n} unread`,
+    pin: (name: string) => `Pin ${name}`, unpin: (name: string) => `Unpin ${name}`, muted: "Muted", deafened: "Deafened", sharing: "Sharing your screen", speaking: "Speaking",
   },
   side: {
-    label: "Details", people: "People", chords: "Chords", owner: "Owner", search: "Search", pins: "Pins", searchLabel: "Search messages",
+    label: "Details", chat: "Chat", people: "People", chords: "Chords", owner: "Owner", search: "Search", pins: "Pins", searchLabel: "Search messages",
     noResults: "No results", noPins: "No pins",
   },
   chords: {

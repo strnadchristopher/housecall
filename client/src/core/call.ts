@@ -12,6 +12,12 @@ export interface CallParticipant {
   connected: boolean;
 }
 
+/** Audio level (0 to 1, as reported by getStats) above which a participant counts as speaking. */
+export const SPEAKING_LEVEL = 0.02;
+export function isSpeaking(level: number | undefined): boolean {
+  return typeof level === "number" && level > SPEAKING_LEVEL;
+}
+
 export interface CallMedia {
   id: string;
   stream: MediaStream;
@@ -37,6 +43,10 @@ export interface CallState {
   /** Who is in a call right now, by conversation id, for every conversation you can open. Read before joining. */
   active: Record<string, { personId: string; name: string; avatarUrl?: string }[]>;
   media: CallMedia[];
+  /** Ids of participants whose audio is above the speaking threshold right now (sampled at 4 Hz). */
+  speaking: string[];
+  /** Your own outgoing picture (camera, or the screen while sharing), for your tile. */
+  localVideo?: MediaStream;
   /** When this client joined, in epoch milliseconds. */
   joinedAt?: number;
   muted: boolean;

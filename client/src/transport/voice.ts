@@ -1,4 +1,5 @@
 import type { Api } from "./api";
+import { isSpeaking } from "../core/call";
 export interface VoiceInputs { microphone?: string; camera?: string }
 export interface VoiceDevice { id: string; label: string; kind: "audioinput" | "videoinput" }
 /** Enumeration does not request permission; labels may be blank until an explicit capture grant. */
@@ -13,6 +14,8 @@ export interface VoiceStatus {
   streams: MediaStream[];
   /** SFU msid is the originating peer ID; values contain no session credential. */
   sourcePeers?: Record<string, string>;
+  /** Peer ids whose audio is above the speaking threshold (sampled at 4 Hz). */
+  speaking?: string[];
   receivedBytes: number;
   decodedFrames: number;
   roundTripSeconds?: number;
@@ -105,6 +108,8 @@ export class VoiceSession {
   private cameraTrack?: MediaStreamTrack;
   private channelId?: string;
   private timer?: ReturnType<typeof setInterval>;
+  private levelTimer?: ReturnType<typeof setInterval>;
+  private picture?: { track: MediaStreamTrack; stream: MediaStream };
   private serial = Promise.resolve();
   private state: VoiceStatus = {
     phase: "idle",
@@ -223,6 +228,7 @@ export class VoiceSession {
           current();
         }
       this.timer = setInterval(() => void this.statistics(), 1000);
+      this.levelTimer = setInterval(() => void this.levels(), 250);
     } catch (error) {
       if (generation !== this.generation) return;
       this.close();
@@ -253,6 +259,7 @@ export class VoiceSession {
       if (this.pc !== pc || this.screenTrack !== track) return;
       this.screenTrack = undefined;
       this.local = this.local.filter(local => local !== stream);
+      this.update({});
       const camera = this.cameraTrack?.readyState === "live" ? this.cameraTrack : original?.readyState === "live" ? original : null;
       void sender.replaceTrack(camera).catch(() => {});
     };
@@ -318,6 +325,37 @@ export class VoiceSession {
         await sender.setParameters(parameters);
       }
   }
+  /** Your outgoing picture: the screen while sharing, otherwise the camera. The stream is reused while the track is. */
+  localPicture(): MediaStream | undefined {
+    const track = this.screenTrack?.readyState === "live" ? this.screenTrack : this.cameraTrack?.readyState === "live" ? this.cameraTrack : undefined;
+    if (!track) { this.picture = undefined; return undefined; }
+    if (this.picture?.track !== track) this.picture = { track, stream: new MediaStream([track]) };
+    return this.picture.stream;
+  }
+  /** Who is speaking, sampled at 4 Hz from audio levels. Only a change notifies the UI. */
+  private async levels() {
+    const pc = this.pc;
+    if (!pc) return;
+    let reports: RTCStatsReport;
+    try { reports = await pc.getStats(); } catch { return; }
+    if (this.pc !== pc) return;
+    const owner = new Map<string, string>();
+    for (const stream of this.state.streams) {
+      const peer = this.state.sourcePeers?.[stream.id];
+      const track = stream.getAudioTracks()[0];
+      if (peer && track) owner.set(track.id, peer);
+    }
+    const microphoneOpen = this.local.some(stream => stream.getAudioTracks().some(track => track.enabled));
+    const speaking = new Set<string>();
+    for (const report of reports.values()) {
+      if (report.kind !== "audio" || !isSpeaking(report.audioLevel)) continue;
+      if (report.type === "inbound-rtp") { const peer = owner.get(report.trackIdentifier); if (peer) speaking.add(peer); }
+      else if (report.type === "media-source" && microphoneOpen && this.state.peerId) speaking.add(this.state.peerId);
+    }
+    const next = [...speaking].sort();
+    const before = this.state.speaking ?? [];
+    if (next.length !== before.length || next.some((id, index) => id !== before[index])) this.update({ speaking: next });
+  }
   private async statistics() {
     const pc = this.pc;
     if (!pc) return;
@@ -351,6 +389,8 @@ export class VoiceSession {
     this.screenTrack=undefined;
     this.cameraTrack = undefined;
     clearInterval(this.timer);
+    clearInterval(this.levelTimer);
+    this.picture = undefined;
     if (this.dc) { this.dc.onmessage = null; this.dc.close(); }
     if (this.pc) {
       this.pc.onconnectionstatechange = null;

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 
 import { useChat } from "../../core/context";
 import { copy } from "../copy";
 import { bytes } from "../format";
-import { Button, IconButton } from "../kit";
+import { Button, IconButton, cx } from "../kit";
 import { EmojiPicker } from "./EmojiPicker";
 import { GifPicker } from "./GifPicker";
 
@@ -15,7 +15,7 @@ function grow(field: HTMLTextAreaElement) {
 }
 
 /** Attach, text, emoji, GIF. Uploads, replies, edits and mention suggestions sit above the field. */
-export function Composer() {
+export function Composer({ compact }: { compact?: boolean }) {
   const chat = useChat();
   const [panel, setPanel] = useState<"" | "emoji" | "gif">("");
   const input = useRef<HTMLTextAreaElement>(null);
@@ -38,7 +38,7 @@ export function Composer() {
   const uploadState = upload && { uploading: copy.composer.uploading, paused: copy.composer.paused, held: copy.composer.held, ready: copy.composer.ready, failed: copy.composer.failed }[upload.state];
 
   return (
-    <form className="hc-composer" data-testid="screen-composer" onSubmit={submit}>
+    <form className={cx("hc-composer", compact && "is-compact")} data-testid="screen-composer" onSubmit={submit}>
       {(chat.replyingTo || chat.editing) && (
         <div className="hc-composer__context">
           <span>{chat.editing ? copy.composer.editing : copy.composer.replying(chat.replyingTo!.authorName)}</span>
