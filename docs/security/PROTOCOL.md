@@ -659,7 +659,7 @@ A reader accepts a message only if:
 6. **Live messages to a stale epoch are dropped.** If the reader has adopted epoch `m > epoch`, a live message arriving in epoch `epoch` is dropped (the sender is told to retry). Backfilled history is exempt.
 7. `sent_at` more than 10 minutes from the reader's clock is displayed with "time unverified".
 
-Edits (`kind 1`) and deletes (`kind 2`) are valid only if `sender` equals the target message's sender (or the sender is an admin or owner who is a member of the channel, for moderation). Reactions and pins are messages too, so the server cannot see who reacted to what.
+Edits (`kind 1`) and deletes (`kind 2`) are valid only if `sender` equals the target message's sender (or the sender is an admin or owner who is a member of the channel, for moderation). Among edits of one target, the edit with the highest `sender_seq` from that sender wins; an older edit arriving later is ignored. A delete is final: a message that was deleted stays deleted when it, or an older edit of it, is replayed. Reactions and pins are messages too, so the server cannot see who reacted to what.
 
 ### 10.5 What the signature does and does not give
 
