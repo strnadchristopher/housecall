@@ -203,3 +203,56 @@ Call stage in the center, chat in the right column (tasks 4.1 to 4.4).
 - The GIF E2E generates the GIF with ffmpeg piped to stdout, so no file is written. It checks the avatar response through `waitForResponse` (type `image/gif`, identical bytes), then `naturalWidth > 0` on the user-bar image.
 - Per the brief, GIF avatars are not paused under reduced motion and there is no still-frame fallback.
 - Skipped as unlikely or hypothetical: re-entering a settings layer that is mid-exit with a different section, and a Lightbox Escape listener lingering for the 190 ms exit.
+
+## Phase 6
+
+Integration setup: server creation wizard and Settings > Integrations, one shared component (tasks 6.1 to 6.6).
+
+### Commits
+- `df7f207` feat(setup): owner-only `/api/setup/status` with names and booleans only (6.1)
+- `4f2b810` test(setup): assert anonymous 401 and member 403 for `/api/setup/status`
+- `c1397f2` feat(setup): copyable integration steps checked against `.env.example` (6.2)
+- `3a5314d` feat(setup): server creation wizard and Settings > Integrations (6.3 to 6.6)
+- the handoff commit that adds this section
+
+### What changed
+- `server/src/setup.rs`: `GET /api/setup/status`, owner only (403 for members, 401 without a session). Returns `{"integrations":[{id, ready, missing?}]}` for calls, media, scanner, transcode, dj, gimme, plex, giphy and vm. `missing` holds env var names (and the text `compose profile: vm`); no value is ever read into the response. It is in the route inventory automatically (the inventory parses `.route(` in `src/`).
+- `.env.example`: added `DJ_ENABLED=false` (compose already reads it) and a commented `HOUSECALL_FFMPEG=/usr/bin/ffmpeg`, so the cards only name documented variables.
+- `client/src/ui/setup/steps.ts`: title, one-line why and ordered steps (with copy snippets) for all nine cards.
+- `client/src/ui/setup/IntegrationSetup.tsx`: the one component. Cards with Ready (bare check) or Needs setup, the missing names, steps with Copy, and Check again (one refetch). One line says readiness is the same for every server on the host. The calls card has a Test microphone and camera button: mic level meter and camera preview through `acquireMedia` with the saved devices; tracks and the AudioContext stop on Stop test and on unmount. Members see "Ask the server owner to set this up." and send no request.
+- `client/src/ui/setup/CreateServerWizard.tsx`: five steps (name and icon, channels, calls, extras, invite) as `Presence` slides, step dots, Back and Next. Step 1 does `POST /api/servers` then `PUT .../icon` (icon failure keeps the server and shows a message). Step 2 creates the optional Voice lounge and Music channels once each. Steps 3 and 4 are `IntegrationSetup` filtered to the calls card and to dj, gimme, plex, giphy, vm and transcode. Step 5 creates a 7 day invite and shows it with Copy. Escape after step 1 asks to confirm; leaving keeps the server.
+- `ServerPicker`: owners get a Create server row. Settings: new Integrations section, shown to everyone in the server group (members get the ask-owner text).
+- `ChatStore.createServer(name, icon?)` and `IdentityProvider.loadSetupStatus()` in `core/` and `adapters/legacy/`. `createServer` makes the new server current, so later channel and invite calls apply to it.
+- UI guidelines applied (also in the commit body): say less, state as words plus a bare check (no chip, no icon tile), tonal cards with no shadow or glow or hover movement, step dots instead of a rail, content visible by default, clear the cut (stage padding for focus rings), no em dashes, every control clicked with a real pointer in the spec. I viewed one screenshot of the calls step (light theme) and fixed the faint card tone and an 8 px misalignment against it.
+
+### Tests run (real results)
+- `npm run build` (in `client`): passed.
+- `npm test` (in `client`): 5 files, 50 tests passed (new: `tests/setup-steps.test.ts`, 3 tests: every `{code}` variable exists in `../.env.example`, no secret-looking values, cards match the server's ids).
+- `HOUSECALL_TEST_SETUP=1 npx playwright test`: 1 passed, 0 failed (new `setup.spec.ts`: full five-step wizard with a GIF icon and `waitForResponse` on the icon PUT; Escape confirm; device test with the fake camera and mic; Check again via `waitForResponse`; all nine cards in Settings; a member sees the ask-owner text and sends no status request; the new server shows its icon in the picker).
+- `HOUSECALL_TEST_SHELL=1 npx playwright test`: 3 passed on four of the last six runs. Two runs failed 2 of 3 (see "Test environment" below); the same code passed on re-run.
+- `npx playwright test` (default chat.spec.ts): 1 passed.
+- `cargo test -p housecall-server --test setup --test route_inventory --config 'profile.dev.package.housecall-server.opt-level=1'`: 2 passed, 0 failed (`setup.rs` sets `GIMME_AGENT_API_KEY=sentinel-xyz` plus Plex and Giphy sentinels and asserts none appear in the body; 401 anonymous, 403 member, 200 owner, ids and keys exact).
+- `cargo test --locked --workspace --config 'profile.dev.package.housecall-server.opt-level=1'`: all suites passed, 0 failed (59 + 1 + 2 + 13 + 1 + 16 + 1 + 4 tests in the main binaries; the others report 0).
+- `cargo clippy --workspace --all-targets --config '...opt-level=1' -- -D warnings`: clean.
+- `cargo fmt --all --check` (first step of `bash scripts/test-server.sh`): passed.
+- `bash scripts/check-public-safe.sh`: OK.
+
+### Test environment problem (please read)
+- `bash scripts/test-server.sh` **failed at "workspace tests"** in my session: `setup::status_is_owner_only_and_never_returns_config_values` got 404. This is not the code. `target` is a symlink into a sibling worktree's target directory, and a library with the same crate name and workspace-relative path was already built there without the new route. Cargo then reports `housecall-server` as Fresh even after I edit the source, and links that stale library (the e2e server binary at `target/debug/housecall-server` has the same problem, which is likely what failed two shell spec runs).
+- I worked around it with `--config 'profile.dev.package.housecall-server.opt-level=1'`, which gives only that crate its own artifact hash and rebuilds it from this worktree's source. All results above that mention it used that flag. The media, activities and sfu steps of the script were not run separately, because I did not touch those crates.
+- The release owner should run `bash scripts/test-server.sh` from a target directory that does not share artifacts with another worktree, or rebuild `housecall-server` first.
+
+### Unverified
+- The wizard and cards on a real phone and in the dark theme; only a desktop light-theme screenshot of the calls step was viewed.
+- Passing steps against a real SFU: the test host has no call port, so the calls card is only seen in its "Needs setup" state. The Ready state is covered only by the server test of the JSON shape, not by a browser run.
+- Mic meter movement with a real voice (the fake device is a tone, and the spec only checks that the meter and a decoded camera frame appear).
+- Gimme under Compose can never read Ready: `compose.yaml` pins `GIMME_DRY_RUN` to `"true"` on purpose (SETUP.md says production calls are not authorised). The Gimme card says so and gives the standalone settings instead of changing the compose file.
+- The `docker compose up -d app` and `docker compose --profile vm up -d` commands in the steps were not run. The service name `app` comes from `compose.yaml`.
+
+### Deviations from the plan
+- `/api/setup/status` has no `detail` text (the field is accepted by the client type but the server never sets it) because nothing real to report was available without reading config values. The `transcode` row names `HOUSECALL_MEDIA_KEY` when uploads are off, and `dj` names `SFU_PUBLIC_IP` or `HOUSECALL_MEDIA_KEY` when its prerequisites are off.
+- There was no existing one-shot "create server" form to replace, and the picker's Add Server row is for connecting another host (native builds only). The wizard is opened from a new owner-only Create server row.
+- Steps in the wizard use one `Presence` per step in a shared grid cell, so the leaving step slides out in place.
+- Integrations are listed for members too (with the ask-owner text), so the plan's non-owner case is reachable from the UI.
+- Fixed an existing bug that the new picker row exposed: pressing ArrowDown on the closed trigger opened the list and the container handler then moved the index again (hidden before because the list had one row).
+- Skipped as unlikely or hypothetical: a second wizard opened while the first is mid-exit, and Escape while the Create server request is in flight.
