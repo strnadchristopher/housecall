@@ -27,6 +27,7 @@ const child = spawn(binary, [], {
       ? { PLEX_URL: "http://127.0.0.1:3032", PLEX_TOKEN: "fixture-secret" }
       : {}),
     HOUSECALL_ORIGIN: "http://localhost:1420",
+    HOUSECALL_PUBLIC_URL: "http://localhost:1420",
     HOUSECALL_DATABASE: join(directory, "database.sqlite"),
     HOUSECALL_MEDIA_DIR: join(directory, "media"),
     HOUSECALL_MEDIA_KEY: "11".repeat(32),

@@ -78,12 +78,12 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
       const page = await context.newPage();
       await page.goto("/");
       await page.getByLabel("Username", { exact: true }).fill(username);
-      await page.getByLabel("Password (at least 12 characters)").fill(password);
+      await page.getByLabel("Password", { exact: true }).fill(password);
       const login = page.waitForResponse((response) =>
         response.url().endsWith("/api/login"),
       );
       await page
-        .getByTestId("screen-login")
+        .getByTestId("screen-sign-in")
         .getByRole("button", { name: "Sign in", exact: true })
         .first()
         .click();
@@ -98,15 +98,15 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
     }
     for (const context of contexts) {
       const page = context.pages()[0];
-      await page
-        .getByRole("button", { name: "Voice and video", exact: true })
-        .click();
-      await page
-        .getByRole("button", { name: "Join with microphone and camera" })
-        .click();
-      await expect(page.getByTestId("screen-voice")).toContainText("live", {
+      const bar = page.getByTestId("call-bar");
+      await bar.getByRole("button", { name: "Join", exact: true }).click();
+      await expect(bar).toHaveAttribute("data-phase", "live", {
         timeout: 30000,
       });
+      await bar.getByRole("button", { name: "Camera on", exact: true }).click();
+      await expect(
+        bar.getByRole("button", { name: "Camera off", exact: true }),
+      ).toBeVisible();
     }
     const evidence = [];
     for (const context of contexts) {
@@ -170,7 +170,7 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
       ).toBeGreaterThanOrEqual(2);
     }
     await writeFile(
-      "../evidence/client-voice-three-user.json",
+      "test-results/client-voice-three-user.json",
       JSON.stringify(
         {
           note: "Actual RTP from Chromium fake capture devices. Does not measure physical glass-to-glass latency.",
@@ -208,10 +208,8 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
       };
     });
     await publisher
-      .getByRole("button", {
-        name: "Share screen (replaces camera; microphone audio)",
-        exact: true,
-      })
+      .getByTestId("call-bar")
+      .getByRole("button", { name: "Share screen", exact: true })
       .click();
     const captureAge = await contexts[1].pages()[0].evaluate(
       () =>
@@ -267,7 +265,7 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
     ).toBeGreaterThanOrEqual(10);
     const sorted = [...captureAge].sort((a, b) => a - b);
     await writeFile(
-      "../evidence/client-screen-capture-latency.json",
+      "test-results/client-screen-capture-latency.json",
       JSON.stringify(
         {
           note: "Synthetic canvas timestamp capture to decoded browser video callback over localhost SFU; same host wall clock. Excludes physical camera exposure, display scanout and real OS screen-capture permissions. Not physical glass-to-glass.",
@@ -282,10 +280,11 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
     await publisher.evaluate(() => (window as any).testScreenStop());
     for (const context of contexts) {
       const page = context.pages()[0];
-      await page
-        .getByRole("button", { name: "Leave voice", exact: true })
-        .click();
-      await expect(page.getByTestId("screen-voice")).toContainText("idle");
+      const bar = page.getByTestId("call-bar");
+      await bar.getByRole("button", { name: "Leave", exact: true }).click();
+      await expect(
+        bar.getByRole("button", { name: "Join", exact: true }),
+      ).toBeVisible();
     }
   } finally {
     const diagnostic = [];
@@ -348,7 +347,7 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
       })
     ).json();
     await writeFile(
-      "../evidence/client-voice-diagnostics.json",
+      "test-results/client-voice-diagnostics.json",
       JSON.stringify({ browser: diagnostic, server }, null, 2),
     );
     for (const context of contexts) await context.close();
