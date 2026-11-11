@@ -4,7 +4,7 @@ export interface MessageDetails {
   authorId: string; authorName: string; createdAt: number; editedAt?: number;
   replyTo?: { id: string; authorName: string; excerpt: string } | null;
   pinned: boolean; reactions: { emoji: string; count: number; mine: boolean }[];
-  attachments: { id: string; filename: string; length: string; videoPath?: string; thumbnailPath?: string }[];
+  attachments: { id: string; filename: string; length: string; kind: string; videoPath?: string; thumbnailPath?: string }[];
   mentionsMe: boolean;
 }
 
@@ -25,6 +25,6 @@ export function messageDetails(message: Message, currentUser: string, name: (id:
     replyTo: parent ? { id: parent.id, authorName: name(parent.author_id), excerpt: parent.body.slice(0, 160) } : null,
     reactions: [...reactions.values()], mentionsMe: message.mention_ids?.includes(currentUser) ?? false,
     attachments: (message.attachments ?? []).map(attachment => ({ id: attachment.id, filename: attachment.filename,
-      length: attachment.length, videoPath: attachment.video_path ?? undefined, thumbnailPath: attachment.thumbnail_path ?? undefined })),
+      length: attachment.length, kind: attachment.kind ?? (attachment.video_path ? "video" : "file"), videoPath: attachment.video_path ?? undefined, thumbnailPath: attachment.thumbnail_path ?? undefined })),
   };
 }

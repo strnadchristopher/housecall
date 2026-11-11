@@ -34,7 +34,10 @@ export interface Attachment {
   id: string;
   filename: string;
   size: string;
+  kind: "image" | "gif" | "video" | "video_pending" | "file";
+  /** Kept for existing callers; true when kind === "video". */
   video: boolean;
+  thumbnail?: string;
 }
 
 export interface Reaction {
@@ -162,6 +165,8 @@ export interface ChatStore extends ChatState {
   gifSource(id: string): Promise<string>;
   /** Saves an attachment to the device. */
   download(attachment: Attachment): Promise<void>;
+  /** Fetches an authenticated media path as a Blob (for inline display). */
+  fetchMedia(path: string): Promise<Blob>;
   /** Binds a scanned video attachment to a player element; returns a disposer. */
   playVideo(element: HTMLVideoElement, messageId: string, attachmentId: string, onError: (message: string) => void): () => void;
   /** These resolve to whether the request succeeded; callers navigate or clear forms only on success. */

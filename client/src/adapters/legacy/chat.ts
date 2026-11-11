@@ -118,6 +118,11 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
   }, [isActive, !!me, c.servers.length]);
 
   const nameOf = (id: string) => c.members.find(member => member.id === id)?.username ?? id;
+  const fetchMedia = async (path: string): Promise<Blob> => {
+    const response = await fetch(c.api.mediaRequest(path));
+    if (!response.ok) throw new Error(`File unavailable (${response.status})`);
+    return response.blob();
+  };
   const view = (message: Message, visible: readonly Message[]): ChatMessage => {
     const details = messageDetails(message, me?.id ?? "", nameOf, visible);
     let nodes: ChatMessage["nodes"] = [];
@@ -127,7 +132,7 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
       id: message.id, authorId: message.author_id, authorName: details.authorName, body: message.body, nodes,
       createdAt: message.created_at, editedAt: details.editedAt, pinned: details.pinned,
       replyTo: details.replyTo ?? null, reactions: details.reactions, mentionsMe: details.mentionsMe && !mine,
-      attachments: details.attachments.map(a => ({ id: a.id, filename: a.filename, size: a.length, video: !!a.videoPath })),
+      attachments: details.attachments.map(a => ({ id: a.id, filename: a.filename, size: a.length, kind: a.kind as Attachment["kind"], video: !!a.videoPath, thumbnail: a.thumbnailPath })),
       mine, canEdit: mine, canUnsend: mine || !!me?.is_owner,
       link: c.capabilities.embeds === true ? firstPreviewLink(message.body) : undefined,
       gifs: c.capabilities.giphy === true ? [...message.body.matchAll(GIF_LINK)].map(match => match[1]) : [],
@@ -322,10 +327,9 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
       }
       return pending;
     },
+    fetchMedia,
     download: (attachment: Attachment) => c.run(async () => {
-      const response = await fetch(c.api.mediaRequest(`/api/media/${encodeURIComponent(attachment.id)}`));
-      if (!response.ok) throw new Error(`File unavailable (${response.status})`);
-      const url = URL.createObjectURL(await response.blob());
+      const url = URL.createObjectURL(await fetchMedia(`/api/media/${encodeURIComponent(attachment.id)}`));
       const link = document.createElement("a");
       link.href = url; link.download = attachment.filename; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);

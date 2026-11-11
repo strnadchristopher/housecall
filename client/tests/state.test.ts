@@ -16,6 +16,15 @@ it("structured message metadata uses exact mentions and hides unavailable reply 
   expect(result.replyTo).toBeNull();
   expect(result.reactions).toEqual([{ emoji: "👍", count: 2, mine: true }]);
 });
+it("attachment display kind comes from the server and falls back to video for legacy rows", () => {
+  const base = { id: "m", channel_id: "c", author_id: "a", created_at: 1, body: "" };
+  const result = messageDetails({ ...base, attachments: [
+    { id: "1", filename: "a.png", length: "10", kind: "image" },
+    { id: "2", filename: "b.mp4", length: "10", video_path: "/api/media-jobs/j/video" },
+    { id: "3", filename: "c.txt", length: "10" },
+  ] }, "me", id => id, []);
+  expect(result.attachments.map(a => a.kind)).toEqual(["image", "video", "file"]);
+});
 it("preserves real Tauri string rejection messages across native cleanup", async () => {
   vi.stubGlobal("window", { __TAURI_INTERNALS__: { invoke: async (_command: string, args: {action: string}) => {
     if (args.action === "status") return { supported: true };
