@@ -4,6 +4,7 @@ pub mod dj;
 pub mod embeds;
 pub mod gimme;
 pub mod giphy;
+pub mod image_blob;
 pub mod media;
 pub(crate) mod media_index;
 pub mod passkeys;
