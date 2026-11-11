@@ -4,12 +4,12 @@ import { useChat, useIdentity } from "../../core/context";
 import { copy } from "../copy";
 import { Avatar, Button, Field, MediaDropzone } from "../kit";
 import { useNav } from "../shell/nav";
-import { resizeImage } from "./resizeImage";
+import { prepareImage } from "./resizeImage";
 
-const PICTURE_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const PICTURE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 const PICTURE_PICK_LIMIT = 8 * 1024 * 1024;
 
-/** Picks an image, shrinks it on this device, then uploads it. Shared by the avatar and the server icon. */
+/** Picks an image, shrinks it on this device (a GIF is kept as is), then uploads it. Shared by the avatar and the server icon. */
 function PictureField({ label, remove, current, shape, name, save, clear }: {
   label: string; remove: string; current?: string; shape: "arch" | "squircle"; name: string;
   save: (image: Blob) => Promise<boolean>; clear: () => Promise<boolean>;
@@ -21,13 +21,13 @@ function PictureField({ label, remove, current, shape, name, save, clear }: {
     if (!file) return;
     setProblem("");
     try {
-      if (await save(await resizeImage(file))) setFile(undefined);
+      if (await save(await prepareImage(file))) setFile(undefined);
     } catch (error) { setProblem(error instanceof Error ? error.message : String(error)); }
   };
   return (
     <div className="hc-stack">
       {!file && shape === "squircle" && <p className="hc-person"><Avatar name={name} src={current} size="lg" shape={shape} /></p>}
-      <MediaDropzone label={label} accept={PICTURE_TYPES} maxBytes={PICTURE_PICK_LIMIT} value={file} onChange={next => { setProblem(""); setFile(next); }} />
+      <MediaDropzone label={label} accept={PICTURE_TYPES} maxBytes={PICTURE_PICK_LIMIT} hint={copy.profile.pictureHint} typeError={copy.profile.pictureType} value={file} onChange={next => { setProblem(""); setFile(next); }} />
       {problem && <p className="hc-field__error" role="alert">{problem}</p>}
       <div className="hc-inline">
         {file && <Button kind="primary" busy={identity.busy} onClick={() => void upload()}>{copy.common.save}</Button>}

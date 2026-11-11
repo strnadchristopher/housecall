@@ -20,7 +20,7 @@ pub fn routes() -> Router<AppState> {
             "/me/avatar",
             put(set_avatar)
                 .delete(clear_avatar)
-                .layer(DefaultBodyLimit::max(image_blob::MAX_ICON_BYTES + 1)),
+                .layer(DefaultBodyLimit::max(image_blob::MAX_GIF_BYTES + 1)),
         )
         .route("/users/{id}/avatar", get(avatar))
         .route("/servers/{id}", patch(rename_server))
@@ -29,7 +29,7 @@ pub fn routes() -> Router<AppState> {
             put(set_icon)
                 .delete(clear_icon)
                 .get(icon)
-                .layer(DefaultBodyLimit::max(image_blob::MAX_ICON_BYTES + 1)),
+                .layer(DefaultBodyLimit::max(image_blob::MAX_GIF_BYTES + 1)),
         )
 }
 

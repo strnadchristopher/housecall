@@ -73,6 +73,7 @@ export const copy = {
   profile: {
     displayName: "Display name", avatar: "Profile picture", username: "Username", removeAvatar: "Remove picture",
     serverName: "Server name", serverIcon: "Server icon", removeIcon: "Remove icon",
+    pictureHint: "PNG, JPEG, WebP or GIF. A GIF keeps moving. You can also paste.", pictureType: "Use a PNG, JPEG, WebP or GIF image",
   },
   settings: {
     label: "Settings", serverProfile: "Server", account: "Account", devices: "Devices", notifications: "Notifications", report: "Report a problem",

@@ -281,6 +281,71 @@ async fn oversized_avatar_is_rejected() {
     let r = raw(&api, "PUT", "/api/me/avatar", &alice, "image/png", big).await;
     assert_eq!(r.status, StatusCode::PAYLOAD_TOO_LARGE);
 }
+fn gif(width: u16, height: u16, len: usize) -> Vec<u8> {
+    let mut bytes = b"GIF89a".to_vec();
+    bytes.extend_from_slice(&width.to_le_bytes());
+    bytes.extend_from_slice(&height.to_le_bytes());
+    bytes.resize(len, 0);
+    bytes
+}
+#[tokio::test]
+async fn a_large_gif_uploads_as_avatar_and_server_icon_and_keeps_its_type() {
+    let (api, _, owner, alice) = fixture().await;
+    let animated = gif(64, 64, 1_500_000);
+    let put = raw(
+        &api,
+        "PUT",
+        "/api/me/avatar",
+        &alice,
+        "image/gif",
+        animated.clone(),
+    )
+    .await;
+    assert_eq!(put.status, StatusCode::OK);
+    let id = call(&api, "GET", "/api/me", &alice, Value::Null)
+        .await
+        .json()["user"]["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let got = call(
+        &api,
+        "GET",
+        &format!("/api/users/{id}/avatar"),
+        &owner,
+        Value::Null,
+    )
+    .await;
+    assert_eq!(got.content_type.as_deref(), Some("image/gif"));
+    assert_eq!(got.bytes, animated);
+    let icon = raw(
+        &api,
+        "PUT",
+        "/api/servers/home/icon",
+        &owner,
+        "image/gif",
+        animated.clone(),
+    )
+    .await;
+    assert_eq!(icon.status, StatusCode::OK);
+    let got = call(&api, "GET", "/api/servers/home/icon", &alice, Value::Null).await;
+    assert_eq!(got.content_type.as_deref(), Some("image/gif"));
+    assert_eq!(got.bytes, animated);
+}
+#[tokio::test]
+async fn a_gif_over_two_megabytes_is_rejected_by_the_route() {
+    let (api, _, _, alice) = fixture().await;
+    let r = raw(
+        &api,
+        "PUT",
+        "/api/me/avatar",
+        &alice,
+        "image/gif",
+        gif(64, 64, 2 * 1024 * 1024 + 1),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::PAYLOAD_TOO_LARGE);
+}
 #[tokio::test]
 async fn non_owner_cannot_change_the_server() {
     let (api, _, _, alice) = fixture().await;

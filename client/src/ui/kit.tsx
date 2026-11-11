@@ -129,8 +129,8 @@ const DROP_COPY = copy.dropzone;
  * One drop zone for every image field: click to browse, drag and drop, or paste.
  * Validates type and size before anything leaves the device and shows a small preview.
  */
-export function MediaDropzone({ label, accept, maxBytes, value, onChange, hint }: {
-  label: string; accept: string[]; maxBytes: number; value?: File; onChange: (file?: File) => void; hint?: string;
+export function MediaDropzone({ label, accept, maxBytes, value, onChange, hint, typeError }: {
+  label: string; accept: string[]; maxBytes: number; value?: File; onChange: (file?: File) => void; hint?: string; typeError?: string;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
@@ -144,7 +144,7 @@ export function MediaDropzone({ label, accept, maxBytes, value, onChange, hint }
   }, [value]);
   const take = (file?: File) => {
     if (!file) return;
-    if (!accept.includes(file.type)) return setError(DROP_COPY.type);
+    if (!accept.includes(file.type)) return setError(typeError ?? DROP_COPY.type);
     if (file.size > maxBytes) return setError(DROP_COPY.size(maxBytes));
     setError("");
     onChange(file);

@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { test, expect } from "@playwright/test";
 import { setup, signIn } from "./helpers";
 
@@ -151,6 +152,15 @@ test("profile: display name and avatar show in the user bar and on new messages;
   await expect(account).toContainText("owner");
   await drop("screen-account");
   await expect(bar.locator(".hc-avatar img")).toBeVisible();
+
+  // A GIF avatar is uploaded as picked (not redrawn into a still), served with its own type, and loads in the bar.
+  const gif = execFileSync("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "testsrc2=size=64x64:rate=2", "-t", "1", "-f", "gif", "pipe:1"], { maxBuffer: 1 << 22 });
+  expect(gif.subarray(0, 4).toString()).toBe("GIF8");
+  await account.locator("input[type=file]").setInputFiles({ name: "wave.gif", mimeType: "image/gif", buffer: gif });
+  const served = page.waitForResponse(response => /\/api\/users\/[^/]+\/avatar/.test(response.url()) && response.headers()["content-type"] === "image/gif");
+  await account.getByRole("button", { name: "Save", exact: true }).last().click();
+  expect(Buffer.compare(await (await served).body(), gif)).toBe(0);
+  await expect.poll(() => bar.locator(".hc-avatar img").evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
 
   await page.getByTestId("screen-settings").getByRole("button", { name: "Server", exact: true }).click();
   const server = page.getByTestId("screen-server");
