@@ -134,3 +134,50 @@ Not run: `NATIVE_PUSH`, `PLEX` and `LOAD` (this branch doesn't touch those specs
 - Either compile and device-test the CallKit plugin or gate it out of the iOS build (#1).
 
 The Minors can follow in a cleanup pass. #6 and #7 should go into the same round because they're small.
+
+## Fix log
+
+Commits: server `8336478`, Presence/tests `bd46c2f`, snap viewer/wizard `9e50f92`, CallKit `db0d5bd`, calls/toast/Save labels `529d0ea`, screenshots `152d1a6`.
+
+| # | Result |
+|---|---|
+| 1 | Not fixed here. The release owner has since built the plugin for the iOS simulator (`769dbfa` fixed the one compile error). The foreground and lock-screen ring on a real device is still open. |
+| 2 | Fixed (`bd46c2f`). `Presence` returns null in the closing render under reduced motion. The test's two one-shot counts are now `toHaveCount(0, { timeout: 250 })`. SHELL passed 5 of 5 in a row. |
+| 3 | Fixed (`9e50f92`). `SnapViewer`, `SnapPreview` and `Lightbox` render through `createPortal` into the body at z-index 1000. `snaps.spec.ts` now checks `elementFromPoint` at three corners and that the viewer is opaque. |
+| 4 | Fixed (`529d0ea`). A direct conversation's people are me, the `peer_id` member and any authors. `dm-calls.spec.ts` ends with a Call from the header of a DM nobody has posted in. |
+| 5 | Fixed (`8336478`). The limiter is keyed by `(channel, caller)` and decline or cancel clears both keys; a new server test covers decline then ring back. The client still treats a 429 as "still ringing": a 429 now only means this caller rang within 10 s, so the review's second half (a different message when someone else rang) is not needed. |
+| 6 | Fixed (`bd46c2f`). Waits for `readyState >= 1`, calls `play()`, then the `currentTime` poll. |
+| 7 | Fixed (`8336478`). `derive` answers 403 for a snap upload, a processed upload can't be sent as a snap, and the reaper purges any `media_jobs` outputs of a reaped snap. Not done: a 403 in `authorized_output`, because no job can exist for a snap any more. Tests added for each. |
+| 8 | Fixed (`8336478`). Display names reject U+00AD, U+061C, U+180E, U+200B-U+200F, U+2028-U+202E, U+2060-U+206F and U+FEFF. Test added in `profile.rs`. |
+| 9 | Fixed (`529d0ea`). Tonal fill and a self-coloured edge, no shadow. On a phone the toast takes the header's full width at the top. |
+| 10 | Fixed (`529d0ea`). The sidebar dock is hidden while the stage owns the center. "Ringing name" is shown once on the stage with the callee's avatar; the call bar no longer repeats it. |
+| 11 | Fixed (`9e50f92`). The invite is created when the step opens (once). At desktop widths the wizard panel hugs its content, so Back and Done sit by the link. |
+| 12 | Fixed (`529d0ea`). "Save name", "Save picture", "Save icon". The current icon sits under its label, inside the field. |
+| 13 | Fixed (`db0d5bd`). Swift emits an empty `voipToken`; the bridge sends `DELETE /api/push/voip`. Not device-tested. |
+| 14 | Partly fixed (`db0d5bd`). Calls report `hasVideo = false`. The system screen is not updated when the camera turns on (that would need another command). |
+| 15 | Fixed (`db0d5bd`). The ring stores its start time and the timer counts from it. |
+| 16 | Fixed (`8336478`). `open` runs `reap` through `spawn_blocking`. |
+| 17 | Not changed. `CALLKIT.md` already says the entitlement is `development` and that release builds switch it to `production`. Confirming the export step rewrites it needs the Mac build. |
+
+Also done from the follow-up brief: `mute` command and echo guard, `.remoteEnded` for a declined outgoing call, snap hardening, the wizard calls/extras changes, the snap viewer restyle, an unsend-hover retry in the shell test, and the wizard Presence/`hc-anim-slide-right` and snap `hc-anim-fade` check (both were already in place). No `eslint-plugin-react-hooks` is installed, and `client/src` has no other conditional hook calls.
+
+### Gate results (2026-11-11, after the fixes)
+
+| Command | Result |
+|---|---|
+| `cd client && npm test` | `Test Files 6 passed (6)`, `Tests 57 passed (57)` |
+| `npm run build` | `✓ built in 4.07s` |
+| `npx playwright test` (default) | `1 passed` |
+| `HOUSECALL_TEST_SHELL=1 npx playwright test` | 5 consecutive runs, `3 passed` each. Before the unsend-hover retry it failed in 3 of 6 runs at `shell.spec.ts:84` (the GIF row lost its hover) |
+| `HOUSECALL_TEST_VOICE=1 npx playwright test` | `4 passed` |
+| `HOUSECALL_TEST_UPLOAD_VIDEO=1 npx playwright test` | 12 runs: 11 passed (`2 passed`), 1 failed in test 1 (output not captured). The 7 runs after the failure passed |
+| `HOUSECALL_TEST_REPORTS=1 npx playwright test` | `1 passed` |
+| `HOUSECALL_TEST_SNAPS=1 npx playwright test` | `1 passed` |
+| `HOUSECALL_TEST_SETUP=1 npx playwright test` | `1 passed` |
+| `HOUSECALL_TEST_DM_CALLS=1 npx playwright test` | `1 passed` |
+| `HOUSECALL_TEST_SHOTS=1 npx playwright test` | `3 passed` (rewrote `design/shots`, added wizard and snap viewer shots) |
+| `bash scripts/test-server.sh` | `Summary: all 6 steps passed` (fmt, workspace tests, media, activities, sfu, clippy). `housecall-server`: lib 62 (1 ignored), empty_integrations 1, media 2, profile 13, ring 7, route_inventory 1, security 16, setup 1, snaps 10, transcode 4. 117 passed, 0 failed |
+| `cargo check --manifest-path client/src-tauri/Cargo.toml` | `Finished` |
+| `scripts/check-public-safe.sh` | `public-safe: OK` |
+
+Not run: `NATIVE_PUSH`, `PLEX`, `LOAD`, and any iOS or Tauri bundle build. Swift changes (mute, `.remoteEnded`, `hasVideo`, token removal) are uncompiled and need the Mac build.

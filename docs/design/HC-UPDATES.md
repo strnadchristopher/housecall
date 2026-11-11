@@ -354,3 +354,50 @@ Snaps: view-once camera photos (tasks 7.1 to 7.6; 7.7 device QA is left to the r
 - "No answer" is shown by pushing an error line through the existing `attempt` helper, so no new error channel was added.
 - Skipped as hypothetical or out of scope: syncing a mute made in the Housecall UI back to the system call screen (no `mute` command in the briefed allowlist), a ring arriving on two of one person's iPhones at once, ring push for Android, and a duplicate ring from the VoIP push and the event poll for the same call beyond what the plugin already handles (the second is reported and ended at once; a call answered or declined in the last 30 s is not rung again).
 
+## Phase 9
+
+Review fixes (`docs/review/hc-updates-review.md`, with its Fix log) plus the follow-up brief: both known flakes, wizard UX, snap hardening, snap viewer, CallKit mute and `.remoteEnded`. The tree was clean at the start, so there was no `wip: finish previous phase` commit.
+
+### Commits
+- `8336478` fix(server): per-caller ring limit, snap hardening, name format chars, off-thread reaper
+- `bd46c2f` fix(client): unmount Presence in the closing commit under reduced motion (also the two test fixes for the shell and upload-video flakes)
+- `9e50f92` fix(ui): immersive snap viewer, overlays in the body, wizard calls/extras/invite
+- `db0d5bd` feat(callkit): mute sync to the system call screen, remoteEnded, audio-first, token removal
+- `529d0ea` fix(ui): DM call button for a fresh DM, one ringing line, tonal call toast, clearer Save labels
+- `152d1a6` test(shots): wizard calls/extras and snap viewer screenshots, steadier unsend hover (includes the rewritten `design/shots`)
+- the commit that adds this section, the review's Fix log and the `CALLKIT.md` update
+
+### What changed
+- Every Blocker, Major and Minor in the review is fixed or explained in the Fix log. Not fixed: #1 (the release owner built the Swift for the simulator; device ring checks remain), #17 (already documented in `CALLKIT.md`). #14 is partial.
+- Ring limiter keyed by `(channel, caller)`, cleared on decline or cancel. Client keeps treating a 429 as "still ringing", which is now accurate.
+- `Presence` unmounts during render under reduced motion. Shell test uses `toHaveCount(0, { timeout: 250 })` for both counts. Upload-video test waits for `readyState >= 1`, then `play()`.
+- Snap hardening: `derive` 403 for snaps, report screenshots refuse snaps, the reaper purges `media_jobs` outputs, a processed upload can't be sent as a snap, `reap` runs in `spawn_blocking` from `open`.
+- Snap viewer and lightbox are portaled to the body (z-index 1000). The viewer is opaque near-black with dark-pinned tokens, `object-fit: contain` at 100% by 100%, safe-area padding.
+- Wizard: calls step leads with the device test (primary button, meter, preview capped at 14rem) and the host setup is a closed disclosure with its chip. Optional integrations read "Not set up" in the wizard and Settings; calls, media and scanner keep "Needs setup" (accent tone). The invite step makes the link on open. On wide screens the panel hugs its content. Step transitions use `Presence` with `hc-anim-slide-right` and the snap viewer uses `hc-anim-fade` (both were already in place).
+- DM people list includes the `peer_id` member, so the header Call button shows in a fresh DM. One "Ringing name" line on the stage with the callee's avatar; the sidebar dock is hidden while the stage owns the center. Toast uses tone, not a shadow, and spans the width on a phone. Save buttons are "Save name", "Save picture", "Save icon".
+- CallKit: `mute {channelId, muted}` (allowlist, `build.rs`, permissions, Swift `CXSetMutedCallAction`), echo guards in Swift and in the adapter, `.remoteEnded` for a decline, `hasVideo = false`, empty `voipToken` on invalidation (bridge sends `DELETE /api/push/voip`).
+- No `eslint-plugin-react-hooks` in the project and no other conditional hook pattern in `client/src`, so nothing was added.
+
+### Tests run (real counts)
+- `cd client && npm test`: 6 files, 57 passed (the callkit test now covers `mute`).
+- `npm run build`: passed.
+- `npx playwright test` (default): 1 passed. VOICE 4 passed. REPORTS 1 passed. SNAPS 1 passed. SETUP 1 passed. DM_CALLS 1 passed. SHOTS 3 passed.
+- `HOUSECALL_TEST_SHELL=1`: 5 consecutive runs, 3 passed each. Before the unsend-hover retry (`shell.spec.ts`, the GIF row lost its hover as the GIF loaded) it failed in 3 of 6 runs at that line. The reduced-motion test passed in every run after the Presence fix.
+- `HOUSECALL_TEST_UPLOAD_VIDEO=1`: 12 runs. 11 passed (2 passed each). 1 failed in test 1, and I did not capture its output. The 7 runs after it passed. I can't say whether the original flake is fully gone; the brief asked for 5 of 5 and the 5 consecutive passes came after that failure.
+- `bash scripts/test-server.sh`: all 6 steps passed. `housecall-server`: 117 passed, 0 failed, 1 ignored (new: ring call-back test, 3 snap tests, extra invisible-character cases in the profile test).
+- `cargo check --manifest-path client/src-tauri/Cargo.toml`: passed.
+- `scripts/check-public-safe.sh`: OK.
+
+### Unverified
+- All Swift changes (`mute`, `.remoteEnded`, `hasVideo`, token invalidation): uncompiled; the Mac build needs to confirm them and the `Optional<Bool> != Bool` comparison in the mute handler.
+- Mute mirroring and the echo guard on a real call; token removal after APNs invalidates a token.
+- The wizard and snap viewer on a real iPhone (checked in Chromium screenshots at 1440x900 and 390x844). On the phone extras step the last card is cut by the scroll area's bottom edge until scrolled; it scrolls, so I left it.
+- The wizard calls and extras shots rewrite `/api/setup/status` in the test to show a host without a call port, because the SHOTS server has one.
+- The failed UPLOAD_VIDEO run above.
+
+### Deviations from the brief
+- Skipped "update `hasVideo` when the camera turns on" (needs a second command); the system call screen stays audio-only.
+- Skipped a 403 in `authorized_output` (no job can exist for a snap now).
+- The two-part client change for #5 (message when someone else rang) is not needed once the limiter is per caller.
+- The snap viewer, wizard and call-stage changes share `index.css`, so the first two UI changes are in one commit (`9e50f92`).
+
