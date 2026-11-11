@@ -32,7 +32,19 @@ export interface CallDevice {
   kind: "microphone" | "camera";
 }
 
+/** Someone is calling you in a direct conversation and you have not answered yet. */
+export interface IncomingCall {
+  conversationId: string;
+  personId: string;
+  name: string;
+  avatarUrl?: string;
+}
+
 export interface CallState {
+  /** A ring for you that is still live (30 s). Cleared by answering, declining, the caller cancelling or timing out. */
+  incoming?: IncomingCall;
+  /** While you are the caller in a direct conversation and nobody else has joined: ringing, or the other person declined. */
+  outgoing?: "ringing" | "declined";
   /** False when the server has no voice transport: no call control is rendered. */
   available: boolean;
   phase: "idle" | "connecting" | "live" | "failed";
@@ -65,6 +77,15 @@ export interface CallState {
 
 export interface CallTransport extends CallState {
   join(conversationId: string): Promise<void>;
+  /**
+   * Calls one person: opens (or finds) your direct conversation with them, joins its voice room and
+   * rings them. The caller leaves by itself after 45 s unanswered or a few seconds after a decline.
+   */
+  callPerson(personId: string): Promise<void>;
+  /** Answers `incoming`: joins that conversation's call. */
+  accept(): Promise<void>;
+  /** Declines `incoming` and tells the caller. */
+  decline(): Promise<void>;
   leave(): Promise<void>;
   setMuted(muted: boolean): void;
   setDeafened(deafened: boolean): void;

@@ -35,6 +35,8 @@ export interface Conversation {
   name: string;
   kind: "channel" | "dm" | "group";
   mentions: number;
+  /** The other person, for a two-person direct conversation. */
+  peerId?: string;
 }
 
 export interface Attachment {

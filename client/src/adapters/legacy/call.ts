@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CallTransport } from "../../core/call";
+import type { CallTransport, IncomingCall } from "../../core/call";
+import { ApiError } from "../../transport/api";
+import { RING_FRESH_MS } from "../../state/callEvents";
 import { VoiceSession, availableVoiceInputs, type VoiceDevice, type VoiceInputs, type VoiceStatus } from "../../transport/voice";
 import { avatarPath, userName } from "../../data/people";
 import { currentUser, type Housecall } from "./chat";
@@ -13,6 +15,9 @@ interface Peer {
 }
 
 const idle: VoiceStatus = { phase: "idle", streams: [], receivedBytes: 0, decodedFrames: 0 };
+/** The caller gives up this long after ringing, and a decline is shown this long before leaving. */
+const UNANSWERED_MS = 45000;
+const DECLINED_MS = 4000;
 
 /** CallTransport over the current SFU (transport/voice.ts). Replaced by adapters/livekit in Phase 3. */
 export function useLegacyCall(c: Housecall) {
@@ -31,8 +36,10 @@ export function useLegacyCall(c: Housecall) {
   const [noiseSuppression, setNoiseSuppression] = useState(false);
   const [peers, setPeers] = useState<Peer[]>([]);
   const [rooms, setRooms] = useState<Record<string, string[]>>({});
+  const [incoming, setIncoming] = useState<IncomingCall>();
+  const [ringing, setRinging] = useState<{ channelId: string; declined: boolean }>();
 
-  const reset = () => { setMuted(false); setDeafened(false); setCamera(false); setChannelId(undefined); setJoinedAt(undefined); setPeers([]); };
+  const reset = () => { setMuted(false); setDeafened(false); setCamera(false); setChannelId(undefined); setJoinedAt(undefined); setPeers([]); setRinging(undefined); };
   useEffect(() => () => voice.close(), [voice]);
   useEffect(() => {
     if (!c.auth) { voice.close(); reset(); setSelected({}); setDevices([]); setError(""); }
@@ -76,7 +83,69 @@ export function useLegacyCall(c: Housecall) {
   const members = peers.filter(peer => !peer.publisher);
   const active = status.phase !== "idle";
 
+  // Rings and declines come from the event poll. Read the latest names and ids at the moment they arrive.
+  const latest = useRef({ nameOf, avatarOf, me: c.auth?.user.id });
+  latest.current = { nameOf, avatarOf, me: c.auth?.user.id };
+  useEffect(() => c.callEvents.subscribe(event => {
+    if (!event.fresh || event.fromId === latest.current.me) return;
+    if (event.kind === "call.ring") {
+      setIncoming({ conversationId: event.channelId, personId: event.fromId, name: event.fromName || latest.current.nameOf(event.fromId), avatarUrl: latest.current.avatarOf(event.fromId) });
+    } else {
+      // The same event serves both sides: the callee declining, or the caller cancelling before an answer.
+      setIncoming(current => current?.conversationId === event.channelId ? undefined : current);
+      setRinging(current => current?.channelId === event.channelId ? { ...current, declined: true } : current);
+    }
+  }), [c.callEvents]);
+  useEffect(() => {
+    if (!c.auth) { setIncoming(undefined); setRinging(undefined); }
+  }, [c.auth]);
+  // A ring stops ringing after 30 s, or once you are in that call.
+  useEffect(() => {
+    if (!incoming) return;
+    const timer = setTimeout(() => setIncoming(undefined), RING_FRESH_MS);
+    return () => clearTimeout(timer);
+  }, [incoming]);
+  useEffect(() => {
+    if (incoming && status.phase !== "idle" && channelId === incoming.conversationId) setIncoming(undefined);
+  }, [incoming, status.phase, channelId]);
+
+  const cancelRing = (id: string) => { void c.api.post(`/api/channels/${encodeURIComponent(id)}/ring/decline`, {}).catch(() => {}); };
+  // Ringing ends when the other person joins, the call fails or ends, or nobody answers.
+  const others = status.phase === "live" ? Math.max(0, (members.length || 1) - 1) : 0;
+  useEffect(() => {
+    if (!ringing || ringing.declined) return;
+    if (others > 0 || status.phase === "idle" || status.phase === "failed") { setRinging(undefined); return; }
+    const timer = setTimeout(() => {
+      cancelRing(ringing.channelId);
+      void transport.leave();
+      void c.attempt(async () => { throw new Error("No answer"); });
+    }, UNANSWERED_MS);
+    return () => clearTimeout(timer);
+  }, [ringing, others, status.phase]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!ringing?.declined) return;
+    const timer = setTimeout(() => void transport.leave(), DECLINED_MS);
+    return () => clearTimeout(timer);
+  }, [ringing?.declined]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Joins the conversation's call; resolves to whether the join worked. */
+  const joinCall = async (conversationId: string): Promise<boolean> => {
+    // Leave the current call properly (server DELETE) before joining another.
+    if (status.phase !== "idle" && channelId && channelId !== conversationId) {
+      try { await voice.leave(); } catch { /* the join below closes any remainder */ }
+    }
+    setError(""); setMuted(false); setDeafened(false); setCamera(false); setPeers([]); setRinging(undefined);
+    setChannelId(conversationId);
+    try {
+      await voice.join(conversationId, false, selected);
+      setJoinedAt(Date.now());
+      return true;
+    } catch (reason) { fail(reason); return false; }
+  };
+
   const transport: CallTransport = {
+    incoming,
+    outgoing: active && ringing && ringing.channelId === channelId ? (ringing.declined ? "declined" : "ringing") : undefined,
     available: c.capabilities.voice === true,
     phase: status.phase,
     conversationId: active ? channelId : undefined,
@@ -99,19 +168,44 @@ export function useLegacyCall(c: Housecall) {
     selected, bitrate, noiseSuppression,
     stats: { receivedBytes: status.receivedBytes, decodedFrames: status.decodedFrames },
 
-    join: async conversationId => {
-      // Leave the current call properly (server DELETE) before joining another.
-      if (status.phase !== "idle" && channelId && channelId !== conversationId) {
-        try { await voice.leave(); } catch { /* the join below closes any remainder */ }
-      }
-      setError(""); setMuted(false); setDeafened(false); setCamera(false); setPeers([]);
-      setChannelId(conversationId);
+    join: async conversationId => { await joinCall(conversationId); },
+    callPerson: async personId => {
+      if (!c.auth || personId === c.auth.user.id) return;
+      setError("");
+      let id = c.channels.find(channel => channel.kind === "dm" && channel.peer_id === personId)?.id;
       try {
-        await voice.join(conversationId, false, selected);
-        setJoinedAt(Date.now());
-      } catch (reason) { fail(reason); }
+        if (!id) {
+          const created = await c.api.post<{ id: string }>("/api/channels", { name: nameOf(personId), kind: "dm", member_ids: [personId] });
+          id = created.id;
+          await c.refresh();
+        }
+        await c.select(id);
+      } catch (reason) { fail(reason); return; }
+      if (!(await joinCall(id))) return;
+      try {
+        await c.api.post(`/api/channels/${encodeURIComponent(id)}/ring`, {});
+        setRinging({ channelId: id, declined: false });
+      } catch (reason) {
+        // Rung a moment ago by either side: they are still being rung, so keep waiting.
+        if (reason instanceof ApiError && reason.status === 429) setRinging({ channelId: id, declined: false });
+        else fail(reason);
+      }
+    },
+    accept: async () => {
+      const call = incoming;
+      if (!call) return;
+      setIncoming(undefined);
+      await joinCall(call.conversationId);
+    },
+    decline: async () => {
+      const call = incoming;
+      if (!call) return;
+      setIncoming(undefined);
+      cancelRing(call.conversationId);
     },
     leave: async () => {
+      // Hanging up before anyone answered tells the other side to stop ringing.
+      if (ringing && !ringing.declined) cancelRing(ringing.channelId);
       try { await voice.leave(); } catch (reason) { fail(reason); }
       reset();
     },

@@ -51,6 +51,8 @@ export const copy = {
     bitrate: "Audio bitrate (bit/s)", noise: "Noise suppression", apply: "Apply", stage: "Call stage",
     remoteVideo: "Remote video", remoteAudio: "Remote audio", dock: "Current call", open: (name: string) => `Open ${name}`,
     localVideo: "Your video", you: "you", chat: "Chat", chatUnread: (n: number) => `Chat, ${n} unread`,
+    callPerson: (name: string) => `Call ${name}`, ringing: "Ringing…", declined: "Declined", incoming: "Incoming call",
+    answer: (name: string) => `Answer ${name}`, decline: (name: string) => `Decline ${name}`,
     pin: (name: string) => `Pin ${name}`, unpin: (name: string) => `Unpin ${name}`, muted: "Muted", deafened: "Deafened", sharing: "Sharing your screen", speaking: "Speaking",
   },
   side: {

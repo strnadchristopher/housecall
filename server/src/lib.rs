@@ -823,8 +823,10 @@ async fn channels(
     Extension(p): Extension<Principal>,
 ) -> ApiResult<Value> {
     let db = s.db.lock().unwrap();
-    let mut q=db.prepare("SELECT c.id,c.name,c.kind,c.server_id FROM channels c JOIN members m ON m.channel_id=c.id WHERE m.user_id=? ORDER BY c.name")?;
-    let rows=q.query_map([p.user.id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"name":r.get::<_,String>(1)?,"kind":r.get::<_,String>(2)?,"server_id":r.get::<_,Option<String>>(3)?})))?.collect::<Result<Vec<_>,_>>()?;
+    // `peer_id` is the other person in a two-person direct conversation (null elsewhere), so a
+    // client can find the existing conversation before it creates another one.
+    let mut q=db.prepare("SELECT c.id,c.name,c.kind,c.server_id,(SELECT m2.user_id FROM members m2 WHERE c.kind='dm' AND m2.channel_id=c.id AND m2.user_id<>?1) FROM channels c JOIN members m ON m.channel_id=c.id WHERE m.user_id=?1 ORDER BY c.name")?;
+    let rows=q.query_map([p.user.id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"name":r.get::<_,String>(1)?,"kind":r.get::<_,String>(2)?,"server_id":r.get::<_,Option<String>>(3)?,"peer_id":r.get::<_,Option<String>>(4)?})))?.collect::<Result<Vec<_>,_>>()?;
     Ok(Json(json!({"channels":rows})))
 }
 #[derive(Deserialize)]
@@ -1300,7 +1302,9 @@ async fn events(
         .last()
         .and_then(|v| v["id"].as_i64())
         .unwrap_or(v.after);
-    Ok(Json(json!({"events":rows,"cursor":cursor})))
+    // `now` lets a client tell a fresh event (a ringing call) from one replayed after sign-in
+    // without trusting its own clock.
+    Ok(Json(json!({"events":rows,"cursor":cursor,"now":now()})))
 }
 #[derive(Deserialize)]
 struct Report {

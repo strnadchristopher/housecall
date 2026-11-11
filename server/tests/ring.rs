@@ -319,3 +319,27 @@ async fn decline_goes_to_the_other_member_only_and_is_not_rate_limited_like_a_ri
         assert_eq!(count(&kinds(&w, other).await, "call.declined"), 0);
     }
 }
+
+#[tokio::test]
+async fn channel_list_names_the_peer_of_a_direct_conversation_and_events_carry_server_time() {
+    let w = world().await;
+    for (who, peer) in [(&w.alice, &w.bob), (&w.bob, &w.alice)] {
+        let (_, list) = call(&w.api, "GET", "/api/channels", Some(who), json!(null)).await;
+        let channels = list["channels"].as_array().unwrap();
+        let dm = channels.iter().find(|c| c["id"] == w.dm).unwrap();
+        assert_eq!(dm["peer_id"], peer["user"]["id"]);
+        let general = channels.iter().find(|c| c["kind"] == "channel").unwrap();
+        assert!(general["peer_id"].is_null());
+    }
+    let before = housecall_server::now();
+    let (_, events) = call(
+        &w.api,
+        "GET",
+        "/api/events?after=0",
+        Some(&w.bob),
+        json!(null),
+    )
+    .await;
+    let at = events["now"].as_i64().unwrap();
+    assert!(at >= before && at <= housecall_server::now());
+}

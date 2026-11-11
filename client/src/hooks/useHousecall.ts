@@ -7,6 +7,7 @@ import { NotificationReconciler } from "../transport/notifications";
 import type { NotificationRecord } from "../transport/notifications";
 import { acceptActivity, type ActivitySnapshot } from "../data/activities";
 import { TypingStore } from "../state/typing";
+import { CallEvents, toCallEvent } from "../state/callEvents";
 import { MessageStore } from "../state/messages";
 import type { Message } from "../state/messages";
 import type {
@@ -26,7 +27,8 @@ function deviceName() {
 export function useHousecall() {
   const api = useMemo(() => new Api(), []),
     store = useMemo(() => new MessageStore(), []),
-    notifications = useMemo(() => new NotificationReconciler(), []);
+    notifications = useMemo(() => new NotificationReconciler(), []),
+    callEvents = useMemo(() => new CallEvents(), []);
   const [auth, setAuth] = useState<Auth>(),
     [channels, setChannels] = useState<Channel[]>([]),
     [members, setMembers] = useState<User[]>([]),
@@ -159,13 +161,15 @@ export function useHousecall() {
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
       try {
-        const result = await api.get<{ events: ServerEvent[]; cursor: number }>(
+        const result = await api.get<{ events: ServerEvent[]; cursor: number; now?: number }>(
           `/api/events?after=${cursor.current}`,
           abort.signal,
         );
         if (stop) return;
         for (const e of result.events) {
           typingStore.apply(e);
+          const ring = toCallEvent(e, result.now);
+          if (ring) callEvents.emit(ring);
           if (e.kind === "activity.updated" && e.channel_id) {
             const channelId = e.channel_id;
             setActivities((previous) => ({
@@ -218,7 +222,7 @@ export function useHousecall() {
       clearTimeout(timer);
       abort.abort();
     };
-  }, [auth, api, store, notifications, refresh, logout, typingStore]);
+  }, [auth, api, store, notifications, refresh, logout, typingStore, callEvents]);
   const [loading, setLoading] = useState(false);
   const select = async (id: string) => {
     selected.current = id;
@@ -278,6 +282,7 @@ export function useHousecall() {
     loadReports,
     store,
     notifications,
+    callEvents,
     setMessages,
   };
 }

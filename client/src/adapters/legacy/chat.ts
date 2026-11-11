@@ -204,8 +204,8 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
     servers,
     conversations: c.channels
       .filter(channel => channel.kind !== "channel" || channel.server_id === serverId)
-      .map(channel => ({ id: channel.id, name: channel.name, kind: kindOf(channel), mentions: mentionsBy.get(channel.id) ?? 0 })),
-    current: current ? { id: current.id, name: current.name, kind: kindOf(current), mentions: mentionsBy.get(current.id) ?? 0 } : undefined,
+      .map(channel => ({ id: channel.id, name: channel.name, kind: kindOf(channel), mentions: mentionsBy.get(channel.id) ?? 0, peerId: channel.peer_id ?? undefined })),
+    current: current ? { id: current.id, name: current.name, kind: kindOf(current), mentions: mentionsBy.get(current.id) ?? 0, peerId: current.peer_id ?? undefined } : undefined,
     people, friends: serverPeople.map(person), messages,
     typing: c.typers.map(nameOf),
     requests: c.gimmeRequests.map((request): RequestCard => ({

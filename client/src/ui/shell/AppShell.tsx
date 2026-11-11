@@ -5,6 +5,7 @@ import { MessageList } from "../chat/MessageList";
 import { CallBar } from "../chat/CallBar";
 import { Composer } from "../chat/Composer";
 import { CallStage } from "../call/CallStage";
+import { IncomingCall } from "../call/IncomingCall";
 import { DmView } from "../dm/DmView";
 import { RightPanel } from "../side/RightPanel";
 import { SettingsView } from "../settings/SettingsView";
@@ -47,6 +48,7 @@ export function AppShell() {
 
   return (
     <NavContext.Provider value={{ ...nav, set }}>
+      <IncomingCall />
       <div className={cx("hc-shell", phone && "is-phone")} data-screen={nav.screen} data-sheet={nav.sheet ? "" : undefined}>
         <nav className="hc-left" aria-label={copy.app.name} inert={phone && nav.screen !== "list"}>
           <ServerPicker />

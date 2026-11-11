@@ -15,6 +15,8 @@ export interface Channel {
   name: string;
   kind: "channel" | "dm" | "group_dm";
   server_id?: string | null;
+  /** The other person in a two-person direct conversation. */
+  peer_id?: string | null;
 }
 export interface Device {
   id: string;

@@ -33,6 +33,11 @@ export function CallStage({ full }: { full?: boolean; away?: boolean }) {
   );
   return (
     <section className="hc-stage is-full" {...common}>
+      {call.outgoing && (
+        <p className="hc-stage__ring" role="status" data-testid="call-ringing" data-state={call.outgoing}>
+          {call.outgoing === "declined" ? copy.call.declined : copy.call.ringing}
+        </p>
+      )}
       {spot ? (
         <>
           <div className="hc-stage__spot">{tile(spot)}</div>
