@@ -120,7 +120,7 @@ impl InviteMailConfig {
             return Err("HOUSECALL_MAIL_FROM is required when RESEND_API_KEY is set".into());
         }
         let public_url = std::env::var("HOUSECALL_PUBLIC_URL")
-            .unwrap_or_else(|_| "https://housecall.littleobelisk.com".into());
+            .unwrap_or_else(|_| "http://localhost:3000".into());
         let parsed =
             reqwest::Url::parse(&public_url).map_err(|_| "invalid HOUSECALL_PUBLIC_URL")?;
         if !matches!(parsed.scheme(), "http" | "https")
@@ -140,10 +140,12 @@ impl InviteMailConfig {
         })
     }
 
-    async fn send_invite(&self, email: &str, token: &str) -> Result<bool, String> {
-        let link = format!("{}/#invite={token}", self.public_url);
+    fn invite_link(&self, token: &str) -> String {
+        format!("{}/#invite={token}", self.public_url)
+    }
+
+    async fn send_invite(&self, email: &str, link: &str) -> Result<bool, String> {
         let Some(api_key) = self.api_key.as_deref() else {
-            tracing::info!(invite_link = %link, "invite link (development mode; no RESEND_API_KEY configured)");
             return Ok(false);
         };
         let html_link = link
@@ -162,8 +164,8 @@ impl InviteMailConfig {
                 "from": self.mail_from.as_deref().expect("validated sender"),
                 "to": [email],
                 "subject": "Your Housecall invitation",
-                "html": format!("<p>Christopher invited you to Housecall. This link works once and expires in seven days.</p><p><a href=\"{html_link}\">Accept your invitation</a></p><p>If you did not expect this, you can ignore this email.</p>"),
-                "text": format!("Christopher invited you to Housecall. This link works once and expires in seven days:\n\n{link}\n\nIf you did not expect this, you can ignore this email.")
+                "html": format!("<p>You have been invited to Housecall. This link works once and expires in seven days.</p><p><a href=\"{html_link}\">Accept your invitation</a></p><p>If you did not expect this, you can ignore this email.</p>"),
+                "text": format!("You have been invited to Housecall. This link works once and expires in seven days:\n\n{link}\n\nIf you did not expect this, you can ignore this email.")
             }))
             .send()
             .await
@@ -588,7 +590,8 @@ async fn login(State(s): State<AppState>, Json(v): Json<Login>) -> ApiResult<Val
 #[derive(Deserialize)]
 struct Invite {
     expires_in_seconds: i64,
-    email: String,
+    #[serde(default)]
+    email: Option<String>,
     server_id: Option<String>,
 }
 async fn invite(
@@ -600,11 +603,16 @@ async fn invite(
     if !(60..=604800).contains(&v.expires_in_seconds) {
         return Err(bad("invalid expiry"));
     }
-    let email = v.email.trim().to_ascii_lowercase();
-    if !valid_email(&email) {
-        return Err(bad("valid email required"));
+    let email = v
+        .email
+        .as_deref()
+        .map(|e| e.trim().to_ascii_lowercase())
+        .unwrap_or_default();
+    if !email.is_empty() && !valid_email(&email) {
+        return Err(bad("invalid email"));
     }
     let token = secret();
+    let link = s.invite_mail.invite_link(&token);
     let expires = now() + v.expires_in_seconds * 1000;
     let server_id = v.server_id.unwrap_or_else(|| "home".into());
     {
@@ -615,7 +623,12 @@ async fn invite(
             params![hash(&token), expires, server_id, email],
         )?;
     }
-    let email_sent = match s.invite_mail.send_invite(&email, &token).await {
+    let email_sent = if email.is_empty() {
+        Ok(false)
+    } else {
+        s.invite_mail.send_invite(&email, &link).await
+    };
+    let email_sent = match email_sent {
         Ok(sent) => sent,
         Err(error) => {
             let _ = s.db.lock().unwrap().execute(
@@ -630,7 +643,7 @@ async fn invite(
         }
     };
     Ok(Json(
-        json!({"id":hash(&token),"token":if email_sent { Value::Null } else { json!(token) },"expires_at":expires,"server_id":server_id,"email":email,"email_sent":email_sent}),
+        json!({"id":hash(&token),"token":if email_sent { Value::Null } else { json!(token) },"expires_at":expires,"server_id":server_id,"email":email,"email_sent":email_sent,"link":link}),
     ))
 }
 async fn invites(

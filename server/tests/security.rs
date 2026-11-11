@@ -63,6 +63,30 @@ async fn join(api: &Router, owner: &Value, name: &str) -> Value {
     u
 }
 #[tokio::test]
+async fn invite_without_email_returns_acceptable_link() {
+    let (api, _, a, _, _) = fixture().await;
+    let (status, invite) = call(
+        &api,
+        "POST",
+        "/api/invites",
+        Some(&a),
+        json!({"expires_in_seconds":3600}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{invite}");
+    let link = invite["link"].as_str().expect("link is a string");
+    let token = link.split("#invite=").nth(1).expect("link carries token");
+    let (status, session) = call(
+        &api,
+        "POST",
+        "/api/invites/accept",
+        None,
+        json!({"token":token,"username":"linkuser","password":"test-password-long","device_name":"test"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{session}");
+}
+#[tokio::test]
 async fn all_private_endpoints_reject_unauthenticated() {
     let api = app(AppState::new(":memory:", SETUP).unwrap(), None);
     let routes = [
