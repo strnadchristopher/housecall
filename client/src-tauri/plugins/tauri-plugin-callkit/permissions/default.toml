@@ -9,4 +9,5 @@ permissions = [
   "allow-connected",
   "allow-end",
   "allow-pending",
+  "allow-mute",
 ]

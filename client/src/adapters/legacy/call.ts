@@ -38,7 +38,7 @@ export function useLegacyCall(c: Housecall) {
   const [peers, setPeers] = useState<Peer[]>([]);
   const [rooms, setRooms] = useState<Record<string, string[]>>({});
   const [incoming, setIncoming] = useState<IncomingCall>();
-  const [ringing, setRinging] = useState<{ channelId: string; declined: boolean }>();
+  const [ringing, setRinging] = useState<{ channelId: string; declined: boolean; since: number }>();
 
   const reset = () => { setMuted(false); setDeafened(false); setCamera(false); setChannelId(undefined); setJoinedAt(undefined); setPeers([]); setRinging(undefined); };
   useEffect(() => () => voice.close(), [voice]);
@@ -91,6 +91,8 @@ export function useLegacyCall(c: Housecall) {
   // `systemCall` the call it shows as connected, and `handled` rings already answered or declined there.
   const systemRing = useRef(new Set<string>());
   const systemCall = useRef<{ channelId: string; connected: boolean } | undefined>(undefined);
+  /** The mute state the system call screen shows. A call starts unmuted. */
+  const systemMuted = useRef(false);
   const handled = useRef(new Map<string, number>());
   const declinedByPeer = useRef(false);
   useEffect(() => c.callEvents.subscribe(event => {
@@ -134,7 +136,8 @@ export function useLegacyCall(c: Housecall) {
       cancelRing(ringing.channelId);
       void transport.leave();
       void c.attempt(async () => { throw new Error("No answer"); });
-    }, UNANSWERED_MS);
+    // Counted from when the ring was sent, so connecting to live doesn't restart the wait.
+    }, Math.max(0, ringing.since + UNANSWERED_MS - Date.now()));
     return () => clearTimeout(timer);
   }, [ringing, others, status.phase]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -170,7 +173,7 @@ export function useLegacyCall(c: Housecall) {
       setIncoming(undefined);
       if (latest.current.joined === id) return;
       void c.select(id).catch(() => {});
-      if (await joinCall(id)) systemCall.current = { channelId: id, connected: true };
+      if (await joinCall(id)) { systemMuted.current = false; systemCall.current = { channelId: id, connected: true }; }
       else void callKit.end(id, { remote: true }).catch(() => {});
     },
     end: async id => {
@@ -180,12 +183,24 @@ export function useLegacyCall(c: Housecall) {
       if (latest.current.joined === id) await transport.leave();
       else if (systemRing.current.delete(id)) cancelRing(id); // declined on the system screen
     },
-    mute: (id, next) => { if (latest.current.joined === id) transport.setMuted(next); },
+    // The system screen already shows this state, so it must not be sent back to it.
+    mute: (id, next) => { if (latest.current.joined === id) { systemMuted.current = next; transport.setMuted(next); } },
   };
+  // Mute pressed in the Housecall UI during a CallKit call is mirrored on the system call screen.
+  useEffect(() => {
+    const call = systemCall.current;
+    if (!call || call.channelId !== channelId || muted === systemMuted.current) return;
+    systemMuted.current = muted;
+    void callKit.mute(call.channelId, muted).catch(() => {});
+  }, [muted, channelId]);
   useEffect(() => {
     if (!c.auth || !isCallKit()) return;
     let live = true;
-    const send = (token: unknown) => { if (typeof token === "string" && token) void c.api.put("/api/push/voip", { token }).catch(() => {}); };
+    // An empty token means iOS invalidated it: take this device's token off the server.
+    const send = (token: unknown) => {
+      if (typeof token !== "string") return;
+      void (token ? c.api.put("/api/push/voip", { token }) : c.api.delete("/api/push/voip")).catch(() => {});
+    };
     const channelOf = (data: Record<string, unknown>) => typeof data.channelId === "string" ? data.channelId : undefined;
     const stops = [
       onCallKit("voipToken", data => send(data.token)),
@@ -256,14 +271,15 @@ export function useLegacyCall(c: Housecall) {
       if (!(await joinCall(id))) return;
       try {
         await c.api.post(`/api/channels/${encodeURIComponent(id)}/ring`, {});
-        setRinging({ channelId: id, declined: false });
+        setRinging({ channelId: id, declined: false, since: Date.now() });
       } catch (reason) {
-        // Rung a moment ago by either side: they are still being rung, so keep waiting.
-        if (reason instanceof ApiError && reason.status === 429) setRinging({ channelId: id, declined: false });
+        // The limit is per caller: this caller rang a moment ago, so they are still being rung. Keep waiting.
+        if (reason instanceof ApiError && reason.status === 429) setRinging({ channelId: id, declined: false, since: Date.now() });
         else { fail(reason); return; }
       }
       // iOS: show the outgoing call in the system UI (Recents, audio routing); connected once they join.
       if (isCallKit()) {
+        systemMuted.current = false;
         systemCall.current = { channelId: id, connected: false };
         void callKit.startOutgoing(id, nameOf(personId)).catch(() => { systemCall.current = undefined; });
       }

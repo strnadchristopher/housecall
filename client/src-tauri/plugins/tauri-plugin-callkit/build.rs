@@ -5,6 +5,7 @@ const COMMANDS: &[&str] = &[
     "connected",
     "end",
     "pending",
+    "mute",
 ];
 
 fn main() {

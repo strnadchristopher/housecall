@@ -319,6 +319,18 @@
           "markdownDescription": "Denies the end command without any pre-configured scope."
         },
         {
+          "description": "Enables the mute command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-mute",
+          "markdownDescription": "Enables the mute command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the mute command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-mute",
+          "markdownDescription": "Denies the mute command without any pre-configured scope."
+        },
+        {
           "description": "Enables the pending command without any pre-configured scope.",
           "type": "string",
           "const": "allow-pending",
@@ -367,10 +379,10 @@
           "markdownDescription": "Denies the start_outgoing command without any pre-configured scope."
         },
         {
-          "description": "Lets the local webview ring, answer and end Housecall 1:1 calls through the iOS system call screen.\n#### This default permission set includes:\n\n- `allow-register`\n- `allow-report-incoming`\n- `allow-start-outgoing`\n- `allow-connected`\n- `allow-end`\n- `allow-pending`",
+          "description": "Lets the local webview ring, answer and end Housecall 1:1 calls through the iOS system call screen.\n#### This default permission set includes:\n\n- `allow-register`\n- `allow-report-incoming`\n- `allow-start-outgoing`\n- `allow-connected`\n- `allow-end`\n- `allow-pending`\n- `allow-mute`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Lets the local webview ring, answer and end Housecall 1:1 calls through the iOS system call screen.\n#### This default permission set includes:\n\n- `allow-register`\n- `allow-report-incoming`\n- `allow-start-outgoing`\n- `allow-connected`\n- `allow-end`\n- `allow-pending`"
+          "markdownDescription": "Lets the local webview ring, answer and end Housecall 1:1 calls through the iOS system call screen.\n#### This default permission set includes:\n\n- `allow-register`\n- `allow-report-incoming`\n- `allow-start-outgoing`\n- `allow-connected`\n- `allow-end`\n- `allow-pending`\n- `allow-mute`"
         }
       ]
     }

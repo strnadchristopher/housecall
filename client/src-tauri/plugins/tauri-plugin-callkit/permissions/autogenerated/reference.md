@@ -10,6 +10,7 @@ Lets the local webview ring, answer and end Housecall 1:1 calls through the iOS 
 - `allow-connected`
 - `allow-end`
 - `allow-pending`
+- `allow-mute`
 
 ## Permission Table
 
@@ -68,6 +69,32 @@ Enables the end command without any pre-configured scope.
 <td>
 
 Denies the end command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`callkit:allow-mute`
+
+</td>
+<td>
+
+Enables the mute command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`callkit:deny-mute`
+
+</td>
+<td>
+
+Denies the mute command without any pre-configured scope.
 
 </td>
 </tr>

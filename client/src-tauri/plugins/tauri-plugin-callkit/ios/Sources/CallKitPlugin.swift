@@ -19,6 +19,8 @@ private struct CallArgs: Decodable {
   /// `end` only: true when the other side ended or declined, so CallKit is told instead of asked.
   let remote: Bool?
   let declined: Bool?
+  /// `mute` only: the state the Housecall UI is now in.
+  let muted: Bool?
 }
 
 private struct Reply: Encodable {
@@ -45,6 +47,8 @@ class CallKitPlugin: Plugin, CXProviderDelegate, PKPushRegistryDelegate {
   private var incoming: IncomingState?
   /// Calls this app asked to end itself; their end action is not echoed back to the web side.
   private var endedByApp = Set<UUID>()
+  /// Mute states this app asked the system for; the matching action is not echoed back to the web side.
+  private var mutedByApp: [UUID: Bool] = [:]
   /// A ring nobody answers stops after this long (the server's push expires after 30 s).
   private let unansweredSeconds: Double = 45
 
@@ -94,7 +98,7 @@ class CallKitPlugin: Plugin, CXProviderDelegate, PKPushRegistryDelegate {
       self.configureAudio()
       let action = CXStartCallAction(call: uuid, handle: CXHandle(type: .generic, value: channelId))
       action.contactIdentifier = args.displayName
-      action.isVideo = true
+      action.isVideo = false
       self.controller.request(CXTransaction(action: action)) { error in
         DispatchQueue.main.async {
           if let error = error {
@@ -121,6 +125,25 @@ class CallKitPlugin: Plugin, CXProviderDelegate, PKPushRegistryDelegate {
     }
   }
 
+  /// Mute pressed in the Housecall UI: show it on the system call screen too.
+  @objc(mute:)
+  func muteCommand(_ invoke: Invoke) {
+    guard let args = try? invoke.parseArgs(CallArgs.self), let channelId = args.channelId, let muted = args.muted else {
+      return invoke.reject("channelId and muted are required")
+    }
+    DispatchQueue.main.async {
+      guard let uuid = self.uuidForChannel[channelId] else { return invoke.resolve(Reply()) }
+      self.mutedByApp[uuid] = muted
+      self.controller.request(CXTransaction(action: CXSetMutedCallAction(call: uuid, muted: muted))) { error in
+        DispatchQueue.main.async {
+          // No action arrives when the request failed, so there is nothing to swallow.
+          if error != nil { self.mutedByApp.removeValue(forKey: uuid) }
+          invoke.resolve(Reply())
+        }
+      }
+    }
+  }
+
   @objc(end:)
   func endCommand(_ invoke: Invoke) {
     guard let args = try? invoke.parseArgs(CallArgs.self), let channelId = args.channelId else {
@@ -129,7 +152,7 @@ class CallKitPlugin: Plugin, CXProviderDelegate, PKPushRegistryDelegate {
     DispatchQueue.main.async {
       guard let uuid = self.uuidForChannel[channelId] else { return invoke.resolve(Reply()) }
       if args.remote == true {
-        self.provider.reportCall(with: uuid, endedAt: Date(), reason: args.declined == true ? .declinedElsewhere : .remoteEnded)
+        self.provider.reportCall(with: uuid, endedAt: Date(), reason: .remoteEnded)
         self.forget(uuid)
         return invoke.resolve(Reply())
       }
@@ -198,7 +221,8 @@ class CallKitPlugin: Plugin, CXProviderDelegate, PKPushRegistryDelegate {
     let update = CXCallUpdate()
     update.remoteHandle = CXHandle(type: .generic, value: channelId)
     update.localizedCallerName = name
-    update.hasVideo = true
+    // Calls start audio-only (the camera is off on join), so the system screen says audio.
+    update.hasVideo = false
     update.supportsHolding = false
     update.supportsGrouping = false
     update.supportsUngrouping = false
@@ -232,7 +256,10 @@ class CallKitPlugin: Plugin, CXProviderDelegate, PKPushRegistryDelegate {
   }
 
   func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
-    if type == .voIP { voipToken = nil }
+    guard type == .voIP else { return }
+    voipToken = nil
+    // An empty token tells the web side to remove this device's token from the server.
+    emit("voipToken", ["token": ""])
   }
 
   func pushRegistry(
@@ -284,7 +311,8 @@ class CallKitPlugin: Plugin, CXProviderDelegate, PKPushRegistryDelegate {
   }
 
   func provider(_ provider: CXProvider, perform action: CXSetMutedCallAction) {
-    if let channelId = channelForUuid[action.callUUID] {
+    // A mute this app asked for is already what the web side shows.
+    if mutedByApp.removeValue(forKey: action.callUUID) != action.isMuted, let channelId = channelForUuid[action.callUUID] {
       emit("mute", ["channelId": channelId, "muted": action.isMuted])
     }
     action.fulfill()

@@ -49,12 +49,14 @@ describe("callKit commands", () => {
     expect(await callKit.reportIncoming("room", "Avery")).toBe(true);
     await callKit.startOutgoing("room", "Avery");
     await callKit.connected("room");
+    await callKit.mute("room", true);
     await callKit.end("room", { remote: true, declined: true });
     expect(await callKit.pending()).toEqual({ channelId: "room", name: "Avery", answered: true });
     expect(invoke.mock.calls).toEqual([
       ["callkit", { action: "report_incoming", payload: { channelId: "room", displayName: "Avery" } }],
       ["callkit", { action: "start_outgoing", payload: { channelId: "room", displayName: "Avery" } }],
       ["callkit", { action: "connected", payload: { channelId: "room" } }],
+      ["callkit", { action: "mute", payload: { channelId: "room", muted: true } }],
       ["callkit", { action: "end", payload: { channelId: "room", remote: true, declined: true } }],
       ["callkit", { action: "pending", payload: {} }],
     ]);
