@@ -30,7 +30,7 @@ Status: code complete and committed. Three verification steps could not run beca
 
 ### Deviations from the plan
 - The "no microphone" unit test uses `await expect(session.join(...)).rejects.toThrow()` because `join` rethrows after setting `failed`.
-- `scripts/test-server.sh` could not be marked executable here (`chmod` and `git update-index --chmod` needed approval), so CI and docs call `bash scripts/test-server.sh`. Noah can run `chmod +x` and `git update-index --chmod=+x scripts/test-server.sh` and switch back to the bare path if wanted.
+- `scripts/test-server.sh` could not be marked executable here (`chmod` and `git update-index --chmod` needed approval), so CI and docs call `bash scripts/test-server.sh`. The release owner can run `chmod +x` and `git update-index --chmod=+x scripts/test-server.sh` and switch back to the bare path if wanted.
 - Device selection is not persisted in this app (plain React state), so the plan's `localStorage` injection does not apply. The E2E instead injects a stale microphone id into `enumerateDevices`, selects it in Settings, and joins; Chromium itself rejects the unknown id.
 - The adapter joins with the camera off, so the join-time "no camera" fallback is covered by the unit test and the transport, while the E2E covers the saved-microphone path.
 
@@ -62,7 +62,7 @@ Status: code complete and committed. The upload E2E could not run here (no ClamA
 - The new E2E (png `naturalWidth > 0`, lightbox open and Escape, gif inline, `.txt` stays a card, unprepared video shows processing then plays after `POST /api/uploads/{id}/derive`, with no reload) and the edited first test (no Play click) were not run against a scanner. Please run `HOUSECALL_TEST_UPLOAD_VIDEO=1 npx playwright test` from `client/` where ClamAV is up. I started to write a stand-in scanner that always answers OK, but running it needed approval, so I deleted it rather than work around that.
 - `scripts/check-public-safe.sh` was not run (needs approval). New fixtures use `video_owner`/`media_friend` and generated media only; no real data or URLs were added.
 - Whether an unprepared video stays in `video_pending` long enough for the E2E to see it depends on nothing auto-transcoding on send. I found no auto-derive call in the client, but it is unconfirmed.
-- Real-device and visual checks of the lightbox and layout were not done (Noah's job).
+- Real-device and visual checks of the lightbox and layout were not done (the release owner's job).
 - The Rust binary was rebuilt (`cargo build -p housecall-server`), so `target/debug/housecall-server` matches this branch.
 
 ### Deviations from the plan
@@ -120,3 +120,45 @@ Profile name and avatar, server name and icon, `MediaDropzone`, report screensho
 - The shell profile test signs in as the owner created by the first test in that file (the server is shared across the file), so it does not pass if run alone with `--grep`.
 - `resizeImage` is unit-tested through its pure `fitWithin` only: `jsdom` and canvas are not installed. The canvas path is exercised by the shell e2e.
 - Attachments on the report form: the hidden file input has no label of its own; the drop zone group carries the "Screenshot" label.
+
+## Phase 4
+
+Call stage in the center, chat in the right column (tasks 4.1 to 4.4).
+
+### Commits
+- `e7134ea` feat(call): full call stage with chat in the side panel
+- (this handoff) docs: phase 4 handoff. It also rewords two earlier lines of this file that named a person, so `scripts/check-public-safe.sh` passes.
+
+### What changed
+- `ui/shell/nav.ts`: `SideTab`, `sideTabs(inCall, chordsConfigured)`, and `isStaged(call, currentId, main)`.
+- `AppShell`: when staged (live or connecting call, looking at the call's own conversation, not in Settings) the center is header, `<CallStage full />`, error line and `<CallBar />`. MessageList and Composer are not rendered there. An effect selects the Chat tab on entering the stage and falls back from Chat to People once the call is over. Otherwise the layout is unchanged, and `<CallStage />` (no picture) still keeps remote audio mounted while another channel or Settings is open.
+- `RightPanel`: tabs come from `sideTabs`; new `side/ChatTab.tsx` renders `MessageList compact` and `Composer compact`.
+- `CallStage` and `Tile`: one tile per participant, joined to `call.media` by `participantId`. A tile shows the live picture or a large `Avatar`, the name (with "(you)"), a muted or deafened glyph on your own tile, a 2px accent ring while speaking, and a button covering the tile that pins it. A pinned tile (or yours while you share your screen) takes the center and the rest sit in a strip. Layout is `repeat(auto-fit, minmax(min(100%, 18rem), 1fr))` with 16:9 tiles.
+- Every remote stream is still a `<video data-testid="remote-media">`, hidden when it has no picture. Your own camera preview is `data-testid="local-media"`, so the remote-media count is unchanged.
+- Speaking: `VoiceSession.levels()` samples `getStats` audio levels at 4 Hz (inbound-rtp by track id to peer id, plus the local media-source while the mic is open) and notifies only on change. `core/call.ts` has `SPEAKING_LEVEL` and `isSpeaking`; `CallState` gains `speaking: string[]` and `localVideo`.
+- A remote picture counts as live while video frames keep arriving (4 s), so a peer who switches the camera off shows their avatar even if the track never reports `mute`.
+- Narrow widths (sheet layout): the CallBar has a Chat button with a mentions count that opens the right column on the Chat tab.
+- UI guidelines applied (also in the commit body): bare icons with no box; a plain 2px tonal ring with no glow or pulse; nothing moves on hover; content visible by default; flat tonal avatars; no em dashes; the name label is a solid surface so its text clears the video.
+
+### Tests run (real results)
+- `npm run build` (in `client`): passed.
+- `npm test` (in `client`): 3 files, 40 tests passed (includes the new `sideTabs`, `isStaged` and `isSpeaking` cases).
+- `HOUSECALL_TEST_VOICE=1 npx playwright test`: 4 passed, 0 failed (the original three-browser RTP test, the new "call stage owns center", the new phone-width stage test, and the saved-device warning test).
+- `HOUSECALL_TEST_SHELL=1 npx playwright test`: 2 passed, 0 failed.
+- `npx playwright test` (default, chat.spec.ts): 1 passed.
+- `bash scripts/check-public-safe.sh`: OK.
+- I also read a Chromium screenshot of the two-person stage (light theme) and it matched the intended layout. It is not committed.
+
+### Unverified
+- Real devices, real microphones for the speaking ring (tests only use Chromium's fake beep), the dark theme on the stage, and the iOS layout. These are the release owner's checks.
+- `npm run shots` was not run, so the screenshot set has no call stage yet.
+- Tauri builds were not run.
+
+### Deviations from the plan
+- The stage owns the center only while you look at the call's own conversation, not whenever `nav.main === "chat"`. If you open another channel during a call you get that channel with the "In call in ..." bar, and the call dock reopens the call. Otherwise you could not read any other channel while in a call. Because of this, the Chat tab always shows the selected conversation, which is the call's, so `ChatTab` needs no `chat.open(call.conversationId)` call (the plan's fallback) and I added none.
+- Screen share is not given the full width for remote sharers: the SFU carries one video transceiver per peer and swaps its track, so a receiver cannot tell a screen from a camera. You can pin any tile to spotlight it. Your own tile is spotlighted automatically while you share.
+- Mute and deafen glyphs show on your own tile only: the backend reports no per-participant mute state.
+- The composer test id in this codebase is `screen-composer`, not `composer`, so the new E2E uses that.
+- `shell.spec.ts` now clicks the People tab before counting people, since a call opens the right column on Chat. It also asserts that Chat is the selected tab.
+- Added a phone-width E2E (390 px) beyond the plan: stage is the main screen, the CallBar Chat button opens the sheet on the Chat tab.
+- Not done, per the brief: no extra guard for a call whose conversation is not the selected one (skipped as an unlikely race, see above).
