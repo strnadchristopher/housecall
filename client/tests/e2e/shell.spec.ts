@@ -80,8 +80,12 @@ test("shell: picker, channel, call, composer, tabs, direct messages", async ({ p
   await expect(page.getByTestId("screen-conversation").locator("video").first()).toBeVisible();
   // Leave the shared server clean for the screenshot run that follows.
   const sent = page.locator("li[data-message-id]").filter({ has: page.locator("video") });
-  await sent.hover();
-  await sent.getByRole("button", { name: "Unsend", exact: true }).click();
+  // The toolbar only takes clicks while the row is hovered, and the GIF loading can scroll the list out from under
+  // the pointer, so hover again on each try.
+  await expect(async () => {
+    await sent.hover();
+    await sent.getByRole("button", { name: "Unsend", exact: true }).click({ timeout: 2000 });
+  }).toPass({ timeout: 15000 });
   await page.getByRole("button", { name: "Unsend for everyone", exact: true }).click();
   await expect(page.getByTestId("screen-conversation").locator("video")).toHaveCount(0);
 

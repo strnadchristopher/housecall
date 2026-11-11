@@ -8,7 +8,7 @@ const stopPlex =
     ? await (await import("./plex-fixture.mjs")).startPlexFixture()
     : undefined;
 const directory = await mkdtemp(join(tmpdir(), "housecall-e2e-"));
-const wantsScanner = process.env.HOUSECALL_TEST_REPORTS === "1" || process.env.HOUSECALL_TEST_UPLOAD_VIDEO === "1" || process.env.HOUSECALL_TEST_UPLOADS === "1" || process.env.HOUSECALL_TEST_SNAPS === "1" || process.env.HOUSECALL_TEST_PROFILE === "1";
+const wantsScanner = process.env.HOUSECALL_TEST_REPORTS === "1" || process.env.HOUSECALL_TEST_UPLOAD_VIDEO === "1" || process.env.HOUSECALL_TEST_UPLOADS === "1" || process.env.HOUSECALL_TEST_SNAPS === "1" || process.env.HOUSECALL_TEST_SHOTS === "1" || process.env.HOUSECALL_TEST_PROFILE === "1";
 // Real ClamAV when its socket exists; otherwise a local INSTREAM stand-in (OK unless EICAR).
 let clamdSocket = resolve("../.runtime/scan/clamd.sock");
 let stopClamd;
