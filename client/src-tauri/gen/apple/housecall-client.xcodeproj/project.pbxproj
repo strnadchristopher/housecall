@@ -1,0 +1,471 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1AAEBE52C3FE988E0E065B66 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E0063537F2825F5B23CA7D1 /* WebKit.framework */; };
+		247D203589F8015C839890A3 /* assets in Resources */ = {isa = PBXBuildFile; fileRef = AAF2EBCE0C0B9C29D3C1DEE9 /* assets */; };
+		299EE6F468AD7F127DBB0600 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E5612437615441A923ABF919 /* CoreGraphics.framework */; };
+		3958426F1DF501D962B02D77 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AFB3636447E0E30F48A9EFCF /* Metal.framework */; };
+		5BC6A985EBBD3311908B9418 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C6FF55B8FF49674321B610D4 /* QuartzCore.framework */; };
+		6FDE948F47F54B3C74DFE9F3 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 87CA9C4E7FAEA87BF550FCEA /* Security.framework */; };
+		8D0E094031CC2DE1964A38F2 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 68EDEAE80BCCB248344A1F4F /* MetalKit.framework */; };
+		9F33D98673FD34617FA1C453 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A7996B0B665CA98EAD6BB60F /* UIKit.framework */; };
+		C88C91D69BBD08D98B419B6C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2F06167B5B11CACB229D874A /* Assets.xcassets */; };
+		D60CA783214DC0103680FF5A /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 45E07682B2FDC806B6161C66 /* main.mm */; };
+		E818F7767DCE9D28D544C5F1 /* libapp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A247FD678C426F1D6E23F3AE /* libapp.a */; };
+		F1B7A6E9AE02907219D5F0C3 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 47F7E83B63B519417EF90A51 /* LaunchScreen.storyboard */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		011C7D2EF2A07A314DB7B2AF /* housecall-client_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "housecall-client_iOS.entitlements"; sourceTree = "<group>"; };
+		15792B0BEE46EAC12AA45D9B /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
+		2F06167B5B11CACB229D874A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		31BB04C04BD41BF1AF56B19D /* linux_permissions.rs */ = {isa = PBXFileReference; path = linux_permissions.rs; sourceTree = "<group>"; };
+		3E0063537F2825F5B23CA7D1 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
+		457AE3B01C44D97D3DE8B90A /* native_push.rs */ = {isa = PBXFileReference; path = native_push.rs; sourceTree = "<group>"; };
+		45E07682B2FDC806B6161C66 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
+		47F7E83B63B519417EF90A51 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		68EDEAE80BCCB248344A1F4F /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		745DF302F345649EE8B8BE2D /* main.rs */ = {isa = PBXFileReference; path = main.rs; sourceTree = "<group>"; };
+		87CA9C4E7FAEA87BF550FCEA /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		921D6A26D58945DBA89158D3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		A247FD678C426F1D6E23F3AE /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
+		A7996B0B665CA98EAD6BB60F /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		AAF2EBCE0C0B9C29D3C1DEE9 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
+		AC89B00E19BE4CE0E8B05EC3 /* native_auth.rs */ = {isa = PBXFileReference; path = native_auth.rs; sourceTree = "<group>"; };
+		AFB3636447E0E30F48A9EFCF /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		C6FF55B8FF49674321B610D4 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		CA108353B3A5CAF7644B16F7 /* housecall-client_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "housecall-client_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D3D95EED7A6E1DED5BE25464 /* lib.rs */ = {isa = PBXFileReference; path = lib.rs; sourceTree = "<group>"; };
+		E5612437615441A923ABF919 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		8B4377F9E5E8A8FB1406E037 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E818F7767DCE9D28D544C5F1 /* libapp.a in Frameworks */,
+				299EE6F468AD7F127DBB0600 /* CoreGraphics.framework in Frameworks */,
+				3958426F1DF501D962B02D77 /* Metal.framework in Frameworks */,
+				8D0E094031CC2DE1964A38F2 /* MetalKit.framework in Frameworks */,
+				5BC6A985EBBD3311908B9418 /* QuartzCore.framework in Frameworks */,
+				6FDE948F47F54B3C74DFE9F3 /* Security.framework in Frameworks */,
+				9F33D98673FD34617FA1C453 /* UIKit.framework in Frameworks */,
+				1AAEBE52C3FE988E0E065B66 /* WebKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		428E3388DDD21D1C3D425C3E /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				FD6223F638C78230F9970E46 /* housecall-client */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		5BF1F420700FF49F61CCFC7C = {
+			isa = PBXGroup;
+			children = (
+				AAF2EBCE0C0B9C29D3C1DEE9 /* assets */,
+				2F06167B5B11CACB229D874A /* Assets.xcassets */,
+				47F7E83B63B519417EF90A51 /* LaunchScreen.storyboard */,
+				7E5C6C9441D994B76BFA2881 /* Externals */,
+				9F42368AEC0B595A6DB66FE5 /* housecall-client_iOS */,
+				428E3388DDD21D1C3D425C3E /* Sources */,
+				84E3636EB5F7975D879B9C7D /* src */,
+				D8B702B4182155556BD30102 /* Frameworks */,
+				FD44C2FA56827A4408BD3328 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		7E5C6C9441D994B76BFA2881 /* Externals */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Externals;
+			sourceTree = "<group>";
+		};
+		84E3636EB5F7975D879B9C7D /* src */ = {
+			isa = PBXGroup;
+			children = (
+				D3D95EED7A6E1DED5BE25464 /* lib.rs */,
+				31BB04C04BD41BF1AF56B19D /* linux_permissions.rs */,
+				745DF302F345649EE8B8BE2D /* main.rs */,
+				AC89B00E19BE4CE0E8B05EC3 /* native_auth.rs */,
+				457AE3B01C44D97D3DE8B90A /* native_push.rs */,
+			);
+			name = src;
+			path = ../../src;
+			sourceTree = "<group>";
+		};
+		8F9B41FC0E61985ABC167BE4 /* bindings */ = {
+			isa = PBXGroup;
+			children = (
+				15792B0BEE46EAC12AA45D9B /* bindings.h */,
+			);
+			path = bindings;
+			sourceTree = "<group>";
+		};
+		9F42368AEC0B595A6DB66FE5 /* housecall-client_iOS */ = {
+			isa = PBXGroup;
+			children = (
+				011C7D2EF2A07A314DB7B2AF /* housecall-client_iOS.entitlements */,
+				921D6A26D58945DBA89158D3 /* Info.plist */,
+			);
+			path = "housecall-client_iOS";
+			sourceTree = "<group>";
+		};
+		D8B702B4182155556BD30102 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				E5612437615441A923ABF919 /* CoreGraphics.framework */,
+				A247FD678C426F1D6E23F3AE /* libapp.a */,
+				AFB3636447E0E30F48A9EFCF /* Metal.framework */,
+				68EDEAE80BCCB248344A1F4F /* MetalKit.framework */,
+				C6FF55B8FF49674321B610D4 /* QuartzCore.framework */,
+				87CA9C4E7FAEA87BF550FCEA /* Security.framework */,
+				A7996B0B665CA98EAD6BB60F /* UIKit.framework */,
+				3E0063537F2825F5B23CA7D1 /* WebKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		FD44C2FA56827A4408BD3328 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CA108353B3A5CAF7644B16F7 /* housecall-client_iOS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		FD6223F638C78230F9970E46 /* housecall-client */ = {
+			isa = PBXGroup;
+			children = (
+				45E07682B2FDC806B6161C66 /* main.mm */,
+				8F9B41FC0E61985ABC167BE4 /* bindings */,
+			);
+			path = "housecall-client";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F8026378E4E56C3ECBDC8CF6 /* housecall-client_iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A74C4F256C755B2A6F10E272 /* Build configuration list for PBXNativeTarget "housecall-client_iOS" */;
+			buildPhases = (
+				F5C66775B42496E930EF6146 /* Build Rust Code */,
+				852B19EDE316EB2FCF9AD74E /* Sources */,
+				41AB78B480970E7ED591231E /* Resources */,
+				8B4377F9E5E8A8FB1406E037 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "housecall-client_iOS";
+			packageProductDependencies = (
+			);
+			productName = "housecall-client_iOS";
+			productReference = CA108353B3A5CAF7644B16F7 /* housecall-client_iOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AAAF877A31C777CE5EE32185 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					F8026378E4E56C3ECBDC8CF6 = {
+						DevelopmentTeam = HSAU48DYD8;
+					};
+				};
+			};
+			buildConfigurationList = 65144A6B6F27B3B28E2D6A89 /* Build configuration list for PBXProject "housecall-client" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 5BF1F420700FF49F61CCFC7C;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = FD44C2FA56827A4408BD3328 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F8026378E4E56C3ECBDC8CF6 /* housecall-client_iOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		41AB78B480970E7ED591231E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C88C91D69BBD08D98B419B6C /* Assets.xcassets in Resources */,
+				F1B7A6E9AE02907219D5F0C3 /* LaunchScreen.storyboard in Resources */,
+				247D203589F8015C839890A3 /* assets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		F5C66775B42496E930EF6146 /* Build Rust Code */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Build Rust Code";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/Externals/x86_64/${CONFIGURATION}/libapp.a",
+				"$(SRCROOT)/Externals/arm64/${CONFIGURATION}/libapp.a",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "npm run -- tauri ios xcode-script -v --platform \"${PLATFORM_DISPLAY_NAME:?}\" --sdk-root \"${SDKROOT:?}\" --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_PREPROCESSOR_DEFINITIONS:-}\" --configuration \"${CONFIGURATION:?}\" ${FORCE_COLOR} ${ARCHS:?}\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		852B19EDE316EB2FCF9AD74E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D60CA783214DC0103680FF5A /* main.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		3438152AC3DC8F2CCAA11099 /* debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ARCHS = (
+					arm64,
+				);
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "housecall-client_iOS/housecall-client_iOS.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = "HSAU48DYD8";
+				ENABLE_BITCODE = NO;
+				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				INFOPLIST_FILE = "housecall-client_iOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.mapleavenuelabs.housecall;
+				PRODUCT_NAME = "Housecall";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = arm64;
+			};
+			name = debug;
+		};
+		3B6EB0BDB4A2492DD125DD1B /* release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = release;
+		};
+		C254DE6E256AB8B79FEF9CF8 /* release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ARCHS = (
+					arm64,
+				);
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "housecall-client_iOS/housecall-client_iOS.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = "HSAU48DYD8";
+				ENABLE_BITCODE = NO;
+				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				INFOPLIST_FILE = "housecall-client_iOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/$(PLATFORM_NAME) $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.mapleavenuelabs.housecall;
+				PRODUCT_NAME = "Housecall";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = arm64;
+			};
+			name = release;
+		};
+		DFE68664A6DE6F2054ADAE9B /* debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		65144A6B6F27B3B28E2D6A89 /* Build configuration list for PBXProject "housecall-client" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DFE68664A6DE6F2054ADAE9B /* debug */,
+				3B6EB0BDB4A2492DD125DD1B /* release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = debug;
+		};
+		A74C4F256C755B2A6F10E272 /* Build configuration list for PBXNativeTarget "housecall-client_iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3438152AC3DC8F2CCAA11099 /* debug */,
+				C254DE6E256AB8B79FEF9CF8 /* release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AAAF877A31C777CE5EE32185 /* Project object */;
+}
