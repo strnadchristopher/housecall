@@ -359,3 +359,41 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
     for (const context of contexts) await context.close();
   }
 });
+
+test("joins and shows a warning when a saved device is missing", async ({ browser, request }) => {
+  const setup = await request.post("/api/setup", {
+    data: { setup_token: "test-setup-token-at-least-32-characters", username: "owner", password, device_name: "missing device fixture" },
+  });
+  expect([200, 201, 409]).toContain(setup.status());
+  const context = await browser.newContext({ permissions: ["camera", "microphone"] });
+  try {
+    // A saved microphone that is no longer plugged in: listed once, rejected by capture.
+    await context.addInitScript(() => {
+      const list = navigator.mediaDevices.enumerateDevices.bind(navigator.mediaDevices);
+      navigator.mediaDevices.enumerateDevices = async () => [
+        ...(await list()),
+        { deviceId: "does-not-exist", kind: "audioinput", label: "Unplugged microphone", groupId: "gone", toJSON: () => ({}) } as MediaDeviceInfo,
+      ];
+    });
+    const page = await context.newPage();
+    await page.goto("/");
+    await page.getByLabel("Username", { exact: true }).fill("owner");
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).first().click();
+    await expect(page.getByTestId("screen-composer")).toBeVisible({ timeout: 30000 });
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    const settings = page.getByTestId("screen-settings");
+    await settings.getByRole("button", { name: "Audio and video", exact: true }).click();
+    await settings.getByLabel("Microphone").selectOption("does-not-exist");
+    await settings.getByRole("button", { name: "Close", exact: true }).click();
+    const bar = page.getByTestId("call-bar");
+    await bar.getByRole("button", { name: "Join", exact: true }).click();
+    await expect(bar).toHaveAttribute("data-phase", "live", { timeout: 30000 });
+    await expect(page.getByText("Call failed")).toHaveCount(0);
+    await expect(bar.getByRole("status")).toContainText("Using the default device");
+    await bar.getByRole("button", { name: "Dismiss", exact: true }).click();
+    await expect(bar.getByRole("status")).toHaveCount(0);
+  } finally {
+    await context.close();
+  }
+});

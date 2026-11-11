@@ -67,7 +67,7 @@ export function CallBar() {
         {call.warning && call.warning !== dismissed && (
           <small role="status" className="hc-callbar__warning">
             {call.warning}
-            <button type="button" className="hc-callbar__dismiss" onClick={() => setDismissed(call.warning)}>{copy.call.dismiss}</button>
+            <button type="button" className="hc-callbar__dismiss" onClick={() => setDismissed(call.warning)}>{copy.common.dismiss}</button>
           </small>
         )}
       </div>
