@@ -68,3 +68,28 @@ Regenerate with `HOUSECALL_TEST_SHOTS=1 npm run e2e --prefix client` (not `HOUSE
 - Add Server with an address and with an invite link in the desktop build.
 - Settings sections and Chord panels with a configured Gimme, DJ and shared browser.
 - Safe-area insets and 44 px targets on an iPhone.
+
+## Neutral black dark scheme
+
+Owner decision (overrides the earlier warm charcoal): direction A dark is a neutral black. Light mode is unchanged. Directions B (neutral ink) and C (green-black) have no warm or brown dark ground, so they are unchanged.
+
+| Token | Old | New |
+| --- | --- | --- |
+| `--hc-bg` | `#171311` | `#0c0c0c` |
+| `--hc-surface` | `#1f1a17` | `#151515` |
+| `--hc-surface-raised` | `#2b2420` | `#212121` |
+| `--hc-line` | `#786d64` | `#787878` |
+| `--hc-text` | `#f3ebe1` | `#ededed` |
+| `--hc-text-muted` | `#b3a597` | `#a6a6a6` |
+
+Accent, on-accent, live, danger and focus are unchanged. The accent is no longer mixed into any surface: avatar faces, the mention row, `@me` chip and own reactions now step in lightness from `--hc-text`. The mention row keeps a 2px solid accent rail on its left edge.
+
+Computed WCAG contrast:
+
+| Pair | bg | surface | raised |
+| --- | --- | --- | --- |
+| text | 16.71 | 15.60 | 13.75 |
+| text-muted | 8.04 | 7.50 | 6.61 |
+| line | 4.43 | 4.14 | 3.65 |
+
+Also: `--hc-on-accent` on `--hc-accent` 8.74; `--hc-danger` on surface 7.43. The app icon source (`src-tauri/icons/housecall.svg`) and `logo.svg` use the new ground and ink; icons were regenerated with `tauri icon`. `index.html` has no theme-color, there is no web manifest, `tauri.conf.json` sets no window background, and the iOS launch screen uses the system background colour, so nothing else repeated the brown.
