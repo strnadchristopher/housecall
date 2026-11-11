@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { BackendProvider } from "../../core/context";
 import { useHousecall } from "../../hooks/useHousecall";
 import { useLegacyChat } from "./chat";
@@ -20,6 +20,11 @@ export function LegacyHost({ host, hosts, updater, children }: { host: HostEntry
   const call = useLegacyCall(c);
   const chords = useLegacyChords(c, call, chat.store.requests);
   const identity = useLegacyIdentity(c, host, hosts, updater, { id: chat.serverId, roles: chat.roles, setRoles: chat.setRoles });
+  // An inactive host renders nothing, so its call has no stage or controls.
+  // Leave it rather than keep transmitting the microphone with nothing visible.
+  const leaveCall = call.transport.leave;
+  const inCall = call.transport.phase !== "idle";
+  useEffect(() => { if (!active && inCall) void leaveCall(); }, [active, inCall]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!active) return null;
   return <BackendProvider value={{ chat: chat.store, call: call.transport, identity, chords }}>{children}</BackendProvider>;
 }

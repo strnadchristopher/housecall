@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CallTransport } from "../../core/call";
 import { VoiceSession, availableVoiceInputs, type VoiceDevice, type VoiceInputs, type VoiceStatus } from "../../transport/voice";
 import type { Housecall } from "./chat";
@@ -21,6 +21,7 @@ export function useLegacyCall(c: Housecall) {
   const [joinedAt, setJoinedAt] = useState<number>();
   const [muted, setMuted] = useState(false);
   const [deafened, setDeafened] = useState(false);
+  const mutedBeforeDeafen = useRef(false);
   const [camera, setCamera] = useState(false);
   const [error, setError] = useState("");
   const [devices, setDevices] = useState<VoiceDevice[]>([]);
@@ -76,6 +77,10 @@ export function useLegacyCall(c: Housecall) {
     stats: { receivedBytes: status.receivedBytes, decodedFrames: status.decodedFrames },
 
     join: async conversationId => {
+      // Leave the current call properly (server DELETE) before joining another.
+      if (status.phase !== "idle" && channelId && channelId !== conversationId) {
+        try { await voice.leave(); } catch { /* the join below closes any remainder */ }
+      }
       setError(""); setMuted(false); setDeafened(false); setCamera(false); setPeers([]);
       setChannelId(conversationId);
       try {
@@ -88,7 +93,12 @@ export function useLegacyCall(c: Housecall) {
       reset();
     },
     setMuted: next => { voice.mute(next); setMuted(next); },
-    setDeafened: next => setDeafened(next),
+    // Deafen also closes the microphone, and undeafen restores the earlier state.
+    setDeafened: next => {
+      if (next) { mutedBeforeDeafen.current = muted; voice.mute(true); setMuted(true); }
+      else { const restore = mutedBeforeDeafen.current; voice.mute(restore); setMuted(restore); }
+      setDeafened(next);
+    },
     setCamera: async on => {
       setError("");
       try { await voice.camera(on, selected.camera); setCamera(on); } catch (reason) { fail(reason); }

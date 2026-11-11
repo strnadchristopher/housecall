@@ -51,11 +51,13 @@ export interface Song {
 }
 
 export interface BrowserState {
-  phase: string;
+  phase: "unavailable" | "idle" | "armed" | "connecting" | "live";
   canStop: boolean;
+  /** The server supports the offline reset check. */
+  canReset: boolean;
   streams: MediaStream[];
   /** Outcome of the last reset the server remembers, if any. */
-  resetOutcome?: string;
+  resetOutcome?: "pending" | "reset" | "rolled_back" | "unknown";
 }
 
 export interface ChordState {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ChordEntry, ChordRegistry, SharedSession } from "../../core/chords";
+import type { BrowserState, ChordEntry, ChordRegistry, SharedSession } from "../../core/chords";
 import type { RequestCard } from "../../core/chat";
 import type { ActivitySnapshot } from "../../data/activities";
 import type { PlexPlayer } from "../../transport/plex";
@@ -23,7 +23,7 @@ export function useLegacyChords(c: Housecall, voice: { status: VoiceStatus; live
   const [tracks, setTracks] = useState<Track[]>([]);
   const [djAudio, setDjAudio] = useState<string>();
   const [vm, setVm] = useState<{ armed: boolean; phase: string; peer_id?: number }>();
-  const [resetOutcome, setResetOutcome] = useState<string>();
+  const [resetOutcome, setResetOutcome] = useState<NonNullable<BrowserState["resetOutcome"]>>();
   const pendingGimme = useRef<{ intent: string; key: string } | undefined>(undefined);
   const watchers = useRef(new Set<PlexPlayer>());
   const listeners = useRef(new Set<DjPlayer>());
@@ -80,7 +80,8 @@ export function useLegacyChords(c: Housecall, voice: { status: VoiceStatus; live
   }, [vmLive, c.channel, c.api]);
   const checkReset = async () => {
     const status = await c.api.get<{ operation?: string; outcome: string }>(`/api/channels/${c.channel}/vm/reset`);
-    setResetOutcome(status.operation && status.outcome !== "none" ? status.outcome : undefined);
+    const known = ["pending", "reset", "rolled_back", "unknown"] as const;
+    setResetOutcome(status.operation ? known.find(outcome => outcome === status.outcome) : undefined);
   };
   useEffect(() => {
     setResetOutcome(undefined);
@@ -126,7 +127,8 @@ export function useLegacyChords(c: Housecall, voice: { status: VoiceStatus; live
       player: activity?.kind === "dj" ? djAudio : undefined,
     },
     browser: activity?.kind === "vm" && vm ? {
-      phase: vm.phase, canStop: activity.host === me && vm.armed, resetOutcome,
+      phase: (["idle", "armed", "connecting", "live"] as const).find(phase => phase === vm.phase) ?? "unavailable",
+      canStop: activity.host === me && vm.armed, canReset: cap.vm_reset === true, resetOutcome,
       streams: voice.status.streams.filter(stream => voice.status.sourcePeers?.[stream.id] === String(vm.peer_id)),
     } : undefined,
 

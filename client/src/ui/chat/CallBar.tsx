@@ -19,7 +19,23 @@ export function CallBar() {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [here, call.joinedAt]);
+  const [confirming, setConfirming] = useState(false);
+  useEffect(() => setConfirming(false), [chat.current?.id]);
   if (!chat.current) return null;
+  const elsewhere = call.phase !== "idle" && !here;
+  if (elsewhere)
+    return (
+      <section className="hc-callbar is-live" data-testid="call-bar" data-phase={call.phase} data-elsewhere="" aria-label={copy.call.label}>
+        <div className="hc-callbar__title">
+          <strong>{copy.call.inCallIn(call.conversationName ?? "")}</strong>
+          {call.error && <small>{call.error}</small>}
+        </div>
+        {confirming
+          ? <><Button kind="primary" onClick={() => { setConfirming(false); void call.join(chat.current!.id); }}>{copy.call.switchCall}</Button><Button kind="text" onClick={() => setConfirming(false)}>{copy.common.cancel}</Button></>
+          : <Button onClick={() => setConfirming(true)}>{copy.call.join}</Button>}
+        <CallControls />
+      </section>
+    );
   if (!here)
     return (
       <section className="hc-callbar" data-testid="call-bar" aria-label={copy.call.label}>
@@ -38,7 +54,7 @@ export function CallBar() {
           {call.phase === "live" ? copy.call.people(call.participants.length) : call.phase === "failed" ? copy.call.failed : copy.call.joining}
           {call.phase === "live" && call.joinedAt && <time data-testid="call-duration"> · {clock(Math.max(0, (now - call.joinedAt) / 1000))}</time>}
         </strong>
-        <small>{call.error || copy.call.inTransit}</small>
+        {call.error && <small>{call.error}</small>}
       </div>
       <CallControls />
     </section>

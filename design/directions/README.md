@@ -9,7 +9,9 @@ Screenshots: `design/shots/`.
 
 - Logo (`a/logo.svg`): a lowercase h whose counter is a lit doorway with the door ajar. The door swings wider when the server picker opens.
 - Typeface: Inria Sans (OFL, Black[Foundry]). A humanist sans with cut, slightly calligraphic terminals; warm at chat sizes, two weights only, which forces hierarchy by size and tone.
-- Palette: warm charcoal at night, one amber that means "the light is on" (live call, primary action). Light scheme is fired clay, deliberately not cream or kit gray.
+- Palette: warm charcoal at night, one amber that means "the light is on" (live call, primary action). Light scheme is a cool grey paper with warm ink and a burnt-amber accent; the warmth is in the ink, not in a cream or beige ground (an earlier peach "fired clay" paper was dropped because it rendered as beige).
+- Known deviation, for the owner's direction pick: Inria Sans is on Google Fonts, and the guidelines say the identity cannot rest on anything off the Google shelf. It ships only Regular and Bold, so `--hc-weight-medium` equals `--hc-weight-bold`. B (Martian Grotesk) and C (Apfel Grotezk) do not have this problem. If A stays the default, replace the face.
+- Field borders: `--hc-line` is at least 3:1 against surface and raised in every direction and scheme.
 - Shape and motion: arch silhouette (flat base, round top) for avatars and the live mark; radii 6/10/18; 110/190/320 ms with a small overshoot on enter, plain ease-in on exit.
 - Why default: it is the only direction where logo, colour, avatar shape and the live state are one idea (a lit doorway means someone is home), so the call state reads without words.
 

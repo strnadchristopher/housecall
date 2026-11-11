@@ -19,14 +19,14 @@ function Screen({ stream }: { stream: MediaStream }) {
 export function SharedBrowserPanel() {
   const chords = useChords();
   const browser = chords.browser;
-  if (!browser) return <div className="hc-stack"><p className="hc-pair"><span>{copy.chords.browserPhase}</span><strong>{copy.state.offline}</strong></p></div>;
+  if (!browser) return <div className="hc-stack"><p className="hc-pair"><span>{copy.chords.browserPhase}</span><strong>{copy.chords.browserPhases.idle}</strong></p></div>;
   return (
     <div className="hc-stack" data-testid="screen-browser">
       {browser.streams.map(stream => <Screen key={stream.id} stream={stream} />)}
-      <p className="hc-pair"><span>{copy.chords.browserPhase}</span><strong>{browser.phase}</strong></p>
-      {browser.resetOutcome && <p className="hc-pair"><span>{copy.chords.resetOutcome}</span><strong>{browser.resetOutcome}</strong></p>}
+      <p className="hc-pair"><span>{copy.chords.browserPhase}</span><strong>{copy.chords.browserPhases[browser.phase]}</strong></p>
+      {browser.resetOutcome && <p className="hc-pair"><span>{copy.chords.resetOutcome}</span><strong>{copy.chords.resetOutcomes[browser.resetOutcome]}</strong></p>}
       {browser.canStop && <Button kind="danger" onClick={() => void chords.stopBrowser()}>{copy.chords.stopBrowser}</Button>}
-      <Button onClick={() => void chords.checkBrowserReset()}>{copy.chords.checkReset}</Button>
+      {browser.canReset && <Button onClick={() => void chords.checkBrowserReset()}>{copy.chords.checkReset}</Button>}
     </div>
   );
 }

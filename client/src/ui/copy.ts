@@ -22,7 +22,7 @@ export const copy = {
   userBar: { messages: "Direct messages", settings: "Settings" },
   header: { search: "Search", pins: "Pins", people: "People", settings: "Server settings", in: (server: string) => `in ${server}` },
   messages: {
-    label: "Messages", reply: "Reply", react: "React", pin: "Pin", unpin: "Unpin", edit: "Edit", unsend: "Unsend",
+    label: "Messages", skip: "Skip to message box", reply: "Reply", react: "React", pin: "Pin", unpin: "Unpin", edit: "Edit", unsend: "Unsend",
     unsendConfirm: "Unsend for everyone", preview: "Preview link", play: "Play", closeVideo: "Close video",
     download: "Download", edited: "edited", pinned: "Pinned", replyTo: (name: string) => `Reply to ${name}`,
     typing: (names: string[]) => (names.length === 1 ? `${names[0]} is typing` : `${names.join(", ")} are typing`),
@@ -40,13 +40,13 @@ export const copy = {
     label: "Call", join: "Join", joining: "Joining", leave: "Leave", mute: "Mute", unmute: "Unmute",
     deafen: "Deafen", undeafen: "Undeafen", cameraOn: "Camera on", cameraOff: "Camera off",
     share: "Share screen", stopShare: "Stop sharing", devices: "Audio and video",
-    people: (n: number) => (n === 1 ? "1 person" : `${n} people`), failed: "Call failed", inTransit: "Encrypted in transit",
+    people: (n: number) => (n === 1 ? "1 person" : `${n} people`), failed: "Call failed", inCallIn: (name: string) => `In call in ${name}`, switchCall: "Switch call",
     microphone: "Microphone", camera: "Camera", defaultDevice: "System default", refresh: "Refresh devices",
     bitrate: "Audio bitrate (bit/s)", noise: "Noise suppression", apply: "Apply", stage: "Call stage",
     remoteVideo: "Remote video", remoteAudio: "Remote audio", dock: "Current call", open: (name: string) => `Open ${name}`,
   },
   side: {
-    people: "People", chords: "Chords", owner: "Owner", search: "Search", pins: "Pins", searchLabel: "Search messages",
+    label: "Details", people: "People", chords: "Chords", owner: "Owner", search: "Search", pins: "Pins", searchLabel: "Search messages",
     noResults: "No results", noPins: "No pins",
   },
   chords: {
@@ -57,6 +57,8 @@ export const copy = {
     handOff: "Hand off to", joinCallFirst: "Join the call to watch and listen",
     startMusic: "Start DJ", songSearch: "Song or link", queue: "Queue", queueSong: "Queue", voteSkip: "Vote to skip", voted: "Voted to skip",
     browserPhase: "Status", stopBrowser: "Stop sharing", checkReset: "Check reset", resetOutcome: "Last reset",
+    browserPhases: { unavailable: "Unavailable", idle: "Idle", armed: "Ready", connecting: "Connecting", live: "Live" },
+    resetOutcomes: { pending: "Pending", reset: "Reset", rolled_back: "Rolled back", unknown: "Unknown" },
     film: "Shared film", music: "Shared music", screen: "Shared browser screen",
   },
   dm: { label: "Direct messages", start: "New message", name: "Name (optional)", create: "Start", people: "People" },

@@ -10,7 +10,7 @@ import { RightPanel } from "../side/RightPanel";
 import { SettingsView } from "../settings/SettingsView";
 import { copy } from "../copy";
 import { ErrorLine, cx } from "../kit";
-import { usePhone } from "../tokens/motion";
+import { usePhone, useSheet } from "../tokens/motion";
 import { ServerPicker } from "./ServerPicker";
 import { ChannelList } from "./ChannelList";
 import { CallDock } from "./CallDock";
@@ -25,6 +25,7 @@ export function AppShell() {
   const chat = useChat();
   const call = useCall();
   const phone = usePhone();
+  const sheet = useSheet();
   const [nav, setNav] = useState<Nav>({ left: "channels", main: "chat", section: "account", side: { kind: "tabs", tab: "people" }, screen: "list", sheet: false });
   const set = (next: Partial<Nav>) => setNav(current => ({ ...current, ...next }));
   useEffect(() => {
@@ -46,7 +47,7 @@ export function AppShell() {
           <UserBar />
         </nav>
         <main className="hc-center" inert={phone && nav.screen !== "main"}>
-          {nav.main === "settings" ? <><CallStage away /><SettingsView /></> : (
+          {nav.main === "settings" ? <><CallStage away /><SettingsView />{phone && <CallDock />}</> : (
             <>
               <ChannelHeader />
               {!chat.online && <p className="hc-offline" role="status">{copy.state.reconnecting}</p>}
@@ -60,8 +61,8 @@ export function AppShell() {
         </main>
         {nav.main === "chat" && (
           <>
-            {phone && nav.sheet && <button type="button" className="hc-scrim" aria-label={copy.common.close} onClick={() => set({ sheet: false })} />}
-            <aside className="hc-right" aria-label={copy.side.people} inert={phone && !nav.sheet}>
+            {sheet && nav.sheet && <button type="button" className="hc-scrim" aria-label={copy.common.close} onClick={() => set({ sheet: false })} />}
+            <aside className="hc-right" aria-label={copy.side.label} inert={sheet && !nav.sheet}>
               <RightPanel />
             </aside>
           </>
