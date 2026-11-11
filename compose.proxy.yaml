@@ -1,0 +1,16 @@
+# Optional override for people who already run a reverse proxy in Docker.
+# Attaches the app to an existing external network, reachable as http://housecall:3000.
+#
+#   docker compose -f compose.yaml -f compose.proxy.yaml up -d
+#
+# Set HOUSECALL_PROXY_NETWORK in .env to the name of that network.
+services:
+  app:
+    networks:
+      default: {}
+      proxy:
+        aliases: [housecall]
+networks:
+  proxy:
+    external: true
+    name: ${HOUSECALL_PROXY_NETWORK:?Set HOUSECALL_PROXY_NETWORK to the existing Docker network name}

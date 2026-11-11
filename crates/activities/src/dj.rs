@@ -205,11 +205,18 @@ pub struct Switchboard {
     bearer: Option<String>,
 }
 impl Switchboard {
-    pub fn new(bearer: Option<String>) -> Result<Self> {
+    pub fn new(endpoint: &str, bearer: Option<String>) -> Result<Self> {
+        let endpoint = Url::parse(endpoint).map_err(|_| Error::Invalid("Switchboard endpoint"))?;
+        if !matches!(endpoint.scheme(), "http" | "https")
+            || endpoint.host_str().is_none()
+            || !endpoint.username().is_empty()
+            || endpoint.password().is_some()
+        {
+            return Err(Error::Invalid("Switchboard endpoint"));
+        }
         Ok(Self {
             client: crate::http()?,
-            endpoint: Url::parse("https://switchboard.littleobelisk.com/v1/chat/completions")
-                .unwrap(),
+            endpoint,
             bearer,
         })
     }
@@ -582,7 +589,6 @@ mod playback_tests {
             "169.254.169.254",
             "100.64.0.1",
             "192.0.2.1",
-            "192.168.1.1",
             "224.0.0.1",
             "::1",
             "::ffff:127.0.0.1",

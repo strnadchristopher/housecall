@@ -33,7 +33,7 @@ impl Worker {
     pub fn dry_run() -> Arc<Self> {
         Arc::new(Self {
             config: Config {
-                origin: "https://api.littleobelisk.com/".into(),
+                origin: "https://gimme.invalid/".into(),
                 key: String::new(),
                 mode: Mode::DryRun,
             },
@@ -195,11 +195,18 @@ pub fn configure(s: &mut AppState) -> Result<(), String> {
     let dry = std::env::var("GIMME_DRY_RUN").unwrap_or_else(|_| "true".into());
     s.gimme = match dry.as_str() {
         "true" | "1" => Worker::dry_run(),
-        "false" | "0" => Worker::configured(
-            &std::env::var("GIMME_BASE_URL")
-                .unwrap_or_else(|_| "https://api.littleobelisk.com/".into()),
-            std::env::var("GIMME_AGENT_API_KEY").unwrap_or_default(),
-        )?,
+        "false" | "0" => {
+            // An empty base URL leaves the integration disabled (dry-run).
+            let base = std::env::var("GIMME_BASE_URL").unwrap_or_default();
+            if base.trim().is_empty() {
+                Worker::dry_run()
+            } else {
+                Worker::configured(
+                    base.trim(),
+                    std::env::var("GIMME_AGENT_API_KEY").unwrap_or_default(),
+                )?
+            }
+        }
         _ => return Err("GIMME_DRY_RUN must be true or false".into()),
     };
     recover(&s.db).map_err(|_| "Gimme recovery failed")?;
@@ -946,7 +953,7 @@ mod tests {
             )
             .unwrap();
         assert_eq!(code, "authorization_revoked");
-        assert!(Worker::configured("http://api.littleobelisk.com", "key".into()).is_err());
+        assert!(Worker::configured("http://api.example.com", "key".into()).is_err());
         assert!(Worker::configured("https://api.example.com/path", "key".into()).is_err());
     }
     #[test]
