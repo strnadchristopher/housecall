@@ -131,8 +131,10 @@ const DROP_COPY = copy.dropzone;
  * One drop zone for every image field: click to browse, drag and drop, or paste.
  * Validates type and size before anything leaves the device and shows a small preview.
  */
-export function MediaDropzone({ label, accept, maxBytes, value, onChange, hint, typeError }: {
+export function MediaDropzone({ label, accept, maxBytes, value, onChange, hint, typeError, lead }: {
   label: string; accept: string[]; maxBytes: number; value?: File; onChange: (file?: File) => void; hint?: string; typeError?: string;
+  /** Shown under the label, inside the field: the picture the field currently holds. */
+  lead?: ReactNode;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
@@ -154,6 +156,7 @@ export function MediaDropzone({ label, accept, maxBytes, value, onChange, hint, 
   return (
     <div className="hc-field" role="group" aria-label={label}>
       <span className="hc-field__label">{label}</span>
+      {lead}
       <div className={cx("hc-drop", over && "is-over", value && "has-file")} data-testid="dropzone"
         onDragOver={event => { event.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
         onDrop={event => { event.preventDefault(); setOver(false); take(event.dataTransfer.files[0]); }}

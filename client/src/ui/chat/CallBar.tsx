@@ -64,7 +64,8 @@ export function CallBar() {
       </div>
       <div className="hc-callbar__title">
         <strong>
-          {call.outgoing === "declined" ? copy.call.declined : call.outgoing === "ringing" ? copy.call.ringing : call.phase === "live" ? copy.call.people(call.participants.length) : call.phase === "failed" ? copy.call.failed : copy.call.joining}
+          {/* Ringing and declined are shown once, on the stage. */}
+          {call.phase === "live" ? copy.call.people(call.participants.length) : call.phase === "failed" ? copy.call.failed : copy.call.joining}
           {call.phase === "live" && call.joinedAt && <time data-testid="call-duration"> · {clock(Math.max(0, (now - call.joinedAt) / 1000))}</time>}
         </strong>
         {call.error && <small>{call.error}</small>}

@@ -10,8 +10,8 @@ const PICTURE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 const PICTURE_PICK_LIMIT = 8 * 1024 * 1024;
 
 /** Picks an image, shrinks it on this device (a GIF is kept as is), then uploads it. Shared by the avatar and the server icon. */
-function PictureField({ label, remove, current, shape, name, save, clear }: {
-  label: string; remove: string; current?: string; shape: "arch" | "squircle"; name: string;
+function PictureField({ label, remove, saveLabel, current, shape, name, save, clear }: {
+  label: string; remove: string; saveLabel: string; current?: string; shape: "arch" | "squircle"; name: string;
   save: (image: Blob) => Promise<boolean>; clear: () => Promise<boolean>;
 }) {
   const identity = useIdentity();
@@ -26,11 +26,11 @@ function PictureField({ label, remove, current, shape, name, save, clear }: {
   };
   return (
     <div className="hc-stack">
-      {!file && shape === "squircle" && <p className="hc-person"><Avatar name={name} src={current} size="lg" shape={shape} /></p>}
-      <MediaDropzone label={label} accept={PICTURE_TYPES} maxBytes={PICTURE_PICK_LIMIT} hint={copy.profile.pictureHint} typeError={copy.profile.pictureType} value={file} onChange={next => { setProblem(""); setFile(next); }} />
+      <MediaDropzone label={label} accept={PICTURE_TYPES} maxBytes={PICTURE_PICK_LIMIT} hint={copy.profile.pictureHint} typeError={copy.profile.pictureType} value={file} onChange={next => { setProblem(""); setFile(next); }}
+        lead={!file && shape === "squircle" ? <p className="hc-person"><Avatar name={name} src={current} size="lg" shape={shape} /></p> : undefined} />
       {problem && <p className="hc-field__error" role="alert">{problem}</p>}
       <div className="hc-inline">
-        {file && <Button kind="primary" busy={identity.busy} onClick={() => void upload()}>{copy.common.save}</Button>}
+        {file && <Button kind="primary" busy={identity.busy} onClick={() => void upload()}>{saveLabel}</Button>}
         {!file && current && <Button kind="danger" busy={identity.busy} onClick={() => void clear()}>{remove}</Button>}
       </div>
     </div>
@@ -48,9 +48,9 @@ export function Account() {
       <p className="hc-person"><Avatar name={me.name} src={me.avatarUrl} size="lg" /><span><strong>{me.name}</strong><small>{me.username} · {identity.serverName}</small></span></p>
       <form className="hc-inline" onSubmit={submit}>
         <Field label={copy.profile.displayName} value={name} placeholder={me.username} maxLength={32} onChange={event => setName(event.target.value)} />
-        <Button kind="primary" type="submit" busy={identity.busy} disabled={name.trim() === saved}>{copy.common.save}</Button>
+        <Button kind="primary" type="submit" busy={identity.busy} disabled={name.trim() === saved}>{copy.profile.saveName}</Button>
       </form>
-      <PictureField label={copy.profile.avatar} remove={copy.profile.removeAvatar} current={me.avatarUrl} shape="arch" name={me.name}
+      <PictureField label={copy.profile.avatar} remove={copy.profile.removeAvatar} saveLabel={copy.profile.saveAvatar}current={me.avatarUrl} shape="arch" name={me.name}
         save={image => identity.setAvatar(image)} clear={() => identity.setAvatar(undefined)} />
       <Button kind="danger" onClick={() => void identity.signOut()}>{copy.settings.signOut}</Button>
     </div>
@@ -66,9 +66,9 @@ export function ServerProfile() {
     <div className="hc-stack" data-testid="screen-server">
       <form className="hc-inline" onSubmit={submit}>
         <Field label={copy.profile.serverName} value={name} maxLength={48} required onChange={event => setName(event.target.value)} />
-        <Button kind="primary" type="submit" busy={identity.busy} disabled={!name.trim() || name.trim() === identity.serverName}>{copy.common.save}</Button>
+        <Button kind="primary" type="submit" busy={identity.busy} disabled={!name.trim() || name.trim() === identity.serverName}>{copy.profile.saveName}</Button>
       </form>
-      <PictureField label={copy.profile.serverIcon} remove={copy.profile.removeIcon} current={identity.serverIconUrl} shape="squircle" name={identity.serverName}
+      <PictureField label={copy.profile.serverIcon} remove={copy.profile.removeIcon} saveLabel={copy.profile.saveIcon}current={identity.serverIconUrl} shape="squircle" name={identity.serverName}
         save={image => identity.setServerIcon(image)} clear={() => identity.setServerIcon(undefined)} />
     </div>
   );

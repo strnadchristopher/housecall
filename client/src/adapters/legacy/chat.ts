@@ -157,7 +157,8 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
   };
 
   const people: Person[] = current && current.kind !== "channel"
-    ? [...new Map([meUser!, ...c.members.filter(member => c.messages.some(message => message.author_id === member.id))].map(user => [user.id, person(user)])).values()]
+    // Both people of a direct conversation, whoever has posted: the Call button and People tab need the peer.
+    ? [...new Map([meUser!, ...c.members.filter(member => member.id === current.peer_id || c.messages.some(message => message.author_id === member.id))].map(user => [user.id, person(user)])).values()]
     : serverPeople.map(person);
 
   const pending: PendingUpload | undefined = upload ? {

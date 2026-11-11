@@ -53,7 +53,8 @@ export function AppShell() {
         <nav className="hc-left" aria-label={copy.app.name} inert={phone && nav.screen !== "list"}>
           <ServerPicker />
           {nav.left === "dm" ? <DmView /> : <ChannelList />}
-          <CallDock />
+          {/* The stage and its call bar carry the controls while it owns the center. */}
+          {!staged && <CallDock />}
           <UserBar />
         </nav>
         <main className="hc-center" inert={phone && nav.screen !== "main"}>

@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useCall } from "../../core/context";
+import { useCall, useChat } from "../../core/context";
 import { copy } from "../copy";
+import { Avatar } from "../kit";
 import { Sink, Tile } from "./Tile";
 
 /**
@@ -11,7 +12,9 @@ import { Sink, Tile } from "./Tile";
  */
 export function CallStage({ full }: { full?: boolean; away?: boolean }) {
   const call = useCall();
+  const chat = useChat();
   const [pinned, setPinned] = useState<string>();
+  const callee = chat.current?.peerId ? chat.people.find(person => person.id === chat.current?.peerId) : undefined;
   if (call.phase === "idle") return null;
   const common = { "data-testid": "call-stage", "aria-label": copy.call.stage, "data-phase": call.phase, "data-received-bytes": call.stats.receivedBytes, "data-decoded-frames": call.stats.decodedFrames } as const;
   if (!full) {
@@ -34,8 +37,9 @@ export function CallStage({ full }: { full?: boolean; away?: boolean }) {
   return (
     <section className="hc-stage is-full" {...common}>
       {call.outgoing && (
-        <p className="hc-stage__ring" role="status" data-testid="call-ringing" data-state={call.outgoing}>
-          {call.outgoing === "declined" ? copy.call.declined : copy.call.ringing}
+        <p className="hc-stage__ring" role="status" data-state={call.outgoing}>
+          {callee && <Avatar name={callee.name} src={callee.avatarUrl} size="sm" />}
+          <span data-testid="call-ringing" data-state={call.outgoing}>{call.outgoing === "declined" ? copy.call.declined : copy.call.ringing(callee?.name ?? call.conversationName ?? "")}</span>
         </p>
       )}
       {spot ? (

@@ -34,7 +34,10 @@ test("a 1:1 call rings the other person, who answers, declines, or loses the rin
   // Call from People: the caller is in the call and sees Ringing until the other person joins.
   await callButton(ownerPage, "dc_bob").click();
   await expect(stage(ownerPage)).toHaveAttribute("data-phase", "live", { timeout: 30000 });
-  await expect(ownerPage.getByTestId("call-ringing")).toHaveText("Ringing…");
+  // Ringing is said once, on the stage, with who is being rung; the controls are not doubled up by the sidebar dock.
+  await expect(ownerPage.getByTestId("call-ringing")).toHaveText("Ringing dc_bob");
+  await expect(ownerPage.getByText(/^Ringing/)).toHaveCount(1);
+  await expect(ownerPage.getByTestId("call-dock")).toHaveCount(0);
   await expect(toast(bob)).toBeVisible({ timeout: 15000 });
   await expect(toast(bob)).toContainText("dc_owner");
   await expect(toast(bob)).toContainText("Incoming call");
@@ -83,4 +86,16 @@ test("a 1:1 call rings the other person, who answers, declines, or loses the rin
   expect(await dmCount()).toBe(dms);
   await bob.getByTestId("call-bar").getByRole("button", { name: "Leave", exact: true }).click();
   await expect(toast(ownerPage)).toHaveCount(0, { timeout: 15000 });
+
+  // Nobody has posted in the owner's conversation with Bob, yet its header still has the Call button.
+  await ownerPage.getByRole("button", { name: "Direct messages", exact: true }).click();
+  await ownerPage.getByRole("button", { name: "Open dc_bob", exact: true }).click();
+  const headerCall = ownerPage.locator("header.hc-header").getByRole("button", { name: "Call dc_bob", exact: true });
+  await expect(headerCall).toBeVisible();
+  await expect(ownerPage.getByTestId("people").getByRole("button", { name: "Call dc_bob", exact: true })).toBeVisible();
+  await bob.waitForTimeout(10500);
+  await headerCall.click();
+  await expect(toast(bob)).toContainText("dc_owner", { timeout: 15000 });
+  await ownerPage.getByTestId("call-bar").getByRole("button", { name: "Leave", exact: true }).click();
+  await expect(toast(bob)).toHaveCount(0, { timeout: 15000 });
 });

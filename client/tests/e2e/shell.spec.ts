@@ -92,7 +92,9 @@ test("shell: picker, channel, call, composer, tabs, direct messages", async ({ p
   await expect(bar.getByTestId("call-duration")).toBeVisible();
   await expect(bar).toContainText("1");
   await expect(page.getByTestId("channel-call").locator("[title]").first()).toBeVisible();
-  await expect(page.getByTestId("call-dock")).toBeVisible();
+  // The stage owns the center, so its call bar carries the controls and the sidebar dock steps aside.
+  await expect(page.getByTestId("call-dock")).toHaveCount(0);
+  await expect(bar.getByRole("button", { name: "Mute", exact: true })).toBeVisible();
 
   // Right column tabs.
   // No Chord is configured in this fixture, so there is no Chords tab to land on an empty pane.
@@ -133,7 +135,7 @@ test("profile: display name and avatar show in the user bar and on new messages;
   await page.goto("/");
   await signIn(page, "owner");
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
-  const drop = async (screen: string) => {
+  const drop = async (screen: string, save: string) => {
     const dataTransfer = await page.evaluateHandle((bytes: number[]) => {
       const dt = new DataTransfer();
       dt.items.add(new File([new Uint8Array(bytes)], "pic.png", { type: "image/png" }));
@@ -141,16 +143,16 @@ test("profile: display name and avatar show in the user bar and on new messages;
     }, [...png]);
     await page.getByTestId("dropzone").dispatchEvent("drop", { dataTransfer });
     await expect(page.locator(".hc-drop__preview")).toBeVisible();
-    await page.getByTestId(screen).getByRole("button", { name: "Save", exact: true }).last().click();
+    await page.getByTestId(screen).getByRole("button", { name: save, exact: true }).click();
   };
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   const account = page.getByTestId("screen-account");
   await account.getByLabel("Display name", { exact: true }).fill("Ada Fixture");
-  await account.getByRole("button", { name: "Save", exact: true }).first().click();
+  await account.getByRole("button", { name: "Save name", exact: true }).click();
   const bar = page.locator(".hc-userbar");
   await expect(bar).toContainText("Ada Fixture");
   await expect(account).toContainText("owner");
-  await drop("screen-account");
+  await drop("screen-account", "Save picture");
   await expect(bar.locator(".hc-avatar img")).toBeVisible();
 
   // A GIF avatar is uploaded as picked (not redrawn into a still), served with its own type, and loads in the bar.
@@ -158,16 +160,16 @@ test("profile: display name and avatar show in the user bar and on new messages;
   expect(gif.subarray(0, 4).toString()).toBe("GIF8");
   await account.locator("input[type=file]").setInputFiles({ name: "wave.gif", mimeType: "image/gif", buffer: gif });
   const served = page.waitForResponse(response => /\/api\/users\/[^/]+\/avatar/.test(response.url()) && response.headers()["content-type"] === "image/gif");
-  await account.getByRole("button", { name: "Save", exact: true }).last().click();
+  await account.getByRole("button", { name: "Save picture", exact: true }).click();
   expect(Buffer.compare(await (await served).body(), gif)).toBe(0);
   await expect.poll(() => bar.locator(".hc-avatar img").evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
 
   await page.getByTestId("screen-settings").getByRole("button", { name: "Server", exact: true }).click();
   const server = page.getByTestId("screen-server");
   await server.getByLabel("Server name", { exact: true }).fill("Fixture House");
-  await server.getByRole("button", { name: "Save", exact: true }).first().click();
+  await server.getByRole("button", { name: "Save name", exact: true }).click();
   await expect(page.getByRole("button", { name: /^Servers: Fixture House/ })).toBeVisible();
-  await drop("screen-server");
+  await drop("screen-server", "Save icon");
   await expect(page.getByRole("button", { name: /^Servers:/ }).locator(".hc-avatar img")).toBeVisible();
 
   await page.getByTestId("screen-settings").getByRole("button", { name: "Close", exact: true }).click();
