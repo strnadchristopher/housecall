@@ -80,6 +80,8 @@ async fn status_is_owner_only_and_never_returns_config_values() {
     .await;
     let member: Value = serde_json::from_str(&member).unwrap();
 
+    let (status, _) = send(&api, "GET", "/api/setup/status", None, Value::Null).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
     let (status, _) = send(&api, "GET", "/api/setup/status", Some(&member), Value::Null).await;
     assert_eq!(status, StatusCode::FORBIDDEN);
 

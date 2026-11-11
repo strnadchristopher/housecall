@@ -3,6 +3,7 @@ use crate::{owner, ApiResult, AppState, Principal};
 use axum::{extract::State, routing::get, Extension, Json, Router};
 use serde_json::{json, Value};
 
+/// GET /api/setup/status. Mounted with the other private routes: it needs a session, then an owner.
 pub fn routes() -> Router<AppState> {
     Router::new().route("/setup/status", get(status))
 }
