@@ -76,7 +76,7 @@ export function Composer() {
         {chat.can.attach && (
           <>
             <IconButton icon="plus" label={copy.composer.attach} onClick={() => picker.current?.click()} />
-            <input ref={picker} type="file" className="hc-sr" tabIndex={-1} aria-label={copy.composer.attach}
+            <input ref={picker} type="file" className="hc-sr" tabIndex={-1} aria-hidden="true"
               onChange={event => { const chosen = event.target.files?.[0]; event.target.value = ""; if (chosen) void chat.attach(chosen); }} />
           </>
         )}

@@ -6,6 +6,8 @@ export default defineConfig({
       ? "**/native-push.spec.ts"
       : process.env.HOUSECALL_TEST_UPLOAD_VIDEO === "1"
       ? "**/upload-video.spec.ts"
+      : process.env.HOUSECALL_TEST_SHELL === "1"
+      ? "**/shell.spec.ts"
       : process.env.HOUSECALL_TEST_REPORTS === "1"
       ? "**/reports.spec.ts"
       : process.env.HOUSECALL_TEST_PLEX === "1"
