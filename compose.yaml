@@ -10,16 +10,13 @@ services:
     ports:
       - "127.0.0.1:${HOUSECALL_PORT:-4317}:3000"
       - "${SFU_HOST_BIND:-127.0.0.1}:${SFU_PORT:-50000}:${SFU_PORT:-50000}/udp"
-    networks:
-      lo-proxy:
-        aliases: [housecall]
     environment:
       HOUSECALL_BIND: 0.0.0.0:3000
       HOUSECALL_DATABASE: /data/housecall.sqlite
       HOUSECALL_STATIC_DIR: /app/client
       HOUSECALL_SETUP_TOKEN: ${HOUSECALL_SETUP_TOKEN:-}
-      HOUSECALL_ORIGIN: ${HOUSECALL_ORIGIN:-https://housecall.littleobelisk.com}
-      HOUSECALL_PUBLIC_URL: ${HOUSECALL_PUBLIC_URL:-https://housecall.littleobelisk.com}
+      HOUSECALL_ORIGIN: ${HOUSECALL_ORIGIN:?Set HOUSECALL_ORIGIN in .env, for example https://chat.example.com}
+      HOUSECALL_PUBLIC_URL: ${HOUSECALL_PUBLIC_URL:?Set HOUSECALL_PUBLIC_URL in .env, for example https://chat.example.com}
       HOUSECALL_MAIL_FROM: ${HOUSECALL_MAIL_FROM:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       HOUSECALL_MEDIA_DIR: /data/media
@@ -35,10 +32,10 @@ services:
       GIPHY_API_KEY: ${GIPHY_API_KEY:-}
       PLEX_URL: ${PLEX_URL:-}
       PLEX_TOKEN: ${PLEX_TOKEN:-}
-      GIMME_BASE_URL: ${GIMME_BASE_URL:-https://api.littleobelisk.com}
+      GIMME_BASE_URL: ${GIMME_BASE_URL:-}
       GIMME_AGENT_API_KEY: ${GIMME_AGENT_API_KEY:-}
       GIMME_DRY_RUN: "true"
-      SWITCHBOARD_URL: ${SWITCHBOARD_URL:-https://switchboard.littleobelisk.com/v1/chat/completions}
+      SWITCHBOARD_URL: ${SWITCHBOARD_URL:-}
       SWITCHBOARD_API_KEY: ${SWITCHBOARD_API_KEY:-}
       DJ_ENABLED: ${DJ_ENABLED:-false}
       DJ_TMPFS_DIR: /tmp/housecall-dj
@@ -126,7 +123,7 @@ services:
     user: "47191:47191"
     group_add: ["${VM_KVM_GID:-109}"]
     build: infra/vm
-    # Existing Shiva VPN namespace; no fallback bridge and no host networking.
+    # Existing VPN container namespace; no fallback bridge and no host networking.
     network_mode: container:${GLUETUN_CONTAINER:-gluetun}
     devices:
       - /dev/kvm:/dev/kvm
@@ -150,7 +147,3 @@ volumes:
   scanner-db:
   vm-disk:
   vm-control:
-networks:
-  lo-proxy:
-    external: true
-    name: ${LO_PROXY_NETWORK:-lo-proxy}

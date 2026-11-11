@@ -19,7 +19,7 @@ def main():
     envfile=RUNTIME/'fixture.env'
     fd=os.open(envfile,os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
     with os.fdopen(fd,'w') as f:
-        f.write(f'HOUSECALL_SETUP_TOKEN={token}\nHOUSECALL_MEDIA_KEY={secrets.token_hex(32)}\nHOUSECALL_PORT={port}\nHOUSECALL_ORIGIN=http://localhost:{port}\nHOUSECALL_PUBLIC_URL=http://localhost:{port}\nSFU_PORT={udp}\nLO_PROXY_NETWORK={PROJECT}-proxy\nHOUSECALL_DATA_DIR={data_dir}\n')
+        f.write(f'HOUSECALL_SETUP_TOKEN={token}\nHOUSECALL_MEDIA_KEY={secrets.token_hex(32)}\nHOUSECALL_PORT={port}\nHOUSECALL_ORIGIN=http://localhost:{port}\nHOUSECALL_PUBLIC_URL=http://localhost:{port}\nSFU_PORT={udp}\nHOUSECALL_DATA_DIR={data_dir}\n')
     # Reuse only the signature cache created by our earlier isolated scanner test.
     # Its original scanner must be stopped before this runner starts.
     override=RUNTIME/'override.yaml'
@@ -29,9 +29,8 @@ def main():
     clean_env={k:v for k,v in os.environ.items() if not k.startswith(('HOUSECALL_','SFU_','PLEX_','GIMME_','GIPHY_','SWITCHBOARD_','PUSH_','APNS_','FCM_','GLUETUN_','VM_','DJ_','SPOTIFY_','YT_DLP_','RESEND_'))}
     checks=[]
     completed=False
-    proxy_network_created=False
     def checkpoint():
-        EVIDENCE.write_text(json.dumps({'project':PROJECT,'completed':completed,'checks':checks,'note':'Isolated local Docker fixture; no Shiva deployment. Synthetic credentials never logged.'},indent=2)+'\n')
+        EVIDENCE.write_text(json.dumps({'project':PROJECT,'completed':completed,'checks':checks,'note':'Isolated local Docker fixture; no production deployment. Synthetic credentials never logged.'},indent=2)+'\n')
     def cli(*args,check=True,timeout=240):
         return subprocess.run(base+list(args),cwd=ROOT,env=clean_env,check=check,timeout=timeout,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
     origin=f'http://127.0.0.1:{port}'
@@ -50,8 +49,6 @@ def main():
         checkpoint()
         if not condition:raise AssertionError(name)
     try:
-        subprocess.run(docker+['network','create',PROJECT+'-proxy'],cwd=ROOT,env=clean_env,check=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
-        proxy_network_created=True
         result=cli('up','-d','--no-build','app','scanner');print(result.stdout,flush=True)
         deadline=time.monotonic()+120
         while True:
@@ -116,8 +113,6 @@ def main():
                 print(cleanup.stdout)
                 if cleanup.returncode: raise RuntimeError('Owned compose cleanup failed; inspect fixture project')
             finally:
-                if proxy_network_created:
-                    subprocess.run(docker+['network','rm',PROJECT+'-proxy'],cwd=ROOT,env=clean_env,check=False,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
                 if data_dir.exists(): shutil.rmtree(data_dir)
                 envfile.unlink(missing_ok=True)
     print(f'PASS {len(checks)} isolated compose checks; {EVIDENCE.relative_to(ROOT)}')

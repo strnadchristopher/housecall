@@ -19,7 +19,7 @@ function npmCli() {
 }
 
 const env = { ...process.env };
-env.VITE_API_ORIGIN ||= "https://housecall.littleobelisk.com";
+// VITE_API_ORIGIN is optional; set it to bake a default server origin into a desktop build.
 const result = spawnSync(process.execPath, [npmCli(), "run", "build"], {
   cwd: new URL("..", import.meta.url),
   env,

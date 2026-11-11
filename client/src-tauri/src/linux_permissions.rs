@@ -51,7 +51,7 @@ mod tests {
         }
 
         for denied in [
-            "https://housecall.littleobelisk.com/",
+            "https://chat.example.com/",
             "http://tauri.localhost/",
             "http://localhost:1421/",
             "http://tauri.localhost.evil.test/",
@@ -82,7 +82,7 @@ mod tests {
             PermissionResponse::Deny
         );
 
-        let remote = Url::parse("https://housecall.littleobelisk.com/").unwrap();
+        let remote = Url::parse("https://chat.example.com/").unwrap();
         assert_eq!(
             response_for(&remote, PermissionKind::Microphone),
             PermissionResponse::Deny

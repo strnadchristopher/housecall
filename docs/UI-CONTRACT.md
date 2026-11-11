@@ -1,6 +1,6 @@
 # UI contract v1
 
-Engineering owns client/src/{contracts,data,state,transport,hooks}, services and packaging. Claude Opus 5.5 owns **client/src/ui/**: presentation, interaction design, layout, themes, motion. Initial UI files are deliberately unstyled semantic HTML. Replace them while preserving exported props, semantic accessibility, events and test selectors. Noah merges Opus's separate branch. No visuals have been designed by engineering.
+Engineering owns client/src/{contracts,data,state,transport,hooks}, services and packaging. The UI team owns **client/src/ui/**: presentation, interaction design, layout, themes, motion. Initial UI files are deliberately unstyled semantic HTML. Replace them while preserving exported props, semantic accessibility, events and test selectors. No visuals have been designed by engineering.
 
 ## Common contract
 

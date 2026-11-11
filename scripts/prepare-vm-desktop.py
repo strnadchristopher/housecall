@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Create a disposable desktop fixture from the already pinned Debian cloud base.
-Run only in Noah's serialized resource-guarded host lane. No production VM is read.
+Run only in a serialized, resource-guarded host lane. No production VM is read.
 """
 import hashlib
 import importlib.util

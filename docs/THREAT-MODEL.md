@@ -4,7 +4,7 @@ Status: implementation in progress; this is a threat model and acceptance ledger
 
 ## Assets and trust boundaries
 
-Private message content, membership, invite tokens, account credentials, sessions, encrypted attachments, push tokens, reports, third-party service credentials and VM browser sessions are sensitive. Christopher is the trusted instance administrator. Internet visitors and invited members are untrusted at API boundaries. Browser content, filenames, markdown, embed URLs, media containers, subprocess output, Plex/Gimme replies, WebRTC SDP/RTP and VM input are untrusted parsers.
+Private message content, membership, invite tokens, account credentials, sessions, encrypted attachments, push tokens, reports, third-party service credentials and VM browser sessions are sensitive. The instance owner is the trusted administrator. Internet visitors and invited members are untrusted at API boundaries. Browser content, filenames, markdown, embed URLs, media containers, subprocess output, Plex/Gimme replies, WebRTC SDP/RTP and VM input are untrusted parsers.
 
 Trust boundaries: HTTPS reverse proxy → Rust HTTP service; HTTP service → SQLite/media storage; client → OS credential/notification APIs; service → allowlisted integrations; WebRTC transport → SFU; VM guest → Gluetun network namespace; local TTS/yt-dlp/ffmpeg processes → untrusted media. Neither an authenticated user nor the owner may supply arbitrary filesystem paths or arbitrary proxy destinations.
 

@@ -3,6 +3,11 @@ on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
+  public-safe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/check-public-safe.sh
   rust:
     runs-on: ubuntu-latest
     steps:
@@ -40,7 +45,9 @@ jobs:
         if: always()
         with:
           name: e2e-evidence
-          path: evidence/
+          path: |
+            evidence/
+            client/test-results/
   desktop:
     strategy:
       fail-fast: false

@@ -26,7 +26,7 @@ client/node_modules/.bin/vitest run client/tests/media-streaming.test.ts --maxWo
 client/node_modules/.bin/tsc --noEmit --project client/tsconfig.json
 ```
 
-Authored, unexecuted Rust cases include sparse multi-terabyte virtual offsets without allocating payload, exact offsets above JavaScript's integer limit, malformed/missing index handling, actual FFmpeg derivative index boundaries, anonymous/cross-channel/revoked-session access, source deletion and current-DJ-track invalidation. The existing actual-FFmpeg server tests now check the seek endpoints and new MP4 container. Run them only after the historical SFU receipt and through Noah's shared-lock, single-job, incremental-disabled, disk-floor guard:
+Authored, unexecuted Rust cases include sparse multi-terabyte virtual offsets without allocating payload, exact offsets above JavaScript's integer limit, malformed/missing index handling, actual FFmpeg derivative index boundaries, anonymous/cross-channel/revoked-session access, source deletion and current-DJ-track invalidation. The existing actual-FFmpeg server tests now check the seek endpoints and new MP4 container. Run them only after the historical SFU receipt and through a shared-lock, single-job, incremental-disabled, disk-floor guard:
 
 ```bash
 cargo test --locked -p housecall-server media_index::tests

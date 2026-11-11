@@ -1,6 +1,6 @@
-# Media compatibility and security — proposal for Noah review
+# Media compatibility and security — proposal
 
-**Not approved or implemented. No runtime, quarantine, scanner selection, or release default changes are authorized by this document.** Christopher requires intense upload security **and no upload size cap except available disk**. A paid scanner was not a requirement. Preserve the optional WithSecure adapter and its qualification work; purchasing, installing, or qualifying it is not a prerequisite for choosing the no-new-spending approach below. Noah must review the policy and implementation scope before any behavior changes.
+**Not approved or implemented. No runtime, quarantine, scanner selection, or release default changes are authorized by this document.** The project requires intense upload security **and no upload size cap except available disk**. A paid scanner was not a requirement. Preserve the optional WithSecure adapter and its qualification work; purchasing, installing, or qualifying it is not a prerequisite for choosing the no-new-spending approach below. The maintainers must review the policy and implementation scope before any behavior changes.
 
 ## Recommendation and current boundary
 
@@ -60,4 +60,4 @@ Use assistant-authored data in isolated fixtures when the host execution lane is
 
 Retained evidence is narrower: `evidence/client-multigib.json` proves 2,147,483,771-byte browser resume followed by quarantine; `evidence/media-multigib.log` uses a fixture scanner and disclaims malware coverage. `evidence/client-upload-video.json` proves real scanner/FFmpeg playback of a 60-second source but explicitly leaves outside-buffer seeking and native WebViews unverified. `evidence/recovery-scanner-source-review.md` is source review only. The optional whole-object engine harness is authored but unexecuted. None establishes this proposed default or satisfies the combined large-video outcome.
 
-**Decision for Noah:** approve/revise the unknown-original action and isolated unknown-source processing boundary, then approve the staged compatibility/containment implementation and its acceptance evidence. Until then, preserve current quarantine and release gates. No scanner purchase or new spending is requested.
+**Decision for maintainers:** approve/revise the unknown-original action and isolated unknown-source processing boundary, then approve the staged compatibility/containment implementation and its acceptance evidence. Until then, preserve current quarantine and release gates. No scanner purchase or new spending is requested.

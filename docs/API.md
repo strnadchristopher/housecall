@@ -5,7 +5,7 @@ All timestamps are epoch milliseconds and JSON fields snake_case. Except health/
 - `GET /api/health`: `{ok:true}`
 - `POST /api/setup`: `{setup_token, username, password, device_name}` → `{token,device_key,user:{id,username,is_owner},expires_at}`; once only, bootstrap token from env.
 - `POST /api/login`: `{username,password,device_name}` → same session result.
-- `POST /api/invites`: owner, `{expires_in_seconds}` → `{token,expires_at}`; 60–604800 seconds.
+- `POST /api/invites`: owner, `{expires_in_seconds, email?, server_id?}` → `{id,token,link,expires_at,server_id,email,email_sent}`; 60–604800 seconds. `email` is optional; mail is sent only when an address is given and mail is configured (`RESEND_API_KEY`, `HOUSECALL_MAIL_FROM`). `link` is always present: the invite link (`<HOUSECALL_PUBLIC_URL>/#invite=<token>`) to share by any means. `token` is null when the email was sent.
 - `POST /api/invites/accept`: `{token,username,password,device_name}` → session. Single use transaction.
 - `GET /api/me`: `{user:{id,username,is_owner},session_id,capabilities:{...}}`.
 - `GET /api/devices`: `{devices:[{id,device_name,created_at,expires_at,current}]}`. `DELETE /api/devices/:id`: own session only.

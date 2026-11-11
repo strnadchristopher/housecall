@@ -20,7 +20,7 @@ export default defineConfig({
   timeout: 120000,
   reporter: [
     ["list"],
-    ["json", { outputFile: process.env.HOUSECALL_TEST_RECEIPT ?? "../evidence/client-playwright.json" }],
+    ["json", { outputFile: process.env.HOUSECALL_TEST_RECEIPT ?? "test-results/client-playwright.json" }],
   ],
   use: {
     baseURL: "http://localhost:1420",

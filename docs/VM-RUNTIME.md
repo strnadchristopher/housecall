@@ -8,7 +8,7 @@ The local `infra/vm/qmp.py` helper bounds replies to64 KiB, correlates response 
 
 ## Reproducing the bounded fixture
 
-Prerequisites: local Docker available through `sudo -n docker`, `/dev/kvm`, existing images `housecall-vm:fixture` and `housecall-sprint-vpn-fixture:local`, and the pinned Gluetun image used by the existing namespace tests. The fixture uses a private internal bridge, synthetic ephemeral WireGuard keys and local HTTP/DNS canaries. It never joins an existing VPN container, calls Shiva, or sends guest traffic onto the public internet. The root disk stays under ignored `.runtime/vm-guest/`.
+Prerequisites: local Docker available through `sudo -n docker`, `/dev/kvm`, existing images `housecall-vm:fixture` and `housecall-sprint-vpn-fixture:local`, and the pinned Gluetun image used by the existing namespace tests. The fixture uses a private internal bridge, synthetic ephemeral WireGuard keys and local HTTP/DNS canaries. It never joins an existing VPN container, or sends guest traffic onto the public internet. The root disk stays under ignored `.runtime/vm-guest/`.
 
 ```
 python3 scripts/test-vm-guest.py --download

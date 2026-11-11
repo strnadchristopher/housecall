@@ -124,7 +124,7 @@ export async function startPlexFixture() {
       "../evidence/client-plex-fixture.json",
       JSON.stringify(
         {
-          note: "Synthetic local Plex-compatible provider; no live Christopher library used.",
+          note: "Synthetic local Plex-compatible provider; no live library used.",
           counts,
         },
         null,
