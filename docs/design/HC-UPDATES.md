@@ -302,3 +302,55 @@ Snaps: view-once camera photos (tasks 7.1 to 7.6; 7.7 device QA is left to the r
 - Skipped as hypothetical: the author calling `POST /api/uploads/{id}/derive` on an upload before sending it as a snap to get a normal media job; `/api/media-jobs/*` for a snap id is not otherwise reachable.
 - Build note: the shared `target` directory collides with another worktree's `housecall-server` artifacts (see Phase 6). My first `cargo test --test snaps` linked a stale library without `snaps`; editing `server/src/lib.rs` forced a rebuild from this worktree and every later server run used the fresh code. The release owner should run the server gate from a clean target, as Phase 6 already asked.
 
+## Phase 8
+
+1:1 calls through the server (8.1 to 8.3) and native iOS CallKit and PushKit (8B). Device QA (8.4) is left to the release owner. The tree was clean at the start, so there was no `wip: finish previous phase` commit.
+
+### Commits
+- `7718d56` feat(calls): ring and decline routes for direct conversations, VoIP push to iOS devices (server, 8.1 and brief item 6)
+- `87f0d04` feat(calls): Call button, incoming-call toast, ringing and declined states (client and E2E, 8.2 and 8.3; also `peer_id` on the channel list and `now` on the events reply)
+- `0b4470e` feat(callkit): iOS CallKit and PushKit plugin, unsupported elsewhere (Rust crate, Swift, capability, plist, entitlement)
+- `6028314` feat(callkit): client bridge for the iOS system call screen and VoIP token
+- the handoff commit that adds `docs/design/CALLKIT.md` and this section
+
+### What changed
+- Server: `POST /api/channels/{id}/ring` (member of a two-person `dm`, else 400 or 403; one ring per 10 s per conversation, else 429; the event goes to the other member only) and `POST /api/channels/{id}/ring/decline`. `call.ring` carries `{from, from_name, channel_id}`, `call.declined` carries `{from, channel_id}`. The decline route is also the caller cancelling: the receiving client tells the two apart by its own role (a callee with a pending ring dismisses it, a caller in the ringing state shows Declined).
+- Server: `voip_devices` table exactly as briefed, `PUT/DELETE /api/push/voip` (session-bound, token encrypted with the existing `seal_token`/`open_token`, never returned, deleted with its session). A second session registering the same token takes it over. When APNs is configured, `ring` spawns a task that sends a VoIP push per device of the callee through the existing provider: `apns-push-type: voip`, topic `<APNS_TOPIC>.voip`, priority 10, expiry now+30 s, payload `{"housecall":{"kind":"ring","channel_id","from"}}`. A 410 Unregistered deletes the row. Not retried, no token or reply logged.
+- `GET /api/channels` gains `peer_id` (the other person in a `dm`, else null) so the client reuses an existing direct conversation instead of creating another. `GET /api/events` gains `now`, so a ring replayed after sign-in is judged by the server's clock (30 s) and not shown.
+- Client: Call button (phone icon) in `ChannelHeader` for a `dm` until you are in its call, and on each other person in the People tab. `callPerson` finds or creates the direct conversation, selects it, joins, then rings. `IncomingCall` toast (answer and decline icon buttons, 30 s). The caller sees "Ringing…" on the stage and in the call bar, "Declined" (then leaves after 4 s), and leaves after 45 s unanswered with a "No answer" error line. Hanging up early sends the cancel.
+- Plugin `client/src-tauri/plugins/tauri-plugin-callkit` as briefed (crate, `build.rs`, `ios/Package.swift`, `ios/Sources/CallKitPlugin.swift`, default permission, `callkit:default` capability for iOS and the local `main` window only). `cargo check` of the desktop target compiles it. `Info.ios.plist` has `UIBackgroundModes` `voip` and `audio`; the iOS entitlements file has `aps-environment` = `development`.
+- Client bridge `client/src/transport/callkit.ts` and the wiring in `adapters/legacy/call.ts` as briefed (register and token at sign-in, foreground ring through `report_incoming` with a toast fallback, answer/end/mute, outgoing and connected, end when the call ends, `pending` catch-up).
+- `docs/design/CALLKIT.md`: architecture, build steps, Apple and server setup, device checklist, what is not covered.
+
+### Tests run (real counts)
+- `cargo test -p housecall-server --test ring`: 6 passed, 0 failed (event only to the other member with the display name; 400 for a normal channel and a three-person group; 403 for a non-member and for a missing conversation; 401 anonymous; 429 for a second ring in 10 s from either side, other conversations unaffected, allowed again after the window; decline to the other member only; `peer_id` and `now`).
+- `cargo test -p housecall-server --lib push`: 13 passed, 0 failed (3 new: VoIP token needs a session and is stored encrypted, bound to a session and taken over by a second session, removed with the session; the ring sends a request with push type `voip`, topic `….voip`, priority 10, expiry in 29 to 35 s and the exact payload to a loopback APNs fixture; ring works with push off, and a 410 deletes the token).
+- `cargo test -p housecall-server --test route_inventory`: 1 passed (covers the three new routes).
+- `bash scripts/test-server.sh`: all 6 steps passed (fmt; workspace tests, library 62 passed and 1 ignored; media; activities; sfu; clippy `-D warnings`).
+- `cargo check --manifest-path client/src-tauri/Cargo.toml` (Linux desktop target): passed.
+- `npm run build` (client): passed. `npm test` (vitest): 6 files, 57 tests passed (7 new in `tests/callkit.test.ts`: `isCallKit` per platform, the bridge sends the right action and payload, unsupported off iOS, a refused system call reports false, ring freshness on the server clock).
+- `HOUSECALL_TEST_DM_CALLS=1 npx playwright test`: 1 passed, 0 failed, run 3 times (three browsers: A calls B from People, B sees the toast and only B, B answers, both see 2 tiles and Ringing disappears; both leave; A calls C, C declines, A sees Declined and the stage closes by itself; C calls B and hangs up, B's toast disappears; B calls A again after the rate-limit window and no second direct conversation is created).
+- `npx playwright test` (default chat.spec.ts): 1 passed. `HOUSECALL_TEST_VOICE=1 npx playwright test`: 4 passed.
+- `HOUSECALL_TEST_SHELL=1 npx playwright test`: 2 passed, **1 failed**: the motion test, `emoji.count()` still 1 right after Escape under reduced motion. It is the failure Phases 6 and 7 already recorded and it does not touch calls.
+- `bash scripts/check-public-safe.sh`: OK.
+- I looked at screenshots of the toast (callee) and the ringing stage (caller) in the light theme at desktop width: contrast is readable, nothing is clipped, no tile or glow behind the icons.
+
+### Unverified
+- All Swift. It was written without a compiler or a Mac: `CallKitPlugin.swift` and `Package.swift` have never been built. The first job on the Mac is `npm run tauri -- ios build --debug --open` and fixing any compile error. Specific things I could not check: that `.package(name:path:)` under swift-tools 5.9 only warns, that `@objc(register:)`-style explicit selectors match the command strings, and that `trigger(_:data:)` with the `JSObject` literals resolves without ambiguity.
+- On a real iPhone: that a VoIP push rings on the lock screen and with the app closed, that the Rust-to-Swift channel (`callkit_listen` forwarding a JS `Channel` to Swift's `registerListener`) delivers `answer`, `end` and `mute` to the web side, that WKWebView microphone capture works under CallKit's audio session, and Recents for an outgoing call.
+- A real APNs call over HTTP/2 (tests use a loopback HTTP/1.1 fixture, which the existing `fixture` flag allows; the real path keeps the HTTP/2 check).
+- The 30 s toast timeout and the 45 s no-answer leave: the logic is straightforward but no test advanced a clock to reach them (the E2E covers answer, decline, cancel and reuse).
+- Dark theme, a phone-width viewport and the toast over a narrow header.
+- `client/package.json` and the lockfile were edited by hand to declare `@tauri-apps/api` ^2.12.4 (it was already installed at 2.12.4 as a dependency of the plugin packages, and the bridge now imports `Channel` from it). `npm ci` was not rerun.
+
+### Deviations from the plan and the brief
+- The plan's ring push through the existing message-push helper was not done: that helper is a durable, ID-only outbox tied to a message and its notification, and has no call kind. iOS rings through the VoIP push as briefed; Android and the web get the in-app ring only. This is the one planned item I did not build.
+- The plan's People "context menu" is an inline Call icon on each row (there was no context menu to extend, and a button works on touch).
+- The caller cancelling reuses `/ring/decline` instead of a new route (see above).
+- The brief's build list has six commands. The plugin also has an app command `callkit_listen(event, handler)`, which is not a plugin command and needs no permission. It exists because Swift's `trigger` can only reach a JS `Channel` that was passed through Rust. Both app commands sit in `src/commands.rs` (a `pub` command in the crate root clashes with the macros `#[tauri::command]` generates) and are registered on every platform except Android, where the existing native-push command handler stays alone.
+- A second session registering the same VoIP token takes it over instead of failing with 409 as `push/device` does, because the same phone signing in as another account must ring for the account in use.
+- The Swift plugin starts PushKit when the plugin loads, not only when `register` is called, because a push that launches the app arrives before any web code runs. `register` returns the current token.
+- `GET /api/channels` and `GET /api/events` each gained one additive field (see above).
+- "No answer" is shown by pushing an error line through the existing `attempt` helper, so no new error channel was added.
+- Skipped as hypothetical or out of scope: syncing a mute made in the Housecall UI back to the system call screen (no `mute` command in the briefed allowlist), a ring arriving on two of one person's iPhones at once, ring push for Android, and a duplicate ring from the VoIP push and the event poll for the same call beyond what the plugin already handles (the second is reported and ended at once; a call answered or declined in the last 30 s is not rung again).
+
