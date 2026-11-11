@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Housecall">
-  <path fill="#f3ebe1" d="M6 3H12V10.83A10 10 0 0 1 26 20V29H20V20A4 4 0 0 0 12 20V29H6Z"/>
+  <path fill="#ededed" d="M6 3H12V10.83A10 10 0 0 1 26 20V29H20V20A4 4 0 0 0 12 20V29H6Z"/>
   <path fill="#e6a94f" d="M12 29V20A4 4 0 0 1 20 20V29Z"/>
   <path fill="#1f1407" fill-opacity="0.38" d="M12 29V20A4 4 0 0 1 12.6 17.9L15.4 19.6V29Z"/>
 </svg>

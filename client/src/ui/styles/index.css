@@ -45,15 +45,15 @@ a { color: var(--hc-accent); }
   border-radius: 50% 50% var(--hc-radius-sm) var(--hc-radius-sm) / 44.4% 44.4% var(--hc-radius-sm) var(--hc-radius-sm);
   font-family: var(--hc-font-initial); font-size: var(--hc-text-sm); font-weight: var(--hc-weight-bold); line-height: 1; color: var(--hc-text);
   padding-top: calc(var(--hc-space-1) / 2);
-  background: color-mix(in oklab, var(--hc-accent) 32%, var(--hc-surface-raised));
+  background: color-mix(in oklab, var(--hc-text) 24%, var(--hc-surface-raised));
 }
 .hc-avatar--sm { width: var(--hc-space-5); height: calc(var(--hc-space-5) * 1.125); font-size: var(--hc-text-xs); }
 .hc-avatar--lg { width: var(--hc-space-7); height: calc(var(--hc-space-7) * 1.125); font-size: var(--hc-text-lg); }
-.hc-avatar[data-tone="1"] { background: color-mix(in oklab, var(--hc-danger) 28%, var(--hc-surface-raised)); }
+.hc-avatar[data-tone="1"] { background: color-mix(in oklab, var(--hc-text) 8%, var(--hc-surface-raised)); }
 .hc-avatar[data-tone="2"] { background: color-mix(in oklab, var(--hc-text-muted) 32%, var(--hc-surface-raised)); }
-.hc-avatar[data-tone="3"] { background: color-mix(in oklab, color-mix(in oklab, var(--hc-accent), var(--hc-danger)) 30%, var(--hc-surface-raised)); }
+.hc-avatar[data-tone="3"] { background: color-mix(in oklab, var(--hc-text) 31%, var(--hc-surface-raised)); }
 .hc-avatar[data-tone="4"] { background: color-mix(in oklab, var(--hc-text) 16%, var(--hc-surface-raised)); }
-.hc-avatar[data-tone="5"] { background: color-mix(in oklab, var(--hc-accent) 16%, var(--hc-surface-raised)); }
+.hc-avatar[data-tone="5"] { background: color-mix(in oklab, var(--hc-text) 12%, var(--hc-surface-raised)); }
 
 /* Controls */
 .hc-ibtn {
@@ -194,7 +194,7 @@ a { color: var(--hc-accent); }
 .hc-msg { position: relative; display: grid; grid-template-columns: var(--hc-space-6) minmax(0, 1fr); gap: var(--hc-space-3); padding: var(--hc-space-2) var(--hc-space-5) var(--hc-space-1); }
 .hc-msg.is-grouped { padding-top: 0; }
 .hc-msg:hover, .hc-msg.is-open { background: color-mix(in oklab, var(--hc-surface-raised) 55%, transparent); }
-.hc-msg.is-mention { background: color-mix(in oklab, var(--hc-accent) 10%, transparent); }
+.hc-msg.is-mention { background: color-mix(in oklab, var(--hc-text) 7%, transparent); box-shadow: inset 2px 0 0 var(--hc-accent); }
 .hc-msg__head { display: flex; align-items: baseline; gap: var(--hc-space-2); }
 .hc-msg__head time, .hc-msg__edited { font-size: var(--hc-text-xs); color: var(--hc-text-muted); }
 .hc-msg__flag { display: inline-flex; align-items: center; gap: var(--hc-space-1); font-size: var(--hc-text-xs); color: var(--hc-accent); }
@@ -216,10 +216,10 @@ a { color: var(--hc-accent); }
 .hc-md blockquote { padding-left: var(--hc-space-3); color: var(--hc-text-muted); border-left: calc(var(--hc-space-1) / 2) solid var(--hc-line); border-radius: calc(var(--hc-space-1) / 4); }
 .hc-md__h { font-size: var(--hc-text-lg); font-weight: var(--hc-weight-bold); }
 .hc-mention { color: var(--hc-accent); font-weight: var(--hc-weight-medium); }
-.hc-mention.is-me { background: color-mix(in oklab, var(--hc-accent) 22%, transparent); border-radius: var(--hc-radius-sm); padding: 0 calc(var(--hc-space-1) / 2); color: var(--hc-text); }
+.hc-mention.is-me { background: color-mix(in oklab, var(--hc-text) 16%, transparent); border-radius: var(--hc-radius-sm); padding: 0 calc(var(--hc-space-1) / 2); color: var(--hc-text); }
 .hc-reacts { display: flex; flex-wrap: wrap; gap: var(--hc-space-1); padding-top: var(--hc-space-1); }
 .hc-react { display: inline-flex; gap: var(--hc-space-1); align-items: center; padding: 0 var(--hc-space-2); min-height: var(--hc-space-5); border-radius: var(--hc-radius-sm); background: var(--hc-surface-raised); font-size: var(--hc-text-sm); }
-.hc-react.is-mine { background: color-mix(in oklab, var(--hc-accent) 26%, var(--hc-surface-raised)); }
+.hc-react.is-mine { background: color-mix(in oklab, var(--hc-text) 18%, var(--hc-surface-raised)); }
 .hc-file, .hc-gimme, .hc-preview, .hc-upload {
   display: flex; align-items: center; gap: var(--hc-space-3); padding: var(--hc-space-2) var(--hc-space-3); margin-top: var(--hc-space-1);
   background: var(--hc-surface-raised); border-radius: var(--hc-radius-md); max-width: calc(var(--hc-space-8) * 8);

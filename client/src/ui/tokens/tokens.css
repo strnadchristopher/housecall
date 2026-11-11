@@ -1,8 +1,9 @@
 /*
  * Housecall design tokens. Direction A, "Doorway" (the default).
- * Warm charcoal house at night; amber is the lit doorway and is reserved
- * for live and primary states. Light scheme is a cool grey paper; the warmth
- * comes from the ink and the accent, not from a cream or beige ground.
+ * Neutral black at night (equal R, G and B, no warm cast); amber is the lit
+ * doorway and is reserved for small solid live and primary elements. Never
+ * mix the accent into a surface: hover and selected rows step in lightness.
+ * Light scheme is a cool grey paper with a warm ink and accent.
  * --hc-line is at least 3:1 against surface and raised (field boundaries).
  *
  * The property list is fixed by PLAN Task 0.9. Directions B and C override
@@ -33,12 +34,12 @@
 :root {
   color-scheme: dark light;
 
-  --hc-bg: #171311;
-  --hc-surface: #1f1a17;
-  --hc-surface-raised: #2b2420;
-  --hc-line: #786d64;
-  --hc-text: #f3ebe1;
-  --hc-text-muted: #b3a597;
+  --hc-bg: #0c0c0c;
+  --hc-surface: #151515;
+  --hc-surface-raised: #212121;
+  --hc-line: #787878;
+  --hc-text: #ededed;
+  --hc-text-muted: #a6a6a6;
   --hc-accent: #e6a94f;
   --hc-on-accent: #1f1407;
   --hc-live: #e6a94f;
