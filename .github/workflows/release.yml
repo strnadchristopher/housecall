@@ -1,7 +1,7 @@
 name: Desktop release
 
-# Builds on Christopher's own runners by default: Linux + Windows (cargo-xwin cross) on Shiva,
-# macOS universal on Maya. Each build uploads straight to a draft release; the publish job writes
+# Builds on self-hosted runners by default: Linux + Windows (cargo-xwin cross) on council-linux,
+# macOS universal on council-macos. Each build uploads straight to a draft release; the publish job writes
 # latest.json, verifies every asset and publishes the release as latest.
 # GitHub-hosted fallback: set repo variable CI_HOSTED=true or dispatch with hosted=true.
 # Server deploy is separate: .github/workflows/deploy.yml (manual dispatch only).
@@ -16,7 +16,7 @@ on:
         required: true
         type: string
       hosted:
-        description: Use GitHub-hosted runners instead of Shiva/Maya
+        description: Use GitHub-hosted runners instead of the self-hosted ones
         type: boolean
         default: false
       publish:
@@ -39,7 +39,7 @@ env:
 
 jobs:
   prepare:
-    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"ubuntu-22.04"' || '["self-hosted","shiva"]') }}
+    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"ubuntu-22.04"' || '["self-hosted","council-linux"]') }}
     outputs:
       version: ${{ steps.v.outputs.version }}
     steps:
@@ -56,7 +56,7 @@ jobs:
 
   linux:
     needs: prepare
-    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"ubuntu-22.04"' || '["self-hosted","shiva"]') }}
+    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"ubuntu-22.04"' || '["self-hosted","council-linux"]') }}
     env:
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -77,7 +77,7 @@ jobs:
 
   windows:
     needs: prepare
-    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"windows-latest"' || '["self-hosted","shiva"]') }}
+    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"windows-latest"' || '["self-hosted","council-linux"]') }}
     env:
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -105,7 +105,7 @@ jobs:
 
   macos:
     needs: prepare
-    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"macos-14"' || '["self-hosted","maya"]') }}
+    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"macos-14"' || '["self-hosted","council-macos"]') }}
     env:
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -130,7 +130,7 @@ jobs:
 
   publish:
     needs: [prepare, linux, windows, macos]
-    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"ubuntu-22.04"' || '["self-hosted","shiva"]') }}
+    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"ubuntu-22.04"' || '["self-hosted","council-linux"]') }}
     steps:
       - uses: actions/checkout@v4
         with: { ref: "${{ env.TAG }}" }

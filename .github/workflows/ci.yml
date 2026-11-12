@@ -1,5 +1,5 @@
 name: verify
-# Self-hosted (Shiva/Maya) by default; repo variable CI_HOSTED=true switches back to GitHub-hosted.
+# Self-hosted (council-linux/council-macos runners) by default; repo variable CI_HOSTED=true switches back to GitHub-hosted.
 # pull_request runs only for same-repo branches: fork PRs must never reach self-hosted runners.
 on:
   push:
@@ -14,13 +14,13 @@ concurrency:
 jobs:
   public-safe:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ${{ fromJSON(vars.CI_HOSTED == 'true' && '"ubuntu-latest"' || '["self-hosted","shiva"]') }}
+    runs-on: ${{ fromJSON(vars.CI_HOSTED == 'true' && '"ubuntu-latest"' || '["self-hosted","council-linux"]') }}
     steps:
       - uses: actions/checkout@v4
       - run: scripts/check-public-safe.sh
   rust:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ${{ fromJSON(vars.CI_HOSTED == 'true' && '"ubuntu-latest"' || '["self-hosted","shiva"]') }}
+    runs-on: ${{ fromJSON(vars.CI_HOSTED == 'true' && '"ubuntu-latest"' || '["self-hosted","council-linux"]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/toolchain
@@ -34,7 +34,7 @@ jobs:
       - run: cargo audit && cargo deny check
   client:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ${{ fromJSON(vars.CI_HOSTED == 'true' && '"ubuntu-latest"' || '["self-hosted","shiva"]') }}
+    runs-on: ${{ fromJSON(vars.CI_HOSTED == 'true' && '"ubuntu-latest"' || '["self-hosted","council-linux"]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/toolchain
@@ -55,13 +55,13 @@ jobs:
         include:
           - name: linux
             hosted: '"ubuntu-24.04"'
-            self: '["self-hosted","shiva"]'
+            self: '["self-hosted","council-linux"]'
           - name: windows
             hosted: '"windows-latest"'
-            self: '["self-hosted","shiva"]'
+            self: '["self-hosted","council-linux"]'
           - name: macos
             hosted: '"macos-latest"'
-            self: '["self-hosted","maya"]'
+            self: '["self-hosted","council-macos"]'
     name: desktop (${{ matrix.name }})
     runs-on: ${{ fromJSON(vars.CI_HOSTED == 'true' && matrix.hosted || matrix.self) }}
     defaults:
@@ -82,7 +82,7 @@ jobs:
           else npx tauri build --no-bundle; fi
 
   android:
-    # Needs the Android SDK/NDK, which the Shiva image does not carry yet: hosted-only, opt-in.
+    # Needs the Android SDK/NDK, which the self-hosted Linux image does not carry yet: hosted-only, opt-in.
     if: vars.CI_HOSTED == 'true'
     runs-on: ubuntu-24.04
     env:
