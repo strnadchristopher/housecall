@@ -1,5 +1,5 @@
 use tauri::{
-    plugin::{Builder, PluginHandle, PluginInvokeError, TauriPlugin},
+    plugin::{mobile::PluginInvokeError, Builder, PluginHandle, TauriPlugin},
     Manager, Runtime, State,
 };
 
