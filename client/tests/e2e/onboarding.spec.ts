@@ -108,6 +108,19 @@ test("onboarding: welcome, code sign-up into general, return to last chat, signe
   await bob.getByTestId("confirm-join").getByRole("button", { name: "Join", exact: true }).click();
   await expect(bob.getByRole("button", { name: /^Servers: Garden/ })).toBeAttached();
   expect(bob.url()).not.toContain("invite=");
+
+  // A member can't invite; Settings says who to ask and opens a conversation with them.
+  // The drawer is still open on the server he just joined: close it first.
+  await bob.keyboard.press("Escape");
+  await expect(bob.locator(".hc-shell")).toHaveAttribute("data-screen", "main");
+  await bob.getByRole("button", { name: "Server settings" }).click({ timeout: 10000 });
+  const bobSettings = bob.getByTestId("screen-settings");
+  await expect(bobSettings.getByRole("button", { name: "Invites", exact: true })).toHaveCount(0);
+  await bobSettings.getByRole("button", { name: "Invite people", exact: true }).click({ timeout: 10000 });
+  await expect(bob.getByTestId("screen-invite-people")).toContainText("owner, owner");
+  await bob.getByRole("button", { name: "Message owner" }).click({ timeout: 10000 });
+  await expect(bob.getByTestId("screen-settings")).toHaveCount(0);
+  await expect(bob.getByTestId("screen-composer")).toBeVisible();
   await ownerCtx.close();
   await bobCtx.close();
 });

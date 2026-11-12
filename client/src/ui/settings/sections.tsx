@@ -256,12 +256,14 @@ export function InvitePeople() {
   const chat = useChat();
   const nav = useNav();
   const owner = chat.people.find(person => person.owner && person.id !== chat.me.id);
+  // Its own flag: the chat's busy covers unrelated background work and would dim this button.
+  const [opening, setOpening] = useState(false);
   return (
     <div className="hc-stack" data-testid="screen-invite-people">
       <p className="hc-lede">{copy.settings.askOwner(owner?.name, identity.serverName)}</p>
       {owner && (
-        <Button kind="primary" className="hc-btn--start" busy={chat.busy}
-          onClick={() => void chat.startDirect([owner.id], "").then(ok => { if (ok) nav.set({ main: "chat", section: null, left: "dm" }); })}>
+        <Button kind="primary" className="hc-btn--start" busy={opening}
+          onClick={() => { setOpening(true); void chat.startDirect([owner.id], "").then(ok => { setOpening(false); if (ok) nav.set({ main: "chat", section: null, left: "dm" }); }); }}>
           {copy.settings.messageOwner(owner.name)}
         </Button>
       )}

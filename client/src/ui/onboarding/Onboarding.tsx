@@ -242,13 +242,16 @@ function Pending({ onBack, onLogIn }: { onBack: () => void; onLogIn: (account: P
   useEffect(() => {
     void check();
     const timer = setInterval(() => { if (document.visibilityState === "visible") void refresh.current(); }, 30_000);
-    return () => clearInterval(timer);
+    // Coming back to the app (or the tab) checks at once: that is when someone looks for an answer.
+    const onShow = () => { if (document.visibilityState === "visible") void refresh.current(); };
+    document.addEventListener("visibilitychange", onShow);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", onShow); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const status = { pending: C.waiting, approved: C.approved, declined: C.declined };
   return (
     <div className="hc-onb__form">
       <Top onBack={onBack} />
-      <Title text={C.pendingTitle} />
+      <Title text={C.pendingTitle} sub={identity.pendingRequests.some(request => request.status === "pending") ? C.pendingHint : undefined} />
       <ul className="hc-requests" aria-live="polite">
         {identity.pendingRequests.map(request => (
           <li key={request.id} className="hc-request" data-status={request.status}>

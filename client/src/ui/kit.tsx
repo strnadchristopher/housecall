@@ -30,8 +30,8 @@ const ICONS = {
   menu: "M3.5 5.5h13M3.5 10h13M3.5 14.5h8",
   // A lit doorway inside the doorway: the accent colour.
   accent: "M4.5 17V9.5a5.5 5.5 0 0 1 11 0V17zM8.2 17v-5.6a1.8 1.8 0 0 1 3.6 0V17",
-  // The doorway with its knob, standing on a threshold: someone at the door.
-  door: "M5.5 16.5V9.5a4.5 4.5 0 0 1 9 0v7M3.5 16.5h13M11.9 11.8v.3",
+  // A closed doorway (the brand arch, flat base) with its knob: someone at the door.
+  door: "M5 17V9.5a5 5 0 0 1 10 0V17zM12.2 12.4v.6",
   bell: "M5.8 13.6V9.2a4.2 4.2 0 0 1 8.4 0v4.4l1.3 1.7h-11zM8.4 17.4h3.2",
   hash: "M8.3 3.5l-1.6 13M13.3 3.5l-1.6 13M4.5 7.5h12M3.5 12.5h12",
   info: "M10 3a7 7 0 1 0 0 14a7 7 0 0 0 0-14M10 9.2v4.6M10 6.4v.2",

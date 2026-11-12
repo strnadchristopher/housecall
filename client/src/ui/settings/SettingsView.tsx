@@ -26,7 +26,7 @@ export function SettingsView() {
   const groups: Group[] = [
     { label: copy.settings.you, rows: [
       { id: "account", label: copy.settings.account, lead: me ? <Avatar name={me.name} src={me.avatarUrl} size="sm" /> : <Icon name="people" />, detail: phone ? me?.name : undefined },
-      { id: "appearance", label: copy.settings.appearance, icon: "accent", detail: ACCENTS.find(option => option.id === accent)?.label },
+      { id: "appearance", label: copy.settings.appearance, icon: "accent", detail: phone ? ACCENTS.find(option => option.id === accent)?.label : undefined },
       { id: "notifications", label: copy.settings.notifications, icon: "bell" },
       { id: "call", label: copy.settings.call, icon: "mic" },
       { id: "devices", label: copy.settings.devices, icon: "screen" },

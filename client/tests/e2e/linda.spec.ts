@@ -55,6 +55,8 @@ test("linda: invite link, first post, next-day post, colour, invite her sister",
   task = "join from the invite link";
   await linda.goto(link);
   await shot("1-invite-link");
+  const joinHeading = linda.getByTestId("screen-join").locator("h1");
+  if (await visible(joinHeading)) notes.push(`Join screen title: "${await joinHeading.innerText()}".`);
   const nameField = linda.getByLabel(/^(Display name|Username)$/);
   notes.push(`Join screen asks for: ${(await linda.locator(".hc-onb label .hc-field__label, .hc-onb label > span").allInnerTexts()).join(" / ")}`);
   await nameField.fill("linda");
@@ -85,8 +87,9 @@ test("linda: invite link, first post, next-day post, colour, invite her sister",
   await shot("5-next-day");
   const signIn = linda.getByTestId("screen-sign-in");
   if (await visible(signIn)) {
-    notes.push("Next day she has to sign in again with username and password (session is memory-only on web).");
-    await linda.getByLabel("Username", { exact: true }).fill("linda");
+    const prefilled = await visible(signIn.getByTestId("sign-in-account"));
+    notes.push(`Next day (web, memory-only session) she sees "${await signIn.locator("h1").innerText()}"; ${prefilled ? "her username is already there, only the password is asked" : "she has to type her username and password"}.`);
+    if (!prefilled) await linda.getByLabel("Username", { exact: true }).fill("linda");
     await linda.getByLabel("Password", { exact: true }).fill(password);
     await tap(signIn.getByRole("button", { name: /^(Sign in|Log in)$/ }));
     await expect(linda.getByTestId("screen-conversation")).toBeAttached();
@@ -124,10 +127,15 @@ test("linda: invite link, first post, next-day post, colour, invite her sister",
 
   // 5. Invite her sister.
   task = "invite her sister";
+  // Back to the Settings root (she is on the Appearance page).
+  const toRoot = settings.getByRole("button", { name: "Settings", exact: true });
+  if (await visible(toRoot)) await tap(toRoot);
   const inviteRow = settings.getByRole("button", { name: /Invite/ });
   if (await inviteRow.count()) {
     await tap(inviteRow.first());
     await shot("9-invite");
+    const page = settings.locator(".hc-settings__pane");
+    notes.push(`Invite page says: "${(await page.innerText()).replace(/\s+/g, " ").trim()}".`);
   } else {
     notes.push("A member has no way to invite anyone: Invites is owner-only and nothing says to ask the owner.");
     await shot("9-no-invite");
@@ -146,6 +154,48 @@ test("linda: invite link, first post, next-day post, colour, invite her sister",
   const label = labels.join(" then ");
   await shot("10-after-settings");
   notes.push(`Leaving settings (${label}) lands on: ${await visible(linda.getByTestId("screen-composer")) ? "the chat" : "the list"}.`);
+
+  // 7. Her sister Rosa has no code: she downloads the app (here: opens the site) and asks to be let in.
+  task = "sister asks to join without a code";
+  const rosaCtx = await browser.newContext(phone);
+  const rosa = await rosaCtx.newPage();
+  rosa.on("pageerror", error => errors.push(`${task}: ${error.message}`));
+  const rosaShot = (name: string) => rosa.screenshot({ path: `${out}/${name}.png` });
+  const rtap = async (target: Locator) => { taps[task] = (taps[task] ?? 0) + 1; await target.tap(); };
+  await rosa.goto("/");
+  await rosaShot("11-rosa-welcome");
+  notes.push(`First screen for someone with no link: ${(await rosa.locator(".hc-onb button, .hc-onb h1, .hc-onb p").allInnerTexts()).filter(Boolean).join(" / ")}.`);
+  await rtap(rosa.getByRole("button", { name: "Sign up", exact: true }));
+  await rosaShot("12-rosa-sign-up");
+  await rosa.getByLabel(/Server address/).fill(new URL(rosa.url()).host);
+  await rtap(rosa.getByRole("button", { name: "Continue" }));
+  await rosaShot("13-rosa-server");
+  await rtap(rosa.getByRole("button", { name: "Request access" }));
+  await rosa.getByLabel("Username", { exact: true }).fill("rosa");
+  await rosa.getByLabel("Password, 12 or more characters").fill(password);
+  await rosa.getByLabel("Message to the owner").fill("It's Rosa, Linda's sister");
+  await rtap(rosa.getByRole("button", { name: "Send request" }));
+  await expect(rosa.getByTestId("screen-pending")).toBeVisible();
+  await rosaShot("14-rosa-pending");
+  notes.push(`After sending, Rosa sees: ${(await rosa.getByTestId("screen-pending").innerText()).replace(/\s+/g, " ").trim()}.`);
+  // The owner approves on the laptop; Rosa comes back to the app later.
+  task = "sister logs in once approved";
+  const ownerSettings = owner.getByTestId("screen-settings");
+  // Settings is still open on the laptop from making Linda's invite.
+  if (!(await ownerSettings.isVisible())) await owner.getByRole("button", { name: "Server settings", exact: true }).click();
+  await ownerSettings.getByRole("button", { name: "Access requests", exact: true }).click();
+  await owner.getByRole("button", { name: "Approve rosa" }).click();
+  // Coming back to the app re-checks on its own (simulated by a visibility change); no Refresh tap needed.
+  await rosa.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await expect(rosa.getByTestId("screen-pending")).toContainText("Approved");
+  await rtap(rosa.getByRole("button", { name: "Log in", exact: true }));
+  await rosa.getByLabel("Password", { exact: true }).fill(password);
+  await rtap(rosa.getByTestId("screen-sign-in").getByRole("button", { name: "Log in", exact: true }));
+  await expect(rosa.getByTestId("screen-conversation")).toBeAttached();
+  await rosa.waitForTimeout(600);
+  await rosaShot("15-rosa-in");
+  notes.push(`After approval and logging in Rosa lands in: ${await rosa.locator(".hc-center .hc-header h1").innerText()}.`);
+  await rosaCtx.close();
 
   const rows = Object.entries(taps).map(([name, count]) => `| ${name} | ${count} | ${count > 5 ? "RED" : "ok"} |`);
   await writeFile(`${out}/result.md`, [

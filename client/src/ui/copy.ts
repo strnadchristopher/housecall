@@ -30,6 +30,7 @@ export const copy = {
     pending: "Pending requests", pendingTitle: "Your requests",
     waiting: "Waiting for approval", approved: "Approved", declined: "Declined",
     refresh: "Refresh", checked: "Checked just now",
+    pendingHint: "The owner has your request. You can close the app; it checks again when you come back.",
     logInTo: (host: string) => `Log in to ${host}`,
     notYou: "Not you?", otherAccount: "Use another account", newHere: "New here? Sign up",
     addServer: "Add server", addressOrLink: "Server address or invite link", inviteCodeOrLink: "Invite code or link", connect: "Connect",
@@ -126,7 +127,7 @@ export const copy = {
     approveWho: (name: string) => `Approve ${name}`, declineWho: (name: string) => `Decline ${name}`,
     invitePeople: "Invite people",
     askOwner: (owner: string | undefined, server: string) =>
-      `Only ${owner ?? "the owner"} can invite people to ${server}. Ask ${owner ? "them" : "the owner"} for an invite code to pass on.`,
+      `Invites to ${server} come from its owner${owner ? `, ${owner}` : ""}. Ask them for an invite code to pass on.`,
     messageOwner: (owner: string) => `Message ${owner}`,
     channelName: "Channel name", members: "Members", createChannel: "Create channel",
     roleName: "Role name", createRole: "Create role", assign: "Add member", deleteRole: "Delete role", roleMembers: (n: number) => (n === 1 ? "1 member" : `${n} members`),
