@@ -1,0 +1,5 @@
+"$schema" = "schemas/schema.json"
+
+[default]
+description = "Lets the local webview keep and restore the Housecall session in OS secure storage."
+permissions = ["allow-get", "allow-set", "allow-remove", "allow-list"]

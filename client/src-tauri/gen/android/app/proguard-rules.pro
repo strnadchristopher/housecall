@@ -1,6 +1,7 @@
 # Add project specific ProGuard rules here.
 -keep class com.mapleavenuelabs.housecall.NativePushPlugin { *; }
 -keep class com.mapleavenuelabs.housecall.NativeAuthPlugin { *; }
+-keep class com.mapleavenuelabs.housecall.SecureSessionPlugin { *; }
 -keep class com.mapleavenuelabs.housecall.PushWorker { public <init>(...); }
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.

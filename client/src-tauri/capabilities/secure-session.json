@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "secure-session",
+  "description": "Keep and restore the signed-in session in OS secure storage. Local webview only; no remote URLs are listed.",
+  "windows": ["main"],
+  "permissions": ["secure-session:default"]
+}

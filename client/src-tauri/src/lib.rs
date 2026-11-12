@@ -7,7 +7,8 @@ mod native_push;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = tauri::Builder::default();
+    // Native builds keep the session in OS secure storage (Keychain, Keystore, keyring).
+    let builder = tauri::Builder::default().plugin(tauri_plugin_secure_session::init());
     #[cfg(target_os = "linux")]
     let builder = builder.on_permission_request(linux_permissions::handle);
     #[cfg(target_os = "android")]
