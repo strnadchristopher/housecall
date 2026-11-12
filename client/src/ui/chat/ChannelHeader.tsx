@@ -15,9 +15,16 @@ export function ChannelHeader() {
   const phone = usePhone();
   const sheet = useSheet();
   const side = (kind: "search" | "pins") => nav.set({ side: nav.side.kind === kind && !sheet ? { kind: "tabs", tab: "people" } : { kind }, sheet: true });
+  // On a phone the other conversations live in the drawer, so the menu button says when one of them wants you.
+  const elsewhere = chat.conversations.filter(conversation => conversation.id !== chat.current?.id).reduce((sum, conversation) => sum + conversation.mentions, 0);
   return (
     <header className="hc-header">
-      {phone && <IconButton icon="back" label={copy.common.back} onClick={() => nav.set({ screen: "list" })} />}
+      {phone && (
+        <span className="hc-header__menu">
+          <IconButton icon="menu" label={copy.header.menu} data-menu-button="" onClick={() => nav.set({ screen: "list" })} />
+          {elsewhere > 0 && <span className="hc-dot" role="img" aria-label={copy.channels.mentions(elsewhere)} />}
+        </span>
+      )}
       <div className="hc-header__title">
         <h1>{chat.current?.name}</h1>
         {chat.current?.kind === "channel" && <small>{copy.header.in(identity.serverName)}</small>}

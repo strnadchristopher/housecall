@@ -1,27 +1,22 @@
 import { test, expect, type Page } from "@playwright/test";
-import { password, setupToken } from "./helpers";
+import { password, setup } from "./helpers";
+
+/** The server is shared across this file: the first test sets it up, the rest sign in as that owner. */
+async function signInOwner(page: Page) {
+  await page.goto("/");
+  await page.getByLabel("Username", { exact: true }).fill("owner");
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByTestId("screen-composer")).toBeVisible();
+}
 
 const phone = { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true };
 const notch = ":root { --hc-safe-top: 47px; --hc-safe-bottom: 34px; }";
 
-/** Setup on a phone, then into the chat (until the phone opens straight into it). */
-async function setupOnPhone(page: Page) {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Set up a new server" }).click();
-  await page.getByLabel("Setup token").fill(setupToken);
-  await page.getByLabel("Username", { exact: true }).fill("owner");
-  await page.getByLabel("Password, 12 or more characters").fill(password);
-  await page.getByRole("button", { name: "Set up server", exact: true }).click();
-  await expect(page.getByTestId("screen-conversation")).toBeAttached();
-  const general = page.getByRole("button", { name: "Open general", exact: true });
-  if (await general.isVisible()) await general.click();
-  await expect(page.getByTestId("screen-composer")).toBeVisible();
-}
-
 test("phone: content runs behind the status bar, controls stay clear of it", async ({ browser }) => {
   const context = await browser.newContext(phone);
   const page = await context.newPage();
-  await setupOnPhone(page);
+  await setup(page, "owner");
   await page.addStyleTag({ content: notch });
   const root = page.locator(".hc-root");
   await expect(root).toHaveCSS("padding-top", "0px");
@@ -30,5 +25,68 @@ test("phone: content runs behind the status bar, controls stay clear of it", asy
   expect(box?.y).toBe(0);                                 // header colour reaches the top edge
   await expect(header).toHaveCSS("padding-top", "51px");  // 47 inset + 4 (space-1)
   await expect(page.locator(".hc-center")).toHaveCSS("padding-bottom", "34px");
+  // The drawer clears the status bar too.
+  await page.getByRole("button", { name: "Menu" }).click();
+  await expect(page.locator(".hc-left")).toHaveCSS("padding-top", "55px"); // 47 inset + 8 (space-2)
+  await context.close();
+});
+
+test("phone: opens in the chat; hamburger drawer; rows look tappable", async ({ browser }) => {
+  const context = await browser.newContext(phone);
+  const page = await context.newPage();
+  await signInOwner(page);
+  await expect(page.locator(".hc-center .hc-header h1")).toHaveText("general");
+  await expect(page.locator(".hc-left")).toBeHidden();
+  const menu = page.getByRole("button", { name: "Menu" });
+  await expect(menu).toBeVisible();
+  await expect(page.locator(".hc-center .hc-header").getByRole("button", { name: "Back" })).toHaveCount(0);
+  await menu.click();
+  await expect(page.locator(".hc-left")).toBeVisible();
+  const row = page.getByRole("button", { name: "Open general" });
+  await expect(row).toBeFocused();                       // focus moves into the drawer, onto where you are
+  await expect(row.locator(".hc-channel__chev")).toBeVisible();
+  const bg = await row.evaluate(el => getComputedStyle(el).backgroundColor);
+  expect(bg).not.toBe("rgba(0, 0, 0, 0)");
+  expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+  // Tap the dimmed conversation showing beside the drawer.
+  await page.getByRole("button", { name: "Close menu" }).click({ position: { x: 370, y: 420 } });
+  await expect(page.locator(".hc-left")).toBeHidden();
+  await expect(menu).toBeFocused();                      // and back to the button that opened it
+  await menu.click();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".hc-left")).toBeHidden();
+  await menu.click();
+  await row.click();
+  await expect(page.locator(".hc-left")).toBeHidden();
+  await expect(page.getByTestId("screen-composer")).toBeVisible();
+  // Settings, closed from its root, goes back to the chat, not to the drawer.
+  await page.getByRole("button", { name: "Server settings" }).click();
+  await page.getByTestId("screen-settings").getByRole("button", { name: "Back" }).click();
+  await expect(page.getByTestId("screen-composer")).toBeVisible();
+  await expect(page.locator(".hc-left")).toBeHidden();
+  await context.close();
+});
+
+test("phone: drag the drawer to close it", async ({ browser }) => {
+  const context = await browser.newContext({ ...phone, hasTouch: false, isMobile: false });
+  const page = await context.newPage();
+  await signInOwner(page);
+  await page.getByRole("button", { name: "Menu" }).click();
+  const drawer = page.locator(".hc-left");
+  await expect(drawer).toBeVisible();
+  // A short drag snaps back open.
+  await page.mouse.move(200, 400);
+  await page.mouse.down();
+  await page.mouse.move(170, 402, { steps: 4 });
+  await page.waitForTimeout(400); // held, not flicked
+  await page.mouse.up();
+  await expect(page.locator(".hc-shell")).toHaveAttribute("data-screen", "list");
+  // A long one closes it.
+  await page.mouse.move(250, 400);
+  await page.mouse.down();
+  await page.mouse.move(60, 405, { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator(".hc-shell")).toHaveAttribute("data-screen", "main");
+  await expect(drawer).toBeHidden();
   await context.close();
 });

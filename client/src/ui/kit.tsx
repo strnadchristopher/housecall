@@ -26,6 +26,8 @@ const ICONS = {
   down: "M5 7.5l5 5l5-5",
   right: "M7.5 5l5 5l-5 5",
   back: "M12.5 5l-5 5l5 5",
+  // The short third line points back toward the edge the drawer comes from.
+  menu: "M3.5 5.5h13M3.5 10h13M3.5 14.5h8",
   close: "M5 5l10 10M15 5L5 15",
   check: "M4 10.5l4 4l8-9",
   send: "M10 16V4M5 9l5-5l5 5",

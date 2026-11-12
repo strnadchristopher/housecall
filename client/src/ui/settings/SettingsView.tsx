@@ -31,7 +31,7 @@ export function SettingsView() {
   return (
     <div className="hc-settings" data-testid="screen-settings">
       <header className="hc-header">
-        <IconButton icon={phone ? "back" : "close"} label={phone ? copy.common.back : copy.common.close} onClick={() => nav.set(phone ? { main: "chat", screen: "list" } : { main: "chat" })} />
+        <IconButton icon={phone ? "back" : "close"} label={phone ? copy.common.back : copy.common.close} onClick={() => nav.set({ main: "chat" })} />
         <div className="hc-header__title"><h1>{copy.settings.label}</h1></div>
       </header>
       <div className="hc-settings__body">

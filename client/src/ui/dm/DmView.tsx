@@ -1,6 +1,6 @@
 import { useChat } from "../../core/context";
 import { copy } from "../copy";
-import { Avatar, IconButton, cx } from "../kit";
+import { Avatar, Icon, IconButton, cx } from "../kit";
 import { useNav } from "../shell/nav";
 import { FriendList } from "./FriendList";
 
@@ -26,6 +26,7 @@ export function DmView() {
                 <Avatar name={conversation.name} size="sm" />
                 <span className="hc-channel__name">{conversation.name}</span>
                 {conversation.mentions > 0 && <span className="hc-count" aria-label={copy.channels.mentions(conversation.mentions)}>{conversation.mentions}</span>}
+                <span className="hc-channel__chev" aria-hidden="true"><Icon name="right" /></span>
               </button>
             </li>
           );

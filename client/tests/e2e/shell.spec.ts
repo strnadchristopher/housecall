@@ -120,7 +120,8 @@ test("shell: picker, channel, call, composer, tabs, direct messages", async ({ p
   await page.getByRole("button", { name: "Create channel", exact: true }).click();
   await expect(page.getByTestId("screen-settings")).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 });
-  // A phone shows the list first, where the dock is in view; open the other conversation from there.
+  // A phone keeps the conversation on screen; the menu opens the drawer, where the dock is in view.
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
   await expect(page.getByTestId("call-dock")).toBeVisible();
   await page.getByRole("button", { name: "Open garden", exact: true }).click();
   await expect(bar).toHaveAttribute("data-elsewhere", "");

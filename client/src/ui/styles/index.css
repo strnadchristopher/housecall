@@ -198,8 +198,11 @@ a { color: var(--hc-accent); }
 .hc-userbar { display: flex; align-items: center; gap: var(--hc-space-2); padding: var(--hc-space-1) var(--hc-space-1) var(--hc-space-1) var(--hc-space-3); }
 .hc-userbar__name { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
 .hc-userbar__name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hc-userbar__mail { position: relative; display: grid; }
-.hc-userbar__mail .hc-dot { position: absolute; top: var(--hc-space-1); right: var(--hc-space-1); }
+.hc-userbar__mail, .hc-header__menu { position: relative; display: grid; }
+.hc-userbar__mail .hc-dot, .hc-header__menu .hc-dot { position: absolute; top: var(--hc-space-1); right: var(--hc-space-1); pointer-events: none; }
+.hc-header__menu .hc-dot { top: var(--hc-space-2); right: var(--hc-space-2); }
+/* Rows that navigate get a chevron on phones (see the phone block); on wide screens the list stays quiet. */
+.hc-channel__chev { display: none; color: var(--hc-text-muted); }
 
 /* Header */
 .hc-header { display: flex; align-items: center; gap: var(--hc-space-1); padding: var(--hc-space-3) var(--hc-space-4); min-height: var(--hc-space-8); }
@@ -454,10 +457,32 @@ a { color: var(--hc-accent); }
   /* clip, not hidden: the off-screen sheet (translateY 100%) must not give the shell a scrollable
      overflow that focus or scrollIntoView can move, which collapsed the in-call phone layout. */
   .hc-shell { display: block; position: relative; overflow: hidden; overflow: clip; }
-  .hc-left, .hc-center { position: absolute; inset: 0; transition: transform var(--hc-dur-base) var(--hc-ease-out), opacity var(--hc-dur-base) var(--hc-ease-out); }
-  .hc-center { margin: 0; border: 0; border-radius: 0; }
-  .hc-shell[data-screen="list"] .hc-center { transform: translateX(100%); visibility: hidden; transition: transform var(--hc-dur-fast) var(--hc-ease-in), visibility 0s linear var(--hc-dur-fast); }
-  .hc-shell[data-screen="main"] .hc-left { transform: translateX(-25%); opacity: 0; visibility: hidden; transition: transform var(--hc-dur-fast) var(--hc-ease-in), opacity var(--hc-dur-fast) var(--hc-ease-in), visibility 0s linear var(--hc-dur-fast); }
+  /* The conversation owns the screen; the left column is a drawer that slides over it from the menu button.
+     The conversation eases a little the other way underneath, so the drawer reads as a layer on top. */
+  .hc-center { position: absolute; inset: 0; margin: 0; border: 0; border-radius: 0; transition: transform var(--hc-dur-fast) var(--hc-ease-in); }
+  .hc-shell[data-screen="list"] .hc-center { transform: translateX(var(--hc-space-5)); transition: transform var(--hc-dur-slow) var(--hc-ease-out); }
+  .hc-left {
+    position: absolute; inset: 0 auto 0 0; width: min(85%, 340px); z-index: 6; background: var(--hc-surface);
+    border-radius: 0 var(--hc-radius-lg) var(--hc-radius-lg) 0;
+    /* A self-coloured lip on the open edge instead of a shadow. */
+    box-shadow: inset -1px 0 0 color-mix(in oklab, var(--hc-text) 7%, transparent);
+    transform: translateX(-100%); visibility: hidden; touch-action: pan-y;
+    transition: transform var(--hc-dur-fast) var(--hc-ease-in), visibility 0s linear var(--hc-dur-fast);
+  }
+  .hc-shell[data-screen="list"] .hc-left { transform: translateX(var(--hc-drag, 0px)); visibility: visible; transition: transform var(--hc-dur-slow) var(--hc-ease-out), visibility 0s; }
+  .hc-shell[data-dragging] .hc-left { transition: none; }
+  .hc-drawer-scrim { position: absolute; inset: 0; z-index: 5; background: color-mix(in oklab, var(--hc-bg) 62%, transparent); }
+  /* Conversation rows: each one a tappable surface with a chevron, a full thumb tall. */
+  .hc-channels ul { display: flex; flex-direction: column; gap: var(--hc-space-1); }
+  .hc-channels .hc-channel {
+    min-height: 52px; padding-inline: var(--hc-space-4) var(--hc-space-3); gap: var(--hc-space-3);
+    background: var(--hc-surface-raised); border-radius: var(--hc-radius-md); color: var(--hc-text); font-size: var(--hc-text-md);
+  }
+  .hc-channels .hc-channel:hover { background: var(--hc-surface-raised); }
+  .hc-channels .hc-channel:active { background: color-mix(in oklab, var(--hc-text) 9%, var(--hc-surface-raised)); }
+  .hc-channels .hc-channel.is-current { background: color-mix(in oklab, var(--hc-text) 11%, var(--hc-surface-raised)); }
+  .hc-channels .hc-channel.is-current .hc-channel__name { color: var(--hc-accent); font-weight: var(--hc-weight-bold); }
+  .hc-channel__chev { display: grid; }
   .hc-right {
     position: absolute; inset: auto 0 0 0; width: auto; height: 78%;
     border-radius: var(--hc-radius-lg) var(--hc-radius-lg) 0 0;

@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { test, expect, type Browser } from "@playwright/test";
-import { accept, invite, password, send, setupToken, signIn } from "./helpers";
+import { accept, invite, openMenu, password, send, setupToken, signIn } from "./helpers";
 
 // Evidence run: seeds invented people and messages, then captures the app.
 // Rewrites the tracked PNGs in design/shots, so it has its own flag and never
@@ -55,9 +55,10 @@ test("screenshots", async ({ browser }) => {
         await page.getByLabel("Username", { exact: true }).fill("owner");
         await page.getByLabel("Password", { exact: true }).fill(password);
         await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).click();
-        await expect(page.getByRole("button", { name: /^Open / }).first()).toBeVisible();
+        await expect(page.getByTestId("screen-composer")).toBeVisible();
+        // A phone opens in the chat; the list is the drawer behind the menu button.
+        await openMenu(page);
         await page.waitForTimeout(600);
-        // A phone lands on the list first.
         await page.screenshot({ path: `${out}/list-${size}-${scheme}.png`, animations: "disabled" });
         await page.getByRole("button", { name: /^Open / }).first().click();
       } else await signIn(page, "owner");
@@ -175,7 +176,7 @@ test("snap viewer screenshot", async ({ browser }) => {
     await page.getByLabel("Username", { exact: true }).fill(name);
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).click();
-    await page.getByRole("button", { name: "Open general", exact: true }).click();
+    // Opens straight into general.
     await expect(page.getByTestId("screen-composer")).toBeVisible();
     return { context, page };
   };

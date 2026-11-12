@@ -90,7 +90,9 @@ export function useHousecall() {
       setServers(ss.servers);
       setNoticeList(ns.notifications);
       notifications.reconcile(ns.notifications);
-      const active = id || cs.channels[0]?.id;
+      // First open: the server's general chat, not whichever channel happens to be listed first.
+      const general = ss.servers.map(server => server.general_channel_id).find(gid => cs.channels.some(channel => channel.id === gid));
+      const active = id || general || cs.channels[0]?.id;
       if (active) {
         if (!selected.current) setChannel(active);
         const [result, requests] = await Promise.all([

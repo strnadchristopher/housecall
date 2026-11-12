@@ -1,5 +1,6 @@
 import { test, expect, type BrowserContext } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
+import { openMenu } from "./helpers";
 const password = "correct horse battery staple";
 test("three browsers exchange real fake-device audio/video through the Rust SFU", async ({
   browser,
@@ -437,6 +438,8 @@ test("call stage on a phone: stage is the screen, chat opens as the sheet", asyn
     await page.getByLabel("Username", { exact: true }).fill("owner");
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).first().click();
+    await expect(page.getByTestId("screen-composer")).toBeVisible();
+    await openMenu(page);
     await page.getByRole("button", { name: /^Open / }).first().click();
     const bar = page.getByTestId("call-bar");
     await bar.getByRole("button", { name: "Join", exact: true }).click();
