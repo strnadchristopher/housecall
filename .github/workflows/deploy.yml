@@ -1,0 +1,39 @@
+name: Deploy server
+
+# Manual only: deploys a released tag to Shiva's Housecall stack through a forced-command SSH key
+# (environment secret). Never triggered by pushes or tags.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to deploy (vX.Y.Z[-pre])
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy-server:
+    runs-on: [self-hosted, shiva]
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.tag }}" }
+      - name: Deploy to Shiva (forced-command key; data backup, rollback image, health check)
+        env:
+          SHIVA_DEPLOY_KEY: ${{ secrets.SHIVA_DEPLOY_KEY }}
+          SHIVA_KNOWN_HOSTS: ${{ secrets.SHIVA_KNOWN_HOSTS }}
+        run: |
+          K="$RUNNER_TEMP/deploy"; rm -rf "$K"; mkdir -p "$K"; chmod 700 "$K"
+          trap 'rm -rf "$K"' EXIT
+          printf '%s\n' "$SHIVA_DEPLOY_KEY" > "$K/key"; chmod 600 "$K/key"
+          printf '%s\n' "$SHIVA_KNOWN_HOSTS" > "$K/known_hosts"
+          git archive HEAD | ssh -i "$K/key" -o IdentitiesOnly=yes -o UserKnownHostsFile="$K/known_hosts" \
+            -o StrictHostKeyChecking=yes root@192.168.1.212 "deploy ${{ inputs.tag }}"
+      - name: Verify public health
+        run: curl -fsS https://housecall.littleobelisk.com/api/health
