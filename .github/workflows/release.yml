@@ -99,7 +99,7 @@ jobs:
         run: |
           V=${{ needs.prepare.outputs.version }}
           T="${CARGO_TARGET_DIR:-client/src-tauri/target}"
-          B=$(ls -d "$T"/x86_64-pc-windows-msvc/release/bundle/nsis "$T"/release/bundle/nsis 2>/dev/null | head -1)
+          B="$T/x86_64-pc-windows-msvc/release/bundle/nsis"; [ -d "$B" ] || B="$T/release/bundle/nsis"
           ls -la "$B"
           gh release upload "$TAG" --clobber "$B"/*_${V}_x64-setup.exe{,.sig}
 
