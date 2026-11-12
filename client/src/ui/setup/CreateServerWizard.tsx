@@ -79,7 +79,7 @@ export function CreateServerWizard({ onClose }: { onClose: () => void }) {
 
   const makeInvite = async () => {
     setCopied(false);
-    const result = await identity.createInvite({ expiresInSeconds: 604800 });
+    const result = await identity.createInvite({ expiresInSeconds: 604800, maxUses: 1 });
     if (result.link) setLink(result.link);
   };
   // The invite step shows the link as soon as it opens: one request, made once.

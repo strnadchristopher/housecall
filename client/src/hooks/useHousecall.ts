@@ -8,6 +8,8 @@ import type { NotificationRecord } from "../transport/notifications";
 import { acceptActivity, type ActivitySnapshot } from "../data/activities";
 import { TypingStore } from "../state/typing";
 import { initialConversation } from "../state/initialConversation";
+import { secureSession } from "../transport/secureSession";
+import { loadStoredSession } from "../transport/sessionRestore";
 import { CallEvents, toCallEvent } from "../state/callEvents";
 import { MessageStore } from "../state/messages";
 import type { Message } from "../state/messages";
@@ -20,7 +22,7 @@ import type {
   ServerEvent,
   User,
 } from "../data/types";
-function deviceName() {
+export function deviceName() {
   if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window)
     return /android|iphone|ipad/i.test(navigator.userAgent) ? "Housecall mobile" : "Housecall desktop";
   return "Housecall browser";
@@ -52,10 +54,15 @@ export function useHousecall() {
   const cursor = useRef(0),
     selected = useRef(channel),
     preferred = useRef<string | undefined>(undefined),
+    /** Origin whose session is in secure storage; removed on logout or any 401. */
+    storedOrigin = useRef<string | undefined>(undefined),
     generation = useRef(0);
   selected.current = channel;
   const logout = useCallback(async () => {
     generation.current++;
+    const stored = storedOrigin.current;
+    storedOrigin.current = undefined;
+    if (stored) await secureSession.remove(stored);
     api.authenticate();
     setAuth(undefined);
     setMessages([]);
@@ -150,13 +157,37 @@ export function useHousecall() {
     await cancelNativePasskey();
     await clearNativePush();
     const { server_origin, ...credentials } = values;
-    api.configure(String(server_origin ?? ""));
-    await establish(
-      await api.post<Auth>(path, {
-        ...credentials,
-        device_name: deviceName(),
-      }),
-    );
+    const origin = String(server_origin ?? "");
+    api.configure(origin);
+    const result = await api.post<Auth>(path, {
+      ...credentials,
+      device_name: deviceName(),
+    });
+    await establish(result);
+    // Native builds keep the session in OS secure storage (web: no-op).
+    if (origin && (await secureSession.set(origin, { token: result.token, device_key: result.device_key, username: result.user.username, expires_at: result.expires_at })))
+      storedOrigin.current = origin;
+  };
+  /**
+   * Reopen a session kept in secure storage. "none": nothing stored; "gone": the server or the
+   * clock says it is no longer valid (and it was removed); "offline": could not ask, kept for later.
+   */
+  const restore = async (origin: string, preferFor?: (username: string) => string | undefined): Promise<"ok" | "none" | "gone" | "offline"> => {
+    api.configure(origin);
+    const found = await loadStoredSession(origin, async session => {
+      api.authenticate(session);
+      return (await api.get<{ user: User }>("/api/me")).user;
+    });
+    if (found.status !== "ok") { api.authenticate(); return found.status; }
+    preferred.current = preferFor?.(found.auth.user.username);
+    try {
+      await establish(found.auth);
+    } catch {
+      await logout();
+      return "offline";
+    }
+    storedOrigin.current = origin;
+    return "ok";
   };
   useEffect(() => {
     if (!auth) return;
@@ -279,6 +310,7 @@ export function useHousecall() {
     attempt,
     loading,
     authenticate,
+    restore,
     prefer: (id?: string) => { preferred.current = id; },
     logout,
     refresh,

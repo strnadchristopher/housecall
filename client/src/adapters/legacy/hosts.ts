@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { ServerEntry } from "../../core/chat";
 import { parseServerInput } from "../../data/serverInput";
+import { secureSession } from "../../transport/secureSession";
 
 export { parseServerInput };
 
@@ -13,6 +14,8 @@ export interface HostEntry {
   token: string;
   /** Added from the picker; removed again if the person backs out before signing in. */
   added: boolean;
+  /** A stored session may still reopen this host; the sign-in screen waits for the answer. */
+  restoring: boolean;
 }
 
 export interface HostReport {
@@ -55,7 +58,7 @@ class Directory {
 export function useHosts() {
   const directory = useMemo(() => new Directory(), []);
   const [hosts, setHosts] = useState<HostEntry[]>(() => [
-    { id: "host-0", origin: import.meta.env.VITE_API_ORIGIN ?? "", token: "", added: false },
+    { id: "host-0", origin: import.meta.env.VITE_API_ORIGIN ?? "", token: "", added: false, restoring: isNative() },
   ]);
   const [active, setActive] = useState("host-0");
   const [previous, setPrevious] = useState("host-0");
@@ -71,7 +74,7 @@ export function useHosts() {
     }
     const id = `host-${crypto.randomUUID()}`;
     setPrevious(latest.current.active);
-    setHosts([...latest.current.hosts, { id, origin, token, added: true }]);
+    setHosts([...latest.current.hosts, { id, origin, token, added: true, restoring: false }]);
     setActive(id);
   }, []);
   const remove = useCallback((id: string) => {
@@ -86,7 +89,30 @@ export function useHosts() {
   const clearToken = useCallback((id: string) => {
     setHosts(list => list.map(host => (host.id === id && host.token ? { ...host, token: "" } : host)));
   }, []);
-  return { hosts, active, setActive, add, remove, clearToken, directory };
+  const finishRestore = useCallback((id: string) => {
+    setHosts(list => list.map(host => (host.id === id && host.restoring ? { ...host, restoring: false } : host)));
+  }, []);
+  // Native cold start: one host per stored session. The most recent one becomes host-0.
+  useEffect(() => {
+    if (!isNative()) return;
+    let cancelled = false;
+    void secureSession.list().then(origins => {
+      if (cancelled) return;
+      setHosts(list => {
+        const first = list.find(host => host.id === "host-0");
+        const fixed = first?.origin ?? "";
+        const rest = origins.filter(origin => origin !== fixed);
+        const home = fixed ? undefined : rest.shift();
+        const restoreHome = home !== undefined || (!!fixed && origins.includes(fixed));
+        return [
+          ...list.map(host => (host.id === "host-0" ? { ...host, origin: home ?? host.origin, restoring: restoreHome } : host)),
+          ...rest.map(origin => ({ id: `host-${crypto.randomUUID()}`, origin, token: "", added: true, restoring: true })),
+        ];
+      });
+    });
+    return () => { cancelled = true; };
+  }, []);
+  return { hosts, active, setActive, add, remove, clearToken, finishRestore, directory };
 }
 
 export type Hosts = ReturnType<typeof useHosts>;

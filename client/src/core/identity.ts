@@ -45,6 +45,46 @@ export interface ReportInput {
 export interface InviteResult {
   /** Copyable invite link. */
   link?: string;
+  /** Copyable invite code (hc1.…); carries the server address, so it works from the native sign-up field. */
+  code?: string;
+}
+
+/** One invite as the owner sees it. `null` limits mean unlimited / never expires. */
+export interface InviteRecord {
+  id: string;
+  uses: number;
+  maxUses: number | null;
+  expiresAt: number | null;
+  usedAt: number | null;
+  serverId: string;
+}
+
+/** What a typed server address turned out to be. */
+export interface ServerInfo {
+  origin: string;
+  name: string;
+  /** The owner lets people without an invite ask for access. */
+  requestsOpen: boolean;
+}
+
+export type RequestStatus = "pending" | "approved" | "declined";
+
+/** An access request this device sent, with its last known state. */
+export interface PendingRequest {
+  origin: string;
+  id: string;
+  username: string;
+  serverName: string;
+  status: RequestStatus;
+}
+
+/** An access request as the owner sees it. */
+export interface AccessRequestRecord {
+  id: string;
+  username: string;
+  message: string;
+  status: RequestStatus;
+  createdAt: number;
 }
 
 export interface Capability {
@@ -72,6 +112,16 @@ export interface IdentityState {
   inviteToken: string;
   /** Non-secret hints about accounts used on this device, most recent first (web: this host only). */
   remembered: { origin: string; username: string }[];
+  /** A stored session is being reopened (native cold start); show a quiet splash, not Log in. */
+  restoring: boolean;
+  /** An invite that arrived from outside while signed in; confirm before joining. `host` is for display. */
+  pendingJoin?: { host: string };
+  /** Access requests this device sent, newest first. Call refreshPending() to update statuses. */
+  pendingRequests: PendingRequest[];
+  /** Owner: number of access requests waiting for a decision (for a badge). */
+  accessRequestsPending: number;
+  /** Owner: whether people may request access. */
+  accessRequestsOpen: boolean;
   /** True while this host was added from the picker and is not signed in yet. */
   adding: boolean;
   serverName: string;
@@ -101,12 +151,34 @@ export interface IdentityProvider extends IdentityState {
   signOut(): Promise<void>;
   /** Native builds: connect another host from a server address or an invite link. */
   addServer(addressOrLink: string): void;
+  /** Invite code, invite link or (native) server address + code. Throws Error with a user-facing message. Signed in: joins directly. */
+  enterInvite(input: string, code?: string): void;
+  /** Drop a pending invite without redeeming it. */
+  clearInvite(): void;
+  /** Signed in only: join the server from the invite that arrived by link. */
+  confirmJoin(): void;
+  dismissJoin(): void;
+  /** Ask a server (public) what it is. Rejects with a user-facing message when it is not a HouseCall server. */
+  checkServer(address: string): Promise<ServerInfo>;
+  /** Ask the owner for an account. Resolves true when the request was sent and saved. */
+  requestAccess(input: { origin: string; username: string; password: string; message?: string }): Promise<boolean>;
+  refreshPending(): Promise<void>;
+  /** Forget a request (declined, or approved and no longer needed). */
+  dismissPending(id: string): void;
+  loadInvites(): Promise<InviteRecord[]>;
+  revokeInvite(id: string): Promise<void>;
+  /** Owner. Also refreshes accessRequestsPending and accessRequestsOpen. */
+  loadAccessRequests(): Promise<AccessRequestRecord[]>;
+  approveAccessRequest(id: string): Promise<void>;
+  declineAccessRequest(id: string): Promise<void>;
+  setAccessRequestsOpen(open: boolean): Promise<boolean>;
   cancelAdd(): void;
   loadDevices(): Promise<void>;
   revokeDevice(id: string): Promise<void>;
   enableNotifications(): Promise<void>;
   disableBackgroundNotifications(): Promise<void>;
-  createInvite(input: { expiresInSeconds: number }): Promise<InviteResult>;
+  /** `null` expiry = never expires, `null` maxUses = unlimited. */
+  createInvite(input: { expiresInSeconds: number | null; maxUses: number | null }): Promise<InviteResult>;
   loadRoles(): Promise<void>;
   createRole(name: string): Promise<boolean>;
   assignRole(roleId: string, personId: string): Promise<void>;

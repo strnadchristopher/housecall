@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import type { IdentityProvider, InviteResult, SetupRow, UpdateState } from "../../core/identity";
+import type { AccessRequestRecord, IdentityProvider, InviteResult, RequestStatus, SetupRow, UpdateState } from "../../core/identity";
+import { decodeInviteCode, encodeInviteCode } from "../../data/inviteCode";
+import { deviceName } from "../../hooks/useHousecall";
+import { ApiError } from "../../transport/api";
+import { publicJson } from "../../transport/publicApi";
+import { addPending, readPending, removePending } from "../../state/pendingRequests";
 import type { Role } from "../../data/types";
 import { subscribeInviteLinks } from "../../transport/deepLinks";
 import { clearNativePush, enableNativePush, nativePushStatus, type NativePushStatus } from "../../transport/nativePush";
 import { iconPath } from "../../data/people";
 import { reportScreenshot, submitReport } from "../../transport/reports";
 import { currentUser, person, hostLabel, type Housecall } from "./chat";
-import { isNative, type HostEntry, type Hosts } from "./hosts";
+import { isNative, parseServerInput, type HostEntry, type Hosts } from "./hosts";
 import { lastConversation, readAccounts, remember } from "../../state/remembered";
 
 export interface Updater {
@@ -37,34 +42,109 @@ export function useLegacyIdentity(
     return () => { cancelled = true; };
   }, [c.auth?.user.id]);
 
-  // Invite links prefill only; they never redeem an invite or replace an account.
+  const hostOrigin = host.origin || location.origin;
+  const consuming = useRef(false);
+  const [joinOffer, setJoinOffer] = useState<{ origin: string; token: string }>();
+  const [pendingVersion, setPendingVersion] = useState(0);
+  const [requestStatus, setRequestStatus] = useState<Record<string, RequestStatus>>({});
+  const [accessCount, setAccessCount] = useState(0);
+  const [accessOpen, setAccessOpen] = useState(true);
+  const checked = useRef<Record<string, string>>({});
+
+  /** Join the invite's server. Same host: redeem now. Another host: connect it (its invite token waits for sign-in). */
+  const redeem = (token: string) => c.run(async () => {
+    const result = await c.api.post<{ server_id: string; joined: boolean }>("/api/invites/redeem", { token });
+    await c.refresh();
+    // Only a new membership changes the server list, which is what makes the chat adapter open it.
+    if (result.joined) hosts.directory.want(host.id, result.server_id);
+  });
+  const redeemOrAdd = (origin: string, token: string) => {
+    if (origin === hostOrigin) void redeem(token);
+    else hosts.add(encodeInviteCode(origin, token));
+  };
+
+  // Links from outside never join silently: signed in they wait for confirmJoin(); signed out they prefill.
   useEffect(() => {
     if (host.added) return;
     return subscribeInviteLinks(invite => {
-      if (signedIn.current) {
-        if (isNative()) hosts.add(`${invite.server_origin}/#invite=${invite.token}`);
-        else void c.run(async () => { throw new Error("Sign out before accepting another invitation"); });
-        return;
-      }
+      if (signedIn.current) { setJoinOffer({ origin: invite.server_origin, token: invite.token }); return; }
       setAddress(invite.server_origin);
       setInviteToken(invite.token);
     }, error => void c.run(async () => { throw error; }));
-  }, [c.run, host.added, hosts.add]);
+  }, [c.run, host.added]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const hostOrigin = host.origin || location.origin;
+  // A code for this already-connected host arrived through hosts.add: redeem it once signed in.
+  useEffect(() => {
+    if (!c.auth || !host.token || consuming.current) return;
+    const token = host.token;
+    hosts.clearToken(host.id);
+    void redeem(token);
+  }, [c.auth, host.token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Native cold start: reopen the session kept in secure storage, then open the last chat.
+  const restoreStarted = useRef("");
+  useEffect(() => {
+    if (!isNative() || !host.restoring || !host.origin || restoreStarted.current === host.origin) return;
+    restoreStarted.current = host.origin;
+    const origin = host.origin;
+    void c.restore(origin, name => lastConversation(origin, name)).then(result => {
+      if (result === "ok") { if (c.auth) remember({ origin, username: c.auth.user.username }); hosts.finishRestore(host.id); }
+      else if (host.added) hosts.remove(host.id);
+      else hosts.finishRestore(host.id);
+    });
+  }, [host.restoring, host.origin]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (host.origin) setAddress(host.origin); }, [host.origin]);
+
+  // Owner: how many access requests wait, and whether requests are open.
+  const loadAccess = async () => {
+    const [list, instance] = await Promise.all([
+      c.api.get<{ requests: { id: string; username: string; message: string; status: RequestStatus; created_at: number }[] }>("/api/access-requests"),
+      c.api.get<{ requests_open: boolean }>("/api/instance"),
+    ]);
+    setAccessCount(list.requests.filter(r => r.status === "pending").length);
+    setAccessOpen(instance.requests_open);
+    return list.requests.map((r): AccessRequestRecord => ({ id: r.id, username: r.username, message: r.message, status: r.status, createdAt: r.created_at }));
+  };
+  useEffect(() => {
+    if (!c.auth?.user.is_owner) { setAccessCount(0); return; }
+    let stop = false;
+    const tick = () => { void loadAccess().catch(() => {}); };
+    tick();
+    const timer = setInterval(() => { if (!stop) tick(); }, 60_000);
+    return () => { stop = true; clearInterval(timer); };
+  }, [c.auth?.user.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // Remember which chat is open, so the next sign-in reopens it.
   useEffect(() => {
     if (c.auth && c.channel) remember({ origin: hostOrigin, username: c.auth.user.username, lastConversationId: c.channel });
   }, [c.auth?.user.username, c.channel, hostOrigin]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const normalized = (origin: string) => { try { return origin ? parseServerInput(origin).origin : ""; } catch { return origin; } };
   const authenticate = (path: string, origin: string, values: Record<string, unknown>) => c.run(async () => {
-    const target = host.added ? host.origin : origin || location.origin;
+    const serverOrigin = host.added ? host.origin : normalized(origin);
+    const target = serverOrigin || location.origin;
     const name = String(values.username ?? "");
-    await c.authenticate(path, { server_origin: host.added ? host.origin : origin, ...values }, lastConversation(target, name));
-    remember({ origin: target, username: name });
-    if (location.hash.includes("invite=") || location.search.includes("invite=")) history.replaceState(null, "", location.pathname);
-    setInviteToken("");
+    const pendingToken = path === "/api/login" ? inviteToken : "";
+    consuming.current = true;
+    try {
+      await c.authenticate(path, { server_origin: serverOrigin, ...values }, lastConversation(target, name));
+      remember({ origin: target, username: name });
+      // An approved access request is spent once its owner has logged in.
+      for (const request of readPending()) if (request.origin === target && request.username === name) removePending(request.id);
+      setPendingVersion(n => n + 1);
+      if (location.hash.includes("invite=") || location.search.includes("invite=")) history.replaceState(null, "", location.pathname);
+      setInviteToken("");
+      hosts.clearToken(host.id);
+      // "I already have an account": the invite carried through log-in is redeemed now.
+      if (pendingToken) {
+        await c.api.post("/api/invites/redeem", { token: pendingToken });
+        await c.refresh();
+      }
+    } finally {
+      consuming.current = false;
+    }
   });
+  // Re-read after every change (pendingVersion is the re-render trigger).
+  const pendingNow = pendingVersion >= 0 ? readPending() : [];
   const origin = () => new URL(c.api.mediaRequest("/api/me").url).origin;
   const loadRoles = async () => { if (server.id) server.setRoles((await c.api.get<{ roles: Role[] }>(`/api/servers/${server.id}/roles`)).roles); };
 
@@ -76,7 +156,12 @@ export function useLegacyIdentity(
     remembered: readAccounts()
       .filter(account => isNative() || account.origin === location.origin)
       .map(({ origin, username }) => ({ origin, username })),
-    adding: host.added && !c.auth,
+    restoring: host.restoring && !c.auth,
+    pendingJoin: joinOffer ? { host: new URL(joinOffer.origin).host } : undefined,
+    pendingRequests: pendingNow.map(request => ({ ...request, status: requestStatus[request.id] ?? "pending" })),
+    accessRequestsPending: accessCount,
+    accessRequestsOpen: accessOpen,
+    adding: host.added && !c.auth && !host.restoring,
     serverName: c.servers.find(candidate => candidate.id === server.id)?.name ?? hostLabel(host),
     serverId: server.id,
     serverIconUrl: (() => { const current = c.servers.find(candidate => candidate.id === server.id); return current ? iconPath(current) : undefined; })(),
@@ -102,7 +187,81 @@ export function useLegacyIdentity(
       await c.logout();
       if (host.added) hosts.remove(host.id);
     }),
-    addServer: input => hosts.add(input),
+    addServer: input => {
+      const parsed = parseServerInput(input);
+      if (!isNative()) {
+        if (!parsed.token) throw new Error("Paste the invite code the owner sent you.");
+        if (parsed.origin !== location.origin) throw new Error("That invite is for another server. Open it in the HouseCall app.");
+        if (c.auth) redeemOrAdd(parsed.origin, parsed.token);
+        else { setAddress(parsed.origin); setInviteToken(parsed.token); }
+        return;
+      }
+      if (parsed.token && c.auth) redeemOrAdd(parsed.origin, parsed.token);
+      else hosts.add(input);
+    },
+    enterInvite: (input, code) => {
+      const parsed = parseServerInput(input);
+      const second = code?.trim() ?? "";
+      const token = parsed.token || decodeInviteCode(second)?.token || (/^[a-f0-9]{64}$/.test(second) ? second : "");
+      if (!token) throw new Error(isNative() ? "That's a server address. Ask its owner for an invite code." : "Paste the invite code the owner sent you.");
+      if (!isNative() && parsed.origin !== location.origin) throw new Error("That invite is for another server. Open it in the HouseCall app.");
+      if (signedIn.current) { redeemOrAdd(parsed.origin, token); return; }
+      setAddress(parsed.origin);
+      setInviteToken(token);
+    },
+    clearInvite: () => setInviteToken(""),
+    confirmJoin: () => {
+      const offer = joinOffer;
+      setJoinOffer(undefined);
+      if (offer) redeemOrAdd(offer.origin, offer.token);
+    },
+    dismissJoin: () => setJoinOffer(undefined),
+    checkServer: async address => {
+      const { origin } = parseServerInput(address);
+      if (!isNative() && origin !== location.origin) throw new Error("This app can only join the server it was opened from.");
+      let info: { name?: unknown; requests_open?: unknown };
+      try { info = await publicJson<typeof info>(origin, "/api/instance"); }
+      catch (error) {
+        if (error instanceof ApiError && error.status === 404) throw new Error("That doesn't look like a HouseCall server.");
+        throw error;
+      }
+      if (typeof info.name !== "string" || typeof info.requests_open !== "boolean") throw new Error("That doesn't look like a HouseCall server.");
+      checked.current[origin] = info.name;
+      return { origin, name: info.name, requestsOpen: info.requests_open };
+    },
+    requestAccess: input => c.attempt(async () => {
+      const origin = parseServerInput(input.origin).origin;
+      if (!isNative() && origin !== location.origin) throw new Error("This app can only join the server it was opened from.");
+      const sent = await publicJson<{ id: string }>(origin, "/api/access-requests", {
+        username: input.username, password: input.password, device_name: deviceName(), message: input.message?.trim() || undefined,
+      });
+      addPending({ origin, id: sent.id, username: input.username, serverName: checked.current[origin] ?? new URL(origin).host });
+      setPendingVersion(n => n + 1);
+    }),
+    refreshPending: async () => {
+      const next: Record<string, RequestStatus> = {};
+      await Promise.all(readPending().map(async request => {
+        try {
+          const { status } = await publicJson<{ status: RequestStatus }>(request.origin, `/api/access-requests/${request.id}/status`);
+          next[request.id] = status;
+        } catch (error) {
+          // The server forgot it (404): nothing more to wait for. Network trouble keeps the last answer.
+          if (error instanceof ApiError && error.status === 404) next[request.id] = "declined";
+        }
+      }));
+      setRequestStatus(previous => ({ ...previous, ...next }));
+    },
+    dismissPending: id => { removePending(id); setPendingVersion(n => n + 1); },
+    loadInvites: async () => {
+      const { invites } = await c.api.get<{ invites: { id: string; uses: number; max_uses: number | null; expires_at: number | null; used_at: number | null; server_id: string }[] }>("/api/invites");
+      return invites.filter(invite => invite.server_id === server.id)
+        .map(invite => ({ id: invite.id, uses: invite.uses, maxUses: invite.max_uses, expiresAt: invite.expires_at, usedAt: invite.used_at, serverId: invite.server_id }));
+    },
+    revokeInvite: id => c.run(async () => { await c.api.delete(`/api/invites/${encodeURIComponent(id)}`); }),
+    loadAccessRequests: async () => loadAccess(),
+    approveAccessRequest: id => c.run(async () => { await c.api.post(`/api/access-requests/${encodeURIComponent(id)}/approve`, {}); await loadAccess(); }),
+    declineAccessRequest: id => c.run(async () => { await c.api.post(`/api/access-requests/${encodeURIComponent(id)}/decline`, {}); await loadAccess(); }),
+    setAccessRequestsOpen: open => c.attempt(async () => { await c.api.patch("/api/instance", { requests_open: open }); setAccessOpen(open); }),
     cancelAdd: () => hosts.remove(host.id),
     loadDevices: () => c.run(c.loadDevices),
     revokeDevice: id => c.run(async () => {
@@ -125,8 +284,10 @@ export function useLegacyIdentity(
     createInvite: async input => {
       let result: InviteResult = {};
       await c.run(async () => {
-        const issued = await c.api.post<{ link?: string }>("/api/invites", { expires_in_seconds: input.expiresInSeconds, server_id: server.id || undefined });
-        if (issued.link) result = { link: issued.link };
+        const issued = await c.api.post<{ link?: string; code?: string | null }>("/api/invites", {
+          expires_in_seconds: input.expiresInSeconds, max_uses: input.maxUses, server_id: server.id || undefined,
+        });
+        if (issued.link) result = { link: issued.link, code: issued.code ?? undefined };
       });
       return result;
     },

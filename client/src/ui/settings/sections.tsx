@@ -115,7 +115,7 @@ export function Invites() {
   const create = (event: FormEvent) => {
     event.preventDefault();
     setCopied(false);
-    void identity.createInvite({ expiresInSeconds: Number(expires) }).then(next => setResult(next.link ? next : result));
+    void identity.createInvite({ expiresInSeconds: Number(expires), maxUses: 1 }).then(next => setResult(next.link ? next : result));
   };
   const copyLink = async () => {
     if (!result?.link) return;
