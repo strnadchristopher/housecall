@@ -39,6 +39,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/toolchain
         with: { hosted: "${{ vars.CI_HOSTED == 'true' }}", cache-key: ci-client }
+      - if: vars.CI_HOSTED != 'true'
+        run: ln -sfn "$CARGO_TARGET_DIR" target   # e2e fixture expects ./target/debug/housecall-server
       - run: npm ci --prefix client
       - run: npm run build --prefix client && npm test --prefix client
       - run: cargo build --locked
