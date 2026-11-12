@@ -1,3 +1,4 @@
+pub mod access;
 pub mod activities;
 pub mod attach_kind;
 pub mod dj;
@@ -227,6 +228,7 @@ impl AppState {
         db.execute_batch("CREATE TABLE IF NOT EXISTS report_media(report_id TEXT PRIMARY KEY REFERENCES reports(id) ON DELETE CASCADE,upload_id TEXT NOT NULL);")?;
         transcode::init(&db)?;
         servers::init(&db)?;
+        access::init(&db)?;
         snaps::init(&db)?;
         passkeys::init(&db)?;
         activities::init(&db)?;
@@ -302,6 +304,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .merge(vm_media::routes())
         .merge(vm_reset::routes())
         .merge(servers::routes())
+        .merge(access::routes())
         .merge(setup::routes())
         .merge(profile::routes())
         .merge(snaps::routes())
@@ -336,6 +339,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .route_layer(middleware::from_fn_with_state(state.clone(), authenticate));
     let public = Router::new()
         .merge(passkeys::public_routes())
+        .merge(access::public_routes())
         .route("/setup", post(setup))
         .route("/login", post(login))
         .route("/invites/accept", post(accept))
@@ -561,7 +565,7 @@ async fn login(State(s): State<AppState>, Json(v): Json<Login>) -> ApiResult<Val
         s.db.lock()
             .unwrap()
             .query_row(
-                "SELECT id,username,is_owner,password FROM users WHERE username=? AND disabled=0",
+                "SELECT id,username,is_owner,password,disabled FROM users WHERE username=?",
                 [&v.username],
                 |r| {
                     Ok((
@@ -571,6 +575,7 @@ async fn login(State(s): State<AppState>, Json(v): Json<Login>) -> ApiResult<Val
                             is_owner: r.get(2)?,
                         },
                         r.get::<_, String>(3)?,
+                        r.get::<_, bool>(4)?,
                     ))
                 },
             )
@@ -603,8 +608,16 @@ async fn login(State(s): State<AppState>, Json(v): Json<Login>) -> ApiResult<Val
     if !valid {
         return Err(unauthorized());
     }
-    let u = found.ok_or_else(unauthorized)?.0;
-    Ok(Json(session(&s.db.lock().unwrap(), u, &v.device_name)?))
+    let (u, _, disabled) = found.ok_or_else(unauthorized)?;
+    let db = s.db.lock().unwrap();
+    if disabled {
+        // Only after the password checked out: say why an access request is not usable yet.
+        return Err(match access::login_block(&db, &u.id)? {
+            Some(reason) => ApiError(StatusCode::FORBIDDEN, reason),
+            None => unauthorized(),
+        });
+    }
+    Ok(Json(session(&db, u, &v.device_name)?))
 }
 #[derive(Deserialize)]
 struct Invite {
@@ -976,7 +989,7 @@ async fn create_channel(
 async fn members(State(s): State<AppState>) -> ApiResult<Value> {
     let db = s.db.lock().unwrap();
     let mut q = db.prepare(
-        "SELECT id,username,is_owner,display_name,avatar_rev FROM users ORDER BY username",
+        "SELECT id,username,is_owner,display_name,avatar_rev FROM users WHERE disabled=0 ORDER BY username",
     )?;
     let rows = q
         .query_map([], |r| {
