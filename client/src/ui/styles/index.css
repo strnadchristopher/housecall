@@ -420,9 +420,52 @@ a { color: var(--hc-accent); }
 
 /* Settings */
 .hc-settings { display: flex; flex-direction: column; min-height: 0; flex: 1; }
-.hc-settings__body { flex: 1; min-height: 0; display: grid; grid-template-columns: calc(var(--hc-space-8) * 3) minmax(0, 1fr); }
-.hc-settings__nav { overflow-y: auto; padding: 0 var(--hc-space-2) var(--hc-space-4) var(--hc-space-4); }
-.hc-settings__nav .hc-label { padding-top: var(--hc-space-4); }
+.hc-settings__body { flex: 1; min-height: 0; display: grid; grid-template-columns: 16rem minmax(0, 1fr); }
+.hc-settings__nav { overflow-y: auto; padding: 0 var(--hc-space-2) var(--hc-space-5) var(--hc-space-4); display: flex; flex-direction: column; gap: var(--hc-space-5); }
+.hc-settings__grouplabel {
+  font-size: var(--hc-text-sm); font-weight: var(--hc-weight-regular); color: var(--hc-text-muted);
+  padding: 0 var(--hc-space-4) var(--hc-space-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Navigation rows (NavRow): a stack of tiles parted by a sliver of the page, rounded as one group, no rules. */
+.hc-navgroup { display: flex; flex-direction: column; gap: 2px; }
+.hc-navgroup > li > .hc-navrow { border-radius: var(--hc-radius-sm); }
+.hc-navgroup > li:first-child > .hc-navrow { border-top-left-radius: var(--hc-radius-md); border-top-right-radius: var(--hc-radius-md); }
+.hc-navgroup > li:last-child > .hc-navrow { border-bottom-left-radius: var(--hc-radius-md); border-bottom-right-radius: var(--hc-radius-md); }
+.hc-navrow {
+  display: flex; align-items: center; gap: var(--hc-space-3); width: 100%; min-height: var(--hc-space-7);
+  padding: var(--hc-space-2) var(--hc-space-3) var(--hc-space-2) var(--hc-space-4); text-align: start; color: var(--hc-text);
+  background: var(--hc-surface-raised); transition: background-color var(--hc-dur-fast) var(--hc-ease-out);
+}
+.hc-navrow:hover { background: color-mix(in oklab, var(--hc-text) 6%, var(--hc-surface-raised)); }
+.hc-navrow:active { background: color-mix(in oklab, var(--hc-text) 10%, var(--hc-surface-raised)); }
+.hc-navrow.is-current { background: color-mix(in oklab, var(--hc-text) 12%, var(--hc-surface-raised)); }
+.hc-navrow.is-current .hc-navrow__label { font-weight: var(--hc-weight-bold); }
+.hc-navrow__lead { display: grid; place-items: center; width: var(--hc-space-5); flex: none; color: var(--hc-text-muted); }
+.hc-navrow.is-current .hc-navrow__lead { color: var(--hc-text); }
+.hc-navrow__accent { display: grid; color: var(--hc-accent); }
+.hc-navrow__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-navrow__detail { color: var(--hc-text-muted); font-size: var(--hc-text-sm); max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-navrow__chev { display: grid; color: var(--hc-text-muted); transition: transform var(--hc-dur-fast) var(--hc-ease-out); }
+.hc-navrow:hover .hc-navrow__chev { transform: translateX(2px); }
+.hc-navrow.is-danger .hc-navrow__label { color: var(--hc-danger); }
+/* Wide screens: the open section is shown beside the list, so the chevron is only a hint. */
+.hc-settings__nav .hc-navrow { min-height: calc(var(--hc-space-6) + var(--hc-space-2)); font-size: var(--hc-text-sm); }
+
+/* Appearance: accents as doorways. The chosen one holds a check in its own ink. */
+.hc-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(4.25rem, 1fr)); gap: var(--hc-space-3) var(--hc-space-2); max-width: 30rem; }
+.hc-swatch { display: flex; flex-direction: column; align-items: center; gap: var(--hc-space-2); padding: var(--hc-space-2) 0; border-radius: var(--hc-radius-md); }
+.hc-swatch__door {
+  display: grid; place-items: center; width: var(--hc-space-7); height: calc(var(--hc-space-7) * 1.2); color: var(--hc-on-swatch);
+  border-radius: 50% 50% var(--hc-radius-sm) var(--hc-radius-sm) / 38% 38% var(--hc-radius-sm) var(--hc-radius-sm);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--hc-text) 14%, transparent);
+  transition: transform var(--hc-dur-base) var(--hc-ease-spring);
+}
+.hc-swatch__door .hc-icon { width: 1.4em; height: 1.4em; stroke-width: 2.2; margin-top: var(--hc-space-2); }
+.hc-swatch:active .hc-swatch__door { transform: scale(0.94); }
+.hc-swatch[aria-checked="true"] .hc-swatch__door { box-shadow: 0 0 0 2px var(--hc-surface), 0 0 0 4px var(--hc-swatch); }
+.hc-swatch__name { font-size: var(--hc-text-sm); color: var(--hc-text-muted); }
+.hc-swatch[aria-checked="true"] .hc-swatch__name { color: var(--hc-text); font-weight: var(--hc-weight-bold); }
 .hc-settings__pane { overflow-y: auto; padding: 0 var(--hc-space-5) var(--hc-space-5); display: flex; flex-direction: column; gap: var(--hc-space-3); }
 .hc-settings__pane > * { max-width: calc(var(--hc-space-8) * 8); }
 .hc-settings__pane h2 { font-size: var(--hc-text-lg); }
@@ -459,7 +502,7 @@ a { color: var(--hc-accent); }
   .hc-shell { display: block; position: relative; overflow: hidden; overflow: clip; }
   /* The conversation owns the screen; the left column is a drawer that slides over it from the menu button.
      The conversation eases a little the other way underneath, so the drawer reads as a layer on top. */
-  .hc-center { position: absolute; inset: 0; margin: 0; border: 0; border-radius: 0; transition: transform var(--hc-dur-fast) var(--hc-ease-in); }
+  .hc-center, .hc-shell > .hc-center:last-child { position: absolute; inset: 0; margin: 0; border: 0; border-radius: 0; transition: transform var(--hc-dur-fast) var(--hc-ease-in); }
   .hc-shell[data-screen="list"] .hc-center { transform: translateX(var(--hc-space-5)); transition: transform var(--hc-dur-slow) var(--hc-ease-out); }
   .hc-left {
     position: absolute; inset: 0 auto 0 0; width: min(85%, 340px); z-index: 6; background: var(--hc-surface);
@@ -511,12 +554,13 @@ a { color: var(--hc-accent); }
   .hc-callbar { flex-wrap: wrap; padding: var(--hc-space-1) var(--hc-space-1) var(--hc-space-1) var(--hc-space-3); }
   .hc-callbar.is-live .hc-callctl { flex-basis: 100%; justify-content: space-between; }
   .hc-dock .hc-callctl { justify-content: space-between; }
-  .hc-settings__body { display: flex; flex-direction: column; overflow-y: auto; }
+  /* One level at a time: the root's grouped rows, or one section. */
+  .hc-settings__body { display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; }
   .hc-settings__nav, .hc-settings__pane { overflow: visible; padding-inline: var(--hc-space-3); }
-  .hc-settings__nav ul { display: flex; flex-wrap: wrap; gap: var(--hc-space-1); }
-  .hc-settings__nav .hc-channel { width: auto; }
-  .hc-settings__nav .hc-label { padding-inline: 0; }
-  .hc-settings__pane { padding-top: var(--hc-space-4); }
+  .hc-settings__nav { padding-top: var(--hc-space-3); gap: var(--hc-space-5); }
+  .hc-settings__nav .hc-navrow { min-height: 52px; font-size: var(--hc-text-md); }
+  .hc-settings__pane { padding-top: var(--hc-space-3); }
+  .hc-swatches { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: none; }
   .hc-onb {
     place-items: start center;
     padding: calc(var(--hc-space-6) + var(--hc-safe-top)) calc(var(--hc-space-3) + var(--hc-safe-right)) calc(var(--hc-space-3) + var(--hc-safe-bottom)) calc(var(--hc-space-3) + var(--hc-safe-left));
@@ -532,6 +576,8 @@ a { color: var(--hc-accent); }
 .hc-settings-layer { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; background: var(--hc-surface); }
 @media (prefers-reduced-motion: no-preference) {
   .hc-anim-slide-right { animation: hc-slide-in var(--hc-dur-base) var(--hc-ease-out); }
+  .hc-anim-slide-left { animation: hc-slide-back var(--hc-dur-base) var(--hc-ease-out); }
+  @keyframes hc-slide-back { from { opacity: 0.4; transform: translateX(calc(var(--hc-space-4) * -1)); } }
   .hc-anim-pop { --hc-pop-y: calc(var(--hc-space-1) * -1); transform-origin: top left; animation: hc-pop-in var(--hc-dur-base) var(--hc-ease-out); }
   .hc-anim-fade { animation: hc-fade-in var(--hc-dur-base) var(--hc-ease-out); }
   .hc-presence[data-state="exit"] > .hc-anim-slide-right { animation: hc-slide-out var(--hc-dur-base) var(--hc-ease-in) forwards; }

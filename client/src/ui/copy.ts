@@ -89,7 +89,8 @@ export const copy = {
     pictureHint: "PNG, JPEG, WebP or GIF. A GIF keeps moving. You can also paste.", pictureType: "Use a PNG, JPEG, WebP or GIF image",
   },
   settings: {
-    label: "Settings", serverProfile: "Server", account: "Account", devices: "Devices", notifications: "Notifications", report: "Report a problem",
+    label: "Settings", serverProfile: "Server profile", account: "Profile", appearance: "Appearance", you: "You", help: "Help",
+    accent: "Accent colour", devices: "Devices", notifications: "Notifications", report: "Report a problem",
     server: "Server", invites: "Invites", channels: "Channels", roles: "Roles", reports: "Reports", about: "About",
     call: "Audio and video", signOut: "Sign out",
     thisDevice: "This device", revoke: "Revoke",

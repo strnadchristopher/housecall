@@ -1,11 +1,13 @@
 import { useChat } from "../../core/context";
 import { copy } from "../copy";
 import { Avatar, IconButton } from "../kit";
+import { usePhone } from "../tokens/motion";
 import { useNav } from "./nav";
 
 export function UserBar() {
   const chat = useChat();
   const nav = useNav();
+  const phone = usePhone();
   const dmMentions = chat.conversations.filter(conversation => conversation.kind !== "channel").reduce((sum, conversation) => sum + conversation.mentions, 0);
   return (
     <footer className="hc-userbar">
@@ -19,7 +21,7 @@ export function UserBar() {
         {dmMentions > 0 && <span className="hc-dot" role="img" aria-label={copy.channels.mentions(dmMentions)} />}
       </span>
       <IconButton icon="gear" label={copy.userBar.settings} active={nav.main === "settings"}
-        onClick={() => nav.set(nav.main === "settings" ? { main: "chat" } : { main: "settings", section: "account", screen: "main" })} />
+        onClick={() => nav.set(nav.main === "settings" ? { main: "chat" } : { main: "settings", section: phone ? null : "account", screen: "main" })} />
     </footer>
   );
 }

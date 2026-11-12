@@ -28,7 +28,7 @@ export function AppShell() {
   const call = useCall();
   const phone = usePhone();
   const sheet = useSheet();
-  const [nav, setNav] = useState<Nav>({ left: "channels", main: "chat", section: "account", side: { kind: "tabs", tab: "people" }, screen: "main", sheet: false });
+  const [nav, setNav] = useState<Nav>({ left: "channels", main: "chat", section: null, side: { kind: "tabs", tab: "people" }, screen: "main", sheet: false });
   const set = (next: Partial<Nav>) => setNav(current => ({ ...current, ...next }));
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {

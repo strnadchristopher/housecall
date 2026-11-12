@@ -169,7 +169,7 @@ test("profile: display name and avatar show in the user bar and on new messages;
   expect(Buffer.compare(await (await served).body(), gif)).toBe(0);
   await expect.poll(() => bar.locator(".hc-avatar img").evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
 
-  await page.getByTestId("screen-settings").getByRole("button", { name: "Server", exact: true }).click();
+  await page.getByTestId("screen-settings").getByRole("button", { name: "Server profile", exact: true }).click();
   const server = page.getByTestId("screen-server");
   await server.getByLabel("Server name", { exact: true }).fill("Fixture House");
   await server.getByRole("button", { name: "Save name", exact: true }).click();

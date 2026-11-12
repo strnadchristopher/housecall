@@ -90,3 +90,57 @@ test("phone: drag the drawer to close it", async ({ browser }) => {
   await expect(drawer).toBeHidden();
   await context.close();
 });
+
+test("phone: settings drill down like iOS; accent changes the app", async ({ browser }) => {
+  const context = await browser.newContext(phone);
+  const page = await context.newPage();
+  await signInOwner(page);
+  await page.getByRole("button", { name: "Server settings" }).click();
+  const settings = page.getByTestId("screen-settings");
+  await expect(settings).toHaveAttribute("data-depth", "root");
+  for (const name of ["Profile", "Appearance", "Notifications", "Invites", "About"])
+    await expect(settings.getByRole("button", { name, exact: true })).toBeVisible();
+  // Every row is a full-width tappable surface with a chevron.
+  const invites = settings.getByRole("button", { name: "Invites", exact: true });
+  expect((await invites.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+  await expect(invites.locator(".hc-navrow__chev")).toBeVisible();
+  await invites.click();
+  await expect(settings).toHaveAttribute("data-depth", "detail");
+  await expect(settings.locator(".hc-header h1")).toHaveText("Invites");
+  await expect(page.getByTestId("screen-invites")).toBeVisible();
+  await settings.getByRole("button", { name: "Settings" }).click();      // back to the root
+  await expect(settings).toHaveAttribute("data-depth", "root");
+  await settings.getByRole("button", { name: "Appearance", exact: true }).click();
+  const before = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--hc-accent").trim());
+  await page.getByRole("radio", { name: "Mint" }).click();
+  await expect(page.getByRole("radio", { name: "Mint" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("radio", { name: "Lavender" })).toHaveAttribute("aria-checked", "false");
+  const after = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--hc-accent").trim());
+  expect(after).not.toBe(before);
+  // Arrow keys move the choice, like any radio group.
+  await page.getByRole("radio", { name: "Mint" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("radio", { name: "Rose" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("radio", { name: "Rose" })).toBeFocused();
+  await page.getByRole("radio", { name: "Mint" }).click();
+  await page.reload();
+  expect(await page.evaluate(() => document.documentElement.dataset.accent)).toBe("mint");
+  await context.close();
+});
+
+test("wide: settings keep the two-column list and pane", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await context.newPage();
+  await signInOwner(page);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  const settings = page.getByTestId("screen-settings");
+  await expect(settings).toHaveAttribute("data-depth", "detail");
+  await expect(settings.getByRole("button", { name: "Profile", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByTestId("screen-account")).toBeVisible();
+  await settings.getByRole("button", { name: "Appearance", exact: true }).click();
+  await expect(page.getByTestId("screen-appearance")).toBeVisible();
+  await expect(settings.getByRole("button", { name: "Appearance", exact: true })).toHaveAttribute("aria-current", "page");
+  await settings.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(settings).toHaveCount(0);
+  await context.close();
+});

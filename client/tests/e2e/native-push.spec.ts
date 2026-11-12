@@ -55,7 +55,9 @@ test("native push opt-in and cleanup failures cross the real app session boundar
   await page.evaluate(() => { (window as any).nativePushFixture.clearFails = true; });
   let sessionDeletes = 0;
   page.on("request", req => { if (req.method() === "DELETE" && new URL(req.url()).pathname.startsWith("/api/devices/")) sessionDeletes++; });
-  await settings.getByRole("button", { name: "Account", exact: true }).click();
+  // On a phone settings is a tree: back to its root, then down into Profile.
+  await settings.getByRole("button", { name: "Settings", exact: true }).click();
+  await settings.getByRole("button", { name: "Profile", exact: true }).click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(settings).toContainText("Fixture native cleanup failed");
   expect(sessionDeletes).toBe(0);

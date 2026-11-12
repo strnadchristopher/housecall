@@ -2,7 +2,7 @@ import { createContext, useContext } from "react";
 import type { ChordId } from "../../core/chords";
 
 /** Presentation state only: which view, which side panel, which phone screen. */
-export type SettingsSection = "account" | "devices" | "notifications" | "call" | "report" | "server" | "invites" | "channels" | "roles" | "reports" | "integrations" | "about";
+export type SettingsSection = "account" | "appearance" | "devices" | "notifications" | "call" | "report" | "server" | "invites" | "channels" | "roles" | "reports" | "integrations" | "about";
 export type SideTab = "chat" | "people" | "chords";
 export type Side = { kind: "tabs"; tab: SideTab } | { kind: "chord"; id: ChordId } | { kind: "search" } | { kind: "pins" };
 
@@ -19,7 +19,8 @@ export function sideTabs(inCall: boolean, chordsConfigured: boolean): SideTab[] 
 export interface Nav {
   left: "channels" | "dm";
   main: "chat" | "settings";
-  section: SettingsSection;
+  /** null = the settings root: on a phone the list of sections, on wide screens the first section. */
+  section: SettingsSection | null;
   side: Side;
   /** Phone only: which screen of the stack is on top, and whether the side sheet is up. */
   screen: "list" | "main";

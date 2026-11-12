@@ -1,61 +1,103 @@
+import { useState, type ReactNode } from "react";
 import { useIdentity } from "../../core/context";
 import { DeviceMenu } from "../call/DeviceMenu";
 import { copy } from "../copy";
-import { ErrorLine, IconButton, cx } from "../kit";
+import { Avatar, ErrorLine, Icon, IconButton, NavRow, cx, type IconName } from "../kit";
 import { useNav, type SettingsSection } from "../shell/nav";
+import { ACCENTS, applyAccent, readAccent, type AccentId } from "../tokens/accent";
 import { usePhone } from "../tokens/motion";
 import { IntegrationSetup } from "../setup/IntegrationSetup";
-import { About, Account, Channels, ServerProfile, Devices, Invites, Notifications, ReportProblem, Reports, Roles } from "./sections";
+import { About, Account, Appearance, Channels, ServerProfile, Devices, Invites, Notifications, ReportProblem, Reports, Roles } from "./sections";
 
-/** Account and server settings in one place; owner-only sections appear for the owner. */
+type Row = { id: SettingsSection; label: string; icon?: IconName; lead?: ReactNode; detail?: string };
+type Group = { label: string; rows: Row[] };
+
+/**
+ * Settings as a tree. On a phone: a root of grouped rows (you, this server, help), each drilling into its
+ * section, with Back returning to the root; Back on the root returns to the chat. On wide screens the same
+ * rows sit in a column beside the open section.
+ */
 export function SettingsView() {
   const identity = useIdentity();
   const nav = useNav();
   const phone = usePhone();
-  const personal: [SettingsSection, string][] = [
-    ["account", copy.settings.account], ["devices", copy.settings.devices], ["notifications", copy.settings.notifications],
-    ["call", copy.settings.call], ["report", copy.settings.report],
+  const [accent, setAccent] = useState<AccentId>(() => readAccent());
+  const me = identity.me;
+  const groups: Group[] = [
+    { label: copy.settings.you, rows: [
+      { id: "account", label: copy.settings.account, lead: me ? <Avatar name={me.name} src={me.avatarUrl} size="sm" /> : <Icon name="people" />, detail: phone ? me?.name : undefined },
+      { id: "appearance", label: copy.settings.appearance, icon: "accent", detail: ACCENTS.find(option => option.id === accent)?.label },
+      { id: "notifications", label: copy.settings.notifications, icon: "bell" },
+      { id: "call", label: copy.settings.call, icon: "mic" },
+      { id: "devices", label: copy.settings.devices, icon: "screen" },
+    ] },
+    { label: identity.serverName, rows: [
+      ...(identity.owner ? [
+        { id: "server", label: copy.settings.serverProfile, lead: <Avatar name={identity.serverName} src={identity.serverIconUrl} size="sm" shape="squircle" /> },
+        { id: "invites", label: copy.settings.invites, icon: "link" },
+        { id: "channels", label: copy.settings.channels, icon: "hash" },
+        { id: "roles", label: copy.settings.roles, icon: "people" },
+        { id: "reports", label: copy.settings.reports, icon: "file" },
+      ] as Row[] : []),
+      { id: "integrations", label: copy.settings.integrations, icon: "chords" },
+    ] },
+    { label: copy.settings.help, rows: [
+      { id: "report", label: copy.settings.report, icon: "flag" },
+      { id: "about", label: copy.settings.about, icon: "info" },
+    ] },
   ];
-  const server: [SettingsSection, string][] = [
-    ...(identity.owner ? [["server", copy.settings.serverProfile], ["invites", copy.settings.invites], ["channels", copy.settings.channels], ["roles", copy.settings.roles], ["reports", copy.settings.reports]] as [SettingsSection, string][] : []),
-    ["integrations", copy.settings.integrations],
-    ["about", copy.settings.about],
-  ];
-  const item = ([id, label]: [SettingsSection, string]) => (
-    <li key={id}>
-      <button type="button" className={cx("hc-channel", nav.section === id && "is-current")} aria-current={nav.section === id ? "page" : undefined}
-        onClick={() => nav.set({ section: id })}>{label}</button>
-    </li>
-  );
-  const title = [...personal, ...server].find(([id]) => id === nav.section)?.[1];
+  const section = nav.section ?? (phone ? null : "account");
+  const title = groups.flatMap(group => group.rows).find(row => row.id === section)?.label;
+  const detailOnPhone = phone && !!section;
+  const close = () => nav.set({ main: "chat", section: null });
+  const chooseAccent = (id: AccentId) => setAccent(applyAccent(id));
+
   return (
-    <div className="hc-settings" data-testid="screen-settings">
+    <div className="hc-settings" data-testid="screen-settings" data-depth={section ? "detail" : "root"}>
       <header className="hc-header">
-        <IconButton icon={phone ? "back" : "close"} label={phone ? copy.common.back : copy.common.close} onClick={() => nav.set({ main: "chat" })} />
-        <div className="hc-header__title"><h1>{copy.settings.label}</h1></div>
+        {phone
+          ? <IconButton icon="back" label={detailOnPhone ? copy.settings.label : copy.common.back} onClick={detailOnPhone ? () => nav.set({ section: null }) : close} />
+          : <IconButton icon="close" label={copy.common.close} onClick={close} />}
+        <div className="hc-header__title"><h1>{detailOnPhone ? title : copy.settings.label}</h1></div>
       </header>
       <div className="hc-settings__body">
-        <nav className="hc-settings__nav" aria-label={copy.settings.label}>
-          <ul>{personal.map(item)}</ul>
-          <h2 className="hc-label">{copy.settings.server}</h2>
-          <ul>{server.map(item)}</ul>
-        </nav>
-        <section className="hc-settings__pane" aria-labelledby="hc-settings-title">
-          <h2 id="hc-settings-title">{title}</h2>
-          <ErrorLine text={identity.error} onDismiss={identity.clearError} dismissLabel={copy.common.dismiss} />
-          {nav.section === "account" && identity.me && <Account />}
-          {nav.section === "server" && identity.owner && <ServerProfile />}
-          {nav.section === "devices" && <Devices />}
-          {nav.section === "notifications" && <Notifications />}
-          {nav.section === "call" && <DeviceMenu />}
-          {nav.section === "report" && <ReportProblem />}
-          {nav.section === "invites" && <Invites />}
-          {nav.section === "channels" && <Channels />}
-          {nav.section === "roles" && <Roles />}
-          {nav.section === "reports" && <Reports />}
-          {nav.section === "integrations" && <IntegrationSetup />}
-          {nav.section === "about" && <About />}
-        </section>
+        {!detailOnPhone && (
+          <nav key="root" className={cx("hc-settings__nav", phone && "hc-anim-slide-left")} aria-label={copy.settings.label}>
+            {groups.map(group => (
+              <section key={group.label} className="hc-settings__group" aria-label={group.label}>
+                <h2 className="hc-settings__grouplabel">{group.label}</h2>
+                <ul className="hc-navgroup">
+                  {group.rows.map(row => (
+                    <li key={row.id}>
+                      <NavRow label={row.label} detail={row.detail} current={!phone && section === row.id}
+                        lead={row.lead ?? (row.icon && <span className={row.id === "appearance" ? "hc-navrow__accent" : undefined}><Icon name={row.icon} /></span>)}
+                        onClick={() => nav.set({ section: row.id })} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </nav>
+        )}
+        {section && (
+          <section key={section} className="hc-settings__pane hc-anim-slide-right" aria-label={title}>
+            {!phone && <h2>{title}</h2>}
+            <ErrorLine text={identity.error} onDismiss={identity.clearError} dismissLabel={copy.common.dismiss} />
+            {section === "account" && identity.me && <Account />}
+            {section === "appearance" && <Appearance accent={accent} onChange={chooseAccent} />}
+            {section === "server" && identity.owner && <ServerProfile />}
+            {section === "devices" && <Devices />}
+            {section === "notifications" && <Notifications />}
+            {section === "call" && <DeviceMenu />}
+            {section === "report" && <ReportProblem />}
+            {section === "invites" && <Invites />}
+            {section === "channels" && <Channels />}
+            {section === "roles" && <Roles />}
+            {section === "reports" && <Reports />}
+            {section === "integrations" && <IntegrationSetup />}
+            {section === "about" && <About />}
+          </section>
+        )}
       </div>
     </div>
   );

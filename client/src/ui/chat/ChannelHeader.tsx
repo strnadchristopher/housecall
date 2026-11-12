@@ -33,7 +33,7 @@ export function ChannelHeader() {
       <IconButton icon="search" label={copy.header.search} active={nav.side.kind === "search"} onClick={() => side("search")} />
       <IconButton icon="pin" label={copy.header.pins} active={nav.side.kind === "pins"} onClick={() => side("pins")} />
       {sheet && <IconButton icon="people" label={copy.header.people} onClick={() => nav.set({ side: { kind: "tabs", tab: "people" }, sheet: true })} />}
-      <IconButton icon="settings" label={copy.header.settings} onClick={() => nav.set({ main: "settings", section: identity.owner ? "invites" : "about" })} />
+      <IconButton icon="settings" label={copy.header.settings} onClick={() => nav.set({ main: "settings", section: phone ? null : identity.owner ? "invites" : "about" })} />
     </header>
   );
 }
