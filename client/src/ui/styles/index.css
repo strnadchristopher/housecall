@@ -440,6 +440,7 @@ a { color: var(--hc-accent); }
 .hc-navrow:hover { background: color-mix(in oklab, var(--hc-text) 6%, var(--hc-surface-raised)); }
 .hc-navrow:active { background: color-mix(in oklab, var(--hc-text) 10%, var(--hc-surface-raised)); }
 .hc-navrow.is-current { background: color-mix(in oklab, var(--hc-text) 12%, var(--hc-surface-raised)); }
+@media (prefers-color-scheme: light) { :root:not([data-direction]) .hc-navrow.is-current { background: var(--hc-bg); } }
 .hc-navrow.is-current .hc-navrow__label { font-weight: var(--hc-weight-bold); }
 .hc-navrow__lead { display: grid; place-items: center; width: var(--hc-space-5); flex: none; color: var(--hc-text-muted); }
 .hc-navrow.is-current .hc-navrow__lead { color: var(--hc-text); }
@@ -526,6 +527,10 @@ a { color: var(--hc-accent); }
   .hc-channels .hc-channel.is-current { background: color-mix(in oklab, var(--hc-text) 11%, var(--hc-surface-raised)); }
   .hc-channels .hc-channel.is-current .hc-channel__name { color: var(--hc-accent); font-weight: var(--hc-weight-bold); }
   .hc-channel__chev { display: grid; }
+  /* Daylight: the current row sinks into the page tone instead of turning a flat grey. */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-direction]) .hc-channels .hc-channel.is-current { background: var(--hc-bg); }
+  }
   .hc-right {
     position: absolute; inset: auto 0 0 0; width: auto; height: 78%;
     border-radius: var(--hc-radius-lg) var(--hc-radius-lg) 0 0;

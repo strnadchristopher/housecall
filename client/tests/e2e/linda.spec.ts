@@ -101,13 +101,17 @@ test("linda: invite link, first post, next-day post, colour, invite her sister",
   task = "change the colour";
   const header = linda.locator(".hc-center .hc-header");
   const headerBox = await header.boundingBox();
-  notes.push(`Chat header top edge at y=${headerBox?.y ?? "?"}; .hc-root padding-top ${await linda.locator(".hc-root").evaluate(el => getComputedStyle(el).paddingTop)} (the root pads by env(safe-area-inset-*), so on an iPhone the page background shows as a band under the status bar).`);
+  // Simulate an iPhone notch: does the header colour run behind the status bar, with its controls below it?
+  await linda.addStyleTag({ content: ":root { --hc-safe-top: 47px; --hc-safe-bottom: 34px; }" });
+  const rootPad = await linda.locator(".hc-root").evaluate(el => getComputedStyle(el).paddingTop);
+  const headerPad = await header.evaluate(el => getComputedStyle(el).paddingTop);
+  notes.push(`With a simulated 47 px notch: chat header top edge at y=${headerBox?.y ?? "?"}, root padding-top ${rootPad}, header padding-top ${headerPad}. ${headerPad === "4px" ? "Controls sit under the status bar (no inset), or the root pads and shows a band." : "Header colour reaches the top edge; its controls clear the status bar."}`);
   const settingsButton = linda.getByRole("button", { name: /^(Server settings|Settings)$/ }).first();
   await tap(settingsButton);
   await linda.waitForTimeout(400);
   await shot("7-settings");
   const settings = linda.getByTestId("screen-settings");
-  const sections = await settings.locator(".hc-settings__nav button").allInnerTexts();
+  const sections = await settings.locator(".hc-settings__nav button").evaluateAll(buttons => buttons.map(b => b.getAttribute("aria-label") ?? (b as HTMLElement).innerText));
   notes.push(`Settings shows these at once: ${sections.join(", ")}.`);
   const appearance = settings.getByRole("button", { name: /Appearance|Colou?r|Theme/ });
   if (await appearance.count()) {
@@ -131,10 +135,15 @@ test("linda: invite link, first post, next-day post, colour, invite her sister",
 
   // 6. Leave settings the way she came in.
   task = "leave settings";
-  const out1 = settings.getByRole("button", { name: /^(Back|Close|Settings)$/ }).first();
-  const label = await out1.getAttribute("aria-label");
-  await tap(out1);
-  await linda.waitForTimeout(400);
+  // Tap the top-left button until settings is gone (a tree takes one tap per level).
+  const labels: string[] = [];
+  for (let i = 0; i < 3 && await visible(settings); i++) {
+    const out1 = settings.locator(".hc-header button").first();
+    labels.push(await out1.getAttribute("aria-label") ?? "?");
+    await tap(out1);
+    await linda.waitForTimeout(400);
+  }
+  const label = labels.join(" then ");
   await shot("10-after-settings");
   notes.push(`Leaving settings (${label}) lands on: ${await visible(linda.getByTestId("screen-composer")) ? "the chat" : "the list"}.`);
 
