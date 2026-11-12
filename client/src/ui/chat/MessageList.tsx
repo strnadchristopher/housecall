@@ -12,6 +12,7 @@ const GROUP_WINDOW_MS = 5 * 60 * 1000;
 export function MessageList({ compact }: { compact?: boolean }) {
   const chat = useChat();
   const scroller = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLOListElement>(null);
   const stick = useRef(true);
   const last = chat.messages.at(-1)?.id;
   // Roving tabindex: one message row is the tab stop (the newest until another is focused); arrows move between rows.
@@ -38,6 +39,15 @@ export function MessageList({ compact }: { compact?: boolean }) {
     const node = scroller.current;
     if (node && stick.current) node.scrollTop = node.scrollHeight;
   }, [last, chat.messages.length, chat.requests.length, chat.current?.id]);
+  // Images, GIFs and video posters load after the messages render and grow the list (or the composer shrinks the view):
+  // keep the newest message in view while the reader is at the bottom.
+  useEffect(() => {
+    const node = scroller.current, content = list.current;
+    if (!node || !content || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => { if (stick.current) node.scrollTop = node.scrollHeight; });
+    observer.observe(content); observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
   // Reading the newest message clears the mention count.
   useEffect(() => {
     if (last && stick.current && chat.current?.mentions && document.visibilityState === "visible") void chat.markRead();
@@ -46,7 +56,7 @@ export function MessageList({ compact }: { compact?: boolean }) {
     <div ref={scroller} className={cx("hc-messages", compact && "is-compact")} data-testid="screen-conversation"
       onScroll={event => { const node = event.currentTarget; stick.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; }}>
       <button type="button" className="hc-sr hc-skip" onClick={() => document.querySelector<HTMLTextAreaElement>(".hc-composer textarea")?.focus()}>{copy.messages.skip}</button>
-      <ol aria-label={copy.messages.label} onFocus={remember} onKeyDown={navigate}>
+      <ol ref={list} aria-label={copy.messages.label} onFocus={remember} onKeyDown={navigate}>
         {chat.messages.map((message, index) => {
           const before = chat.messages[index - 1];
           const newDay = !before || new Date(before.createdAt).toDateString() !== new Date(message.createdAt).toDateString();
