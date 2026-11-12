@@ -70,6 +70,8 @@ export interface IdentityState {
   address: string;
   /** Invite token delivered by a link, waiting for a name and password. */
   inviteToken: string;
+  /** Non-secret hints about accounts used on this device, most recent first (web: this host only). */
+  remembered: { origin: string; username: string }[];
   /** True while this host was added from the picker and is not signed in yet. */
   adding: boolean;
   serverName: string;

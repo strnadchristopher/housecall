@@ -7,6 +7,7 @@ import { NotificationReconciler } from "../transport/notifications";
 import type { NotificationRecord } from "../transport/notifications";
 import { acceptActivity, type ActivitySnapshot } from "../data/activities";
 import { TypingStore } from "../state/typing";
+import { initialConversation } from "../state/initialConversation";
 import { CallEvents, toCallEvent } from "../state/callEvents";
 import { MessageStore } from "../state/messages";
 import type { Message } from "../state/messages";
@@ -50,6 +51,7 @@ export function useHousecall() {
   >({});
   const cursor = useRef(0),
     selected = useRef(channel),
+    preferred = useRef<string | undefined>(undefined),
     generation = useRef(0);
   selected.current = channel;
   const logout = useCallback(async () => {
@@ -90,7 +92,7 @@ export function useHousecall() {
       setServers(ss.servers);
       setNoticeList(ns.notifications);
       notifications.reconcile(ns.notifications);
-      const active = id || cs.channels[0]?.id;
+      const active = id || initialConversation(cs.channels, ss.servers, preferred.current);
       if (active) {
         if (!selected.current) setChannel(active);
         const [result, requests] = await Promise.all([
@@ -142,7 +144,9 @@ export function useHousecall() {
   const authenticate = async (
     path: string,
     values: Record<string, unknown>,
+    prefer?: string,
   ) => {
+    preferred.current = prefer;
     await cancelNativePasskey();
     await clearNativePush();
     const { server_origin, ...credentials } = values;
@@ -275,6 +279,7 @@ export function useHousecall() {
     attempt,
     loading,
     authenticate,
+    prefer: (id?: string) => { preferred.current = id; },
     logout,
     refresh,
     select,

@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { ServerEntry } from "../../core/chat";
-import { parseInviteLink } from "../../transport/deepLinks";
+import { parseServerInput } from "../../data/serverInput";
+
+export { parseServerInput };
 
 /** One connected host. The current backend keeps several servers per host. */
 export interface HostEntry {
@@ -50,25 +52,6 @@ class Directory {
   }
 }
 
-/** Accepts "chat.example.com", a full origin, or an invite link. */
-export function parseServerInput(input: string): { origin: string; token: string } {
-  const text = input.trim();
-  if (!text) throw new Error("Server address required");
-  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(text) ? text : `https://${text}`;
-  let url: URL;
-  try {
-    url = new URL(withScheme);
-  } catch {
-    throw new Error("Server address not recognized");
-  }
-  if (url.hash.startsWith("#invite=")) {
-    const invite = parseInviteLink(`${url.origin}/${url.hash}`, url.origin);
-    if (!invite) throw new Error("Invite link not recognized");
-    return { origin: invite.server_origin, token: invite.token };
-  }
-  return { origin: url.origin, token: "" };
-}
-
 export function useHosts() {
   const directory = useMemo(() => new Directory(), []);
   const [hosts, setHosts] = useState<HostEntry[]>(() => [
@@ -83,6 +66,7 @@ export function useHosts() {
     const existing = latest.current.hosts.find(host => host.origin === origin);
     if (existing) {
       setActive(existing.id);
+      if (token) setHosts(list => list.map(host => (host.id === existing.id ? { ...host, token } : host)));
       return;
     }
     const id = `host-${crypto.randomUUID()}`;
@@ -98,7 +82,11 @@ export function useHosts() {
     if (latest.current.active === id)
       setActive(next.some(host => host.id === latest.current.previous) ? latest.current.previous : next[0].id);
   }, [directory]);
-  return { hosts, active, setActive, add, remove, directory };
+  /** Forget an invite token once it was redeemed or consumed. */
+  const clearToken = useCallback((id: string) => {
+    setHosts(list => list.map(host => (host.id === id && host.token ? { ...host, token: "" } : host)));
+  }, []);
+  return { hosts, active, setActive, add, remove, clearToken, directory };
 }
 
 export type Hosts = ReturnType<typeof useHosts>;

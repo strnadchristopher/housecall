@@ -7,6 +7,7 @@ import { iconPath } from "../../data/people";
 import { reportScreenshot, submitReport } from "../../transport/reports";
 import { currentUser, person, hostLabel, type Housecall } from "./chat";
 import { isNative, type HostEntry, type Hosts } from "./hosts";
+import { lastConversation, readAccounts, remember } from "../../state/remembered";
 
 export interface Updater {
   state?: UpdateState;
@@ -50,8 +51,17 @@ export function useLegacyIdentity(
     }, error => void c.run(async () => { throw error; }));
   }, [c.run, host.added, hosts.add]);
 
+  const hostOrigin = host.origin || location.origin;
+  // Remember which chat is open, so the next sign-in reopens it.
+  useEffect(() => {
+    if (c.auth && c.channel) remember({ origin: hostOrigin, username: c.auth.user.username, lastConversationId: c.channel });
+  }, [c.auth?.user.username, c.channel, hostOrigin]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const authenticate = (path: string, origin: string, values: Record<string, unknown>) => c.run(async () => {
-    await c.authenticate(path, { server_origin: host.added ? host.origin : origin, ...values });
+    const target = host.added ? host.origin : origin || location.origin;
+    const name = String(values.username ?? "");
+    await c.authenticate(path, { server_origin: host.added ? host.origin : origin, ...values }, lastConversation(target, name));
+    remember({ origin: target, username: name });
     if (location.hash.includes("invite=") || location.search.includes("invite=")) history.replaceState(null, "", location.pathname);
     setInviteToken("");
   });
@@ -63,6 +73,9 @@ export function useLegacyIdentity(
     me: c.auth ? person(currentUser(c) ?? c.auth.user) : undefined,
     owner: !!c.auth?.user.is_owner,
     native: isNative(), address, inviteToken,
+    remembered: readAccounts()
+      .filter(account => isNative() || account.origin === location.origin)
+      .map(({ origin, username }) => ({ origin, username })),
     adding: host.added && !c.auth,
     serverName: c.servers.find(candidate => candidate.id === server.id)?.name ?? hostLabel(host),
     serverId: server.id,
