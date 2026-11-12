@@ -1,5 +1,9 @@
 # Engineering decisions
 
+## 2026-11-11: native builds keep the session in OS secure storage
+
+At Christopher's direction, the iPhone, Android and desktop apps persist the signed-in session (token, device key, username, expiry) in OS secure storage so a cold launch opens straight into the last chat. This reverses the earlier "sessions live only in memory" rule for native builds; the web build stays memory-only. Storage: iOS Keychain generic password (service `com.mapleavenuelabs.housecall.session`, account = server origin, after-first-unlock, this device only, not synchronized), Android AndroidKeyStore AES-GCM key `housecall.session.v1` with a file in `noBackupFilesDir`, desktop `keyring`. If the store is unavailable the app silently stays memory-only. The entry is removed on sign-out, current-device revocation, any 401 and expiry. Plugin: `client/src-tauri/plugins/tauri-plugin-secure-session`; web wrapper: `transport/secureSession.ts`. Only localStorage hints (origin, username, last conversation id, pending request ids, accent) remain non-secret.
+
 ## Rust, SQLite, shared client
 
 Axum/Tokio and SQLite WAL fit a private 5–30 person instance with one self-hosted server. SQLite keeps setup, backup and recovery simpler than a separate database service. Blocking database work must remain short and bounded; expensive hashing, disk operations and subprocesses belong off the async reactor. Shared React/TypeScript state and transport with Tauri 2 are the target across desktop/mobile; native WebAuthn, media and background notification behavior still require platform verification. Presence of a project file is not proof of a platform build.
