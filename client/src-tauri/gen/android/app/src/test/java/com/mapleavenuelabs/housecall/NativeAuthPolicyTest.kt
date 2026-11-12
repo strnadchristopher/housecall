@@ -33,4 +33,13 @@ class NativeAuthPolicyTest {
             assertNull(NativeAuthPolicy.inviteToken(value, origin))
         }
     }
+    @Test fun schemeInviteAcceptsOnlyTheExactShape() {
+        val code = "hc1.aHR0cHM6Ly9jaGF0LmV4YW1wbGUudGVzdA." + "b".repeat(64)
+        assertEquals("housecall://invite?code=$code", NativeAuthPolicy.schemeInvite("housecall://invite?code=$code"))
+        for (value in listOf("housecall://invite?code=$code&x=1", "housecall://invite/?code=$code", "housecall://evil?code=$code",
+            "housecall://invite?code=$code#x", "https://invite?code=$code", "housecall://invite?code=hc2.a." + "b".repeat(64),
+            "housecall://invite?code=hc1.a." + "B".repeat(64))) {
+            assertNull(NativeAuthPolicy.schemeInvite(value))
+        }
+    }
 }

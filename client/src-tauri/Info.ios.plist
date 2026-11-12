@@ -4,6 +4,14 @@
 <key>NSCameraUsageDescription</key><string>Share your camera with friends when you join a Housecall voice channel.</string>
 <key>NSMicrophoneUsageDescription</key><string>Share your microphone with friends when you join a Housecall voice channel.</string>
 <key>NSLocalNetworkUsageDescription</key><string>Connect directly to your self-hosted Housecall server and its voice service on your local network.</string>
+<key>CFBundleURLTypes</key>
+<array>
+<dict>
+<key>CFBundleURLName</key><string>com.mapleavenuelabs.housecall.invite</string>
+<key>CFBundleTypeRole</key><string>Viewer</string>
+<key>CFBundleURLSchemes</key><array><string>housecall</string></array>
+</dict>
+</array>
 <key>UIBackgroundModes</key>
 <array>
 <string>voip</string>

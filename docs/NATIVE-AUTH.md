@@ -91,3 +91,28 @@ adb shell am start -a android.intent.action.VIEW -c android.intent.category.BROW
 Repeat with the app closed and already running; verify correct origin/token prefill, no automatic account switch, and no unexpected browser navigation. For acceptance, open a real expiring test invite privately, redeem once, enroll a passkey, sign out, sign in with the OS picker, and reject replay/expired challenges. Check user cancellation, timeout, Activity destruction, wrong certificate, wrong RP, missing association, unavailable provider and Android below API 28. Confirm browser virtual-authenticator regressions remain green and password fallback works. Do not collect token-bearing network traces/screenshots/logcat. [App Link verification procedure](https://developer.android.com/training/app-links/verify-applinks).
 
 `tests/native-auth.test.ts` covers browser preservation, native JSON/challenge transport, bearer/device headers, certificate/RP refusal, unsupported native platforms, cancellation/server changes, strict invitation parsing, browser fragment removal and acknowledgment after delivery. `NativeAuthPolicyTest.kt` checks canonical HTTPS/RP/certificate policy and malicious link forms without invoking a credential provider. Neither suite proves a real Android passkey ceremony or iOS support.
+
+## Custom scheme: `housecall://invite?code=…` (iOS and Android)
+
+Universal Links would need an Apple association file on every self-hosted domain, so invites also open the app
+through a custom scheme. The only accepted shape is `housecall://invite?code=<hc1 invite code>`: no other host,
+path, parameter or fragment. The code carries the server origin (`hc1.<base64url(origin)>.<64 hex token>`, https or
+loopback http only), so one scheme works for every server. The web join page shows "Open in the Housecall app" on
+phones, linking to the same invite in this form.
+
+- **iOS:** `Info.ios.plist` registers the scheme (`CFBundleURLTypes`). The OS hands the URL to the running app as
+  Tauri `RunEvent::Opened` (cold or warm); `src-tauri/src/scheme_invite.rs` checks the shape and keeps the newest URL
+  for 120 s in memory. The web layer polls `scheme_invite_take` (one-shot) and parses it with `parseSchemeInvite`.
+- **Android:** an `<intent-filter>` for `housecall://invite` on `MainActivity`. `InviteLinkInbox` captures it the same
+  way as the https link (removed from the intent before Tauri sees it, 120 s, no persistence) after
+  `NativeAuthPolicy.schemeInvite` checks the shape; `native_auth takeInvite` returns it as `{id, url}` and the web
+  layer acknowledges it.
+- **Both:** the URL goes into the same `onInvite` path as https links: signed out it prefills Join; signed in it
+  asks first ("Join a server on …?") and never joins silently.
+- **Why not `@tauri-apps/plugin-deep-link`:** it is not a dependency, and nothing here needs it. iOS already gets
+  `RunEvent::Opened` from Tauri core once the scheme is registered, and Android already has a reviewed intent inbox
+  for invite links. Adding the plugin would duplicate both paths and add a capability surface.
+- **Risk:** any app can register `housecall://`. The payload is only an invite (a bearer secret the sender chose to
+  share); it never redeems without a person confirming, and only prefills a form when signed out.
+- **Unverified on device** (needs Maya / the Android emulator): cold and warm opens on iOS, the Android intent filter,
+  and the Kotlin changes (not compiled in this lane).

@@ -24,6 +24,10 @@ object NativeAuthPolicy {
             allowedOrigins.size <= 8 && allowedOrigins.contains(appOrigin)
     }
 
+    /** Exactly housecall://invite?code=hc1.<base64url>.<64 hex>; the web layer decodes and checks the origin. */
+    fun schemeInvite(value: String): String? =
+        value.takeIf { it.length <= 2048 && it.matches(Regex("housecall://invite\\?code=hc1\\.[A-Za-z0-9_-]{1,1400}\\.[a-f0-9]{64}")) }
+
     /** Only the build's HTTPS origin, exact root path, and fragment-held token. */
     fun inviteToken(value: String, configuredOrigin: String): String? {
         val safe = origin(configuredOrigin) ?: return null

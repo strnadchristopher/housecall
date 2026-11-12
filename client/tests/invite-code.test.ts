@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { decodeInviteCode, encodeInviteCode } from "../src/data/inviteCode";
 import { parseServerInput } from "../src/data/serverInput";
+import { parseSchemeInvite } from "../src/transport/deepLinks";
 
 const token = "ab".repeat(32);
 describe("invite codes", () => {
@@ -25,5 +26,27 @@ describe("invite codes", () => {
     expect(parseServerInput(`https://chat.example.test/#invite=${token}`)).toEqual({ origin: "https://chat.example.test", token });
     expect(parseServerInput("chat.example.test")).toEqual({ origin: "https://chat.example.test", token: "" });
     expect(() => parseServerInput("  ")).toThrow();
+  });
+});
+
+describe("housecall:// invite links", () => {
+  const code = encodeInviteCode("https://chat.example.test", token);
+  it("accepts exactly housecall://invite?code=<code>", () => {
+    expect(parseSchemeInvite(`housecall://invite?code=${code}`)).toEqual({ token, server_origin: "https://chat.example.test" });
+  });
+  it("rejects extra parameters, fragments and paths", () => {
+    for (const bad of [`housecall://invite?code=${code}&next=x`, `housecall://invite?next=x&code=${code}`, `housecall://invite?code=${code}#x`,
+      `housecall://invite/?code=${code}`, `housecall://invite/x?code=${code}`, `housecall://invite?code=${code} `])
+      expect(parseSchemeInvite(bad), bad).toBeUndefined();
+  });
+  it("rejects the wrong host or scheme", () => {
+    for (const bad of [`housecall://join?code=${code}`, `housecall://evil.test/invite?code=${code}`, `https://invite?code=${code}`,
+      `HOUSECALL://invite?code=${code}`, `housecalls://invite?code=${code}`])
+      expect(parseSchemeInvite(bad), bad).toBeUndefined();
+  });
+  it("rejects a code that is not a valid invite code", () => {
+    expect(parseSchemeInvite("housecall://invite?code=hc1.nope.abc")).toBeUndefined();
+    expect(parseSchemeInvite(`housecall://invite?code=${encodeInviteCode("http://chat.example.test", token)}`)).toBeUndefined();
+    expect(parseSchemeInvite(`housecall://invite?code=${"a".repeat(3000)}`)).toBeUndefined();
   });
 });

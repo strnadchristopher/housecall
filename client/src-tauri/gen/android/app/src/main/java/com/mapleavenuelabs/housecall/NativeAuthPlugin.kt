@@ -59,7 +59,8 @@ class NativeAuthPlugin(private val activity: Activity) : Plugin(activity) {
     @Command fun takeInvite(invoke: Invoke) {
         val invite = InviteLinkInbox.take()
         val result = JSObject()
-        if (invite != null) result.put("id", invite.first).put("invite", JSONObject().put("token", invite.second).put("server_origin", BuildConfig.AUTH_ORIGIN))
+        if (invite?.token != null) result.put("id", invite.id).put("invite", JSONObject().put("token", invite.token).put("server_origin", BuildConfig.AUTH_ORIGIN))
+        else if (invite?.schemeUrl != null) result.put("id", invite.id).put("url", invite.schemeUrl)
         invoke.resolve(result)
     }
     @Command fun acknowledgeInvite(invoke: Invoke) {
