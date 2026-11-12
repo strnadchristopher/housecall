@@ -12,7 +12,7 @@ Trust boundaries: HTTPS reverse proxy → Rust HTTP service; HTTP service → SQ
 
 | Threat | Implemented or required control | Verification gate |
 | --- | --- | --- |
-| Public signup / invitation guessing | No open registration; 256-bit single-use invite secret, hash at rest, expiry, owner-only issuance, transaction redemption | reuse/expiry/race tests; route matrix |
+| Public signup / invitation guessing | No open registration; 256-bit single-use invite secret, hash at rest, expiry, owner-only issuance, transaction redemption | reuse/expiry/race tests; route matrix. Invite codes and links are bearer secrets; multi-use and never-expiring invites widen exposure until revoked. |
 | Bootstrap takeover | env bootstrap secret, one-time transactional setup | invalid token, repeated setup and setup race tests |
 | Credential theft/bruteforce | Argon2 fallback; strong random secrets; passkey origin/RP verification required; rate limits | auth tests; virtual-authenticator browser registration/login/replay test passes; native bridge remains |
 | Session replay/revocation | bearer and independent device secret hashes; server expiry; device-scoped revoke | stolen bearer alone, wrong device, revoke then every protected route |

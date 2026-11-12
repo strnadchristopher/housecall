@@ -314,6 +314,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .merge(activities::routes())
         .route("/me", get(me).patch(profile::rename_me))
         .route("/invites", get(invites).post(invite))
+        .route("/invites/redeem", post(redeem_invite))
         .route("/invites/{id}", delete(revoke_invite))
         .route("/users/{id}/sessions", delete(revoke_user_sessions))
         .route("/users/{id}/disable", post(disable_user))
@@ -607,10 +608,28 @@ async fn login(State(s): State<AppState>, Json(v): Json<Login>) -> ApiResult<Val
 }
 #[derive(Deserialize)]
 struct Invite {
-    expires_in_seconds: i64,
+    #[serde(default = "invite_week")]
+    expires_in_seconds: Option<i64>,
+    #[serde(default = "invite_once")]
+    max_uses: Option<i64>,
     #[serde(default)]
     email: Option<String>,
     server_id: Option<String>,
+}
+fn invite_week() -> Option<i64> {
+    Some(604_800)
+}
+fn invite_once() -> Option<i64> {
+    Some(1)
+}
+/// `expires_at` for an invite that never expires; listed as null.
+const INVITE_NEVER: i64 = i64::MAX;
+fn invite_code(public_url: &str, token: &str) -> String {
+    use base64::Engine;
+    format!(
+        "hc1.{}.{token}",
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(public_url)
+    )
 }
 async fn invite(
     State(s): State<AppState>,
@@ -618,8 +637,13 @@ async fn invite(
     Json(v): Json<Invite>,
 ) -> ApiResult<Value> {
     owner(&p)?;
-    if !(60..=604800).contains(&v.expires_in_seconds) {
+    if v.expires_in_seconds
+        .is_some_and(|seconds| !(60..=31_536_000).contains(&seconds))
+    {
         return Err(bad("invalid expiry"));
+    }
+    if v.max_uses.is_some_and(|uses| !(1..=1000).contains(&uses)) {
+        return Err(bad("invalid use limit"));
     }
     let email = v
         .email
@@ -629,16 +653,22 @@ async fn invite(
     if !email.is_empty() && !valid_email(&email) {
         return Err(bad("invalid email"));
     }
+    if !email.is_empty() && v.expires_in_seconds.is_none() {
+        return Err(bad("email invitations need an expiry"));
+    }
+    let max_uses = if email.is_empty() { v.max_uses } else { Some(1) };
     let token = secret();
     let link = s.invite_mail.invite_link(&token);
-    let expires = now() + v.expires_in_seconds * 1000;
+    let expires = v
+        .expires_in_seconds
+        .map_or(INVITE_NEVER, |seconds| now() + seconds * 1000);
     let server_id = v.server_id.unwrap_or_else(|| "home".into());
     {
         let db = s.db.lock().unwrap();
         servers::exists(&db, &server_id)?;
         db.execute(
-            "INSERT INTO invites(token_hash,expires_at,used_at,server_id,email) VALUES(?,?,NULL,?,?)",
-            params![hash(&token), expires, server_id, email],
+            "INSERT INTO invites(token_hash,expires_at,used_at,server_id,email,max_uses,uses) VALUES(?,?,NULL,?,?,?,0)",
+            params![hash(&token), expires, server_id, email, max_uses],
         )?;
     }
     let email_sent = if email.is_empty() {
@@ -661,7 +691,7 @@ async fn invite(
         }
     };
     Ok(Json(
-        json!({"id":hash(&token),"token":if email_sent { Value::Null } else { json!(token) },"expires_at":expires,"server_id":server_id,"email":email,"email_sent":email_sent,"link":link}),
+        json!({"id":hash(&token),"token":if email_sent { Value::Null } else { json!(token) },"code":if email_sent { Value::Null } else { json!(invite_code(&s.invite_mail.public_url, &token)) },"expires_at":if expires == INVITE_NEVER { Value::Null } else { json!(expires) },"max_uses":max_uses,"server_id":server_id,"email":email,"email_sent":email_sent,"link":link}),
     ))
 }
 async fn invites(
@@ -671,9 +701,14 @@ async fn invites(
     owner(&p)?;
     let db = s.db.lock().unwrap();
     let mut q = db.prepare(
-        "SELECT token_hash,expires_at,used_at,email FROM invites ORDER BY expires_at DESC LIMIT 500",
+        "SELECT token_hash,expires_at,used_at,email,uses,max_uses,server_id FROM invites ORDER BY rowid DESC LIMIT 500",
     )?;
-    let rows=q.query_map([],|r|Ok(json!({"id":r.get::<_,String>(0)?,"expires_at":r.get::<_,i64>(1)?,"used_at":r.get::<_,Option<i64>>(2)?,"email":r.get::<_,String>(3)?})))?.collect::<Result<Vec<_>,_>>()?;
+    let rows = q
+        .query_map([], |r| {
+            let expires: i64 = r.get(1)?;
+            Ok(json!({"id":r.get::<_,String>(0)?,"expires_at":if expires == INVITE_NEVER { Value::Null } else { json!(expires) },"used_at":r.get::<_,Option<i64>>(2)?,"email":r.get::<_,String>(3)?,"uses":r.get::<_,i64>(4)?,"max_uses":r.get::<_,Option<i64>>(5)?,"server_id":r.get::<_,String>(6)?}))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(Json(json!({"invites":rows})))
 }
 async fn revoke_invite(
@@ -742,8 +777,8 @@ async fn accept(State(s): State<AppState>, Json(v): Json<Accept>) -> ApiResult<V
     let mut db = s.db.lock().unwrap();
     let tx = db.transaction()?;
     if tx.execute(
-        "UPDATE invites SET used_at=? WHERE token_hash=? AND used_at IS NULL AND expires_at>?",
-        params![now(), hash(&v.token), now()],
+        "UPDATE invites SET uses=uses+1,used_at=COALESCE(used_at,?1) WHERE token_hash=?2 AND expires_at>?1 AND (max_uses IS NULL OR uses<max_uses)",
+        params![now(), hash(&v.token)],
     )? != 1
     {
         return Err(bad("invalid or expired invite"));
@@ -777,6 +812,51 @@ async fn accept(State(s): State<AppState>, Json(v): Json<Accept>) -> ApiResult<V
     let result = session(&tx, u, &v.device_name)?;
     tx.commit()?;
     Ok(Json(result))
+}
+#[derive(Deserialize)]
+struct Redeem {
+    token: String,
+}
+/// A signed-in person joins the invite's server. Existing members are told so without spending a use.
+async fn redeem_invite(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Json(v): Json<Redeem>,
+) -> ApiResult<Value> {
+    if v.token.len() != 64 {
+        return Err(bad("invalid invite"));
+    }
+    let (token_hash, at) = (hash(&v.token), now());
+    let mut db = s.db.lock().unwrap();
+    let tx = db.transaction()?;
+    let server_id: String = tx
+        .query_row(
+            "SELECT server_id FROM invites WHERE token_hash=? AND expires_at>?",
+            params![token_hash, at],
+            |r| r.get(0),
+        )
+        .optional()?
+        .ok_or_else(|| bad("invalid or expired invite"))?;
+    let member = tx
+        .query_row(
+            "SELECT 1 FROM server_members WHERE server_id=? AND user_id=?",
+            params![server_id, p.user.id],
+            |_| Ok(()),
+        )
+        .optional()?
+        .is_some();
+    if !member {
+        if tx.execute(
+            "UPDATE invites SET uses=uses+1,used_at=COALESCE(used_at,?1) WHERE token_hash=?2 AND (max_uses IS NULL OR uses<max_uses)",
+            params![at, token_hash],
+        )? != 1
+        {
+            return Err(bad("invalid or expired invite"));
+        }
+        servers::join(&tx, &p.user.id, &server_id)?;
+    }
+    tx.commit()?;
+    Ok(Json(json!({"server_id":server_id,"joined":!member})))
 }
 async fn me(State(s): State<AppState>, Extension(p): Extension<Principal>) -> Json<Value> {
     let (display_name, avatar_rev) =

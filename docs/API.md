@@ -5,8 +5,9 @@ All timestamps are epoch milliseconds and JSON fields snake_case. Except health/
 - `GET /api/health`: `{ok:true}`
 - `POST /api/setup`: `{setup_token, username, password, device_name}` → `{token,device_key,user:{id,username,is_owner},expires_at}`; once only, bootstrap token from env.
 - `POST /api/login`: `{username,password,device_name}` → same session result.
-- `POST /api/invites`: owner, `{expires_in_seconds, email?, server_id?}` → `{id,token,link,expires_at,server_id,email,email_sent}`; 60–604800 seconds. `email` is optional; mail is sent only when an address is given and mail is configured (`RESEND_API_KEY`, `HOUSECALL_MAIL_FROM`). `link` is always present: the invite link (`<HOUSECALL_PUBLIC_URL>/#invite=<token>`) to share by any means. `token` is null when the email was sent.
-- `POST /api/invites/accept`: `{token,username,password,device_name}` → session. Single use transaction.
+- `POST /api/invites`: owner, `{expires_in_seconds?, max_uses?, email?, server_id?}` → `{id,token,code,link,expires_at,max_uses,server_id,email,email_sent}`. `expires_in_seconds`: 60–31536000 (365 days), default 604800, `null` = never expires (`expires_at` is then null). `max_uses`: 1–1000, default 1, `null` = unlimited; email invitations are always single use and need an expiry. `code` is `hc1.<base64url(public origin)>.<token>` and carries the server address; it and `token` are null when the email was sent. `email` is optional; mail is sent only when an address is given and mail is configured (`RESEND_API_KEY`, `HOUSECALL_MAIL_FROM`). `link` is always present: the invite link (`<HOUSECALL_PUBLIC_URL>/#invite=<token>`) to share by any means. `token` is null when the email was sent.
+- `POST /api/invites/accept`: `{token,username,password,device_name}` → session. Each acceptance spends one use in a transaction.
+- `POST /api/invites/redeem`: signed in, `{token}` → `{server_id, joined}`. Joins the invite's server; existing members get `joined:false` and no use is spent.
 - `GET /api/me`: `{user:{id,username,is_owner},session_id,capabilities:{...}}`.
 - `GET /api/devices`: `{devices:[{id,device_name,created_at,expires_at,current}]}`. `DELETE /api/devices/:id`: own session only.
 - `GET /api/channels`: `{channels:[{id,name,kind}]}`. General is automatically joined.
@@ -49,7 +50,7 @@ Requires `HOUSECALL_MEDIA_KEY` (64 hex chars) and optional `HOUSECALL_MEDIA_DIR`
 
 Message creation also accepts `attachment_ids: [upload UUID]` (max 20). Every attachment must be owned by the author, ready after scanning, and belong to the same conversation. An upload belongs to at most one message. Messages return `attachments:[{id,filename,length:"decimal"}]`. Unsend removes their encrypted files as well as message state. Body may be empty only when attachments exist.
 
-Owner administration: `GET /api/invites` lists `{invites:[{id,expires_at,used_at}]}` without redeemable secrets. Issuance also returns `id`. `DELETE /api/invites/:id` invalidates unused invites; `DELETE /api/users/:id/sessions` revokes every session for that account. Both are owner-only.
+Owner administration: `GET /api/invites` lists `{invites:[{id,expires_at,used_at,email,uses,max_uses,server_id}]}` (`expires_at`/`max_uses` null = never/unlimited) without redeemable secrets. Issuance also returns `id`. `DELETE /api/invites/:id` invalidates unused invites; `DELETE /api/users/:id/sessions` revokes every session for that account. Both are owner-only.
 
 Reports may now attach `screenshot_id` for a ready, owned encrypted upload with `screenshot_consent:true`; logs still require separate consent. Owner report listing returns `screenshot_id`. `GET /api/reports/:id/screenshot` is owner-only authenticated streaming, even when the report's original upload belongs to a private conversation. Report diagnostics are never included without explicit per-attachment consent.
 

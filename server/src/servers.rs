@@ -16,6 +16,8 @@ pub fn init(db: &Connection) -> rusqlite::Result<()> {
         ("channels", "server_id", "TEXT REFERENCES servers(id)"),
         ("invites", "server_id", "TEXT NOT NULL DEFAULT 'home'"),
         ("invites", "email", "TEXT NOT NULL DEFAULT ''"),
+        ("invites", "max_uses", "INTEGER DEFAULT 1"),
+        ("invites", "uses", "INTEGER NOT NULL DEFAULT 0"),
         ("users", "disabled", "INTEGER NOT NULL DEFAULT 0"),
         ("users", "display_name", "TEXT"),
         ("users", "avatar", "BLOB"),
@@ -36,6 +38,10 @@ pub fn init(db: &Connection) -> rusqlite::Result<()> {
             )?;
         }
     }
+    db.execute(
+        "UPDATE invites SET uses=1 WHERE used_at IS NOT NULL AND uses=0",
+        [],
+    )?;
     db.execute(
         "UPDATE channels SET server_id='home' WHERE kind='channel' AND server_id IS NULL",
         [],
