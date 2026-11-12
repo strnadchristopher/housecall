@@ -95,11 +95,5 @@ test("readme screenshots", async ({ browser, request }) => {
   await shoot(1280, 800, "light", "desktop-light");
   await shoot(390, 844, "dark", "phone-chat-dark", "chat");
   await shoot(390, 844, "light", "phone-chat-light", "chat");
-  {
-    const { context, page } = await open(browser, 390, 844, "dark");
-    await expect(page.getByTestId("screen-sign-in")).toBeVisible();
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: `${out}/phone-sign-in-dark.png`, animations: "disabled" });
-    await context.close();
-  }
+
 });

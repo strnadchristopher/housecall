@@ -31,9 +31,8 @@ Text, voice, video and watch-together for a small circle of friends, on your own
 
 <br><br>
 
-<img src="docs/readme/phone-sign-in-dark.png" width="240" alt="Signing in on a phone">&nbsp;&nbsp;
-<img src="docs/readme/phone-chat-dark.png" width="240" alt="A conversation on a phone">&nbsp;&nbsp;
-<img src="docs/readme/phone-chat-light.png" width="240" alt="A conversation on a phone in light mode">
+<img src="docs/readme/phone-chat-dark.png" width="300" alt="A conversation on a phone">&nbsp;&nbsp;
+<img src="docs/readme/phone-chat-light.png" width="300" alt="A conversation on a phone in light mode">
 
 </div>
 
