@@ -41,6 +41,15 @@ export async function accept(page: Page, link: string, name: string) {
   await expect(page.getByTestId("screen-composer")).toBeVisible();
 }
 
+/** On a phone the conversation list lives in the drawer: open it. Does nothing on wide screens. */
+export async function openMenu(page: Page) {
+  const menu = page.getByRole("button", { name: "Menu", exact: true });
+  if (await menu.isVisible().catch(() => false)) {
+    await menu.click();
+    await expect(page.locator(".hc-shell")).toHaveAttribute("data-screen", "list");
+  }
+}
+
 export async function send(page: Page, body: string) {
   await page.getByTestId("screen-composer").getByLabel("Message", { exact: true }).fill(body);
   await page.getByRole("button", { name: "Send", exact: true }).click();

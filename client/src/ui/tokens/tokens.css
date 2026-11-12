@@ -1,11 +1,13 @@
 /*
  * Housecall design tokens. Direction A, "Doorway" (the default).
- * Neutral black at night (equal R, G and B, no warm cast); amber is the lit
- * doorway and is reserved for small solid live and primary elements. Never
- * mix the accent into a surface: hover and selected rows step in lightness.
- * Light scheme is the counterpart: neutral paper and ink (equal R, G and B),
- * with the amber only on small live and primary elements.
+ * Cool blue night; the accent (default lavender, chosen per device in
+ * accents.css) is the lit doorway, reserved for small solid live and primary
+ * elements. Never mix the accent into a surface: hover and selected rows step
+ * in lightness. Light scheme is the counterpart: blue-grey paper and ink with
+ * a deeper accent on the same small elements.
  * --hc-line is at least 3:1 against surface and raised (field boundaries).
+ * Layout reads the --hc-safe-* insets, never env() directly, so tests can
+ * simulate a notch by overriding them.
  *
  * The property list is fixed by PLAN Task 0.9. Directions B and C override
  * the same names in ./directions/. Components may use nothing else.
@@ -35,17 +37,24 @@
 :root {
   color-scheme: dark light;
 
-  --hc-bg: #0c0c0c;
-  --hc-surface: #151515;
-  --hc-surface-raised: #212121;
-  --hc-line: #787878;
-  --hc-text: #ededed;
-  --hc-text-muted: #a6a6a6;
-  --hc-accent: #e6a94f;
-  --hc-on-accent: #1f1407;
-  --hc-live: #e6a94f;
-  --hc-danger: #ee8a78;
-  --hc-focus: #f7d9a8;
+  --hc-bg: #0b1018;
+  --hc-surface: #121a26;
+  --hc-surface-raised: #1b2535;
+  --hc-line: #6f7f99;
+  --hc-text: #e8edf6;
+  --hc-text-muted: #a3afc4;
+  --hc-accent: #b8a4ff;
+  --hc-on-accent: #1b1236;
+  --hc-accent-night: #b8a4ff;
+  --hc-on-accent-night: #1b1236;
+  --hc-live: var(--hc-accent);
+  --hc-danger: #f39191;
+  --hc-focus: color-mix(in oklab, var(--hc-accent) 55%, white);
+
+  --hc-safe-top: env(safe-area-inset-top, 0px);
+  --hc-safe-right: env(safe-area-inset-right, 0px);
+  --hc-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --hc-safe-left: env(safe-area-inset-left, 0px);
 
   --hc-font: "Inria Sans", system-ui, sans-serif;
   /* Avatar initials: a face whose O is clearly round, so "O" does not read as the digit 0 (Inria Sans O is a narrow oval). */
@@ -90,16 +99,16 @@
 
 @media (prefers-color-scheme: light) {
   :root {
-    --hc-bg: #e6e6e6;
-    --hc-surface: #f1f1f1;
-    --hc-surface-raised: #fbfbfb;
-    --hc-line: #6e6e6e;
-    --hc-text: #1a1a1a;
-    --hc-text-muted: #595959;
-    --hc-accent: #8a4a00;
+    --hc-bg: #e2e5ef;
+    --hc-surface: #eef0f7;
+    --hc-surface-raised: #fafbfe;
+    --hc-line: #69758a;
+    --hc-text: #141a24;
+    --hc-text-muted: #525d70;
+    --hc-accent: #5b3fd1;
     --hc-on-accent: #ffffff;
-    --hc-live: #8a4a00;
+    --hc-live: var(--hc-accent);
     --hc-danger: #a12a1a;
-    --hc-focus: #1a1a1a;
+    --hc-focus: var(--hc-text);
   }
 }

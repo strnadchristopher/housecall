@@ -1,6 +1,6 @@
 import { useCall, useChat } from "../../core/context";
 import { copy } from "../copy";
-import { Avatar, cx } from "../kit";
+import { Avatar, Icon, cx } from "../kit";
 import { useNav } from "./nav";
 
 /** Flat list of the server's channels. A channel with this client's live call shows who is in it. */
@@ -25,6 +25,7 @@ export function ChannelList() {
                 onClick={() => { nav.set({ main: "chat", screen: "main" }); if (!here) void chat.open(channel.id); }}>
                 <span className="hc-channel__name">{channel.name}</span>
                 {channel.mentions > 0 && <span className="hc-count" aria-label={copy.channels.mentions(channel.mentions)}>{channel.mentions}</span>}
+                <span className="hc-channel__chev" aria-hidden="true"><Icon name="right" /></span>
               </button>
               {live && (
                 <div className="hc-channel__call" data-testid="channel-call" role="group" aria-label={copy.channels.inCall}>

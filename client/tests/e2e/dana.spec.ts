@@ -47,10 +47,11 @@ test("dana: join from a link, find the live call, send a GIF, start Watch Now, m
   await dana.getByLabel("Display name", { exact: true }).fill("dana");
   await dana.getByLabel("Password, 12 or more characters").fill(password);
   await tap(dana.getByRole("button", { name: "Join", exact: true }));
-  await expect(dana.getByRole("navigation", { name: "Housecall" })).toBeVisible();
+  await expect(dana.getByTestId("screen-composer")).toBeVisible();
 
-  // 2. Find the live call and join it. Start where a phone starts: the list.
+  // 2. Find the live call and join it. The phone opens in general; the list is one tap away in the menu.
   task = "find the live call and join it";
+  await tap(dana.getByRole("button", { name: "Menu", exact: true }));
   const list = dana.getByRole("navigation", { name: "Housecall" });
   const inCallOnList = await list.getByTestId("channel-call").first().isVisible().catch(() => false);
   notes.push(`live call visible on the list before opening the channel: ${inCallOnList}`);
@@ -100,7 +101,7 @@ test("dana: join from a link, find the live call, send a GIF, start Watch Now, m
 
   // 5. Message the friend.
   task = "message the friend";
-  await tap(dana.getByRole("main").getByRole("button", { name: "Back", exact: true }));
+  await tap(dana.getByRole("main").getByRole("button", { name: "Menu", exact: true }));
   await tap(dana.getByRole("button", { name: "Direct messages", exact: true }));
   await shot("5-direct-messages");
   await tap(dana.getByTestId("screen-direct-messages").getByRole("checkbox", { name: "Add owner" }));

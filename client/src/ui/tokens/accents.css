@@ -1,0 +1,36 @@
+/*
+ * Accent colours, one per device (ui/tokens/accent.ts sets data-accent on the root).
+ * Dark values first; light-scheme counterparts below. --hc-accent-night is the dark value
+ * in both schemes, for surfaces that are always dark (snaps). Each accent is light and
+ * soft at night and deep in daylight, so it reads as a tint of the ink, never a neon.
+ * Swatches in Settings → Appearance show each accent as it looks in the current scheme.
+ */
+:root[data-accent="lavender"] { --hc-accent: #b8a4ff; --hc-on-accent: #1b1236; --hc-accent-night: #b8a4ff; --hc-on-accent-night: #1b1236; }
+:root[data-accent="sky"] { --hc-accent: #7cc4ff; --hc-on-accent: #071a2b; --hc-accent-night: #7cc4ff; --hc-on-accent-night: #071a2b; }
+:root[data-accent="mint"] { --hc-accent: #6fdcb4; --hc-on-accent: #06261a; --hc-accent-night: #6fdcb4; --hc-on-accent-night: #06261a; }
+:root[data-accent="rose"] { --hc-accent: #ff9cc0; --hc-on-accent: #2e0b19; --hc-accent-night: #ff9cc0; --hc-on-accent-night: #2e0b19; }
+:root[data-accent="coral"] { --hc-accent: #ff9a7a; --hc-on-accent: #2b0f06; --hc-accent-night: #ff9a7a; --hc-on-accent-night: #2b0f06; }
+:root[data-accent="amber"] { --hc-accent: #e6a94f; --hc-on-accent: #1f1407; --hc-accent-night: #e6a94f; --hc-on-accent-night: #1f1407; }
+
+[data-accent-swatch="lavender"] { --hc-swatch: #b8a4ff; --hc-on-swatch: #1b1236; background: #b8a4ff; }
+[data-accent-swatch="sky"] { --hc-swatch: #7cc4ff; --hc-on-swatch: #071a2b; background: #7cc4ff; }
+[data-accent-swatch="mint"] { --hc-swatch: #6fdcb4; --hc-on-swatch: #06261a; background: #6fdcb4; }
+[data-accent-swatch="rose"] { --hc-swatch: #ff9cc0; --hc-on-swatch: #2e0b19; background: #ff9cc0; }
+[data-accent-swatch="coral"] { --hc-swatch: #ff9a7a; --hc-on-swatch: #2b0f06; background: #ff9a7a; }
+[data-accent-swatch="amber"] { --hc-swatch: #e6a94f; --hc-on-swatch: #1f1407; background: #e6a94f; }
+
+@media (prefers-color-scheme: light) {
+  :root[data-accent="lavender"] { --hc-accent: #5b3fd1; --hc-on-accent: #ffffff; }
+  :root[data-accent="sky"] { --hc-accent: #0b62a8; --hc-on-accent: #ffffff; }
+  :root[data-accent="mint"] { --hc-accent: #0b7a55; --hc-on-accent: #ffffff; }
+  :root[data-accent="rose"] { --hc-accent: #b0285e; --hc-on-accent: #ffffff; }
+  :root[data-accent="coral"] { --hc-accent: #b23d18; --hc-on-accent: #ffffff; }
+  :root[data-accent="amber"] { --hc-accent: #8a4a00; --hc-on-accent: #ffffff; }
+
+  [data-accent-swatch="lavender"] { --hc-swatch: #5b3fd1; --hc-on-swatch: #ffffff; background: #5b3fd1; }
+  [data-accent-swatch="sky"] { --hc-swatch: #0b62a8; --hc-on-swatch: #ffffff; background: #0b62a8; }
+  [data-accent-swatch="mint"] { --hc-swatch: #0b7a55; --hc-on-swatch: #ffffff; background: #0b7a55; }
+  [data-accent-swatch="rose"] { --hc-swatch: #b0285e; --hc-on-swatch: #ffffff; background: #b0285e; }
+  [data-accent-swatch="coral"] { --hc-swatch: #b23d18; --hc-on-swatch: #ffffff; background: #b23d18; }
+  [data-accent-swatch="amber"] { --hc-swatch: #8a4a00; --hc-on-swatch: #ffffff; background: #8a4a00; }
+}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import { useChat } from "../core/context";
 import { copy } from "./copy";
 import { afterExit, prefersReducedMotion } from "./tokens/motion";
@@ -26,6 +26,14 @@ const ICONS = {
   down: "M5 7.5l5 5l5-5",
   right: "M7.5 5l5 5l-5 5",
   back: "M12.5 5l-5 5l5 5",
+  // The short third line points back toward the edge the drawer comes from.
+  menu: "M3.5 5.5h13M3.5 10h13M3.5 14.5h8",
+  // A lit doorway inside the doorway: the accent colour.
+  accent: "M4.5 17V9.5a5.5 5.5 0 0 1 11 0V17zM8.2 17v-5.6a1.8 1.8 0 0 1 3.6 0V17",
+  bell: "M5.8 13.6V9.2a4.2 4.2 0 0 1 8.4 0v4.4l1.3 1.7h-11zM8.4 17.4h3.2",
+  hash: "M8.3 3.5l-1.6 13M13.3 3.5l-1.6 13M4.5 7.5h12M3.5 12.5h12",
+  info: "M10 3a7 7 0 1 0 0 14a7 7 0 0 0 0-14M10 9.2v4.6M10 6.4v.2",
+  flag: "M5 17V3.8M5 4.2h9.5l-2 3.4l2 3.4H5",
   close: "M5 5l10 10M15 5L5 15",
   check: "M4 10.5l4 4l8-9",
   send: "M10 16V4M5 9l5-5l5 5",
@@ -204,6 +212,25 @@ export function Field({ label, hideLabel, className, ...rest }: { label: string;
       <span className={hideLabel ? "hc-sr" : "hc-field__label"}>{label}</span>
       <input {...rest} aria-label={hideLabel ? label : undefined} />
     </label>
+  );
+}
+
+/**
+ * A row that navigates somewhere: full width, its own surface, a trailing chevron. The accessible name is the
+ * label alone; the detail (a current value) is read as the description. `lead` is a bare icon or avatar.
+ */
+export function NavRow({ label, detail, lead, current, tone, onClick }: {
+  label: string; detail?: string; lead?: ReactNode; current?: boolean; tone?: "danger"; onClick(): void;
+}) {
+  const detailId = useId();
+  return (
+    <button type="button" className={cx("hc-navrow", current && "is-current", tone === "danger" && "is-danger")}
+      aria-current={current ? "page" : undefined} aria-label={label} aria-describedby={detail ? detailId : undefined} onClick={onClick}>
+      {lead && <span className="hc-navrow__lead" aria-hidden="true">{lead}</span>}
+      <span className="hc-navrow__label">{label}</span>
+      {detail && <span className="hc-navrow__detail" id={detailId}>{detail}</span>}
+      <span className="hc-navrow__chev" aria-hidden="true"><Icon name="right" /></span>
+    </button>
   );
 }
 

@@ -1,8 +1,9 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { ACCENTS, type AccentId } from "../tokens/accent";
 import type { InviteResult } from "../../core/identity";
 import { useChat, useIdentity } from "../../core/context";
 import { copy } from "../copy";
-import { Avatar, Button, Field, MediaDropzone } from "../kit";
+import { Avatar, Button, Field, Icon, MediaDropzone } from "../kit";
 import { useNav } from "../shell/nav";
 import { prepareImage } from "./resizeImage";
 
@@ -256,6 +257,41 @@ export function Reports() {
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Accent colour for this device. Each choice is a doorway (the brand's arch) filled with the accent as it looks
+ * in the current scheme; the chosen one carries a check. A radio group: Tab lands on the choice, arrows move it.
+ */
+export function Appearance({ accent, onChange }: { accent: AccentId; onChange: (id: AccentId) => void }) {
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  const pick = (index: number) => {
+    const next = (index + ACCENTS.length) % ACCENTS.length;
+    onChange(ACCENTS[next].id);
+    buttons.current[next]?.focus();
+  };
+  const onKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const step = ({ ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 } as Record<string, number>)[event.key];
+    if (step === undefined) return;
+    event.preventDefault();
+    pick(index + step);
+  };
+  return (
+    <div className="hc-stack" data-testid="screen-appearance">
+      <div role="radiogroup" aria-label={copy.settings.accent} className="hc-swatches">
+        {ACCENTS.map((option, index) => {
+          const chosen = accent === option.id;
+          return (
+            <button key={option.id} ref={element => { buttons.current[index] = element; }} type="button" role="radio" aria-checked={chosen}
+              tabIndex={chosen ? 0 : -1} className="hc-swatch" onClick={() => pick(index)} onKeyDown={event => onKey(event, index)}>
+              <span className="hc-swatch__door" data-accent-swatch={option.id} aria-hidden="true">{chosen && <Icon name="check" />}</span>
+              <span className="hc-swatch__name">{option.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

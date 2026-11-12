@@ -1,6 +1,8 @@
 import "./tokens.css";
 import "./directions/b.css";
 import "./directions/c.css";
+// After the directions, so the chosen accent wins over a direction's own.
+import "./accents.css";
 
 /**
  * Review aid, not a product setting: ?direction=b or ?direction=c selects an

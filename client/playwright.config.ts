@@ -16,8 +16,16 @@ export default defineConfig({
       ? "**/dana.spec.ts" // rewrites docs/ux/phase-2; run on purpose with tests/run-dana.mjs
       : process.env.HOUSECALL_TEST_SHOTS === "1"
       ? "**/shots.spec.ts" // rewrites the tracked PNGs in design/shots; never part of an acceptance run
+      : process.env.HOUSECALL_TEST_LINDA === "1"
+      ? "**/linda.spec.ts" // adversarial UX walk-through; writes docs/ux/$HOUSECALL_UX_OUT, run on purpose
       : process.env.HOUSECALL_TEST_SHELL === "1"
       ? "**/shell.spec.ts"
+      : process.env.HOUSECALL_TEST_UISHOTS === "1"
+      ? "**/ui-shots.spec.ts" // writes docs/ux/mobile-after-part1; run on purpose
+      : process.env.HOUSECALL_TEST_MOBILE === "1"
+      ? "**/mobile.spec.ts"
+      : process.env.HOUSECALL_TEST_ONBOARDING === "1"
+      ? "**/onboarding.spec.ts"
       : process.env.HOUSECALL_TEST_REPORTS === "1"
       ? "**/reports.spec.ts"
       : process.env.HOUSECALL_TEST_PLEX === "1"
