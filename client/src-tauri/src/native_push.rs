@@ -20,7 +20,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
 // App commands are available only to the local webview; no remote IPC capability is granted.
 #[tauri::command]
 pub async fn native_push(
-    state: State<'_, Push<tauri::Wry>>, 
+    state: State<'_, Push<tauri::Wry>>,
     action: String,
     payload: serde_json::Value,
 ) -> Result<serde_json::Value, String> {

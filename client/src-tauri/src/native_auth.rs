@@ -18,8 +18,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
 }
 
 #[tauri::command]
-pub async fn native_auth<R: Runtime>(
-    state: State<'_, Auth<R>>,
+pub async fn native_auth(
+    state: State<'_, Auth<tauri::Wry>>,
     action: String,
     payload: serde_json::Value,
 ) -> Result<serde_json::Value, String> {
