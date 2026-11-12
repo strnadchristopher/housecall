@@ -20,6 +20,10 @@ export default defineConfig({
       ? "**/linda.spec.ts" // adversarial UX walk-through; writes docs/ux/$HOUSECALL_UX_OUT, run on purpose
       : process.env.HOUSECALL_TEST_SHELL === "1"
       ? "**/shell.spec.ts"
+      : process.env.HOUSECALL_TEST_MOBILE === "1"
+      ? "**/mobile.spec.ts"
+      : process.env.HOUSECALL_TEST_ONBOARDING === "1"
+      ? "**/onboarding.spec.ts"
       : process.env.HOUSECALL_TEST_REPORTS === "1"
       ? "**/reports.spec.ts"
       : process.env.HOUSECALL_TEST_PLEX === "1"

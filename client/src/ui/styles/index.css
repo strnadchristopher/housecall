@@ -122,9 +122,16 @@ a { color: var(--hc-accent); }
 .hc-live { color: var(--hc-live); }
 
 /* Shell */
-.hc-root { height: 100dvh; display: flex; flex-direction: column; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
-.hc-update { display: flex; align-items: center; justify-content: center; gap: var(--hc-space-3); padding: var(--hc-space-2) var(--hc-space-4); background: var(--hc-surface-raised); font-size: var(--hc-text-sm); }
-.hc-shell { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--hc-col-left) minmax(0, 1fr) auto; }
+/* Full screen: the root draws edge to edge (behind the status bar and home indicator); the edges that hold
+   controls pad themselves by the --hc-safe-* insets. Wide screens pad the whole shell; phones pad per edge. */
+.hc-root { height: 100dvh; display: flex; flex-direction: column; background: var(--hc-bg); }
+.hc-update {
+  display: flex; align-items: center; justify-content: center; gap: var(--hc-space-3); background: var(--hc-surface-raised); font-size: var(--hc-text-sm);
+  padding: calc(var(--hc-space-2) + var(--hc-safe-top)) calc(var(--hc-space-4) + var(--hc-safe-right)) var(--hc-space-2) calc(var(--hc-space-4) + var(--hc-safe-left));
+}
+/* The banner already cleared the status bar, so whatever follows it starts at zero. */
+.hc-update ~ * { --hc-safe-top: 0px; }
+.hc-shell { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--hc-col-left) minmax(0, 1fr) auto; padding: var(--hc-safe-top) var(--hc-safe-right) var(--hc-safe-bottom) var(--hc-safe-left); }
 .hc-left { display: flex; flex-direction: column; min-height: 0; padding: var(--hc-space-3) var(--hc-space-2) var(--hc-space-2) var(--hc-space-3); gap: var(--hc-space-2); }
 .hc-center {
   position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; margin-block: var(--hc-space-2);
@@ -289,9 +296,9 @@ a { color: var(--hc-accent); }
 .hc-media--pending { display: flex; align-items: center; gap: var(--hc-space-3); padding: var(--hc-space-3) var(--hc-space-4); color: var(--hc-text); }
 .hc-media--pending > span { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
 .hc-media--pending small { color: var(--hc-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hc-lightbox { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: max(var(--hc-space-6), calc(env(safe-area-inset-top) + var(--hc-space-6))) max(var(--hc-space-5), env(safe-area-inset-right)) max(var(--hc-space-6), env(safe-area-inset-bottom)) max(var(--hc-space-5), env(safe-area-inset-left)); background: color-mix(in oklab, var(--hc-bg) 92%, transparent); }
+.hc-lightbox { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: max(var(--hc-space-6), calc(var(--hc-safe-top) + var(--hc-space-6))) max(var(--hc-space-5), var(--hc-safe-right)) max(var(--hc-space-6), var(--hc-safe-bottom)) max(var(--hc-space-5), var(--hc-safe-left)); background: color-mix(in oklab, var(--hc-bg) 92%, transparent); }
 .hc-lightbox > img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: var(--hc-radius-md); }
-.hc-lightbox__bar { position: absolute; top: calc(env(safe-area-inset-top) + var(--hc-space-3)); right: calc(env(safe-area-inset-right) + var(--hc-space-3)); display: flex; gap: var(--hc-space-1); }
+.hc-lightbox__bar { position: absolute; top: calc(var(--hc-safe-top) + var(--hc-space-3)); right: calc(var(--hc-safe-right) + var(--hc-space-3)); display: flex; gap: var(--hc-space-1); }
 /* Snaps: view-once photos. The tile is a file-card cousin; the viewer is a solid full-screen surface. */
 .hc-snap { display: flex; align-items: center; gap: var(--hc-space-3); padding: var(--hc-space-2) var(--hc-space-4) var(--hc-space-2) var(--hc-space-3); border: 0; border-radius: var(--hc-radius-md); background: var(--hc-surface-raised); color: var(--hc-text); font: inherit; text-align: left; line-height: 1.3; cursor: pointer; }
 .hc-snap:hover:not(:disabled):not(.is-static) { background: color-mix(in oklab, var(--hc-text) 12%, var(--hc-surface-raised)); }
@@ -353,7 +360,7 @@ a { color: var(--hc-accent); }
 }
 /* On a phone it takes the header's full width, so no part of the channel title shows around it. */
 @media (max-width: 47.5em) {
-  .hc-incoming { top: 0; left: 0; translate: none; width: 100%; border-radius: 0 0 var(--hc-radius-md) var(--hc-radius-md); padding-top: max(var(--hc-space-3), env(safe-area-inset-top)); }
+  .hc-incoming { top: 0; left: 0; translate: none; width: 100%; border-radius: 0 0 var(--hc-radius-md) var(--hc-radius-md); padding-top: calc(var(--hc-space-3) + var(--hc-safe-top)); }
 }
 .hc-incoming__who { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
 .hc-incoming__who strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -418,7 +425,10 @@ a { color: var(--hc-accent); }
 .hc-settings__pane h2 { font-size: var(--hc-text-lg); }
 
 /* Onboarding */
-.hc-onb { flex: 1; min-height: 0; overflow-y: auto; display: grid; place-items: center; padding: var(--hc-space-5); }
+.hc-onb {
+  flex: 1; min-height: 0; overflow-y: auto; display: grid; place-items: center;
+  padding: calc(var(--hc-space-5) + var(--hc-safe-top)) calc(var(--hc-space-5) + var(--hc-safe-right)) calc(var(--hc-space-5) + var(--hc-safe-bottom)) calc(var(--hc-space-5) + var(--hc-safe-left));
+}
 .hc-onb__form { width: 100%; max-width: calc(var(--hc-space-8) * 5.5); display: flex; flex-direction: column; gap: var(--hc-space-3); padding: var(--hc-space-6); background: var(--hc-surface); border-radius: var(--hc-radius-lg); }
 .hc-onb__brand { display: flex; align-items: center; gap: var(--hc-space-2); font-size: var(--hc-text-lg); font-weight: var(--hc-weight-bold); }
 .hc-onb h1 { font-size: var(--hc-text-xl); line-height: 1.2; padding-top: var(--hc-space-3); }
@@ -445,13 +455,12 @@ a { color: var(--hc-accent); }
      overflow that focus or scrollIntoView can move, which collapsed the in-call phone layout. */
   .hc-shell { display: block; position: relative; overflow: hidden; overflow: clip; }
   .hc-left, .hc-center { position: absolute; inset: 0; transition: transform var(--hc-dur-base) var(--hc-ease-out), opacity var(--hc-dur-base) var(--hc-ease-out); }
-  .hc-left { padding: var(--hc-space-2) var(--hc-space-3); }
   .hc-center { margin: 0; border: 0; border-radius: 0; }
   .hc-shell[data-screen="list"] .hc-center { transform: translateX(100%); visibility: hidden; transition: transform var(--hc-dur-fast) var(--hc-ease-in), visibility 0s linear var(--hc-dur-fast); }
   .hc-shell[data-screen="main"] .hc-left { transform: translateX(-25%); opacity: 0; visibility: hidden; transition: transform var(--hc-dur-fast) var(--hc-ease-in), opacity var(--hc-dur-fast) var(--hc-ease-in), visibility 0s linear var(--hc-dur-fast); }
   .hc-right {
     position: absolute; inset: auto 0 0 0; width: auto; height: 78%;
-    border-radius: var(--hc-radius-lg) var(--hc-radius-lg) 0 0; padding-bottom: var(--hc-space-3);
+    border-radius: var(--hc-radius-lg) var(--hc-radius-lg) 0 0;
     transform: translateY(100%); visibility: hidden; transition: transform var(--hc-dur-fast) var(--hc-ease-in), visibility 0s linear var(--hc-dur-fast);
   }
   .hc-shell[data-sheet] .hc-right { transform: none; visibility: visible; transition: transform var(--hc-dur-slow) var(--hc-ease-out), visibility 0s; }
@@ -462,6 +471,12 @@ a { color: var(--hc-accent); }
   .hc-composer textarea { font-size: max(1rem, var(--hc-text-md)); min-height: var(--hc-space-7); padding-block: var(--hc-space-2); }
   .hc-header { padding: var(--hc-space-1) var(--hc-space-2); min-height: var(--hc-space-7); gap: 0; }
   .hc-header h1 { font-size: var(--hc-text-lg); }
+  /* Full screen: the header's own colour runs up behind the status bar; its controls sit below it. */
+  .hc-shell { padding: 0; }
+  .hc-center { padding: 0 var(--hc-safe-right) var(--hc-safe-bottom) var(--hc-safe-left); }
+  .hc-header { padding-top: calc(var(--hc-space-1) + var(--hc-safe-top)); min-height: calc(var(--hc-space-7) + var(--hc-safe-top)); }
+  .hc-left { padding: calc(var(--hc-space-2) + var(--hc-safe-top)) var(--hc-space-3) calc(var(--hc-space-2) + var(--hc-safe-bottom)) calc(var(--hc-space-3) + var(--hc-safe-left)); }
+  .hc-right { padding-bottom: calc(var(--hc-space-3) + var(--hc-safe-bottom)); }
   .hc-msg { padding-inline: var(--hc-space-3); }
   .hc-msg__bar { display: none; position: static; grid-column: 2; justify-self: start; opacity: 1; pointer-events: auto; }
   .hc-msg.is-open .hc-msg__bar { display: flex; flex-wrap: wrap; }
@@ -477,7 +492,10 @@ a { color: var(--hc-accent); }
   .hc-settings__nav .hc-channel { width: auto; }
   .hc-settings__nav .hc-label { padding-inline: 0; }
   .hc-settings__pane { padding-top: var(--hc-space-4); }
-  .hc-onb { padding: var(--hc-space-3); place-items: start center; padding-top: var(--hc-space-6); }
+  .hc-onb {
+    place-items: start center;
+    padding: calc(var(--hc-space-6) + var(--hc-safe-top)) calc(var(--hc-space-3) + var(--hc-safe-right)) calc(var(--hc-space-3) + var(--hc-safe-bottom)) calc(var(--hc-space-3) + var(--hc-safe-left));
+  }
   .hc-onb__form { padding: var(--hc-space-5); }
 }
 
@@ -533,7 +551,10 @@ a { color: var(--hc-accent); }
 
 /* Create-server wizard: a full-screen layer on the page background. Steps share one grid cell so a leaving step slides out in place. */
 .hc-wizard { position: fixed; inset: 0; z-index: 40; display: flex; justify-content: center; background: var(--hc-bg); color: var(--hc-text); }
-.hc-wizard__panel { position: relative; display: flex; flex-direction: column; gap: var(--hc-space-4); width: min(100%, 38rem); height: 100%; padding: var(--hc-space-5) var(--hc-space-4); }
+.hc-wizard__panel {
+  position: relative; display: flex; flex-direction: column; gap: var(--hc-space-4); width: min(100%, 38rem); height: 100%;
+  padding: calc(var(--hc-space-5) + var(--hc-safe-top)) calc(var(--hc-space-4) + var(--hc-safe-right)) calc(var(--hc-space-5) + var(--hc-safe-bottom)) calc(var(--hc-space-4) + var(--hc-safe-left));
+}
 .hc-wizard__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--hc-space-3); }
 .hc-wizard__head h1 { font-size: var(--hc-text-xl); line-height: 1.2; }
 .hc-wizard__dots { display: flex; align-items: center; gap: var(--hc-space-2); margin: 0; padding: 0; list-style: none; }
@@ -546,7 +567,7 @@ a { color: var(--hc-accent); }
 .hc-wizard__step h2 { font-size: var(--hc-text-lg); }
 .hc-wizard__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--hc-space-3); padding-top: var(--hc-space-2); }
 .hc-wizard__confirm { display: flex; flex-direction: column; gap: var(--hc-space-3); padding: var(--hc-space-4); border-radius: var(--hc-radius-md); background: var(--hc-surface-raised); }
-@media (max-width: 720px) { .hc-wizard__panel { padding-inline: var(--hc-space-3); } }
+@media (max-width: 720px) { .hc-wizard__panel { padding-inline: calc(var(--hc-space-3) + var(--hc-safe-left)) calc(var(--hc-space-3) + var(--hc-safe-right)); } }
 /* Wide screens: a centred panel hugging its content, so Back and Next sit by what they act on. */
 @media (min-width: 721px) {
   .hc-wizard { align-items: center; }
