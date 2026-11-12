@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { signIn } from "./helpers";
+import { openSignIn, signIn } from "./helpers";
 
 // The native command is instrumented here; Kotlin/Keystore/FCM/device tests are separate gates.
 test("native push opt-in and cleanup failures cross the real app session boundary", async ({ page, request }) => {
@@ -34,6 +34,7 @@ test("native push opt-in and cleanup failures cross the real app session boundar
   page.on("pageerror", error => consoleErrors.push(error.name));
   await page.goto("/");
   // The injected Tauri bridge makes this a native build, which asks for the server address.
+  await openSignIn(page, "native_fixture");
   await page.getByLabel("Server address", { exact: true }).fill("http://localhost:1420");
   await signIn(page, "native_fixture", password);
   const settings = page.getByTestId("screen-settings");

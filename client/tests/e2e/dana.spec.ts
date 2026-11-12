@@ -44,7 +44,7 @@ test("dana: join from a link, find the live call, send a GIF, start Watch Now, m
   await expect(dana.getByTestId("screen-join")).toBeVisible();
   notes.push(`invite screen offers: ${(await dana.getByTestId("screen-join").getByRole("button").allInnerTexts()).join(" | ")}`);
   await shot("1-invite");
-  await dana.getByLabel("Display name", { exact: true }).fill("dana");
+  await dana.getByLabel("Username", { exact: true }).fill("dana");
   await dana.getByLabel("Password, 12 or more characters").fill(password);
   await tap(dana.getByRole("button", { name: "Join", exact: true }));
   await expect(dana.getByTestId("screen-composer")).toBeVisible();

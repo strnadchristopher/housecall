@@ -112,6 +112,8 @@ export interface IdentityState {
   inviteToken: string;
   /** Non-secret hints about accounts used on this device, most recent first (web: this host only). */
   remembered: { origin: string; username: string }[];
+  /** Web build with a pending invite: a housecall:// link that opens the same invite in the installed app. */
+  inviteAppLink?: string;
   /** A stored session is being reopened (native cold start); show a quiet splash, not Log in. */
   restoring: boolean;
   /** An invite that arrived from outside while signed in; confirm before joining. `host` is for display. */
@@ -155,6 +157,8 @@ export interface IdentityProvider extends IdentityState {
   enterInvite(input: string, code?: string): void;
   /** Drop a pending invite without redeeming it. */
   clearInvite(): void;
+  /** "Not you?": stop suggesting this account on this device. Non-secret hint only; no session is touched. */
+  forgetAccount(origin: string, username: string): void;
   /** Signed in only: join the server from the invite that arrived by link. */
   confirmJoin(): void;
   dismissJoin(): void;

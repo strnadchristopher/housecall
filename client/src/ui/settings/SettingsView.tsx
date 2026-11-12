@@ -7,9 +7,9 @@ import { useNav, type SettingsSection } from "../shell/nav";
 import { ACCENTS, applyAccent, readAccent, type AccentId } from "../tokens/accent";
 import { usePhone } from "../tokens/motion";
 import { IntegrationSetup } from "../setup/IntegrationSetup";
-import { About, Account, Appearance, Channels, ServerProfile, Devices, Invites, Notifications, ReportProblem, Reports, Roles } from "./sections";
+import { About, AccessRequests, Account, Appearance, Channels, ServerProfile, Devices, InvitePeople, Invites, Notifications, ReportProblem, Reports, Roles } from "./sections";
 
-type Row = { id: SettingsSection; label: string; icon?: IconName; lead?: ReactNode; detail?: string };
+type Row = { id: SettingsSection; label: string; icon?: IconName; lead?: ReactNode; detail?: string; badge?: number };
 type Group = { label: string; rows: Row[] };
 
 /**
@@ -35,10 +35,13 @@ export function SettingsView() {
       ...(identity.owner ? [
         { id: "server", label: copy.settings.serverProfile, lead: <Avatar name={identity.serverName} src={identity.serverIconUrl} size="sm" shape="squircle" /> },
         { id: "invites", label: copy.settings.invites, icon: "link" },
+        { id: "access", label: copy.settings.access, icon: "door", badge: identity.accessRequestsPending },
         { id: "channels", label: copy.settings.channels, icon: "hash" },
         { id: "roles", label: copy.settings.roles, icon: "people" },
         { id: "reports", label: copy.settings.reports, icon: "file" },
-      ] as Row[] : []),
+      ] as Row[] : [
+        { id: "invite-people", label: copy.settings.invitePeople, icon: "link" },
+      ] as Row[]),
       { id: "integrations", label: copy.settings.integrations, icon: "chords" },
     ] },
     { label: copy.settings.help, rows: [
@@ -70,6 +73,7 @@ export function SettingsView() {
                   {group.rows.map(row => (
                     <li key={row.id}>
                       <NavRow label={row.label} detail={row.detail} current={!phone && section === row.id}
+                        badge={row.badge} badgeLabel={row.badge ? copy.settings.waiting(row.badge) : undefined}
                         lead={row.lead ?? (row.icon && <span className={row.id === "appearance" ? "hc-navrow__accent" : undefined}><Icon name={row.icon} /></span>)}
                         onClick={() => nav.set({ section: row.id })} />
                     </li>
@@ -90,7 +94,9 @@ export function SettingsView() {
             {section === "notifications" && <Notifications />}
             {section === "call" && <DeviceMenu />}
             {section === "report" && <ReportProblem />}
-            {section === "invites" && <Invites />}
+            {section === "invites" && identity.owner && <Invites />}
+            {section === "access" && identity.owner && <AccessRequests />}
+            {section === "invite-people" && <InvitePeople />}
             {section === "channels" && <Channels />}
             {section === "roles" && <Roles />}
             {section === "reports" && <Reports />}

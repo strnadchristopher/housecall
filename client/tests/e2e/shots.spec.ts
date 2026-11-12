@@ -41,7 +41,7 @@ test("screenshots", async ({ browser }) => {
   // Invite screen as seen by the invitee (phone, both schemes).
   for (const scheme of ["dark", "light"] as const) {
     const invitee = await open(browser, 390, 844, scheme, link);
-    await expect(invitee.page.getByLabel("Display name", { exact: true })).toBeVisible();
+    await expect(invitee.page.getByLabel("Username", { exact: true })).toBeVisible();
     await invitee.page.screenshot({ path: `${out}/invite-390-${scheme}.png` });
     await invitee.context.close();
   }
@@ -49,13 +49,10 @@ test("screenshots", async ({ browser }) => {
   for (const [width, height, size] of [[1440, 900, "1440"], [390, 844, "390"]] as const)
     for (const scheme of ["dark", "light"] as const) {
       const { context, page } = await open(browser, width, height, scheme);
-      await expect(page.getByTestId("screen-sign-in")).toBeVisible();
+      await expect(page.getByTestId("screen-welcome")).toBeVisible();
       await page.screenshot({ path: `${out}/sign-in-${size}-${scheme}.png` });
       if (width < 600) {
-        await page.getByLabel("Username", { exact: true }).fill("owner");
-        await page.getByLabel("Password", { exact: true }).fill(password);
-        await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).click();
-        await expect(page.getByTestId("screen-composer")).toBeVisible();
+        await signIn(page, "owner");
         // A phone opens in the chat; the list is the drawer behind the menu button.
         await openMenu(page);
         await page.waitForTimeout(600);
@@ -138,9 +135,7 @@ test("wizard screenshots", async ({ browser }) => {
       body.integrations = body.integrations.map((row: { id: string }) => row.id === "calls" ? { id: "calls", ready: false, missing: ["SFU_PUBLIC_IP", "SFU_PORT"] } : row);
       await route.fulfill({ json: body });
     });
-    await page.getByLabel("Username", { exact: true }).fill("owner");
-    await page.getByLabel("Password", { exact: true }).fill(password);
-    await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).click();
+    await signIn(page, "owner");
     await page.getByRole("button", { name: /^Servers:/ }).click();
     await page.getByRole("option", { name: "Create server" }).click();
     const wizard = page.getByTestId("create-server-wizard");
@@ -173,11 +168,8 @@ test("snap viewer screenshot", async ({ browser }) => {
   const photo = execFileSync("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "testsrc2=size=640x480", "-frames:v", "1", "-f", "image2", "-c:v", "mjpeg", "pipe:1"], { maxBuffer: 1 << 22 });
   const phone = async (name: string) => {
     const { context, page } = await open(browser, 390, 844, "dark");
-    await page.getByLabel("Username", { exact: true }).fill(name);
-    await page.getByLabel("Password", { exact: true }).fill(password);
-    await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).click();
     // Opens straight into general.
-    await expect(page.getByTestId("screen-composer")).toBeVisible();
+    await signIn(page, name);
     return { context, page };
   };
   const sender = await phone("owner");

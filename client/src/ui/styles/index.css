@@ -75,12 +75,17 @@ a { color: var(--hc-accent); }
   background: var(--hc-surface-raised); color: var(--hc-text); white-space: nowrap;
   transition: background-color var(--hc-dur-fast) var(--hc-ease-out), opacity var(--hc-dur-fast) var(--hc-ease-out);
 }
-.hc-btn:hover:not(:disabled) { background: color-mix(in oklab, var(--hc-text) 12%, var(--hc-surface-raised)); }
+/* Hover tints only where there is a real pointer: on touch screens a tap leaves "hover" stuck on the button. */
+@media (hover: hover) {
+  .hc-btn:hover:not(:disabled) { background: color-mix(in oklab, var(--hc-text) 12%, var(--hc-surface-raised)); }
+  .hc-btn--primary:hover:not(:disabled) { background: color-mix(in oklab, var(--hc-on-accent) 12%, var(--hc-accent)); }
+}
+.hc-btn:active:not(:disabled) { background: color-mix(in oklab, var(--hc-text) 12%, var(--hc-surface-raised)); }
 .hc-btn--primary { background: var(--hc-accent); color: var(--hc-on-accent); }
-.hc-btn--primary:hover:not(:disabled) { background: color-mix(in oklab, var(--hc-on-accent) 12%, var(--hc-accent)); }
+.hc-btn--primary:active:not(:disabled) { background: color-mix(in oklab, var(--hc-on-accent) 14%, var(--hc-accent)); }
 .hc-btn--danger { color: var(--hc-danger); }
 .hc-btn--text { background: none; color: var(--hc-text-muted); padding-inline: var(--hc-space-2); }
-.hc-btn--text:hover:not(:disabled) { background: none; color: var(--hc-text); }
+.hc-btn--text:hover:not(:disabled), .hc-btn--text:active:not(:disabled) { background: none; color: var(--hc-text); }
 .hc-btn[aria-busy] { opacity: 0.6; }
 .hc-field { display: flex; flex-direction: column; gap: var(--hc-space-1); min-width: 0; }
 .hc-field__label { font-size: var(--hc-text-sm); color: var(--hc-text-muted); }
@@ -467,21 +472,128 @@ a { color: var(--hc-accent); }
 .hc-swatch[aria-checked="true"] .hc-swatch__door { box-shadow: 0 0 0 2px var(--hc-surface), 0 0 0 4px var(--hc-swatch); }
 .hc-swatch__name { font-size: var(--hc-text-sm); color: var(--hc-text-muted); }
 .hc-swatch[aria-checked="true"] .hc-swatch__name { color: var(--hc-text); font-weight: var(--hc-weight-bold); }
+.hc-navrow > .hc-count { flex: none; }
+
+/* Settings lists with an action per row (invites, access requests): tiles like a NavRow group, no chevron. */
+.hc-tiles { display: flex; flex-direction: column; gap: 2px; }
+.hc-tile-row {
+  display: flex; align-items: center; gap: var(--hc-space-3); min-height: 60px;
+  padding: var(--hc-space-2) var(--hc-space-2) var(--hc-space-2) var(--hc-space-4); background: var(--hc-surface-raised); border-radius: var(--hc-radius-sm);
+}
+.hc-tile-row:first-child { border-top-left-radius: var(--hc-radius-md); border-top-right-radius: var(--hc-radius-md); }
+.hc-tile-row:last-child { border-bottom-left-radius: var(--hc-radius-md); border-bottom-right-radius: var(--hc-radius-md); }
+.hc-tile-row.is-empty { color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-tile-row__text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.hc-tile-row__text small { font-size: var(--hc-text-sm); }
+.hc-tile-row__message { overflow-wrap: anywhere; padding-block: 2px; }
+.hc-tile-row__actions { display: flex; align-items: center; gap: var(--hc-space-1); flex: none; }
+.hc-tile-row--request { align-items: flex-start; padding-block: var(--hc-space-3); }
+.hc-tile-row--request .hc-tile-row__actions { align-self: center; }
+.hc-btn--text.hc-btn--danger-text { color: var(--hc-danger); }
+.hc-btn--text.hc-btn--danger-text:hover:not(:disabled) { color: color-mix(in oklab, var(--hc-danger) 80%, var(--hc-text)); }
+.hc-invites .hc-label { padding: var(--hc-space-3) 0 0; }
+.hc-confirm-join__panel .hc-logo { width: 44px; height: 44px; }
+.hc-invites__choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--hc-space-3); }
+.hc-invites__result { display: flex; flex-direction: column; gap: var(--hc-space-3); padding: var(--hc-space-4); border-radius: var(--hc-radius-md); background: color-mix(in oklab, var(--hc-accent) 9%, var(--hc-surface-raised)); }
+.hc-field--mono input { font: var(--hc-text-sm) / 1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: 0.01em; }
+.hc-switchrow { min-height: 52px; padding-inline: var(--hc-space-4); border-radius: var(--hc-radius-md); background: var(--hc-surface-raised); gap: var(--hc-space-3); font-size: var(--hc-text-md); }
+.hc-switchrow span { flex: 1; }
+.hc-switchrow input[role="switch"] {
+  appearance: none; -webkit-appearance: none; order: 2; position: relative; width: 44px; height: 26px; flex: none; margin: 0; cursor: pointer;
+  border-radius: 13px; background: color-mix(in oklab, var(--hc-text) 22%, var(--hc-surface-raised));
+  transition: background-color var(--hc-dur-base) var(--hc-ease-out);
+}
+.hc-switchrow input[role="switch"]::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--hc-text);
+  transition: transform var(--hc-dur-base) var(--hc-ease-spring), background-color var(--hc-dur-base) var(--hc-ease-out);
+}
+.hc-switchrow input[role="switch"]:checked { background: var(--hc-accent); }
+.hc-switchrow input[role="switch"]:checked::after { transform: translateX(18px); background: var(--hc-on-accent); }
+.hc-lede { font-size: var(--hc-text-md); line-height: 1.5; max-width: 34rem; }
+.hc-btn--start { align-self: flex-start; }
 .hc-settings__pane { overflow-y: auto; padding: 0 var(--hc-space-5) var(--hc-space-5); display: flex; flex-direction: column; gap: var(--hc-space-3); }
 .hc-settings__pane > * { max-width: calc(var(--hc-space-8) * 8); }
 .hc-settings__pane h2 { font-size: var(--hc-text-lg); }
 
-/* Onboarding */
-.hc-onb {
-  flex: 1; min-height: 0; overflow-y: auto; display: grid; place-items: center;
-  padding: calc(var(--hc-space-5) + var(--hc-safe-top)) calc(var(--hc-space-5) + var(--hc-safe-right)) calc(var(--hc-space-5) + var(--hc-safe-bottom)) calc(var(--hc-space-5) + var(--hc-safe-left));
+/* Onboarding: full screen on the page itself, no card. One column; on phones the actions sit at the thumb. */
+.hc-onb { position: relative; flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; display: flex; justify-content: center; background: var(--hc-bg); }
+.hc-onb__screen {
+  position: relative; width: 100%; max-width: calc(400px + var(--hc-space-5) * 2); min-height: 100%; display: flex; flex-direction: column;
+  padding: calc(var(--hc-space-2) + var(--hc-safe-top)) calc(var(--hc-space-5) + var(--hc-safe-right)) calc(var(--hc-space-4) + var(--hc-safe-bottom)) calc(var(--hc-space-5) + var(--hc-safe-left));
 }
-.hc-onb__form { width: 100%; max-width: calc(var(--hc-space-8) * 5.5); display: flex; flex-direction: column; gap: var(--hc-space-3); padding: var(--hc-space-6); background: var(--hc-surface); border-radius: var(--hc-radius-lg); }
-.hc-onb__brand { display: flex; align-items: center; gap: var(--hc-space-2); font-size: var(--hc-text-lg); font-weight: var(--hc-weight-bold); }
-.hc-onb h1 { font-size: var(--hc-text-xl); line-height: 1.2; padding-top: var(--hc-space-3); }
-.hc-onb__host { color: var(--hc-text-muted); font-size: var(--hc-text-sm); overflow-wrap: anywhere; }
-.hc-onb__go { min-height: var(--hc-space-7); margin-top: var(--hc-space-2); font-size: var(--hc-text-md); }
-.hc-onb__modes { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--hc-space-2); }
+.hc-onb__form { flex: 1; display: flex; flex-direction: column; gap: var(--hc-space-4); }
+.hc-onb__top { display: flex; align-items: center; min-height: var(--hc-space-7); margin-inline-start: calc(var(--hc-space-2) * -1); }
+.hc-onb__title { display: flex; flex-direction: column; align-items: flex-start; gap: var(--hc-space-1); padding-block: var(--hc-space-3) var(--hc-space-2); }
+.hc-onb__title h1 { font-size: var(--hc-text-xl); line-height: 1.15; font-weight: var(--hc-weight-bold); overflow-wrap: anywhere; }
+.hc-onb__title p { color: var(--hc-text-muted); overflow-wrap: anywhere; }
+.hc-onb__title .hc-onb__door { margin-bottom: var(--hc-space-3); }
+/* A lit doorway carrying an initial: the server you are walking into. Quiet ones (accounts) are unlit. */
+.hc-onb__door {
+  display: inline-grid; place-items: center; flex: none; width: 52px; height: 60px; padding-top: 8px;
+  border-radius: 50% 50% var(--hc-radius-sm) var(--hc-radius-sm) / 44% 44% var(--hc-radius-sm) var(--hc-radius-sm);
+  background: var(--hc-accent); color: var(--hc-on-accent);
+  font-family: var(--hc-font-initial); font-size: var(--hc-text-xl); font-weight: var(--hc-weight-bold); line-height: 1;
+}
+.hc-onb__door.is-quiet { background: color-mix(in oklab, var(--hc-text) 16%, var(--hc-surface-raised)); color: var(--hc-text); }
+.hc-onb__door.is-small { width: 36px; height: 42px; padding-top: 5px; font-size: var(--hc-text-md); }
+.hc-onb__door.is-tiny { width: 24px; height: 28px; padding-top: 3px; font-size: var(--hc-text-xs); }
+.hc-onb__help { color: var(--hc-text-muted); font-size: var(--hc-text-sm); margin-top: calc(var(--hc-space-2) * -1); }
+.hc-onb__center { text-align: center; margin-top: 0; }
+.hc-onb__actions { margin-top: auto; display: flex; flex-direction: column; gap: var(--hc-space-2); padding-top: var(--hc-space-4); }
+.hc-onb__actions > .hc-btn { min-height: 52px; width: 100%; font-size: var(--hc-text-md); border-radius: var(--hc-radius-md); text-decoration: none; }
+.hc-onb__actions > .hc-btn--text { min-height: var(--hc-space-7); }
+.hc-onb__quiet { align-self: center; }
+/* Request access: the label over its one-line hint, the chevron centred on both. */
+.hc-onb__ask .hc-navrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--hc-space-3); row-gap: 2px; min-height: 64px; padding-block: var(--hc-space-3); }
+.hc-onb__ask .hc-navrow__label { grid-row: 1; font-weight: var(--hc-weight-bold); }
+.hc-onb__ask .hc-navrow__detail { grid-row: 2; grid-column: 1; max-width: none; white-space: normal; }
+.hc-onb__ask .hc-navrow__chev { grid-row: 1 / span 2; grid-column: 2; }
+.hc-onb__account { display: flex; align-items: center; gap: var(--hc-space-3); min-height: 60px; padding: var(--hc-space-2) var(--hc-space-2) var(--hc-space-2) var(--hc-space-3); border-radius: var(--hc-radius-md); background: var(--hc-surface-raised); }
+.hc-onb__account strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--hc-text-md); }
+.hc-navrow__lead .hc-onb__door { width: 24px; }
+
+/* Pending requests: tiles parted by a sliver of the page, like a NavRow group, each with its own action. */
+.hc-requests { display: flex; flex-direction: column; gap: 2px; }
+.hc-request { display: flex; align-items: center; gap: var(--hc-space-3); min-height: 64px; padding: var(--hc-space-2) var(--hc-space-2) var(--hc-space-2) var(--hc-space-3); background: var(--hc-surface-raised); border-radius: var(--hc-radius-sm); }
+.hc-request:first-child { border-top-left-radius: var(--hc-radius-md); border-top-right-radius: var(--hc-radius-md); }
+.hc-request:last-child { border-bottom-left-radius: var(--hc-radius-md); border-bottom-right-radius: var(--hc-radius-md); }
+.hc-request__text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.hc-request__text strong, .hc-request__text small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-request__text small { font-size: var(--hc-text-sm); }
+.hc-request[data-status="approved"] .hc-request__status { color: var(--hc-text); font-weight: var(--hc-weight-bold); }
+.hc-request[data-status="declined"] .hc-request__status { color: var(--hc-danger); }
+.hc-request[data-status="pending"] .hc-onb__door { background: color-mix(in oklab, var(--hc-text) 16%, var(--hc-surface-raised)); color: var(--hc-text); }
+
+/* Welcome. The mark at the scale of a house: the stem rises off the top edge, the doorway is lit and its light
+   falls across the ground behind the words and the buttons. Everything is visible without any animation. */
+.hc-onb__screen.hc-welcome { padding-top: 0; }
+.hc-welcome__scene { position: relative; z-index: 0; display: block; width: 100%; height: auto; max-height: 50dvh; flex: none; overflow: visible; pointer-events: none; }
+.hc-welcome__house { fill: color-mix(in oklab, var(--hc-text) 9%, var(--hc-surface)); }
+.hc-welcome__lit { fill: var(--hc-accent); }
+.hc-welcome__leaf { fill: var(--hc-on-accent); opacity: 0.38; transform-box: fill-box; transform-origin: left center; }
+.hc-welcome__stop { stop-color: var(--hc-accent); }
+.hc-welcome__words, .hc-welcome .hc-onb__actions { position: relative; z-index: 1; }
+.hc-welcome__words { display: flex; flex-direction: column; gap: var(--hc-space-1); padding-top: var(--hc-space-5); }
+.hc-welcome__words h1 { font-size: 2.25rem; line-height: 1.05; font-weight: var(--hc-weight-bold); letter-spacing: 0.005em; }
+.hc-welcome__words p { font-size: var(--hc-text-lg); color: var(--hc-text-muted); }
+.hc-welcome__pending { margin-bottom: var(--hc-space-2); }
+@media (prefers-color-scheme: light) { .hc-welcome__house { fill: var(--hc-surface-raised); } }
+@media (prefers-reduced-motion: no-preference) {
+  /* The door swings open once; its resting state (the end of the motion) is the drawn state. */
+  .hc-welcome__leaf { animation: hc-door 900ms var(--hc-ease-spring) 250ms backwards; }
+  @keyframes hc-door { from { transform: scaleX(3.2); } }
+  .hc-launch .hc-logo__leaf { animation: hc-door-mark 1.4s var(--hc-ease-out) infinite alternate; }
+  @keyframes hc-door-mark { from { transform: scaleX(1); } to { transform: scaleX(0.3); } }
+}
+.hc-launch { align-items: center; }
+.hc-launch .hc-logo { width: 64px; height: 64px; }
+@media (min-width: 47.51em) {
+  .hc-onb__screen { justify-content: center; padding-top: calc(var(--hc-space-6) + var(--hc-safe-top)); padding-bottom: calc(var(--hc-space-6) + var(--hc-safe-bottom)); }
+  .hc-onb__form { flex: none; }
+  .hc-onb__actions { margin-top: var(--hc-space-2); }
+  .hc-onb__screen.hc-welcome { justify-content: flex-start; }
+  .hc-welcome .hc-onb__actions { margin-top: var(--hc-space-6); }
+}
 
 /* Narrow desktop, tablet, phone landscape: two columns, right column as a sheet from the edge */
 @media (max-width: 68.75em) {
@@ -566,11 +678,6 @@ a { color: var(--hc-accent); }
   .hc-settings__nav .hc-navrow { min-height: 52px; font-size: var(--hc-text-md); }
   .hc-settings__pane { padding-top: var(--hc-space-3); }
   .hc-swatches { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: none; }
-  .hc-onb {
-    place-items: start center;
-    padding: calc(var(--hc-space-6) + var(--hc-safe-top)) calc(var(--hc-space-3) + var(--hc-safe-right)) calc(var(--hc-space-3) + var(--hc-safe-bottom)) calc(var(--hc-space-3) + var(--hc-safe-left));
-  }
-  .hc-onb__form { padding: var(--hc-space-5); }
 }
 
 /* Enter/exit motion for things that mount and unmount (see Presence in kit.tsx). Opacity and transform only.
@@ -578,6 +685,25 @@ a { color: var(--hc-accent); }
 .hc-presence { display: contents; }
 .hc-presence[data-state="exit"] { pointer-events: none; }
 .hc-composer .hc-anim-pop { --hc-pop-y: var(--hc-space-1); transform-origin: bottom left; }
+/* Confirm joining from an outside link: a sheet on phones, a small panel on wide screens. Raised by tone and a
+   self-coloured lip, no shadow. */
+.hc-confirm-join { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: var(--hc-space-4); }
+.hc-confirm-join__scrim { position: absolute; inset: 0; background: color-mix(in oklab, var(--hc-bg) 70%, transparent); cursor: default; }
+.hc-confirm-join__panel {
+  position: relative; width: min(100%, 24rem); display: flex; flex-direction: column; align-items: flex-start; gap: var(--hc-space-2);
+  padding: var(--hc-space-5); border-radius: var(--hc-radius-lg);
+  background: color-mix(in oklab, var(--hc-text) 6%, var(--hc-surface-raised));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--hc-text) 12%, var(--hc-surface-raised)), inset 0 1px 0 color-mix(in oklab, var(--hc-text) 10%, transparent);
+}
+.hc-confirm-join__panel h2 { font-size: var(--hc-text-lg); line-height: 1.25; overflow-wrap: anywhere; padding-top: var(--hc-space-2); }
+.hc-confirm-join__panel p { color: var(--hc-text-muted); }
+.hc-confirm-join__actions { align-self: stretch; display: flex; flex-direction: column; gap: var(--hc-space-1); padding-top: var(--hc-space-3); }
+.hc-confirm-join__actions .hc-btn { min-height: 48px; font-size: var(--hc-text-md); }
+@media (max-width: 47.5em) {
+  .hc-confirm-join { place-items: end stretch; padding: 0; }
+  .hc-confirm-join__panel { width: 100%; border-radius: var(--hc-radius-lg) var(--hc-radius-lg) 0 0; padding-bottom: calc(var(--hc-space-4) + var(--hc-safe-bottom)); }
+  .hc-confirm-join__actions .hc-btn { min-height: 52px; }
+}
 .hc-settings-layer { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; background: var(--hc-surface); }
 @media (prefers-reduced-motion: no-preference) {
   .hc-anim-slide-right { animation: hc-slide-in var(--hc-dur-base) var(--hc-ease-out); }
@@ -585,6 +711,11 @@ a { color: var(--hc-accent); }
   @keyframes hc-slide-back { from { opacity: 0.4; transform: translateX(calc(var(--hc-space-4) * -1)); } }
   .hc-anim-pop { --hc-pop-y: calc(var(--hc-space-1) * -1); transform-origin: top left; animation: hc-pop-in var(--hc-dur-base) var(--hc-ease-out); }
   .hc-anim-fade { animation: hc-fade-in var(--hc-dur-base) var(--hc-ease-out); }
+  .hc-anim-rise { animation: hc-rise-in var(--hc-dur-slow) var(--hc-ease-out); }
+  .hc-presence[data-state="exit"] .hc-anim-rise { animation: hc-rise-out var(--hc-dur-base) var(--hc-ease-in) forwards; }
+  .hc-presence[data-state="exit"] .hc-anim-fade { animation: hc-fade-out var(--hc-dur-base) var(--hc-ease-in) forwards; }
+  @keyframes hc-rise-in { from { transform: translateY(var(--hc-space-6)); opacity: 0.6; } }
+  @keyframes hc-rise-out { to { transform: translateY(var(--hc-space-6)); opacity: 0; } }
   .hc-presence[data-state="exit"] > .hc-anim-slide-right { animation: hc-slide-out var(--hc-dur-base) var(--hc-ease-in) forwards; }
   .hc-presence[data-state="exit"] > .hc-anim-pop { animation: hc-pop-out var(--hc-dur-base) var(--hc-ease-in) forwards; }
   .hc-presence[data-state="exit"] > .hc-anim-fade { animation: hc-fade-out var(--hc-dur-base) var(--hc-ease-in) forwards; }

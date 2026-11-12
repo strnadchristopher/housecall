@@ -30,6 +30,8 @@ const ICONS = {
   menu: "M3.5 5.5h13M3.5 10h13M3.5 14.5h8",
   // A lit doorway inside the doorway: the accent colour.
   accent: "M4.5 17V9.5a5.5 5.5 0 0 1 11 0V17zM8.2 17v-5.6a1.8 1.8 0 0 1 3.6 0V17",
+  // The doorway with its knob, standing on a threshold: someone at the door.
+  door: "M5.5 16.5V9.5a4.5 4.5 0 0 1 9 0v7M3.5 16.5h13M11.9 11.8v.3",
   bell: "M5.8 13.6V9.2a4.2 4.2 0 0 1 8.4 0v4.4l1.3 1.7h-11zM8.4 17.4h3.2",
   hash: "M8.3 3.5l-1.6 13M13.3 3.5l-1.6 13M4.5 7.5h12M3.5 12.5h12",
   info: "M10 3a7 7 0 1 0 0 14a7 7 0 0 0 0-14M10 9.2v4.6M10 6.4v.2",
@@ -219,16 +221,21 @@ export function Field({ label, hideLabel, className, ...rest }: { label: string;
  * A row that navigates somewhere: full width, its own surface, a trailing chevron. The accessible name is the
  * label alone; the detail (a current value) is read as the description. `lead` is a bare icon or avatar.
  */
-export function NavRow({ label, detail, lead, current, tone, onClick }: {
+export function NavRow({ label, detail, lead, badge, badgeLabel, current, tone, onClick }: {
   label: string; detail?: string; lead?: ReactNode; current?: boolean; tone?: "danger"; onClick(): void;
+  /** A count that wants attention (accent), read as part of the description, e.g. "2 waiting". */
+  badge?: number; badgeLabel?: string;
 }) {
   const detailId = useId();
+  const badgeId = useId();
+  const described = [detail && detailId, badge ? badgeId : ""].filter(Boolean).join(" ");
   return (
     <button type="button" className={cx("hc-navrow", current && "is-current", tone === "danger" && "is-danger")}
-      aria-current={current ? "page" : undefined} aria-label={label} aria-describedby={detail ? detailId : undefined} onClick={onClick}>
+      aria-current={current ? "page" : undefined} aria-label={label} aria-describedby={described || undefined} onClick={onClick}>
       {lead && <span className="hc-navrow__lead" aria-hidden="true">{lead}</span>}
       <span className="hc-navrow__label">{label}</span>
       {detail && <span className="hc-navrow__detail" id={detailId}>{detail}</span>}
+      {!!badge && <span className="hc-count" id={badgeId} aria-label={badgeLabel}>{badge}</span>}
       <span className="hc-navrow__chev" aria-hidden="true"><Icon name="right" /></span>
     </button>
   );

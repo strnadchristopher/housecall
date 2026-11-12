@@ -1,13 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
-import { password, setup } from "./helpers";
+import { setup, signIn } from "./helpers";
 
 /** The server is shared across this file: the first test sets it up, the rest sign in as that owner. */
 async function signInOwner(page: Page) {
   await page.goto("/");
-  await page.getByLabel("Username", { exact: true }).fill("owner");
-  await page.getByLabel("Password", { exact: true }).fill(password);
-  await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page.getByTestId("screen-composer")).toBeVisible();
+  await signIn(page, "owner");
 }
 
 const phone = { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true };

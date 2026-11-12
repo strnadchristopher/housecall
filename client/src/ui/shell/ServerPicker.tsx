@@ -10,7 +10,8 @@ import { CreateServerWizard } from "../setup/CreateServerWizard";
  * The server picker. The list stays mounted and is moved with transform and
  * opacity only, so a click mid-animation reverses it from where it is.
  * Up, Down, Home, End, Enter, Escape and type-ahead work; focus returns to
- * the trigger on close; "Add Server" is the last row on native builds.
+ * the trigger on close. "Add server" takes an invite code or link (and, in the app, a server address);
+ * a code for this host joins straight away.
  */
 export function ServerPicker() {
   const chat = useChat();
@@ -27,9 +28,9 @@ export function ServerPicker() {
   const current = chat.servers.find(server => server.current);
   const manyHosts = new Set(chat.servers.map(server => server.host)).size > 1;
   const [creating, setCreating] = useState(false);
-  const addRow = identity.native ? chat.servers.length : -1;
-  const createRow = identity.owner ? chat.servers.length + (identity.native ? 1 : 0) : -1;
-  const rows = chat.servers.length + (identity.native ? 1 : 0) + (identity.owner ? 1 : 0);
+  const addRow = chat.servers.length;
+  const createRow = identity.owner ? chat.servers.length + 1 : -1;
+  const rows = chat.servers.length + 1 + (identity.owner ? 1 : 0);
 
   const close = (refocus = true) => {
     setOpen(false); setAdding(false); setAddError("");
@@ -105,7 +106,7 @@ export function ServerPicker() {
             {server.mentions > 0 && <span className="hc-dot" role="img" aria-label={copy.picker.mentions(server.mentions)} />}
           </button>
         ))}
-        {identity.native && !adding && (
+        {!adding && (
           <button type="button" role="option" aria-selected={false} data-index={addRow} tabIndex={index === addRow ? 0 : -1}
             className="hc-picker__row hc-picker__add" style={{ ["--i" as string]: addRow }} onClick={() => choose(addRow)}>
             <Icon name="plus" /><strong>{copy.picker.add}</strong>
@@ -117,9 +118,9 @@ export function ServerPicker() {
             <Icon name="plus" /><strong>{copy.picker.create}</strong>
           </button>
         )}
-        {identity.native && adding && (
+        {adding && (
           <form className="hc-picker__form" onSubmit={add}>
-            <Field label={copy.onboarding.addressOrLink} value={input} onChange={event => setInput(event.target.value)} autoFocus autoCapitalize="none" required />
+            <Field label={identity.native ? copy.onboarding.addressOrLink : copy.onboarding.inviteCodeOrLink} value={input} onChange={event => setInput(event.target.value)} autoFocus autoCapitalize="none" required />
             <ErrorLine text={addError} />
             <Button kind="primary" type="submit">{copy.onboarding.connect}</Button>
           </form>

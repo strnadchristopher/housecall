@@ -1,6 +1,6 @@
 import { test, expect, type BrowserContext } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
-import { openMenu } from "./helpers";
+import { fillSignIn, logInButton, openMenu } from "./helpers";
 const password = "correct horse battery staple";
 test("three browsers exchange real fake-device audio/video through the Rust SFU", async ({
   browser,
@@ -78,16 +78,11 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
       });
       const page = await context.newPage();
       await page.goto("/");
-      await page.getByLabel("Username", { exact: true }).fill(username);
-      await page.getByLabel("Password", { exact: true }).fill(password);
+      await fillSignIn(page, username, password);
       const login = page.waitForResponse((response) =>
         response.url().endsWith("/api/login"),
       );
-      await page
-        .getByTestId("screen-sign-in")
-        .getByRole("button", { name: "Sign in", exact: true })
-        .first()
-        .click();
+      await logInButton(page).click();
       const loginData = await (await login).json();
       voiceHeaders ??= {
         Authorization: `Bearer ${loginData.token}`,
@@ -381,9 +376,8 @@ test("call stage owns center", async ({ browser, request }) => {
       contexts.push(context);
       const page = await context.newPage();
       await page.goto("/");
-      await page.getByLabel("Username", { exact: true }).fill(username);
-      await page.getByLabel("Password", { exact: true }).fill(password);
-      await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).first().click();
+      await fillSignIn(page, username, password);
+      await logInButton(page).click();
       await expect(page.getByTestId("screen-composer")).toBeVisible({ timeout: 30000 });
     }
     const [host, guest] = contexts.map(context => context.pages()[0]);
@@ -435,9 +429,8 @@ test("call stage on a phone: stage is the screen, chat opens as the sheet", asyn
   try {
     const page = await context.newPage();
     await page.goto("/");
-    await page.getByLabel("Username", { exact: true }).fill("owner");
-    await page.getByLabel("Password", { exact: true }).fill(password);
-    await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).first().click();
+    await fillSignIn(page, "owner", password);
+    await logInButton(page).click();
     await expect(page.getByTestId("screen-composer")).toBeVisible();
     await openMenu(page);
     await page.getByRole("button", { name: /^Open / }).first().click();
@@ -474,9 +467,8 @@ test("joins and shows a warning when a saved device is missing",async ({ browser
     });
     const page = await context.newPage();
     await page.goto("/");
-    await page.getByLabel("Username", { exact: true }).fill("owner");
-    await page.getByLabel("Password", { exact: true }).fill(password);
-    await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).first().click();
+    await fillSignIn(page, "owner", password);
+    await logInButton(page).click();
     await expect(page.getByTestId("screen-composer")).toBeVisible({ timeout: 30000 });
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     const settings = page.getByTestId("screen-settings");

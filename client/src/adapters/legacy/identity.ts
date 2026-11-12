@@ -12,7 +12,7 @@ import { iconPath } from "../../data/people";
 import { reportScreenshot, submitReport } from "../../transport/reports";
 import { currentUser, person, hostLabel, type Housecall } from "./chat";
 import { isNative, parseServerInput, type HostEntry, type Hosts } from "./hosts";
-import { lastConversation, readAccounts, remember } from "../../state/remembered";
+import { forgetAccount, lastConversation, readAccounts, remember } from "../../state/remembered";
 
 export interface Updater {
   state?: UpdateState;
@@ -54,9 +54,10 @@ export function useLegacyIdentity(
   /** Join the invite's server. Same host: redeem now. Another host: connect it (its invite token waits for sign-in). */
   const redeem = (token: string) => c.run(async () => {
     const result = await c.api.post<{ server_id: string; joined: boolean }>("/api/invites/redeem", { token });
-    await c.refresh();
-    // Only a new membership changes the server list, which is what makes the chat adapter open it.
+    // Only a new membership changes the server list, which is what makes the chat adapter open it. The wish has
+    // to be registered before the refresh: the adapter checks for it when the longer list renders.
     if (result.joined) hosts.directory.want(host.id, result.server_id);
+    await c.refresh();
   });
   const redeemOrAdd = (origin: string, token: string) => {
     if (origin === hostOrigin) void redeem(token);
@@ -156,6 +157,8 @@ export function useLegacyIdentity(
     remembered: readAccounts()
       .filter(account => isNative() || account.origin === location.origin)
       .map(({ origin, username }) => ({ origin, username })),
+    inviteAppLink: !isNative() && inviteToken && /^[a-f0-9]{64}$/.test(inviteToken)
+      ? `housecall://invite?code=${encodeInviteCode(address || location.origin, inviteToken)}` : undefined,
     restoring: host.restoring && !c.auth,
     pendingJoin: joinOffer ? { host: new URL(joinOffer.origin).host } : undefined,
     pendingRequests: pendingNow.map(request => ({ ...request, status: requestStatus[request.id] ?? "pending" })),
@@ -210,6 +213,7 @@ export function useLegacyIdentity(
       setInviteToken(token);
     },
     clearInvite: () => setInviteToken(""),
+    forgetAccount: (origin, username) => { forgetAccount(origin, username); setPendingVersion(n => n + 1); },
     confirmJoin: () => {
       const offer = joinOffer;
       setJoinOffer(undefined);

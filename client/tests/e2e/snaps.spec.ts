@@ -1,12 +1,12 @@
 import { test, expect, devices } from "@playwright/test";
 import { deflateSync } from "node:zlib";
 import type { Page } from "@playwright/test";
+import { fillSignIn, logInButton } from "./helpers";
 
 /** A phone shows the conversation list first, so sign in and then open the general channel. */
 async function phoneSignIn(page: Page, username: string, password: string) {
-  await page.getByLabel("Username", { exact: true }).fill(username);
-  await page.getByLabel("Password", { exact: true }).fill(password);
-  await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).click();
+  await fillSignIn(page, username, password);
+  await logInButton(page).click();
   await openGeneral(page);
 }
 async function openGeneral(page: Page) {

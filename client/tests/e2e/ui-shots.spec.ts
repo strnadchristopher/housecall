@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { test, expect, type Browser, type Page } from "@playwright/test";
-import { accept, invite, openMenu, password, send, setup } from "./helpers";
+import { accept, invite, openMenu, send, setup, signIn } from "./helpers";
 
 /**
  * Screenshots of the mobile UI work (part 1): chat, drawer, settings root and a section, Appearance in
@@ -16,10 +16,7 @@ async function open(browser: Browser, size: { width: number; height: number }, s
   const context = await browser.newContext({ viewport: size, colorScheme: scheme, deviceScaleFactor: 2, ...(phone ? { hasTouch: true, isMobile: true } : {}) });
   const page = await context.newPage();
   await page.goto("/");
-  await page.getByLabel("Username", { exact: true }).fill("owner");
-  await page.getByLabel("Password", { exact: true }).fill(password);
-  await page.getByTestId("screen-sign-in").getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page.getByTestId("screen-composer")).toBeVisible();
+  await signIn(page, "owner");
   return { context, page, phone };
 }
 const shot = (page: Page, name: string) => page.waitForTimeout(450).then(() => page.screenshot({ path: `${out}/${name}.png`, animations: "disabled" }));

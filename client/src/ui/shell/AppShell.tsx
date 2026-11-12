@@ -15,6 +15,7 @@ import { usePhone, useSheet } from "../tokens/motion";
 import { ServerPicker } from "./ServerPicker";
 import { ChannelList } from "./ChannelList";
 import { CallDock } from "./CallDock";
+import { ConfirmJoin } from "./ConfirmJoin";
 import { UserBar } from "./UserBar";
 import { useDrawerDrag } from "./drawer";
 import { NavContext, isStaged, type Nav } from "./nav";
@@ -72,6 +73,7 @@ export function AppShell() {
   return (
     <NavContext.Provider value={{ ...nav, set }}>
       <IncomingCall />
+      <ConfirmJoin />
       <div ref={shell} className={cx("hc-shell", phone && "is-phone")} data-screen={nav.screen} data-sheet={nav.sheet ? "" : undefined}>
         <nav ref={left} className="hc-left" aria-label={copy.app.name} inert={phone && !drawerOpen} {...(phone ? drag : {})}>
           <ServerPicker />

@@ -18,7 +18,7 @@ test("shell: picker, channel, call, composer, tabs, direct messages", async ({ p
   await page.route("**/api/giphy/media/*", route => route.fulfill({ status: 200, contentType: "video/mp4", body: Buffer.alloc(16) }));
   await setup(page, "owner");
 
-  // Picker: keyboard, focus return, no Add Server on the web build.
+  // Picker: keyboard, focus return. The web build offers Add server too (it takes invite codes for this host).
   const trigger = page.getByRole("button", { name: /^Servers:/ });
   const list = page.locator(".hc-picker__list");
   await trigger.focus();
@@ -33,7 +33,7 @@ test("shell: picker, channel, call, composer, tabs, direct messages", async ({ p
   const first = (await rows.first().locator("strong").innerText()).toLowerCase();
   await page.keyboard.type(first.slice(0, 2));
   await expect(rows.first()).toBeFocused();
-  await expect(list.getByRole("option", { name: /Add/ })).toHaveCount(0);
+  await expect(list.getByRole("option", { name: /Add server/i })).toHaveCount(1);
   await page.keyboard.press("Escape");
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
   await expect(trigger).toBeFocused();

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ACCENTS, type AccentId } from "../tokens/accent";
-import type { InviteResult } from "../../core/identity";
+import type { AccessRequestRecord, InviteRecord, InviteResult } from "../../core/identity";
 import { useChat, useIdentity } from "../../core/context";
 import { copy } from "../copy";
 import { Avatar, Button, Field, Icon, MediaDropzone } from "../kit";
@@ -108,38 +108,164 @@ export function Notifications() {
   );
 }
 
+/** A read-only value with its own Copy button that says Copied for a moment. */
+function CopyField({ label, value, testId, mono }: { label: string; value: string; testId: string; mono?: boolean }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => { setCopied(false); }, [value]);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [copied]);
+  const write = async () => {
+    try { await navigator.clipboard.writeText(value); setCopied(true); } catch { setCopied(false); }
+  };
+  return (
+    <div className="hc-copy">
+      <Field label={label} value={value} readOnly onFocus={event => event.target.select()} data-testid={testId} className={mono ? "hc-field--mono" : undefined} />
+      <Button aria-label={`${copy.common.copy} ${label.toLowerCase()}`} onClick={() => void write()}>{copied ? copy.common.copied : copy.common.copy}</Button>
+    </div>
+  );
+}
+
+const USES = [["1", copy.settings.once], ["5", copy.settings.times(5)], ["25", copy.settings.times(25)], ["unlimited", copy.settings.unlimited]] as const;
+const LIFETIMES = [["3600", copy.settings.hour], ["86400", copy.settings.day], ["604800", copy.settings.week], ["2592000", copy.settings.month], ["never", copy.settings.never]] as const;
+const shortDate = (at: number) => new Date(at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+/**
+ * Owner: make an invite (how many people, how long), hand over its code or link, and see or revoke the ones that
+ * still work. Spent and expired invites are not listed; they no longer let anyone in.
+ */
 export function Invites() {
   const identity = useIdentity();
   const [result, setResult] = useState<InviteResult>();
+  const [uses, setUses] = useState("1");
   const [expires, setExpires] = useState("604800");
-  const [copied, setCopied] = useState(false);
+  const [invites, setInvites] = useState<InviteRecord[]>();
+  const [confirming, setConfirming] = useState("");
+  const load = useRef(identity.loadInvites);
+  load.current = identity.loadInvites;
+  const reload = () => load.current().then(setInvites, () => setInvites(list => list ?? []));
+  useEffect(() => { void reload(); }, [identity.serverId]); // eslint-disable-line react-hooks/exhaustive-deps
   const create = (event: FormEvent) => {
     event.preventDefault();
-    setCopied(false);
-    void identity.createInvite({ expiresInSeconds: Number(expires), maxUses: 1 }).then(next => setResult(next.link ? next : result));
+    void identity.createInvite({
+      expiresInSeconds: expires === "never" ? null : Number(expires),
+      maxUses: uses === "unlimited" ? null : Number(uses),
+    }).then(next => { if (next.link) setResult(next); void reload(); });
   };
-  const copyLink = async () => {
-    if (!result?.link) return;
-    try { await navigator.clipboard.writeText(result.link); setCopied(true); } catch { setCopied(false); }
-  };
+  const revoke = (id: string) => void identity.revokeInvite(id).then(() => { setConfirming(""); void reload(); });
+  const now = Date.now();
+  const live = (invites ?? []).filter(invite => (invite.expiresAt === null || invite.expiresAt > now) && (invite.maxUses === null || invite.uses < invite.maxUses));
   return (
-    <form className="hc-stack" data-testid="screen-invites" onSubmit={create}>
-      <label className="hc-field">
-        <span className="hc-field__label">{copy.settings.expires}</span>
-        <select value={expires} onChange={event => setExpires(event.target.value)}>
-          <option value="3600">{copy.settings.hour}</option>
-          <option value="86400">{copy.settings.day}</option>
-          <option value="604800">{copy.settings.week}</option>
-        </select>
-      </label>
-      <Button kind="primary" type="submit" busy={identity.busy}>{copy.settings.invite}</Button>
+    <div className="hc-stack hc-invites" data-testid="screen-invites">
+      <form className="hc-stack" onSubmit={create}>
+        <div className="hc-invites__choices">
+          <label className="hc-field">
+            <span className="hc-field__label">{copy.settings.canBeUsed}</span>
+            <select value={uses} onChange={event => setUses(event.target.value)}>
+              {USES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </label>
+          <label className="hc-field">
+            <span className="hc-field__label">{copy.settings.expires}</span>
+            <select value={expires} onChange={event => setExpires(event.target.value)}>
+              {LIFETIMES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </label>
+        </div>
+        <Button kind="primary" type="submit" busy={identity.busy}>{copy.settings.invite}</Button>
+      </form>
       {result?.link && (
-        <div className="hc-copy">
-          <Field label={copy.settings.inviteLink} value={result.link} readOnly onFocus={event => event.target.select()} data-testid="invite-link" />
-          <Button onClick={() => void copyLink()}>{copied ? copy.common.copied : copy.common.copy}</Button>
+        <div className="hc-invites__result hc-anim-pop">
+          {result.code && <CopyField label={copy.settings.inviteCode} value={result.code} testId="invite-code" mono />}
+          <CopyField label={copy.settings.inviteLink} value={result.link} testId="invite-link" />
         </div>
       )}
-    </form>
+      <section className="hc-stack" aria-label={copy.settings.activeInvites}>
+        <h3 className="hc-label">{copy.settings.activeInvites}</h3>
+        <ul className="hc-tiles" data-testid="active-invites">
+          {invites && live.length === 0 && <li className="hc-tile-row is-empty">{copy.settings.noInvites}</li>}
+          {live.map(invite => (
+            <li key={invite.id} className="hc-tile-row">
+              {confirming === invite.id ? (
+                <>
+                  <span className="hc-tile-row__text"><strong>{copy.settings.revokeInvite}</strong><small>{copy.settings.revokeHint}</small></span>
+                  <Button kind="text" onClick={() => setConfirming("")}>{copy.common.cancel}</Button>
+                  <Button kind="danger" busy={identity.busy} onClick={() => revoke(invite.id)}>{copy.settings.revoke}</Button>
+                </>
+              ) : (
+                <>
+                  <span className="hc-tile-row__text">
+                    <strong>{copy.settings.used(invite.uses, invite.maxUses)}</strong>
+                    <small>{invite.expiresAt === null ? copy.settings.neverExpires : copy.settings.expiresOn(shortDate(invite.expiresAt))}</small>
+                  </span>
+                  <Button kind="text" className="hc-btn--danger-text" onClick={() => setConfirming(invite.id)}>{copy.settings.revoke}</Button>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+/** Owner: people who asked to join, oldest decision first, and whether asking is allowed at all. */
+export function AccessRequests() {
+  const identity = useIdentity();
+  const [requests, setRequests] = useState<AccessRequestRecord[]>();
+  const load = useRef(identity.loadAccessRequests);
+  load.current = identity.loadAccessRequests;
+  const reload = () => load.current().then(setRequests, () => setRequests(list => list ?? []));
+  useEffect(() => { void reload(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const waiting = (requests ?? []).filter(request => request.status === "pending");
+  return (
+    <div className="hc-stack" data-testid="screen-access">
+      <label className="hc-check hc-switchrow">
+        <input type="checkbox" role="switch" checked={identity.accessRequestsOpen}
+          onChange={event => void identity.setAccessRequestsOpen(event.target.checked)} />
+        <span>{copy.settings.accessOpen}</span>
+      </label>
+      <ul className="hc-tiles">
+        {requests && waiting.length === 0 && <li className="hc-tile-row is-empty">{copy.settings.noRequests}</li>}
+        {waiting.map(request => (
+          <li key={request.id} className="hc-tile-row hc-tile-row--request">
+            <Avatar name={request.username} />
+            <span className="hc-tile-row__text">
+              <strong>{request.username}</strong>
+              {request.message && <span className="hc-tile-row__message">{request.message}</span>}
+              <small>{shortDate(request.createdAt)}</small>
+            </span>
+            <span className="hc-tile-row__actions">
+              <Button kind="text" className="hc-btn--danger-text" aria-label={copy.settings.declineWho(request.username)}
+                onClick={() => void identity.declineAccessRequest(request.id).then(reload)}>{copy.settings.decline}</Button>
+              <Button kind="primary" aria-label={copy.settings.approveWho(request.username)}
+                onClick={() => void identity.approveAccessRequest(request.id).then(reload)}>{copy.settings.approve}</Button>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Members: inviting is the owner's, so say who to ask (and offer to message them). */
+export function InvitePeople() {
+  const identity = useIdentity();
+  const chat = useChat();
+  const nav = useNav();
+  const owner = chat.people.find(person => person.owner && person.id !== chat.me.id);
+  return (
+    <div className="hc-stack" data-testid="screen-invite-people">
+      <p className="hc-lede">{copy.settings.askOwner(owner?.name, identity.serverName)}</p>
+      {owner && (
+        <Button kind="primary" className="hc-btn--start" busy={chat.busy}
+          onClick={() => void chat.startDirect([owner.id], "").then(ok => { if (ok) nav.set({ main: "chat", section: null, left: "dm" }); })}>
+          {copy.settings.messageOwner(owner.name)}
+        </Button>
+      )}
+    </div>
   );
 }
 
