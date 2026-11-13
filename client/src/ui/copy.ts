@@ -194,6 +194,7 @@ export const copy = {
     test: "Test microphone and camera", stopTest: "Stop test", micLevel: "Microphone level", cameraPreview: "Camera preview",
     noCamera: "No camera found. Calls will use the microphone only.", testing: "Listening. Say something.",
   },
+  createServer: { title: "Create a server", create: "Create", created: (name: string) => `${name} is ready`, invite: "Invite people" },
   wizard: {
     create: "Create server", title: "Create a server", stepOf: (n: number, total: number) => `Step ${n} of ${total}`,
     steps: ["Name and icon", "Channels", "Calls", "Extras", "Invite"],

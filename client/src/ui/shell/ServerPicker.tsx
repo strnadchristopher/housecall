@@ -2,9 +2,8 @@ import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent 
 import { useChat, useIdentity } from "../../core/context";
 import { Logo } from "../brand/Logo";
 import { copy } from "../copy";
-import { createPortal } from "react-dom";
-import { Avatar, Button, ErrorLine, Field, Icon, Presence, cx } from "../kit";
-import { CreateServerWizard } from "../setup/CreateServerWizard";
+import { Avatar, Button, ErrorLine, Field, Icon, cx } from "../kit";
+import { CreateServerDialog } from "../setup/CreateServerDialog";
 import { useDismiss } from "../useDismiss";
 
 /**
@@ -120,10 +119,7 @@ export function ServerPicker() {
           </form>
         )}
       </div>
-      {createPortal(
-        <Presence show={creating}><CreateServerWizard onClose={() => setCreating(false)} /></Presence>,
-        document.body,
-      )}
+      <CreateServerDialog open={creating} onClose={() => { setCreating(false); trigger.current?.focus(); }} />
     </div>
   );
 }

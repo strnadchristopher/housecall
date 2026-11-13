@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { test, expect } from "@playwright/test";
-import { send, setup, signIn } from "./helpers";
+import { accept, invite, send, setup, signIn } from "./helpers";
 
 // Fictional fixture only. The GIF provider is not reachable from tests, so its
 // routes are answered locally and the capability flag is set on /api/me.
@@ -295,4 +295,34 @@ test("pickers: the emoji panel and a message's reaction panel close on an outsid
   await expect(message.getByRole("group", { name: "Emoji", exact: true })).toBeVisible();
   await page.locator(".hc-header h1").first().click();
   await expect(message.getByRole("group", { name: "Emoji", exact: true })).toHaveCount(0);
+});
+
+test("create server: owner gets a one-field dialog and an invite offer; members do not see the row", async ({ browser }) => {
+  const owner = await (await browser.newContext()).newPage();
+  const member = await (await browser.newContext()).newPage();
+  owner.setDefaultTimeout(15000);
+  member.setDefaultTimeout(15000);
+  await owner.goto("/");
+  await signIn(owner, "owner");
+  const trigger = owner.getByRole("button", { name: /^Servers:/ });
+  await trigger.click();
+  await owner.getByRole("option", { name: "Create server" }).click();
+  const dialog = owner.getByTestId("create-server");
+  await expect(dialog.getByLabel("Server name", { exact: true })).toBeFocused();
+  await expect(dialog.getByRole("button", { name: "Create", exact: true })).toBeDisabled();
+  await dialog.getByLabel("Server name", { exact: true }).fill("Second House");
+  await dialog.getByRole("button", { name: "Create", exact: true }).click();
+  await expect(dialog).toContainText("Second House is ready");
+  await expect(owner.getByRole("button", { name: /^Servers: Second House/ })).toBeVisible();
+  await dialog.getByRole("button", { name: "Invite people" }).click();
+  await expect(dialog.getByTestId("create-server-invite-link")).toHaveValue(/#invite=[a-f0-9]{64}$/);
+  await dialog.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+
+  await owner.getByRole("button", { name: /^Servers:/ }).click();
+  await owner.getByRole("option", { name: /^Second House/ }).click();
+  await accept(member, await invite(owner), "ivy");
+  await member.getByRole("button", { name: /^Servers:/ }).click();
+  await expect(member.getByRole("option", { name: "Add server" })).toHaveCount(1);
+  await expect(member.getByRole("option", { name: "Create server" })).toHaveCount(0);
 });
