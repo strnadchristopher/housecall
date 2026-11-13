@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en" data-accent="lavender">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HC-040 · 17 Create server, first run, Apps</title>
+<!-- default = the create-server dialog · picker = the server list with the Create row · created · error · firstrun = the host's first page, checks passing · firstrun-blocked = one check failed · apps = Settings, Apps · apps-empty · apps-tab = the Apps tab in the right column -->
+<meta name="hc-states" content="default,picker,created,error,firstrun,firstrun-blocked,apps,apps-empty,apps-tab">
+<link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/b.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/c.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/accents.css">
+<link rel="stylesheet" href="../../client/src/ui/styles/index.css">
+<link rel="stylesheet" href="hc-040.css">
+<script src="icons.js"></script>
+<script src="mock.js"></script>
+</head>
+<body>
+<div class="hc-root">
+
+<!-- ================= 17.2 First-run page ================= -->
+<main class="hc-firstrun" data-show="firstrun firstrun-blocked" aria-labelledby="fr-title">
+  <div class="hc-firstrun__in">
+    <section class="hc-firstrun__claim">
+      <span data-part="logo"></span>
+      <h1 id="fr-title">This house needs a host</h1>
+      <p>Housecall is running at <strong>chat.theo.house</strong> and nobody owns it yet. Make the first account and it is yours.</p>
+      <form class="hc-firstrun__form">
+        <label class="hc-field"><span class="hc-field__label">Setup token</span><input type="password" value="correct-horse-battery-staple-9f2c" autocomplete="off">
+          <small>Printed when the server started, and saved as <code>HOUSECALL_SETUP_TOKEN</code> in <code>.env</code>.</small></label>
+        <label class="hc-field"><span class="hc-field__label">Username</span><input type="text" value="theo" autocapitalize="none"></label>
+        <label class="hc-field"><span class="hc-field__label">Password</span><input type="password" value="longpasswordhere"></label>
+        <button type="button" class="hc-btn hc-btn--primary hc-btn--wide" data-show="firstrun">Claim this server</button>
+        <button type="button" class="hc-btn hc-btn--primary hc-btn--wide" data-show="firstrun-blocked">Claim this server</button>
+      </form>
+    </section>
+
+    <section class="hc-checks" data-state="ok" data-show="firstrun" aria-labelledby="ck-title">
+      <div class="hc-checks__head"><h2 id="ck-title">Host check</h2><button type="button" class="hc-btn hc-btn--text">Check again</button></div>
+      <ul>
+        <li class="hc-check" data-state="ok"><span class="hc-check__mark"><i data-i="check"></i></span><span class="hc-check__text"><strong>Secure address</strong><small>https://chat.theo.house answers with a valid certificate</small></span><span class="hc-check__state">Ready</span></li>
+        <li class="hc-check" data-state="ok"><span class="hc-check__mark"><i data-i="check"></i></span><span class="hc-check__text"><strong>Storage</strong><small>Messages and files can be saved. 212 GB free</small></span><span class="hc-check__state">Ready</span></li>
+        <li class="hc-check" data-state="busy"><span class="hc-check__mark"><i></i></span><span class="hc-check__text"><strong>Call port</strong><small>Trying UDP 50000 from this browser</small></span><span class="hc-check__state">Checking</span></li>
+      </ul>
+      <p class="hc-checks__sum">You can claim the server while this finishes.</p>
+    </section>
+
+    <section class="hc-checks" data-state="warn" data-show="firstrun-blocked" aria-labelledby="ck-title2">
+      <div class="hc-checks__head"><h2 id="ck-title2">Host check</h2><button type="button" class="hc-btn hc-btn--text">Check again</button></div>
+      <ul>
+        <li class="hc-check" data-state="ok"><span class="hc-check__mark"><i data-i="check"></i></span><span class="hc-check__text"><strong>Secure address</strong><small>https://chat.theo.house answers with a valid certificate</small></span><span class="hc-check__state">Ready</span></li>
+        <li class="hc-check" data-state="ok"><span class="hc-check__mark"><i data-i="check"></i></span><span class="hc-check__text"><strong>Storage</strong><small>Messages and files can be saved. 212 GB free</small></span><span class="hc-check__state">Ready</span></li>
+        <li class="hc-check" data-state="fail"><span class="hc-check__mark"><i data-i="warn"></i></span><span class="hc-check__text"><strong>Call port</strong><small>Nothing answered on UDP 50000</small></span><span class="hc-check__state">Needs a fix</span>
+          <div class="hc-check__fix">
+            <p>Chat works now. Calls will not connect until this port is open. Forward it from your router to this machine, and set the address people reach you on:</p>
+            <div class="hc-snippet"><pre><code>SFU_PUBLIC_IP=203.0.113.10
+SFU_PORT=50000</code></pre><button type="button" class="hc-btn hc-btn--text" aria-label="Copy SFU_PUBLIC_IP">Copy</button></div>
+            <a class="hc-app__guide" href="#">Calls guide<i data-i="out"></i></a>
+          </div>
+        </li>
+      </ul>
+      <p class="hc-checks__sum">You can claim the server now and fix calls later in Settings, Apps.</p>
+    </section>
+  </div>
+</main>
+
+<!-- ================= the shell, for everything else ================= -->
+<div class="hc-shell" id="shell" data-screen="main" data-hide="firstrun firstrun-blocked">
+  <nav class="hc-left" aria-label="Housecall" data-part="left" data-opts='{"current":"general","unread":false}' data-opts-created='{"current":"general","unread":false}'></nav>
+  <main class="hc-center">
+    <div data-hide="apps apps-empty" style="display:contents">
+      <div data-part="header" data-opts='{"kind":"text","name":"general"}' style="display:contents"></div>
+      <div data-part="messages" data-hide="created" style="display:contents"></div>
+      <div class="hc-empty hc-empty--start" data-show="created">
+        <span data-part="door" data-opts='{"kind":"ajar"}'></span>
+        <strong>This is the start of general</strong>
+        <p>Nothing has been said in here yet. The first word is yours.</p>
+      </div>
+      <div data-part="composer" data-opts='{"name":"general"}' style="display:contents"></div>
+    </div>
+
+    <!-- ================= 17.3 Settings, Apps ================= -->
+    <div class="hc-settings-layer" data-show="apps apps-empty"><div class="hc-settings">
+      <header class="hc-header">
+        <button type="button" class="hc-ibtn" aria-label="Close" data-show-phone="0"><i data-i="close"></i></button>
+        <button type="button" class="hc-ibtn" aria-label="Back" data-show-phone="1"><i data-i="back"></i></button>
+        <div class="hc-header__title"><h1 data-show-phone="0">Settings</h1><h1 data-show-phone="1">Apps</h1></div>
+      </header>
+      <div class="hc-settings__body">
+        <nav class="hc-settings__nav" aria-label="Settings" data-show-phone="0" data-part="settingsnav" data-opts='{"current":"Apps"}'></nav>
+        <section class="hc-settings__pane" aria-labelledby="apps-title">
+          <h2 id="apps-title" data-show-phone="0">Apps</h2>
+
+          <div class="hc-apps" data-show="apps">
+            <div class="hc-apps__head"><h3>Things people can do together in a call. Same for every server on this host.</h3><button type="button" class="hc-btn hc-btn--text">Check again</button></div>
+            <ul class="hc-apps__list">
+              <li class="hc-app" data-state="ready"><button type="button" class="hc-app__head" aria-expanded="false"><i data-i="phone"></i><span class="hc-app__text"><strong>Calls</strong><small>Voice and video between people in a channel.</small></span><span class="hc-app__state"><i data-i="check"></i>Ready</span><span class="hc-app__chev"><i data-i="down"></i></span></button></li>
+              <li class="hc-app" data-state="ready"><button type="button" class="hc-app__head" aria-expanded="false"><i data-i="film"></i><span class="hc-app__text"><strong>Plex</strong><small>Watch your Plex library together in a call.</small></span><span class="hc-app__state"><i data-i="check"></i>Ready</span><span class="hc-app__chev"><i data-i="down"></i></span></button></li>
+              <li class="hc-app" data-state="todo" data-open><button type="button" class="hc-app__head" aria-expanded="true"><i data-i="browser"></i><span class="hc-app__text"><strong>Shared browser</strong><small>A browser everyone in a call can watch and use.</small></span><span class="hc-app__state">Needs setup</span><span class="hc-app__chev"><i data-i="down"></i></span></button>
+                <div class="hc-app__body">
+                  <p class="hc-muted">Still missing: VM_ENABLED</p>
+                  <ol class="hc-steps">
+                    <li>Calls must be ready first. Prepare the base disk, then start the vm profile.</li>
+                    <li>In .env on the host, set:<div class="hc-snippet"><pre><code>VM_ENABLED=true</code></pre><button type="button" class="hc-btn hc-btn--text" aria-label="Copy VM_ENABLED">Copy</button></div></li>
+                    <li>Restart Housecall:<div class="hc-snippet"><pre><code>docker compose --profile vm up -d</code></pre><button type="button" class="hc-btn hc-btn--text" aria-label="Copy docker compose">Copy</button></div></li>
+                  </ol>
+                  <div class="hc-app__foot"><button type="button" class="hc-btn hc-btn--primary">Check again</button><a class="hc-app__guide" href="#">Shared browser guide<i data-i="out"></i></a></div>
+                </div>
+              </li>
+              <li class="hc-app" data-state="optional"><button type="button" class="hc-app__head" aria-expanded="false"><i data-i="download"></i><span class="hc-app__text"><strong>Gimme</strong><small>Request media from chat and follow it to done.</small></span><span class="hc-app__state">Not set up</span><span class="hc-app__chev"><i data-i="down"></i></span></button></li>
+              <li class="hc-app" data-state="optional"><button type="button" class="hc-app__head" aria-expanded="false"><i data-i="music"></i><span class="hc-app__text"><strong>DJ</strong><small>Play music into a voice channel for everyone.</small></span><span class="hc-app__state">Not set up</span><span class="hc-app__chev"><i data-i="down"></i></span></button></li>
+              <li class="hc-app" data-state="optional"><button type="button" class="hc-app__head" aria-expanded="false"><i data-i="image"></i><span class="hc-app__text"><strong>GIFs</strong><small>Search and send GIFs from the message box.</small></span><span class="hc-app__state">Not set up</span><span class="hc-app__chev"><i data-i="down"></i></span></button></li>
+            </ul>
+          </div>
+
+          <!-- a member, or a host with nothing switched on: the pane a member sees -->
+          <div class="hc-empty" data-show="apps-empty">
+            <span data-part="door" data-opts='{"kind":"shut"}'></span>
+            <strong>No apps yet</strong>
+            <p>The host hasn't switched any on. Apps are things to do together in a call, like watching a film.</p>
+          </div>
+        </section>
+      </div>
+    </div></div>
+  </main>
+  <aside class="hc-right" aria-label="Details" id="right" data-part="right" data-tab="people" data-hide="apps apps-empty"></aside>
+</div>
+
+<!-- ================= 17.1 Create-server dialog ================= -->
+<div data-show="default error">
+  <div class="hc-sheet-scrim"></div>
+  <form class="hc-sheet hc-newserver" role="dialog" aria-modal="true" aria-labelledby="ns-title">
+    <span class="hc-sheet__grip"></span>
+    <div class="hc-sheet__head"><h2 id="ns-title">Create a server</h2><button type="button" class="hc-ibtn" aria-label="Close"><i data-i="close"></i></button></div>
+    <div class="hc-newserver__row">
+      <button type="button" class="hc-iconwell" aria-label="Choose an icon"><span class="hc-avatar" data-tone="4" aria-hidden="true">B</span><span class="hc-iconwell__badge"><i data-i="image"></i></span></button>
+      <label class="hc-field"><span class="hc-field__label">Server name</span><input type="text" value="Book club" maxlength="40"></label>
+    </div>
+    <p class="hc-field__error" role="alert" data-show="error">Couldn't create Book club. The host didn't answer. Try again.</p>
+    <p class="hc-newserver__help" data-show="default">A second set of rooms in this house, with its own channels and people. You can change the name and icon later.</p>
+    <div class="hc-sheet__actions"><button type="submit" class="hc-btn hc-btn--primary">Create server</button><button type="button" class="hc-btn hc-btn--text">Cancel</button></div>
+  </form>
+</div>
+<div data-show="created">
+  <div class="hc-sheet-scrim"></div>
+  <div class="hc-sheet hc-newserver" role="dialog" aria-modal="true" aria-labelledby="ns-done">
+    <span class="hc-sheet__grip"></span>
+    <div class="hc-newserver__done">
+      <span data-part="door" data-opts='{"kind":"ajar"}'></span>
+      <strong id="ns-done">Book club is ready</strong>
+      <p>You are in. It has one text channel, general, and nobody else yet.</p>
+    </div>
+    <div class="hc-sheet__actions"><button type="button" class="hc-btn hc-btn--primary">Invite people</button><button type="button" class="hc-btn hc-btn--text">Not now</button></div>
+  </div>
+</div>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const s = HC.state || "default";
+  const shell = document.getElementById("shell");
+  if (!shell) return;
+  if (s === "created") {
+    document.querySelector(".hc-picker__name strong").textContent = "Book club";
+    document.querySelector(".hc-channels").innerHTML = `
+      <section class="hc-group"><div class="hc-group__head"><h2 class="hc-group__label">Text channels</h2><button type="button" class="hc-group__add" aria-label="Create text channel">${HC.icon("plus")}</button></div><ul class="hc-group__list">${HC.channel("text", "general", { current: true })}</ul></section>
+      <section class="hc-group"><div class="hc-group__head"><h2 class="hc-group__label">Voice channels</h2><button type="button" class="hc-group__add" aria-label="Create voice channel">${HC.icon("plus")}</button></div><ul class="hc-group__list">
+        <li><button type="button" class="hc-channel hc-channel--add"><span class="hc-channel__glyph">${HC.icon("plus")}</span><span class="hc-channel__name">Add a voice channel</span></button></li></ul></section>`;
+    const body = document.querySelector("#right .hc-side__body");
+    if (body) body.innerHTML = `<ul class="hc-people"><li><button type="button" class="hc-person__open" aria-label="theo"></button>${HC.av("theo")}<span><strong>theo <em class="hc-role">Owner</em></strong><small>Kettle's on. Knock first.</small></span></li></ul>`;
+  }
+  if (s === "picker") {
+    if (HC.phone) { shell.dataset.screen = "list"; shell.querySelector(".hc-left").insertAdjacentHTML("afterend", '<button type="button" class="hc-drawer-scrim" aria-label="Close menu"></button>'); }
+    const picker = document.querySelector(".hc-picker");
+    picker.setAttribute("data-open", "");
+    const row = (name, sub, o = {}) => `<button type="button" role="option" aria-selected="${!!o.current}" class="hc-picker__row${o.current ? " is-current" : ""}">${HC.av(name, "sm")}<span class="hc-picker__rowname"><strong>${name}</strong><small>${sub}</small></span>${o.dot ? '<span class="hc-dot" role="img" aria-label="2 mentions"></span>' : ""}${o.current ? HC.icon("check") : ""}</button>`;
+    const add = (label) => `<button type="button" role="option" aria-selected="false" class="hc-picker__row hc-picker__add"><span>${HC.icon("plus")}</span><strong>${label}</strong></button>`;
+    picker.insertAdjacentHTML("beforeend", `<div class="hc-picker__list" role="listbox" aria-label="Servers">${row("Theo's place", "Connected", { current: true })}${row("Night shift", "Connected", { dot: true })}${row("Mara's flat", "mara.example · Reconnecting")}${add("Add server")}${add("Create server")}</div>`);
+  }
+  if (s === "apps-tab") {
+    if (HC.phone) shell.setAttribute("data-sheet", "");
+    const right = document.getElementById("right");
+    right.innerHTML = HC.right("apps");
+    const chord = (icon, name, sub, cls = "") => `<li><button type="button" class="hc-chord ${cls}">${HC.icon(icon)}<span><strong>${name}</strong><small>${sub}</small></span>${HC.icon("right")}</button></li>`;
+    right.querySelector(".hc-side__body").innerHTML = `<ul class="hc-chords">
+      ${chord("film", "Plex", "Mara is playing Paddington 2", "is-on")}
+      ${chord("download", "Gimme", "Ask for a film or a show")}
+      ${chord("browser", "Shared browser", "Join a call to use this", "is-idle")}
+      ${chord("music", "DJ", "Join a call to use this", "is-idle")}
+    </ul><div class="hc-chords__more"><button type="button" class="hc-btn hc-btn--text">${HC.icon("gear")}Set up more apps</button></div>`;
+  }
+});
+</script>
+</body>
+</html>
