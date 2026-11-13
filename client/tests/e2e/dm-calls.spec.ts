@@ -37,7 +37,7 @@ test("a 1:1 call rings the other person, who answers, declines, or loses the rin
   // Ringing is said once, on the stage, with who is being rung; the controls are not doubled up by the sidebar dock.
   await expect(ownerPage.getByTestId("call-ringing")).toHaveText("Ringing dc_bob");
   await expect(ownerPage.getByText(/^Ringing/)).toHaveCount(1);
-  await expect(ownerPage.getByTestId("call-dock")).toHaveCount(0);
+  await expect(ownerPage.getByTestId("call-dock")).toBeVisible(); // HC-040 6: the call card stays in the sidebar on the stage too
   await expect(toast(bob)).toBeVisible({ timeout: 15000 });
   await expect(toast(bob)).toContainText("dc_owner");
   await expect(toast(bob)).toContainText("Incoming call");

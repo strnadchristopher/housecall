@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CallTransport, IncomingCall } from "../../core/call";
 import { ApiError } from "../../transport/api";
 import { RING_FRESH_MS } from "../../state/callEvents";
+import { lossFraction } from "../../state/callQuality";
 import { applyVoiceEvent, roomsFromStates, sortRoster, type VoiceRooms } from "../../state/voiceRoster";
 import { PREVIEW_EVERY_MS, captureFrame, previewEnabled } from "../../state/streamPreview";
 import { callKit, isCallKit, onCallKit } from "../../transport/callkit";
@@ -292,6 +293,7 @@ export function useLegacyCall(c: Housecall) {
     devices: devices.map(device => ({ id: device.id, label: device.label, kind: device.kind === "audioinput" ? "microphone" as const : "camera" as const })),
     selected, bitrate, noiseSuppression,
     stats: { receivedBytes: status.receivedBytes, decodedFrames: status.decodedFrames },
+    quality: { rttMs: status.phase === "live" && status.roundTripSeconds !== undefined ? status.roundTripSeconds * 1000 : undefined, loss: status.phase === "live" ? lossFraction(status.packetsLost ?? 0, status.packetsReceived ?? 0) : undefined },
 
     join: async conversationId => { await joinCall(conversationId); },
     callPerson: async personId => {

@@ -92,6 +92,8 @@ export const copy = {
     sounds: "Call sounds", soundsHint: "A short sound when someone joins or leaves, and while a call rings.", soundVolume: "Sound volume",
     speaker: "Speaker", speakerDefault: "System default", volumeFor: (name: string) => `Volume for ${name}`, muteForMe: "Mute for me", unmuteForMe: "Unmute for me", mutedForMe: "Muted for you",
     shortcuts: "Shortcuts", shortcutMute: "Mute or unmute", shortcutDeafen: "Deafen or undeafen", shortcutsHint: "Work anywhere in the desktop app, even when another window is in front.",
+    connection: "Connection", latency: (ms: number) => `${ms} ms to server`, measuring: "Measuring", noConnection: "No connection",
+    connected: "Voice connected", connecting: "Connecting", reconnecting: "Reconnecting", weak: "Weak connection", tryAgain: "Try again",
     microphone: "Microphone", camera: "Camera", defaultDevice: "System default", refresh: "Refresh devices",
     bitrate: "Audio bitrate (bit/s)", noise: "Noise suppression", apply: "Apply", stage: "Call stage",
     remoteVideo: "Remote video", remoteAudio: "Remote audio", dock: "Current call", open: (name: string) => `Open ${name}`,

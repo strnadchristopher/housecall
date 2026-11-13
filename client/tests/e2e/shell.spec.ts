@@ -98,8 +98,8 @@ test("shell: picker, channel, call, composer, tabs, direct messages", async ({ p
   await expect(bar.getByTestId("call-duration")).toBeVisible();
   await expect(bar).toContainText("1");
   await expect(page.getByTestId("voice-person").first()).toBeVisible();
-  // The stage owns the center, so its call bar carries the controls and the sidebar dock steps aside.
-  await expect(page.getByTestId("call-dock")).toHaveCount(0);
+  // The stage carries the full controls and the call card stays in the sidebar above the user bar.
+  await expect(page.getByTestId("call-dock")).toBeVisible(); // HC-040 6: the call card does not leave the sidebar
   await expect(bar.getByRole("button", { name: "Mute", exact: true })).toBeVisible();
 
   // Right column tabs.

@@ -87,6 +87,8 @@ export interface CallState {
   bitrate: number;
   noiseSuppression: boolean;
   stats: { receivedBytes: number; decodedFrames: number };
+  /** Measured by getStats(): round-trip time in ms and packet loss as a fraction. Absent until measured. */
+  quality: { rttMs?: number; loss?: number };
 }
 
 export interface CallTransport extends CallState {

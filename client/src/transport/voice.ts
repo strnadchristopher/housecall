@@ -19,6 +19,8 @@ export interface VoiceStatus {
   receivedBytes: number;
   decodedFrames: number;
   roundTripSeconds?: number;
+  packetsLost?: number;
+  packetsReceived?: number;
   error?: string;
   /** Non-fatal notice, e.g. a saved device was replaced by the default. */
   warning?: string;
@@ -364,16 +366,20 @@ export class VoiceSession {
     if (this.pc !== pc) return;
     let receivedBytes = 0,
       decodedFrames = 0,
-      roundTripSeconds: number | undefined;
+      roundTripSeconds: number | undefined,
+      packetsLost = 0,
+      packetsReceived = 0;
     for (const report of reports.values()) {
       if (report.type === "inbound-rtp") {
         receivedBytes += report.bytesReceived ?? 0;
         decodedFrames += report.framesDecoded ?? 0;
+        packetsLost += report.packetsLost ?? 0;
+        packetsReceived += report.packetsReceived ?? 0;
       }
       if (report.type === "candidate-pair" && report.state === "succeeded")
         roundTripSeconds = report.currentRoundTripTime;
     }
-    this.update({ receivedBytes, decodedFrames, roundTripSeconds });
+    this.update({ receivedBytes, decodedFrames, roundTripSeconds, packetsLost, packetsReceived });
   }
   async leave() {
     const peerId = this.state.peerId,

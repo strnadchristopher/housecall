@@ -14,7 +14,7 @@ import { ErrorLine, Presence, cx } from "../kit";
 import { usePhone, useSheet } from "../tokens/motion";
 import { ServerPicker } from "./ServerPicker";
 import { ChannelList } from "./ChannelList";
-import { CallDock } from "./CallDock";
+import { CallDock, CallStrip } from "./CallDock";
 import { ConfirmJoin } from "./ConfirmJoin";
 import { UserBar } from "./UserBar";
 import { useDrawerDrag } from "./drawer";
@@ -78,8 +78,7 @@ export function AppShell() {
         <nav ref={left} className="hc-left" aria-label={copy.app.name} inert={phone && !drawerOpen} {...(phone ? drag : {})}>
           <ServerPicker />
           {nav.left === "dm" ? <DmView /> : <ChannelList />}
-          {/* The stage and its call bar carry the controls while it owns the center. */}
-          {!staged && <CallDock />}
+          <CallDock />
           <UserBar />
         </nav>
         {phone && (
@@ -89,7 +88,7 @@ export function AppShell() {
         )}
         <main className="hc-center" inert={drawerOpen}>
           <Presence show={nav.main === "settings"}>
-            <div className="hc-settings-layer hc-anim-slide-right"><CallStage away /><SettingsView />{phone && <CallDock />}</div>
+            <div className="hc-settings-layer hc-anim-slide-right"><CallStage away /><SettingsView />{phone && <CallStrip />}</div>
           </Presence>
           {nav.main === "settings" ? null : staged ? (
             <>
@@ -102,6 +101,7 @@ export function AppShell() {
           ) : (
             <>
               <ChannelHeader />
+              {phone && <CallStrip />}
               {!chat.online && <p className="hc-offline" role="status">{copy.state.reconnecting}</p>}
               <CallStage />
               <MessageList />
