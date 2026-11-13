@@ -1,5 +1,25 @@
 # Security levels: the rule
 
+## What 0.4.0 actually builds
+
+0.4.0 does not build the four-segment bar described in sections 1 to 12. Those sections belong to the future design in `PROTOCOL.md`, which has no signed log, no epochs, no host features and no bots. 0.4.0 shows one label per conversation, defined in `DM-V1.md` section 14.1:
+
+| Condition | Label |
+|---|---|
+| One-to-one DM, native app, both people have keys, the other person's key is pinned | **End-to-end encrypted** (plus "Verified" once safety numbers were compared) |
+| Same, in the web client with keys in memory | **Encrypted in browser** |
+| The other person has no keys yet | **Not encrypted yet** |
+| You have no keys on this server | **Not encrypted** |
+| The other person's key changed and you have not accepted it | **Key changed** (sending paused) |
+| Group DM, channel, voice channel | **Not end-to-end encrypted** |
+| Any call, including DM calls | **Relayed by the host** |
+
+The rule from this document that 0.4.0 keeps: "End-to-end encrypted" appears in no other state, is never abbreviated, and no other state uses its lock icon or colour. The detail sheet sentences are in `DM-V1.md` section 14.1. Activity chips (section 9 below, "Served by the host") still apply to Plex, the Shared Browser and Gimme.
+
+Everything below this line is the future design, kept for a later release.
+
+---
+
 This document fixes how a client turns the verified state of a server and a channel into the level and label members see. It is a pure function of data the client has verified itself. Nothing in it comes from a server's say-so. The labels are chosen so they never claim more than the cryptography gives (`PROTOCOL.md`, `THREAT-MODEL.md`).
 
 ## 1. Levels and labels

@@ -381,3 +381,7 @@ E2E: two browser contexts complete the flow by passing the QR text directly (no 
 3. The host can always create sessions for accounts on its own server. QR login protects your keys, not the host's control over its own accounts.
 4. A stolen unlocked device can link a new device and copy your keys.
 5. Link state is lost on server restart (open links fail; users make a new code).
+
+## 15. Open question for the security owner
+
+S-1 says the showing device asks "Does it show 94?" with Approve and Deny. A stronger variant: the person taps the matching number among three (one right, two random and distinct), and "None of these" denies. This defeats tapping Approve without looking, at no protocol cost: only the UI changes, and the server and formats stay the same. This contract keeps S-1 as written until Noah decides.

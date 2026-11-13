@@ -1,6 +1,8 @@
 # Housecall protocol specification, version 1
 
-Status: draft for implementation. No independent audit has happened. Read `THREAT-MODEL.md` for what this protocol does and does not protect, `SECURITY-LEVELS.md` for the labels members see, `DECISIONS.md` for why it looks like this, and `CRACK-PLAN.md` for how it will be attacked.
+> **Future design. Not built, and not what 0.4.0 implements.** Housecall 0.4.0 builds only `DM-V1.md` (end-to-end encrypted one-to-one DMs) and `LINK-V1.md` (QR login and device linking). Where this document and those two disagree, those two apply. This one is kept as input for a later release.
+
+Status (original): draft for implementation. No independent audit has happened. Read `THREAT-MODEL.md` for what this protocol does and does not protect, `SECURITY-LEVELS.md` for the labels members see, `DECISIONS.md` for why it looks like this, and `CRACK-PLAN.md` for how it will be attacked.
 
 Words "must", "must not" and "should" are used in the RFC 2119 sense. "Client" means a Housecall app (Tauri desktop or mobile, or the web client). "Server" means the `housecall-server` process and everything the host operator controls on that machine. "Host" means the person or party operating the server. "Owner" is the first account that set the server up.
 
