@@ -8,7 +8,7 @@ import { FriendList } from "./FriendList";
 export function DmView() {
   const chat = useChat();
   const nav = useNav();
-  const direct = chat.conversations.filter(conversation => conversation.kind !== "channel");
+  const direct = chat.conversations.filter(conversation => (conversation.kind === "dm" || conversation.kind === "group"));
   return (
     <section className="hc-channels hc-dm" data-testid="screen-direct-messages" aria-labelledby="hc-dm-label">
       <div className="hc-dm__head">

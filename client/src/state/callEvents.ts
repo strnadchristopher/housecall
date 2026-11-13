@@ -11,10 +11,20 @@ export interface CallEvent {
 /** An event is a live ring only for this long after the server wrote it. */
 export const RING_FRESH_MS = 30000;
 
-type Listener = (event: CallEvent) => void;
+export interface RawEvent { kind: string; channel_id?: string; payload: Record<string, unknown> }
+type Listener =(event: CallEvent) => void;
 
 export class CallEvents {
   private listeners = new Set<Listener>();
+  private raw = new Set<(event: RawEvent) => void>();
+  /** Every server event, for voice.* state (adapters/legacy/call.ts). */
+  subscribeRaw(listener: (event: RawEvent) => void): () => void {
+    this.raw.add(listener);
+    return () => { this.raw.delete(listener); };
+  }
+  emitRaw(event: RawEvent) {
+    for (const listener of [...this.raw]) listener(event);
+  }
   subscribe(listener: Listener): () => void {
     this.listeners.add(listener);
     return () => { this.listeners.delete(listener); };

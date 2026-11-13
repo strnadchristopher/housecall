@@ -203,6 +203,7 @@ export function useHousecall() {
         if (stop) return;
         for (const e of result.events) {
           typingStore.apply(e);
+          callEvents.emitRaw(e);
           const ring = toCallEvent(e, result.now);
           if (ring) callEvents.emit(ring);
           if (e.kind === "activity.updated" && e.channel_id) {

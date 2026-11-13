@@ -18,6 +18,18 @@ export function isSpeaking(level: number | undefined): boolean {
   return typeof level === "number" && level > SPEAKING_LEVEL;
 }
 
+/** One person inside a voice room, with the state the server reports (docs/API.md). */
+export interface VoiceRoomMember {
+  personId: string;
+  name: string;
+  avatarUrl?: string;
+  muted: boolean;
+  deafened: boolean;
+  camera: boolean;
+  sharing: boolean;
+  joinedAt: number;
+}
+
 export interface CallMedia {
   id: string;
   stream: MediaStream;
@@ -54,6 +66,8 @@ export interface CallState {
   participants: CallParticipant[];
   /** Who is in a call right now, by conversation id, for every conversation you can open. Read before joining. */
   active: Record<string, { personId: string; name: string; avatarUrl?: string }[]>;
+  /** The same rooms with each person's state, streamers first (see state/voiceRoster.ts). */
+  rooms: Record<string, VoiceRoomMember[]>;
   media: CallMedia[];
   /** Ids of participants whose audio is above the speaking threshold right now (sampled at 4 Hz). */
   speaking: string[];

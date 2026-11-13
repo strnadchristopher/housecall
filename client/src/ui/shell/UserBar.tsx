@@ -8,7 +8,7 @@ export function UserBar() {
   const chat = useChat();
   const nav = useNav();
   const phone = usePhone();
-  const dmMentions = chat.conversations.filter(conversation => conversation.kind !== "channel").reduce((sum, conversation) => sum + conversation.mentions, 0);
+  const dmMentions = chat.conversations.filter(conversation => (conversation.kind === "dm" || conversation.kind === "group")).reduce((sum, conversation) => sum + conversation.mentions, 0);
   return (
     <footer className="hc-userbar">
       <button type="button" className="hc-userbar__me" aria-label={copy.userBar.profile} title={copy.userBar.profile}

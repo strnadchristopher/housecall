@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CallTransport, IncomingCall } from "../../core/call";
 import { ApiError } from "../../transport/api";
 import { RING_FRESH_MS } from "../../state/callEvents";
+import { applyVoiceEvent, roomsFromStates, sortRoster, type VoiceRooms } from "../../state/voiceRoster";
 import { callKit, isCallKit, onCallKit } from "../../transport/callkit";
 import { VoiceSession, availableVoiceInputs, type VoiceDevice, type VoiceInputs, type VoiceStatus } from "../../transport/voice";
 import { avatarPath, userName } from "../../data/people";
@@ -36,7 +37,7 @@ export function useLegacyCall(c: Housecall) {
   const [bitrate, setBitrate] = useState(510000);
   const [noiseSuppression, setNoiseSuppression] = useState(false);
   const [peers, setPeers] = useState<Peer[]>([]);
-  const [rooms, setRooms] = useState<Record<string, string[]>>({});
+  const [rooms, setRooms] = useState<VoiceRooms>({});
   const [incoming, setIncoming] = useState<IncomingCall>();
   const [ringing, setRinging] = useState<{ channelId: string; declined: boolean; since: number }>();
 
@@ -53,14 +54,27 @@ export function useLegacyCall(c: Housecall) {
     let stopped = false;
     const tick = async () => {
       try {
-        const result = await c.api.get<{ rooms: Record<string, string[]> }>("/api/voice/rooms");
-        if (!stopped) setRooms(result.rooms);
+        const result = await c.api.get<{ rooms: Record<string, string[]>; states?: Parameters<typeof roomsFromStates>[0] }>("/api/voice/rooms");
+        if (!stopped) setRooms(roomsFromStates(result.states, result.rooms));
       } catch { /* keep the last answer; the next tick retries */ }
     };
     void tick();
     const timer = setInterval(() => void tick(), 4000);
     return () => { stopped = true; clearInterval(timer); };
   }, [voiceAvailable, c.api]);
+
+  // 0.4.0 servers push joins, leaves and state changes; the poll above stays as the fallback.
+  useEffect(() => c.callEvents.subscribeRaw(event => {
+    if (!voiceAvailable) return;
+    setRooms(current => applyVoiceEvent(current, event) ?? current);
+  }), [c.callEvents, voiceAvailable]);
+
+  // Tell the room what this device is doing, on every local change while in a call.
+  const sharingNow = voice.sharing;
+  useEffect(() => {
+    if (status.phase !== "live" || !channelId) return;
+    void c.api.put(`/api/channels/${encodeURIComponent(channelId)}/voice/state`, { muted, deafened, camera, sharing: sharingNow }).catch(() => {});
+  }, [status.phase, channelId, muted, deafened, camera, sharingNow, c.api]);
 
   // The per-peer roster is reported only to a session that is in the call.
   useEffect(() => {
@@ -246,7 +260,8 @@ export function useLegacyCall(c: Housecall) {
     participants: status.phase !== "live" ? []
       : members.length ? members.map(peer => ({ id: String(peer.peer_id), personId: peer.user_id, name: nameOf(peer.user_id), avatarUrl: avatarOf(peer.user_id), me: peer.current_session, connected: peer.connected }))
       : c.auth ? [{ id: status.peerId ?? "self", personId: c.auth.user.id, name: userName(currentUser(c) ?? c.auth.user), avatarUrl: avatarOf(c.auth.user.id), me: true, connected: true }] : [],
-    active: Object.fromEntries(Object.entries(rooms).map(([room, ids]) => [room, ids.map(id => ({ personId: id, name: nameOf(id), avatarUrl: avatarOf(id) }))])),
+    active: Object.fromEntries(Object.entries(rooms).map(([room, list]) => [room, list.map(p => ({ personId: p.personId, name: nameOf(p.personId), avatarUrl: avatarOf(p.personId) }))])),
+    rooms: Object.fromEntries(Object.entries(rooms).map(([room, list]) => [room, sortRoster(list).map(p => ({ ...p, name: nameOf(p.personId), avatarUrl: avatarOf(p.personId) }))])),
     media: status.streams
       .filter(stream => !publishers.has(status.sourcePeers?.[stream.id] ?? ""))
       .map(stream => ({ id: stream.id, stream, participantId: status.sourcePeers?.[stream.id] || undefined, video: stream.getVideoTracks().length > 0 })),

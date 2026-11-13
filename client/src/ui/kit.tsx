@@ -45,6 +45,7 @@ const ICONS = {
   trash: "M4 6h12M8 6V4h4v2M5.5 6l.8 10h7.4l.8-10",
   people: "M7.5 4.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 0 0 0-5M3 16v-1a4.5 4.5 0 0 1 9 0v1M14 6a2 2 0 1 0 0 4a2 2 0 0 0 0-4M13.6 11.6a3.6 3.6 0 0 1 3.4 3.6V16",
   chords: "M8.4 5.0Q9.4 10.2 14.6 11.2Q9.4 12.2 8.4 17.4Q7.4 12.2 2.2 11.2Q7.4 10.2 8.4 5.0zM15.6 2.2Q16.1 4.1 18.0 4.6Q16.1 5.1 15.6 7.0Q15.1 5.1 13.2 4.6Q15.1 4.1 15.6 2.2zM15.9 13.9v2.6M14.6 15.2h2.6",
+  chat: "M4.5 4.5h11a1.5 1.5 0 0 1 1.5 1.5v6a1.5 1.5 0 0 1-1.5 1.5H9.5l-3.5 3v-3h-1.5A1.5 1.5 0 0 1 3 12V6a1.5 1.5 0 0 1 1.5-1.5z",
   speaker: "M3.2 8h2.9L10 4.6v10.8L6.1 12H3.2zM12.7 7.7a3.3 3.3 0 0 1 0 4.6M14.7 5.5a6.4 6.4 0 0 1 0 9",
   qr: "M3.5 3.5h5v5h-5zM11.5 3.5h5v5h-5zM3.5 11.5h5v5h-5zM11.5 11.5h2v2h-2zM16.5 11.5v1.5M14.5 16.5h2v-1",
   copy: "M9 7h5a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2M4 13V5.5A1.5 1.5 0 0 1 5.5 4H13",
@@ -112,7 +113,7 @@ function usePicture(path: string | undefined) {
  * The person's picture, or their initial in a doorway arch in one of six tones mixed from the palette.
  * Servers use the same component with the squircle shape. `src` is an authenticated media path.
  */
-export function Avatar({ name, src, size = "md", shape = "arch" }: { name: string; src?: string; size?: "sm" | "md" | "lg"; shape?: "arch" | "squircle" }) {
+export function Avatar({ name, src, size = "md", shape = "arch" }: { name: string; src?: string; size?: "xs" | "sm" | "md" | "lg" | "xl"; shape?: "arch" | "squircle" }) {
   const picture = usePicture(src);
   return (
     <span className={cx("hc-avatar", `hc-avatar--${size}`, shape === "squircle" && "hc-avatar--squircle")} data-tone={hash(name) % 6} data-has-image={picture ? "" : undefined} aria-hidden="true">

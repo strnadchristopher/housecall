@@ -106,7 +106,7 @@ export function AppShell() {
               <CallStage />
               <MessageList />
               <ErrorLine text={chat.error} onDismiss={chat.clearError} dismissLabel={copy.common.dismiss} />
-              {call.available && <CallBar />}
+              {call.available && chat.current?.kind !== "channel" && <CallBar />}
               <Composer />
             </>
           )}

@@ -26,7 +26,7 @@ export const currentUser = (c: Pick<Housecall, "auth" | "members">): User | unde
   c.auth ? c.members.find(member => member.id === c.auth!.user.id) ?? c.auth.user : undefined;
 
 function kindOf(channel: Channel): Conversation["kind"] {
-  return channel.kind === "channel" ? "channel" : channel.kind === "dm" ? "dm" : "group";
+  return channel.kind === "channel" || channel.kind === "voice" ? channel.kind : channel.kind === "dm" ? "dm" : "group";
 }
 
 export function hostLabel(host: HostEntry): string {
@@ -156,7 +156,7 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
     return result;
   };
 
-  const people: Person[] = current && current.kind !== "channel"
+  const people: Person[] = current && current.kind !== "channel" && current.kind !== "voice"
     // Both people of a direct conversation, whoever has posted: the Call button and People tab need the peer.
     ? [...new Map([meUser!, ...c.members.filter(member => member.id === current.peer_id || c.messages.some(message => message.author_id === member.id))].map(user => [user.id, person(user)])).values()]
     : serverPeople.map(person);
@@ -204,7 +204,7 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
     me: meUser ? person(meUser) : { id: "", name: "", username: "", owner: false },
     servers,
     conversations: c.channels
-      .filter(channel => channel.kind !== "channel" || channel.server_id === serverId)
+      .filter(channel => (channel.kind !== "channel" && channel.kind !== "voice") || channel.server_id === serverId)
       .map(channel => ({ id: channel.id, name: channel.name, kind: kindOf(channel), mentions: mentionsBy.get(channel.id) ?? 0, peerId: channel.peer_id ?? undefined })),
     current: current ? { id: current.id, name: current.name, kind: kindOf(current), mentions: mentionsBy.get(current.id) ?? 0, peerId: current.peer_id ?? undefined } : undefined,
     people, friends: serverPeople.map(person), messages,
@@ -393,8 +393,8 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
       });
       return result;
     },
-    createChannel: (name, memberIds) => c.attempt(async () => {
-      const created = await c.api.post<{ id: string }>("/api/channels", { name, kind: "channel", server_id: serverId, member_ids: memberIds });
+    createChannel: (name, memberIds, kind = "channel") => c.attempt(async () => {
+      const created = await c.api.post<{ id: string }>("/api/channels", { name, kind, server_id: serverId, member_ids: memberIds });
       await c.refresh();
       await c.select(created.id);
     }),

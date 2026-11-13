@@ -33,7 +33,7 @@ export interface ServerEntry {
 export interface Conversation {
   id: string;
   name: string;
-  kind: "channel" | "dm" | "group";
+  kind: "channel" | "voice" | "dm" | "group";
   mentions: number;
   /** The other person, for a two-person direct conversation. */
   peerId?: string;
@@ -190,7 +190,7 @@ export interface ChatStore extends ChatState {
   playVideo(element: HTMLVideoElement, messageId: string, attachmentId: string, onError: (message: string) => void): () => void;
   /** These resolve to whether the request succeeded; callers navigate or clear forms only on success. */
   startDirect(memberIds: string[], name: string): Promise<boolean>;
-  createChannel(name: string, memberIds: string[]): Promise<boolean>;
+  createChannel(name: string, memberIds: string[], kind?: "channel" | "voice"): Promise<boolean>;
   /**
    * Owner only. Creates the server, saves its icon, then makes it the current server.
    * A failed icon does not undo the server: the result carries `iconFailed` instead.

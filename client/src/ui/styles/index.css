@@ -190,8 +190,7 @@ a { color: var(--hc-accent); }
   border-radius: var(--hc-radius-sm); color: var(--hc-text-muted);
   transition: background-color var(--hc-dur-fast) var(--hc-ease-out), color var(--hc-dur-fast) var(--hc-ease-out);
 }
-@media (hover: hover) { .hc-channel:hover { color: var(--hc-text); background: var(--hc-surface-raised); } }
-.hc-channel.is-current, .hc-channel.is-picked { color: var(--hc-text); background: var(--hc-surface-raised); }
+.hc-channel.is-picked { color: var(--hc-text); background: var(--hc-wash-selected); }
 .hc-channel.is-unread { color: var(--hc-text); font-weight: var(--hc-weight-bold); }
 .hc-channel__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hc-channel__call { display: flex; align-items: center; gap: var(--hc-space-1); padding: var(--hc-space-1) var(--hc-space-3) var(--hc-space-2) var(--hc-space-5); }
@@ -644,19 +643,6 @@ a { color: var(--hc-accent); }
   .hc-shell[data-dragging] .hc-left { transition: none; }
   .hc-drawer-scrim { position: absolute; inset: 0; z-index: 5; background: color-mix(in oklab, var(--hc-bg) 62%, transparent); }
   /* Conversation rows: each one a tappable surface with a chevron, a full thumb tall. */
-  .hc-channels ul { display: flex; flex-direction: column; gap: var(--hc-space-1); }
-  .hc-channels .hc-channel {
-    min-height: 52px; padding-inline: var(--hc-space-4) var(--hc-space-3); gap: var(--hc-space-3);
-    background: var(--hc-surface-raised); border-radius: var(--hc-radius-md); color: var(--hc-text); font-size: var(--hc-text-md);
-  }
-  .hc-channels .hc-channel:hover { background: var(--hc-surface-raised); }
-  .hc-channels .hc-channel:active { background: color-mix(in oklab, var(--hc-text) 9%, var(--hc-surface-raised)); }
-  .hc-channels .hc-channel.is-current { background: color-mix(in oklab, var(--hc-text) 11%, var(--hc-surface-raised)); }
-  .hc-channels .hc-channel.is-current .hc-channel__name { color: var(--hc-accent); font-weight: var(--hc-weight-bold); }
-  .hc-channel__chev { display: grid; }
-  /* Daylight: the current row sinks into the page tone instead of turning a flat grey. */
-  @media (prefers-color-scheme: light) {
-    :root:not([data-direction]) .hc-channels .hc-channel.is-current { background: var(--hc-bg); }
   }
   .hc-right {
     position: absolute; inset: auto 0 0 0; width: auto; height: 78%;
@@ -951,4 +937,149 @@ p { text-wrap: pretty; }
 @media (prefers-reduced-motion: no-preference) {
   .hc-skel { animation: hc-breathe 1.4s var(--hc-ease-out) infinite alternate; }
   @keyframes hc-breathe { from { opacity: 0.45; } to { opacity: 1; } }
+}
+/*
+ * HC-040 section 3: sidebar channel model. Replaces the "Channel list, DM list" block of index.css
+ * (keep .hc-dm__head and .hc-friends__go) and the phone rules for .hc-channels inside the 47.5em block.
+ */
+.hc-left { padding: var(--hc-space-3) var(--hc-space-2) var(--hc-space-2); gap: var(--hc-space-2); }
+.hc-channels { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--hc-space-4); padding: var(--hc-space-1) 0 var(--hc-space-3); }
+
+/* Group: "Text channels", "Voice channels". Sentence case, small and bold; the owner's + sits on the same line. */
+.hc-group__head { display: flex; align-items: center; min-height: 28px; padding-inline: var(--hc-space-2) var(--hc-space-1); }
+.hc-group__label { flex: 1; min-width: 0; font-size: var(--hc-text-xs); font-weight: var(--hc-weight-bold); color: var(--hc-text-muted); letter-spacing: 0.01em; }
+.hc-group__add { display: grid; place-items: center; width: 24px; height: 24px; border-radius: var(--hc-radius-xs); color: var(--hc-text-muted); }
+.hc-group__add .hc-icon { width: 16px; height: 16px; stroke-width: 1.9; }
+.hc-group__list { display: flex; flex-direction: column; gap: 2px; }
+
+/* Channel row. */
+.hc-channel {
+  position: relative; display: flex; align-items: center; gap: var(--hc-space-2); width: 100%; min-height: var(--hc-row);
+  padding: 0 var(--hc-space-2); border-radius: var(--hc-radius-sm); color: var(--hc-text-muted); background: none;
+  transition: background-color var(--hc-dur-fast) var(--hc-ease-out), color var(--hc-dur-fast) var(--hc-ease-out);
+}
+.hc-channel__open { position: absolute; inset: 0; border-radius: inherit; } /* the row's own button; siblings sit above it */
+.hc-channel__glyph { display: grid; flex: none; color: var(--hc-text-muted); transition: color var(--hc-dur-base) var(--hc-ease-out); }
+.hc-channel__glyph .hc-icon { width: 18px; height: 18px; }
+.hc-channel__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.3; padding-top: 1px; }
+.hc-channel__glyph, .hc-channel__name, .hc-channel__n, .hc-channel > .hc-count { position: relative; pointer-events: none; }
+.hc-channel__side { position: relative; display: grid; flex: none; margin-inline-end: -4px; }
+.hc-channel__side .hc-ibtn { width: 24px; height: 24px; border-radius: var(--hc-radius-xs); }
+.hc-channel__side .hc-icon { width: 16px; height: 16px; }
+.hc-channel__n { flex: none; min-width: 1ch; text-align: end; font-size: var(--hc-text-xs); font-weight: var(--hc-weight-bold); color: var(--hc-text-muted); }
+
+.hc-channel:active { background: var(--hc-wash-press); }
+.hc-channel.is-current { background: var(--hc-wash-selected); color: var(--hc-text); }
+.hc-channel.is-current .hc-channel__glyph { color: var(--hc-text); }
+.hc-channel.is-unread { color: var(--hc-text); font-weight: var(--hc-weight-bold); }
+/* A voice channel with someone in it is a room with the light on. */
+.hc-channel.is-lit { color: var(--hc-text); }
+.hc-channel.is-lit .hc-channel__glyph { color: var(--hc-live); }
+.hc-channel.is-joined .hc-channel__name { font-weight: var(--hc-weight-bold); }
+@media (hover: hover) {
+  .hc-channel:hover { background: var(--hc-wash-hover); color: var(--hc-text); }
+  .hc-channel.is-current:hover { background: var(--hc-wash-selected); }
+  .hc-group__add:hover { background: var(--hc-wash-hover); color: var(--hc-text); }
+  /* The side-chat button waits until the pointer or the keyboard is on the row. On touch it lives in the sheet. */
+  .hc-channel__side { opacity: 0; }
+  .hc-channel:hover .hc-channel__side, .hc-channel:focus-within .hc-channel__side, .hc-channel.is-joined .hc-channel__side { opacity: 1; }
+}
+@media (hover: none) { .hc-channel__side { display: none; } }
+
+/* People inside a voice channel: rows, streamers first. */
+.hc-voice__people { display: flex; flex-direction: column; padding: 2px 0 var(--hc-space-1); }
+.hc-vrow { position: relative; display: flex; align-items: center; gap: var(--hc-space-2); min-height: 30px; padding: 0 var(--hc-space-2) 0 calc(var(--hc-space-2) + 26px); border-radius: var(--hc-radius-sm); }
+.hc-vrow__open { position: absolute; inset: 0; border-radius: inherit; }
+.hc-vrow > :not(.hc-vrow__open) { position: relative; }
+.hc-vrow .hc-face, .hc-vrow__name, .hc-vrow__state { pointer-events: none; }
+.hc-vrow__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--hc-text-sm); color: var(--hc-text-muted); transition: color var(--hc-dur-base) var(--hc-ease-out); }
+.hc-vrow.is-speaking .hc-vrow__name, .hc-vrow.is-me .hc-vrow__name { color: var(--hc-text); }
+.hc-vrow__state { display: flex; align-items: center; gap: 6px; flex: none; color: var(--hc-text-muted); }
+.hc-vrow__state .hc-icon { width: 16px; height: 16px; }
+.hc-vrow:active { background: var(--hc-wash-press); }
+@media (hover: hover) { .hc-vrow:hover { background: var(--hc-wash-hover); } .hc-vrow:hover .hc-vrow__name { color: var(--hc-text); } }
+
+/* Rows arrive from above and leave to the side; the rows around them glide (useFlip, section 3.6). */
+@media (prefers-reduced-motion: no-preference) {
+  .hc-vrow.is-entering { animation: hc-vrow-in var(--hc-dur-base) var(--hc-ease-out) backwards; }
+  .hc-vrow.is-leaving { animation: hc-vrow-out var(--hc-dur-fast) var(--hc-ease-in) forwards; pointer-events: none; }
+  @keyframes hc-vrow-in { from { opacity: 0; transform: translateY(-6px); } }
+  @keyframes hc-vrow-out { to { opacity: 0; transform: translateX(-8px); } }
+}
+
+/* Phone: the drawer. Rows are a thumb tall; no tiles, no chevrons: the glyph says what a row is. */
+@media (max-width: 47.5em) {
+  .hc-channels ul { gap: 2px; }
+  .hc-channels .hc-channel, .hc-channels .hc-channel:hover, .hc-channels .hc-channel.is-current {
+    min-height: var(--hc-row-touch); padding-inline: var(--hc-space-3); gap: var(--hc-space-3); border-radius: var(--hc-radius-md); font-size: var(--hc-text-md);
+  }
+  .hc-channels .hc-channel, .hc-channels .hc-channel:hover { background: none; color: var(--hc-text-muted); }
+  .hc-channels .hc-channel.is-lit, .hc-channels .hc-channel.is-unread { color: var(--hc-text); }
+  .hc-channels .hc-channel:active { background: var(--hc-wash-press); }
+  .hc-channels .hc-channel.is-current { background: var(--hc-wash-selected); color: var(--hc-text); }
+  .hc-channels .hc-channel.is-current .hc-channel__name { color: inherit; font-weight: inherit; }
+  .hc-channel__chev { display: none; }
+  .hc-channel__glyph .hc-icon { width: 20px; height: 20px; }
+  .hc-group__head { min-height: var(--hc-hit); padding-inline: var(--hc-space-3) 0; }
+  .hc-group__add { width: var(--hc-hit); height: var(--hc-hit); border-radius: var(--hc-radius-md); }
+  .hc-group__add .hc-icon { width: 20px; height: 20px; stroke-width: 1.6; }
+  .hc-vrow { min-height: 40px; padding-inline: calc(var(--hc-space-3) + 32px) var(--hc-space-3); border-radius: var(--hc-radius-md); }
+  .hc-vrow__name { font-size: var(--hc-text-md); }
+}
+
+/* Create channel (the owner's +): a .hc-sheet with one field and a two-way choice. */
+.hc-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; padding: 2px; border: 0; border-radius: var(--hc-radius-md); background: var(--hc-wash-hover); }
+.hc-seg label { position: relative; display: flex; align-items: center; justify-content: center; gap: var(--hc-space-2); min-height: 36px; padding-top: 1px; border-radius: calc(var(--hc-radius-md) - 2px); color: var(--hc-text-muted); font-size: var(--hc-text-sm); cursor: pointer; transition: background-color var(--hc-dur-fast) var(--hc-ease-out), color var(--hc-dur-fast) var(--hc-ease-out); }
+.hc-seg input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.hc-seg .hc-icon { width: 18px; height: 18px; }
+.hc-seg label:has(:checked) { background: var(--hc-wash-selected); color: var(--hc-text); font-weight: var(--hc-weight-bold); }
+.hc-seg label:has(:focus-visible) { outline: 2px solid var(--hc-focus); outline-offset: 2px; }
+@media (max-width: 47.5em) { .hc-seg label { min-height: var(--hc-hit); font-size: var(--hc-text-md); } }
+
+/* Voice channel sheet (phone): who is inside, then Join. Built on .hc-sheet. */
+.hc-voicesheet__people { display: flex; flex-direction: column; gap: 2px; margin-inline: calc(var(--hc-space-2) * -1); }
+.hc-voicesheet__row { display: flex; align-items: center; gap: var(--hc-space-3); min-height: 52px; padding: var(--hc-space-1) var(--hc-space-2); border-radius: var(--hc-radius-md); }
+.hc-voicesheet__row > span:nth-of-type(2) { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.hc-voicesheet__row strong, .hc-voicesheet__row small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-voicesheet__row small { font-size: var(--hc-text-sm); }
+.hc-voicesheet__row .hc-vrow__state .hc-icon { width: 20px; height: 20px; }
+.hc-voicesheet__row .hc-livepill { min-height: 28px; padding-inline: var(--hc-space-2); }
+.hc-voicesheet__empty { padding: var(--hc-space-3) 0 var(--hc-space-2); color: var(--hc-text-muted); }
+/*
+ * HC-040 section 4: the LIVE mark and the stream preview. New rules; append to index.css.
+ */
+/* LIVE: a small solid plate in the live colour. No dot, no glow. It is a button: it opens the preview. */
+.hc-livepill {
+  display: inline-grid; place-items: center; flex: none; min-height: 18px; padding: 1px 5px 0; border-radius: var(--hc-radius-xs);
+  background: var(--hc-live); color: var(--hc-on-accent); font-size: var(--hc-text-2xs); font-weight: var(--hc-weight-bold); letter-spacing: 0.06em; line-height: 1;
+}
+.hc-livepill::before { content: ""; position: absolute; inset: -8px -6px; } /* a larger hit area than the plate */
+.hc-livepill { position: relative; }
+@media (prefers-reduced-motion: no-preference) {
+  /* It lands with a small spring, then breathes three times and rests. Nothing in the sidebar blinks forever. */
+  .hc-livepill.is-entering { animation: hc-live-in var(--hc-dur-slow) var(--hc-ease-spring) backwards, hc-live-breathe 1.6s var(--hc-ease-out) var(--hc-dur-slow) 3; }
+  @keyframes hc-live-in { from { opacity: 0; transform: scale(0.6); } }
+  @keyframes hc-live-breathe { 50% { opacity: 0.55; } }
+}
+
+/* Preview: a popover to the right of the row on wide screens, a sheet on phones. */
+.hc-preview-pop { width: 296px; gap: var(--hc-space-2); transform-origin: 0 var(--hc-space-5); }
+.hc-preview-pop__frame { position: relative; aspect-ratio: 16 / 9; border-radius: var(--hc-radius-md); overflow: hidden; background: var(--hc-stage); }
+.hc-preview-pop__frame img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.hc-preview-pop__frame .hc-livepill { position: absolute; top: var(--hc-space-2); left: var(--hc-space-2); }
+.hc-preview-pop__none { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--hc-space-1); color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-preview-pop__who { display: flex; align-items: center; gap: var(--hc-space-2); padding: var(--hc-space-1) var(--hc-space-1) 0; min-width: 0; }
+.hc-preview-pop__who > span:last-child { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.hc-preview-pop__who strong, .hc-preview-pop__who small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-preview-pop .hc-btn { min-height: 36px; margin: var(--hc-space-1) 0 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .hc-preview-pop.hc-anim-pop { animation: hc-pop-side var(--hc-dur-base) var(--hc-ease-out); }
+  .hc-presence[data-state="exit"] > .hc-preview-pop { animation: hc-pop-side-out var(--hc-dur-fast) var(--hc-ease-in) forwards; }
+  @keyframes hc-pop-side { from { opacity: 0; transform: translateX(-6px) scale(0.97); } }
+  @keyframes hc-pop-side-out { to { opacity: 0; transform: translateX(-4px) scale(0.98); } }
+}
+@media (max-width: 47.5em) {
+  /* In a sheet the same parts stack full width. */
+  .hc-sheet .hc-preview-pop__frame { border-radius: var(--hc-radius-md); }
+  .hc-sheet .hc-preview-pop__who { padding-inline: 0; }
 }
