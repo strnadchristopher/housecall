@@ -15,7 +15,8 @@ function hover(event: React.PointerEvent<HTMLElement>, open?: (target: HTMLEleme
   if (event.pointerType !== "mouse" || !open) return;
   const target = event.currentTarget;
   const timer = setTimeout(() => open(target, false), 250);
-  target.addEventListener("pointerleave", () => clearTimeout(timer), { once: true });
+  const stop = () => clearTimeout(timer);
+  for (const type of ["pointerleave", "pointerdown", "focus"]) target.addEventListener(type, stop, { once: true });
 }
 
 /** Words for what a person is doing, in order: live, camera, then one audio state (deafen covers mute). */

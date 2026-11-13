@@ -1083,3 +1083,4 @@ p { text-wrap: pretty; }
   .hc-sheet .hc-preview-pop__frame { border-radius: var(--hc-radius-md); }
   .hc-sheet .hc-preview-pop__who { padding-inline: 0; }
 }
+.hc-vrow__state .hc-livepill { pointer-events: auto; }
