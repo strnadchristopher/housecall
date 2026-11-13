@@ -4,6 +4,7 @@ import type { Attachment, ChatMessage } from "../../core/chat";
 import { useChat } from "../../core/context";
 import { copy } from "../copy";
 import { Button, Icon, IconButton, Presence } from "../kit";
+import { SnapCamera, cameraSupported } from "../snap/SnapCamera";
 
 /** How long a snap stays on screen once opened. */
 const VIEW_SECONDS = 10;
@@ -125,6 +126,7 @@ export function SnapCapture() {
     return () => URL.revokeObjectURL(next);
   }, [photo]);
   const [failed, setFailed] = useState(false);
+  const [camera, setCamera] = useState(false);
   useEffect(() => setFailed(false), [photo]);
   const send = async () => {
     if (!photo) return;
@@ -133,9 +135,15 @@ export function SnapCapture() {
   };
   return (
     <>
-      <IconButton icon="snap" label={copy.snaps.take} onClick={() => input.current?.click()} />
+      <IconButton icon="snap" label={copy.snaps.take} onClick={() => { if (cameraSupported()) setCamera(true); else input.current?.click(); }} />
       <input ref={input} type="file" accept="image/*" capture="environment" className="hc-sr" tabIndex={-1} aria-hidden="true" data-testid="snap-capture"
         onChange={event => { const chosen = event.target.files?.[0]; event.target.value = ""; if (chosen) setPhoto(chosen); }} />
+      {createPortal(
+        <Presence show={camera}>
+          <SnapCamera onClose={() => setCamera(false)} onSend={chat.sendSnap} error={chat.error} />
+        </Presence>,
+        document.body,
+      )}
       {createPortal(
         <Presence show={!!photo}>
           <SnapPreview root={root} src={preview} busy={chat.busy} error={failed ? chat.error : ""} onSend={() => void send()} onCancel={() => setPhoto(undefined)} />

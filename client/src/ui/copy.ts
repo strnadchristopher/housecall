@@ -77,6 +77,13 @@ export const copy = {
     video: { queued: "Video queued", running: "Preparing video", ready: "Video ready", failed: "Video failed" },
     gifSearch: "Search GIFs", gifSource: "Powered by GIPHY", noGifs: "No GIFs", role: "role",
   },
+  camera: {
+    label: "Camera", close: "Close camera", take: "Take photo", flip: "Switch camera", flashOn: "Flash on", flashOff: "Flash off",
+    lightOn: "Light on", lightOff: "Light off", gallery: "Choose a photo", yourPhoto: "Your photo", retake: "Retake", send: "Send",
+    blockedTitle: "Housecall can't use the camera", blockedBody: "Allow the camera for Housecall in your system settings, then try again.",
+    tryAgain: "Try again", galleryInstead: "Choose a photo instead", scanTitle: "Scan QR code", scanHint: "Point at the code on your other device",
+    scanWhere: "Settings, then Log in with QR code", scanFound: "Got it", scanWrong: "That isn't a Housecall login code",
+  },
   snaps: {
     take: "Take a snap", preview: "Snap preview", send: "Send as snap", sending: "Sending", once: "Each person can open it once",
     snap: "Snap", tap: "Tap to view", opening: "Opening", opened: "Opened", expired: "Expired", gone: "This snap is gone",

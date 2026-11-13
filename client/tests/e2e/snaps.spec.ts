@@ -127,3 +127,72 @@ test("a snap opens once per recipient, closes after ten seconds and is then gone
   await expect(receiver.getByTestId("snap-image")).toHaveCount(0);
   expect(opens).toHaveLength(2);
 });
+
+test("the full-screen camera takes a photo from the fake feed, reviews it and sends it; a refused camera falls back", async ({ browser }) => {
+  test.setTimeout(90000);
+  const password = "synthetic snap password 123";
+  const { defaultBrowserType: _ignored, ...phone } = devices["iPhone 13"];
+  const sender = await (await browser.newContext(phone)).newPage();
+  const receiver = await (await browser.newContext(phone)).newPage();
+  sender.setDefaultTimeout(15000);
+  receiver.setDefaultTimeout(15000);
+  await sender.goto("/");
+  await phoneSignIn(sender, "snap_sender", password);
+  await receiver.goto("/");
+  await phoneSignIn(receiver, "snap_friend", password);
+  const before = await receiver.getByTestId("snap-tile").count();
+  const takeASnap = () => sender.getByTestId("screen-composer").getByRole("button", { name: "Take a snap", exact: true });
+
+  // Open: a full-screen dark layer with live video from Chromium's fake camera.
+  await takeASnap().click();
+  const camera = sender.getByRole("dialog", { name: "Camera" });
+  await expect(camera).toBeVisible();
+  const video = camera.getByTestId("snap-camera-video");
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.videoWidth)).toBeGreaterThan(0);
+  const box = (await camera.boundingBox())!;
+  expect(box.width).toBeGreaterThanOrEqual(390);
+  expect(box.height).toBeGreaterThanOrEqual(await sender.evaluate(() => innerHeight));
+
+  // Shutter, then review: the still, a Retake, and the rule of a snap.
+  const shutter = camera.getByRole("button", { name: "Take photo", exact: true });
+  await expect(shutter).toBeEnabled();
+  await shutter.click();
+  const still = camera.getByTestId("snap-camera-still");
+  await expect(still).toBeVisible();
+  expect(await still.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth)).toBeGreaterThan(0);
+  await expect(camera.getByText("Each person can open it once")).toBeVisible();
+  // Retake returns to the live feed, which still plays.
+  await camera.getByRole("button", { name: "Retake", exact: true }).click();
+  await expect(still).toHaveCount(0);
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.videoWidth)).toBeGreaterThan(0);
+  await shutter.click();
+  await expect(still).toBeVisible();
+
+  // Send: the layer closes and the snap arrives for the other person.
+  await camera.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(sender.getByRole("dialog", { name: "Camera" })).toBeHidden();
+  await expect(receiver.getByTestId("snap-tile")).toHaveCount(before + 1);
+  // The camera is released when the layer closes.
+  await expect.poll(() => sender.evaluate(() => document.querySelectorAll(".hc-cam").length)).toBe(0);
+
+  // Escape closes the live camera.
+  await takeASnap().click();
+  await expect(sender.getByRole("dialog", { name: "Camera" })).toBeVisible();
+  await sender.keyboard.press("Escape");
+  await expect(sender.getByRole("dialog", { name: "Camera" })).toBeHidden();
+
+  // Permission refused: the blocked state, with the gallery as the way out; a chosen picture reaches review and sends.
+  await sender.evaluate(() => {
+    navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException("denied", "NotAllowedError"));
+  });
+  await takeASnap().click();
+  const blocked = sender.getByRole("dialog", { name: "Camera" });
+  await expect(blocked.getByText("Housecall can't use the camera")).toBeVisible();
+  await expect(blocked.getByRole("button", { name: "Try again", exact: true })).toBeVisible();
+  await expect(blocked.getByRole("button", { name: "Choose a photo instead", exact: true })).toBeVisible();
+  await blocked.getByTestId("snap-camera-gallery").setInputFiles({ name: "gallery.png", mimeType: "image/png", buffer: photo(48, 64) });
+  await expect(blocked.getByTestId("snap-camera-still")).toBeVisible();
+  await blocked.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(sender.getByRole("dialog", { name: "Camera" })).toBeHidden();
+  await expect(receiver.getByTestId("snap-tile")).toHaveCount(before + 2);
+});
