@@ -67,7 +67,7 @@ test("three live voice peers browse and synchronously play real HLS from a synth
     // Everyone opens the Gimme Chord (the film plays in its panel); the host starts Watch.
     for (const context of contexts) {
       const page = context.pages()[0];
-      await page.getByRole("tab", { name: "Chords", exact: true }).click();
+      await page.getByRole("tab", { name: "Apps", exact: true }).click();
       await page.getByTestId("chords").getByRole("button", { name: /Gimme/ }).click();
     }
     const host = contexts[0].pages()[0];

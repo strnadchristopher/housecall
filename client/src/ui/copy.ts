@@ -79,7 +79,7 @@ export const copy = {
     pin: (name: string) => `Pin ${name}`, unpin: (name: string) => `Unpin ${name}`, muted: "Muted", deafened: "Deafened", sharing: "Sharing your screen", speaking: "Speaking",
   },
   side: {
-    label: "Details", chat: "Chat", people: "People", chords: "Chords", owner: "Owner", search: "Search", pins: "Pins", searchLabel: "Search messages",
+    label: "Details", chat: "Chat", people: "People", chords: "Apps", owner: "Owner", search: "Search", pins: "Pins", searchLabel: "Search messages",
     noResults: "No results", noPins: "No pins",
   },
   chords: {
@@ -134,7 +134,7 @@ export const copy = {
     reportBody: "Description", bug: "Bug", feature: "Feature", logs: "Logs", logsConsent: "Send these logs",
     screenshot: "Screenshot", screenshotConsent: "Send this screenshot", submitReport: "Send report", reportSent: "Report sent",
     resolve: "Resolve", resolved: "Resolved", open: "Open", downloadScreenshot: "Download screenshot", noReports: "No reports",
-    available: "Available", unavailable: "Not configured", integrations: "Integrations",
+    available: "Available", unavailable: "Not configured", integrations: "Apps",
   },
   setup: {
     scope: "Same for every server on this host.",

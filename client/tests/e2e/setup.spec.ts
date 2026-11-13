@@ -83,7 +83,7 @@ test("setup: server wizard, Settings integrations, non-owner", async ({ browser 
 
   // Settings: every card, and Check again asks the server again.
   await owner.getByRole("button", { name: "Server settings", exact: true }).click();
-  await owner.getByTestId("screen-settings").getByRole("button", { name: "Integrations", exact: true }).click();
+  await owner.getByTestId("screen-settings").getByRole("button", { name: "Apps", exact: true }).click();
   const panel = owner.getByTestId("integration-setup");
   for (const id of CARDS) await expect(panel.getByTestId(`integration-${id}`)).toBeVisible();
   await expect(panel.getByTestId("integration-giphy")).toContainText("Not set up");
@@ -104,7 +104,7 @@ test("setup: server wizard, Settings integrations, non-owner", async ({ browser 
   member.on("request", request => { if (request.url().endsWith("/api/setup/status")) asked++; });
   await accept(member, link, "alice");
   await member.getByRole("button", { name: "Server settings", exact: true }).click();
-  await member.getByTestId("screen-settings").getByRole("button", { name: "Integrations", exact: true }).click();
+  await member.getByTestId("screen-settings").getByRole("button", { name: "Apps", exact: true }).click();
   await expect(member.getByTestId("setup-ask-owner")).toHaveText("Ask the server owner to set this up.");
   expect(asked).toBe(0);
 });

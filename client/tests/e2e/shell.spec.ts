@@ -101,8 +101,8 @@ test("shell: picker, channel, call, composer, tabs, direct messages", async ({ p
   await expect(bar.getByRole("button", { name: "Mute", exact: true })).toBeVisible();
 
   // Right column tabs.
-  // No Chord is configured in this fixture, so there is no Chords tab to land on an empty pane.
-  await expect(page.getByRole("tab", { name: "Chords" })).toHaveCount(0);
+  // No app is configured in this fixture, so there is no Apps tab to land on an empty pane.
+  await expect(page.getByRole("tab", { name: "Apps" })).toHaveCount(0);
   // In a call the right column opens on Chat; People is one tab away.
   await expect(page.getByRole("tab", { name: "Chat", exact: true })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tab", { name: "People", exact: true }).click();

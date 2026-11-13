@@ -83,11 +83,11 @@ test("dana: join from a link, find the live call, send a GIF, start Watch Now, m
   await tap(dana.getByRole("button", { name: gif.title }));
   await expect(dana.getByTestId("screen-conversation").locator("video").first()).toBeVisible();
 
-  // 4. Start Watch Now: the people sheet, Chords, Gimme, Start Watch, library, title.
+  // 4. Start Watch Now: the people sheet, Apps, Gimme, Start Watch, library, title.
   task = "start Watch Now";
   await tap(dana.getByRole("button", { name: "People", exact: true }));
   await shot("4-sheet");
-  await tap(dana.getByRole("tab", { name: "Chords", exact: true }));
+  await tap(dana.getByRole("tab", { name: "Apps", exact: true }));
   await tap(dana.getByTestId("chords").getByRole("button", { name: /Gimme/ }));
   const gimme = dana.getByTestId("screen-gimme");
   await tap(gimme.getByRole("button", { name: "Start Watch", exact: true }));

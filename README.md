@@ -88,7 +88,7 @@ Invitations work without email: the owner creates one and shares the returned li
 sent only if you configure `RESEND_API_KEY` and `HOUSECALL_MAIL_FROM`.
 
 Voice and video media uses UDP on `SFU_PORT` and does not go through the reverse proxy; see
-the comments in `.env.example`. Integrations (Plex, Gimme, Switchboard, Giphy, push) are off
+the comments in `.env.example`. Apps (Plex, Gimme, Switchboard, Giphy, push) are off
 until you configure them.
 
 More: [setup](docs/SETUP.md), [API](docs/API.md), [threat model](docs/THREAT-MODEL.md),

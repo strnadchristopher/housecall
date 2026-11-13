@@ -86,9 +86,9 @@ test("three private users: invitation, realtime mentions, unsend/retraction, edi
   await expect(owner.getByTestId("screen-pins")).toContainText("Edited message");
   await owner.getByRole("complementary").getByRole("button", { name: "Back", exact: true }).click();
 
-  // Nothing is configured in this fixture, so the Chords tab is empty.
+  // Nothing is configured in this fixture, so the Apps tab is empty.
   for (const page of [owner, bob, carol]) {
-    await expect(page.getByRole("tab", { name: "Chords" })).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: "Apps" })).toHaveCount(0);
     await expect(page.getByTestId("people").locator("li")).toHaveCount(3);
   }
 
