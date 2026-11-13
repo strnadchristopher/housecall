@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en" data-accent="lavender">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HC-040 · 15 Icons</title>
+<!-- default = the 0.4.0 icons (PLAN and NEW) at 3x and 1x, then the compound marks · all = every icon in the kit at 1x and 3x -->
+<meta name="hc-states" content="default,all">
+<link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/b.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/c.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/accents.css">
+<link rel="stylesheet" href="../../client/src/ui/styles/index.css">
+<link rel="stylesheet" href="hc-040.css">
+<style>
+  /* Mock-only: nothing on this page ships. */
+  .m-icons { height: 100dvh; overflow: auto; background: var(--hc-stage); padding: var(--hc-space-5); display: flex; flex-direction: column; gap: var(--hc-space-4); }
+  .m-icons h2 { font-size: var(--hc-text-sm); color: var(--hc-text-muted); font-weight: var(--hc-weight-regular); }
+  .m-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: var(--hc-space-2); }
+  .m-grid li { display: flex; flex-direction: column; align-items: center; gap: var(--hc-space-1); padding: var(--hc-space-3) var(--hc-space-1) var(--hc-space-2); border-radius: var(--hc-radius-md); background: var(--hc-shell); }
+  .m-grid .m-big { width: 60px; height: 60px; }
+  .m-grid .m-pair { display: flex; align-items: center; gap: var(--hc-space-2); color: var(--hc-text-muted); }
+  .m-grid small { font-size: var(--hc-text-2xs); color: var(--hc-text-muted); }
+  .m-grid--small { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+  .m-grid--small .m-big { width: 40px; height: 40px; }
+  .m-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--hc-space-4); padding: var(--hc-space-3) var(--hc-space-4); border-radius: var(--hc-radius-md); background: var(--hc-shell); }
+  .m-row > span { display: inline-flex; align-items: center; gap: var(--hc-space-2); font-size: var(--hc-text-sm); color: var(--hc-text-muted); }
+  @media (max-width: 47.5em) { .m-icons { padding: var(--hc-space-3); } .m-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); } }
+</style>
+<script src="icons.js"></script>
+<script src="mock.js"></script>
+</head>
+<body>
+<div class="hc-root">
+  <main class="m-icons">
+    <div data-show="default" style="display:contents">
+      <h2>New in 0.4.0, at 3x and at the two sizes they are used (20 and 16 px)</h2>
+      <ul class="m-grid" id="new"></ul>
+      <h2>Compound marks: the slash is one shared path drawn over the icon; signal bars and LIVE are components, not icons</h2>
+      <div class="m-row">
+        <span><i data-i="mic" data-off></i>Muted</span>
+        <span><i data-i="headphones" data-off></i>Deafened</span>
+        <span><i data-i="camera" data-off></i>Camera off</span>
+        <span><i data-i="flash" data-off></i>Flash off</span>
+        <span><button type="button" class="hc-signal" data-bars="3" aria-label="Connection"><i></i><i></i><i></i></button>3</span>
+        <span><button type="button" class="hc-signal" data-bars="2" aria-label="Connection"><i></i><i></i><i></i></button>2</span>
+        <span><button type="button" class="hc-signal" data-bars="1" aria-label="Connection"><i></i><i></i><i></i></button>1</span>
+        <span><button type="button" class="hc-signal" data-bars="0" aria-label="Connection"><i></i><i></i><i></i></button>0</span>
+        <span><span class="hc-livepill">LIVE</span></span>
+      </div>
+    </div>
+    <div data-show="all" style="display:contents">
+      <h2>Every icon in the kit</h2>
+      <ul class="m-grid m-grid--small" id="all"></ul>
+    </div>
+  </main>
+</div>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const names = Object.keys(HC_ICONS);
+    const firstNew = names.indexOf("gear");
+    const cell = name => `<li>${HC.icon(name).replace('class="hc-icon"', 'class="hc-icon m-big"')}<span class="m-pair">${HC.icon(name)}${HC.icon(name).replace('class="hc-icon"', 'class="hc-icon" style="width:16px;height:16px"')}</span><small>${name}</small></li>`;
+    const fresh = document.getElementById("new"), all = document.getElementById("all");
+    if (fresh) fresh.innerHTML = names.slice(firstNew).map(cell).join("");
+    if (all) all.innerHTML = names.filter(n => n !== "slash").map(cell).join("");
+  });
+</script>
+</body>
+</html>
