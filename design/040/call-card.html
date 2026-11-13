@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en" data-accent="lavender">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HC-040 · 6 Call card, 7 User bar</title>
+<meta name="hc-states" content="default">
+<link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/b.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/c.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/accents.css">
+<link rel="stylesheet" href="../../client/src/ui/styles/index.css">
+<link rel="stylesheet" href="hc-040.css">
+<script src="icons.js"></script>
+<script src="mock.js"></script>
+<style>
+  /* mock-only board layout: each cell is as wide as the card is in the left column (288 - 16). */
+  .m-board { grid-template-columns: repeat(auto-fill, 272px); column-gap: var(--hc-space-6); }
+  .m-wide { grid-column: 1 / -1; max-width: 390px; }
+  @media (max-width: 47.5em) { .m-board { grid-template-columns: minmax(0, 1fr); } .m-cell { max-width: 316px; } }
+</style>
+</head>
+<body>
+<div class="m-board">
+  <div class="m-cell"><span class="m-cap"><b>Connected</b> · 3 bars · under 80 ms and 2% loss</span><div data-part="callcard" data-opts='{"call":"connected"}'></div></div>
+  <div class="m-cell"><span class="m-cap"><b>Connected</b> · latency shown on hover, focus or tap</span><div data-part="callcard" data-opts='{"call":"connected"}' class="m-tip"></div></div>
+  <div class="m-cell"><span class="m-cap"><b>Connected</b> · 2 bars · muted</span><div data-part="callcard" data-opts='{"call":"connected","muted":true}' class="m-two"></div></div>
+  <div class="m-cell"><span class="m-cap"><b>Weak</b> · 1 bar · deafened</span><div data-part="callcard" data-opts='{"call":"weak","deafened":true}'></div></div>
+  <div class="m-cell"><span class="m-cap"><b>Connecting</b> · bars light in turn</span><div data-part="callcard" data-opts='{"call":"connecting"}'></div></div>
+  <div class="m-cell"><span class="m-cap"><b>Reconnecting</b></span><div data-part="callcard" data-opts='{"call":"reconnecting"}'></div></div>
+  <div class="m-cell"><span class="m-cap"><b>Failed</b> · 0 bars</span><div data-part="callcard" data-opts='{"call":"failed"}'></div></div>
+  <div class="m-cell"><span class="m-cap"><b>Long name</b> · truncates, controls never move</span><div data-part="callcard" data-opts='{"call":"connected","name":"Saturday morning workshop"}'></div></div>
+
+  <div class="m-cell"><span class="m-cap"><b>User bar</b> · rest. Bio is the second line</span>
+    <footer class="hc-userbar"><button type="button" class="hc-userbar__me" aria-label="Your profile"><span data-av="theo"></span><span class="hc-userbar__name"><strong>theo</strong><small>Kettle's on. Knock first.</small></span></button><span class="hc-userbar__mail"><button type="button" class="hc-ibtn" aria-label="Direct messages"><i data-i="mail"></i></button><span class="hc-dot"></span></span><button type="button" class="hc-ibtn" aria-label="Settings"><i data-i="gear"></i></button></footer></div>
+  <div class="m-cell"><span class="m-cap"><b>User bar</b> · keyboard focus on the profile button</span>
+    <footer class="hc-userbar"><button type="button" class="hc-userbar__me is-ring" aria-label="Your profile"><span data-av="theo"></span><span class="hc-userbar__name"><strong>theo</strong><small>Kettle's on. Knock first.</small></span></button><span class="hc-userbar__mail"><button type="button" class="hc-ibtn" aria-label="Direct messages"><i data-i="mail"></i></button></span><button type="button" class="hc-ibtn" aria-label="Settings"><i data-i="gear"></i></button></footer></div>
+  <div class="m-cell"><span class="m-cap"><b>User bar</b> · no bio: connection state</span>
+    <footer class="hc-userbar"><button type="button" class="hc-userbar__me" aria-label="Your profile"><span data-av="theo"></span><span class="hc-userbar__name"><strong>theo</strong><small>Connected</small></span></button><span class="hc-userbar__mail"><button type="button" class="hc-ibtn" aria-label="Direct messages"><i data-i="mail"></i></button></span><button type="button" class="hc-ibtn is-active" aria-label="Settings"><i data-i="gear"></i></button></footer></div>
+  <div class="m-cell"><span class="m-cap"><b>User bar</b> · offline wins over the bio</span>
+    <footer class="hc-userbar"><button type="button" class="hc-userbar__me" aria-label="Your profile"><span data-av="theo"></span><span class="hc-userbar__name"><strong>theo</strong><small data-state="off">Reconnecting</small></span></button><span class="hc-userbar__mail"><button type="button" class="hc-ibtn" aria-label="Direct messages"><i data-i="mail"></i></button></span><button type="button" class="hc-ibtn" aria-label="Settings"><i data-i="gear"></i></button></footer></div>
+
+  <div class="m-cell m-wide"><span class="m-cap"><b>Phone strip</b> · under the header on every screen but the stage</span>
+    <div class="m-on-stage" style="padding: var(--hc-space-2) 0 var(--hc-space-1)">
+      <section class="hc-callstrip" data-state="connected" aria-label="Current call">
+        <button type="button" class="hc-signal hc-tipped" data-bars="3" aria-label="Connection"><i></i><i></i><i></i><span class="hc-tip" role="tooltip" data-side="start">32 ms to server</span></button>
+        <button type="button" class="hc-callstrip__main" aria-label="Open Lounge"><strong>Lounge</strong><small>Voice connected</small></button>
+        <button type="button" class="hc-ibtn" aria-label="Mute" style="width:44px;height:44px"><i data-i="mic"></i></button>
+        <button type="button" class="hc-ibtn hc-ibtn--danger" aria-label="Leave" style="width:44px;height:44px"><i data-i="leave"></i></button>
+      </section>
+    </div></div>
+  <div class="m-cell m-wide"><span class="m-cap"><b>Phone strip</b> · reconnecting, muted</span>
+    <div class="m-on-stage" style="padding: var(--hc-space-2) 0 var(--hc-space-1)">
+      <section class="hc-callstrip" data-state="reconnecting" aria-label="Current call">
+        <button type="button" class="hc-signal" data-bars="0" data-busy aria-label="Connection"><i></i><i></i><i></i></button>
+        <button type="button" class="hc-callstrip__main" aria-label="Open Lounge"><strong>Lounge</strong><small>Reconnecting</small></button>
+        <button type="button" class="hc-ibtn is-active" aria-label="Unmute" style="width:44px;height:44px"><i data-i="mic" data-off></i></button>
+        <button type="button" class="hc-ibtn hc-ibtn--danger" aria-label="Leave" style="width:44px;height:44px"><i data-i="leave"></i></button>
+      </section>
+    </div></div>
+</div>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    document.querySelector(".m-tip .hc-signal")?.setAttribute("data-open", "");
+    document.querySelector(".m-two .hc-signal")?.setAttribute("data-bars", "2");
+    document.querySelector(".m-board").style.paddingTop = "48px";
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Finish logging in · Housecall</title>
+<!-- HC-040 section 10.6. This file IS the page the server serves at /link: plain HTML and CSS, one small
+     script, no framework, no external request. The colours are the Doorway tokens copied by value, because
+     the page is served without the client bundle. mockup states: default = opened from a scanned code,
+     missing = opened with no code after the # -->
+<meta name="hc-states" content="default,missing">
+<meta name="hc-hash" content="hcl1.9f2c41d07a.Zk3vQ8mT1xYb.MCowBQYDK2VuAyEA">
+<style>
+  :root {
+    color-scheme: dark light;
+    --stage: #0b1018; --raised: #1b2535; --text: #e8edf6; --muted: #a3afc4; --accent: #b8a4ff; --on-accent: #1b1236; --focus: #d9cdff;
+    --ink: #e8edf6; --leaf: rgb(27 18 54 / 0.38);
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --stage: #e2e5ef; --raised: #fafbfe; --text: #141a24; --muted: #525d70; --accent: #5b3fd1; --on-accent: #ffffff; --focus: #141a24; --ink: #141a24; --leaf: rgb(255 255 255 / 0.38); }
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: grid; place-items: center; background: var(--stage); color: var(--text);
+    font: 400 1rem/1.45 "Inria Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%;
+    padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  }
+  main { width: min(100%, 22.5rem); display: flex; flex-direction: column; gap: 12px; }
+  svg { width: 56px; height: 56px; margin-bottom: 12px; }
+  h1 { margin: 0; font-size: 1.625rem; line-height: 1.15; letter-spacing: -0.012em; }
+  p { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+  p strong { color: var(--text); }
+  .actions { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; }
+  a.button {
+    display: flex; align-items: center; justify-content: center; min-height: 52px; padding: 4px 16px; border-radius: 10px;
+    background: var(--raised); color: var(--text); font-weight: 700; text-decoration: none;
+  }
+  a.button.primary { background: var(--accent); color: var(--on-accent); }
+  a.button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  small { display: block; padding-top: 12px; font-size: 0.875rem; color: var(--muted); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <svg viewBox="0 0 32 32" role="img" aria-label="Housecall">
+    <path fill="var(--ink)" d="M6 3H12V10.83A10 10 0 0 1 26 20V29H20V20A4 4 0 0 0 12 20V29H6Z"/>
+    <path fill="var(--accent)" d="M12 29V20A4 4 0 0 1 20 20V29Z"/>
+    <path fill="var(--leaf)" d="M12 29V20A4 4 0 0 1 12.6 17.9L15.4 19.6V29Z"/>
+  </svg>
+
+  <div id="ok">
+    <h1>Finish logging in</h1>
+    <p style="padding-top:8px">You scanned a login code for <strong id="host">this server</strong>. Open it in Housecall to carry on.</p>
+    <div class="actions">
+      <a class="button primary" id="app" href="housecall://link">Open in Housecall</a>
+      <a class="button" id="web" href="/">Continue in this browser</a>
+    </div>
+    <small>Nothing is logged in until you say yes on the device that showed the code. Didn't scan one yourself? Close this page.</small>
+  </div>
+
+  <div id="missing" hidden>
+    <h1>This link is missing its code</h1>
+    <p style="padding-top:8px">Scan the QR code again from Housecall, or point your phone's camera at it.</p>
+  </div>
+
+  <noscript><p>This page needs JavaScript to pass the code on. Open Housecall and choose Log in with QR code instead.</p></noscript>
+</main>
+<script>
+  // The code lives after the # and never reaches the server. It is handed to the app or the web client as is.
+  (function () {
+    var code = location.hash.slice(1);
+    var ok = /^hcl1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(code);
+    document.getElementById("ok").hidden = !ok;
+    document.getElementById("missing").hidden = ok;
+    if (!ok) return;
+    document.getElementById("host").textContent = location.host || "this server";
+    document.getElementById("app").href = "housecall://link?c=" + encodeURIComponent(code) + "&h=" + encodeURIComponent(location.origin);
+    document.getElementById("web").href = "/#link=" + code;
+  })();
+</script>
+</body>
+</html>

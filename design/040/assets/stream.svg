@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" preserveAspectRatio="xMidYMid slice">
+  <!-- Stand-in for a shared screen: a film paused on a night exterior. Mock content only, not UI. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a1226"/><stop offset=".55" stop-color="#1c2a4a"/><stop offset="1" stop-color="#3a3f5e"/>
+    </linearGradient>
+    <linearGradient id="spill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3c178" stop-opacity=".55"/><stop offset="1" stop-color="#f3c178" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7"/>
+      <feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .07 0"/>
+    </filter>
+  </defs>
+  <rect width="960" height="540" fill="url(#sky)"/>
+  <g fill="#dfe6ff">
+    <circle cx="120" cy="70" r="1.6"/><circle cx="260" cy="120" r="1.2"/><circle cx="410" cy="52" r="1.8"/><circle cx="560" cy="96" r="1.1"/>
+    <circle cx="690" cy="44" r="1.5"/><circle cx="820" cy="130" r="1.3"/><circle cx="900" cy="62" r="1.7"/><circle cx="330" cy="180" r="1"/><circle cx="60" cy="170" r="1.2"/>
+  </g>
+  <circle cx="742" cy="118" r="34" fill="#e9ecff"/><circle cx="756" cy="108" r="30" fill="#17223f"/>
+  <path d="M0 370C120 330 240 318 380 340S640 392 760 352S900 318 960 330V540H0Z" fill="#141c33"/>
+  <path d="M0 430C160 392 300 404 470 420S780 446 960 404V540H0Z" fill="#0c1222"/>
+  <!-- the house: tall stem, one lit doorway -->
+  <path d="M410 432V250h34v64a56 56 0 0 1 78 52v66h-34v-64a22 22 0 0 0-44 0v64Z" fill="#070b16"/>
+  <path d="M444 432v-64a22 22 0 0 1 44 0v64Z" fill="#f3c178"/>
+  <path d="M444 432v-64a22 22 0 0 1 3-11l16 10v65Z" fill="#3a2508" fill-opacity=".5"/>
+  <path d="M444 432h44l70 108H374Z" fill="url(#spill)"/>
+  <rect width="960" height="540" filter="url(#grain)"/>
+  <!-- player chrome of the shared window -->
+  <rect y="500" width="960" height="40" fill="#05070d" fill-opacity=".72"/>
+  <rect x="24" y="518" width="912" height="4" rx="2" fill="#ffffff" fill-opacity=".22"/>
+  <rect x="24" y="518" width="338" height="4" rx="2" fill="#ffffff" fill-opacity=".8"/>
+</svg>

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en" data-accent="lavender">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HC-040 · 10 QR login, the device that shows the code</title>
+<!-- default = code hidden (a blurred decoy) · shown = code visible, counting down · t24000 = the ring 24 s in
+     approve = a device scanned it · approved · failed = could not make a code -->
+<meta name="hc-states" content="default,shown,t24000,approve,approved,failed">
+<link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/b.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/c.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/accents.css">
+<link rel="stylesheet" href="../../client/src/ui/styles/index.css">
+<link rel="stylesheet" href="hc-040.css">
+<script src="icons.js"></script>
+<script src="mock.js"></script>
+</head>
+<body>
+<div class="hc-root">
+  <div class="hc-shell" data-screen="main">
+    <nav class="hc-left" aria-label="Housecall" data-part="left" data-opts='{"current":"general","unread":false}'></nav>
+    <main class="hc-center">
+      <div class="hc-settings-layer">
+        <div class="hc-settings">
+          <header class="hc-header">
+            <button type="button" class="hc-ibtn" aria-label="Close" data-show-phone="0"><i data-i="close"></i></button>
+            <button type="button" class="hc-ibtn" aria-label="Back" data-show-phone="1"><i data-i="back"></i></button>
+            <div class="hc-header__title"><h1 data-show-phone="0">Settings</h1><h1 data-show-phone="1">Log in with QR code</h1></div>
+          </header>
+          <div class="hc-settings__body">
+            <nav class="hc-settings__nav" aria-label="Settings" data-show-phone="0" data-part="settingsnav" data-opts='{"current":"Devices"}'></nav>
+            <section class="hc-settings__pane" aria-labelledby="q-title">
+              <h2 id="q-title" data-show-phone="0">Log in with QR code</h2>
+              <div class="hc-qrlogin">
+                <p class="hc-lede" data-hide="approve approved">Scan this with the device you want to log in. You confirm it here before anything happens.</p>
+
+                <div class="hc-qrlogin__card">
+                  <!-- hidden: a decoy pattern under a veil. The real code does not exist yet. -->
+                  <div class="hc-qr is-hidden" data-show="default failed">
+                    <span data-part="qr" data-opts='{"seed":3}' style="display:contents"></span>
+                    <span class="hc-qr__veil"><button type="button" class="hc-btn hc-btn--primary"><i data-i="eye"></i>Show my QR code</button></span>
+                  </div>
+                  <!-- shown -->
+                  <div class="hc-qr" data-show="shown t24000"><span class="hc-qr__code" data-part="qr" data-opts='{"seed":11}' style="display:contents"></span></div>
+                  <div class="hc-qrlogin__timer" data-show="shown t24000">
+                    <span class="hc-ring" role="presentation"><i></i><i></i></span>
+                    <span role="timer" data-show="shown">Hides in 60 s</span><span role="timer" data-show="t24000">Hides in 36 s</span>
+                    <button type="button" class="hc-btn hc-btn--text">Hide now</button>
+                  </div>
+                  <p class="hc-error" role="alert" data-show="failed" style="padding:0"><span>Couldn't make a code. Check your connection and try again.</span></p>
+
+                  <!-- a device scanned the code -->
+                  <div class="hc-qrlogin__ask" data-show="approve" role="alertdialog" aria-labelledby="q-ask">
+                    <i data-i="device"></i>
+                    <strong id="q-ask">iPhone wants to log in</strong>
+                    <p>Does it show this number?</p>
+                  </div>
+                  <div class="hc-plates" aria-label="42" data-show="approve"><span class="hc-plate">4</span><span class="hc-plate">2</span></div>
+                  <div class="hc-qrlogin__actions" data-show="approve">
+                    <button type="button" class="hc-btn hc-btn--primary">Yes, log it in</button>
+                    <button type="button" class="hc-btn hc-btn--text hc-btn--danger-text">No, deny</button>
+                  </div>
+
+                  <!-- approved -->
+                  <div class="hc-qrlogin__ask" data-show="approved" role="status">
+                    <span class="hc-qrlogin__done"><i data-i="check"></i></span>
+                    <strong>iPhone is logged in</strong>
+                    <p>It is in your Devices list. You can log it out there at any time.</p>
+                  </div>
+                  <div class="hc-qrlogin__actions" data-show="approved"><button type="button" class="hc-btn">Done</button></div>
+                </div>
+
+                <p class="hc-note" data-show="default shown t24000 failed"><i data-i="lock"></i><span>A photo of this code is not enough to get in. Every login needs your yes on this device, and each code works once.</span></p>
+                <p class="hc-note" data-show="approve"><i data-i="warn"></i><span>Only say yes if you are holding that device and the numbers match. A different number means someone else scanned your code: deny it.</span></p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

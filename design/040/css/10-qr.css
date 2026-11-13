@@ -1,0 +1,82 @@
+/*
+ * HC-040 section 10: QR login. New rules; append to index.css. The /link page has its own inline CSS
+ * (design/040/link.html) because the server serves it without the client bundle.
+ */
+/* Number plates: the two-digit check number, each digit on a lit doorway, like the number on a front door. */
+.hc-plates { display: inline-flex; gap: var(--hc-space-2); }
+.hc-plate {
+  display: grid; place-items: center; width: 64px; height: 76px; padding-top: 10px;
+  border-radius: 50% 50% var(--hc-radius-md) var(--hc-radius-md) / 42% 42% var(--hc-radius-md) var(--hc-radius-md);
+  background: var(--hc-accent); color: var(--hc-on-accent);
+  font-family: var(--hc-font-initial); font-size: 2.5rem; font-weight: var(--hc-weight-bold); line-height: 1; font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hc-plate { animation: hc-plate-in var(--hc-dur-slow) var(--hc-ease-spring) backwards; }
+  .hc-plate + .hc-plate { animation-delay: var(--hc-stagger); }
+  @keyframes hc-plate-in { from { opacity: 0; transform: translateY(var(--hc-space-2)) scale(0.92); } }
+}
+
+/* Countdown ring: two half discs that turn out of view. Transform only. */
+.hc-ring {
+  position: relative; display: inline-block; flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--hc-line-soft);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px));
+}
+.hc-ring i { position: absolute; inset: 0; clip-path: inset(0 0 0 50%); }
+.hc-ring i + i { clip-path: inset(0 50% 0 0); }
+.hc-ring i::before { content: ""; position: absolute; inset: 0; background: var(--hc-live); clip-path: inset(0 0 0 50%); }
+.hc-ring i + i::before { clip-path: inset(0 50% 0 0); }
+@media (prefers-reduced-motion: no-preference) {
+  .hc-ring i::before { animation: hc-ring-a var(--hc-ring-s, 60s) linear forwards; }
+  .hc-ring i + i::before { animation-name: hc-ring-b; }
+  @keyframes hc-ring-a { 50%, 100% { transform: rotate(180deg); } }
+  @keyframes hc-ring-b { 0%, 50% { transform: none; } 100% { transform: rotate(180deg); } }
+}
+
+/* Waiting: three small doorways breathing in turn. */
+.hc-wait { display: inline-flex; align-items: flex-end; gap: 5px; }
+.hc-wait i { width: 8px; height: 10px; border-radius: 50% 50% 2px 2px / 44% 44% 2px 2px; background: var(--hc-text-muted); }
+@media (prefers-reduced-motion: no-preference) {
+  .hc-wait i { animation: hc-signal-seek 1.2s var(--hc-ease-out) infinite; } /* keyframes: section 6 */
+  .hc-wait i:nth-child(2) { animation-delay: 160ms; }
+  .hc-wait i:nth-child(3) { animation-delay: 320ms; }
+}
+
+/* The code itself. Always dark on white. Before "Show my QR code" the tile holds a decoy, never the real code. */
+.hc-qr { position: relative; width: 232px; aspect-ratio: 1; padding: 14px; border-radius: var(--hc-radius-lg); background: var(--hc-qr-paper); color: var(--hc-qr-ink); overflow: hidden; }
+.hc-qr__svg { display: block; width: 100%; height: 100%; fill: currentColor; shape-rendering: crispEdges; }
+.hc-qr__veil { position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in oklab, var(--hc-qr-paper) 55%, transparent); }
+.hc-qr.is-hidden .hc-qr__svg { filter: blur(9px); opacity: 0.55; transform: scale(1.06); }
+.hc-qr__veil .hc-btn { min-height: var(--hc-hit); padding-inline: var(--hc-space-4); box-shadow: 0 6px 16px -8px color-mix(in oklab, var(--hc-qr-ink) 60%, transparent); }
+@media (prefers-reduced-motion: no-preference) {
+  /* Reveal: the veil and the decoy fade out over the sharp code. Opacity and transform only; the blur itself never animates. */
+  .hc-qr__code { animation: hc-qr-in var(--hc-dur-base) var(--hc-ease-out); }
+  @keyframes hc-qr-in { from { opacity: 0; transform: scale(1.04); } }
+}
+
+/* Settings, Log in with QR code. One card: the code, or the approval that follows a scan. */
+.hc-qrlogin { display: flex; flex-direction: column; gap: var(--hc-space-4); max-width: 26rem; }
+.hc-qrlogin__card { display: flex; flex-direction: column; align-items: center; gap: var(--hc-space-4); padding: var(--hc-space-5); border-radius: var(--hc-radius-lg); background: var(--hc-shell); text-align: center; }
+.hc-qrlogin__timer { display: flex; align-items: center; gap: var(--hc-space-2); min-height: var(--hc-space-6); font-size: var(--hc-text-sm); color: var(--hc-text-muted); }
+.hc-qrlogin__timer .hc-btn { min-height: var(--hc-space-6); }
+.hc-qrlogin__ask { display: flex; flex-direction: column; align-items: center; gap: var(--hc-space-1); }
+.hc-qrlogin__ask > .hc-icon { width: 28px; height: 28px; color: var(--hc-text-muted); margin-bottom: var(--hc-space-1); }
+.hc-qrlogin__ask strong { font-size: var(--hc-text-lg); letter-spacing: var(--hc-tracking-tight); overflow-wrap: anywhere; }
+.hc-qrlogin__ask p { color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-qrlogin__actions { align-self: stretch; display: flex; flex-direction: column; gap: var(--hc-space-1); }
+.hc-qrlogin__actions .hc-btn { min-height: var(--hc-hit); font-size: var(--hc-text-md); }
+.hc-qrlogin__done { color: var(--hc-live); }
+.hc-qrlogin__done .hc-icon { width: 28px; height: 28px; stroke-width: 2; }
+
+/* The new device (onboarding screens): one centred column under the title. */
+.hc-qrnew { display: flex; flex-direction: column; align-items: center; gap: var(--hc-space-4); padding-block: var(--hc-space-5); text-align: center; }
+.hc-qrnew__wait { display: inline-flex; align-items: center; gap: var(--hc-space-3); color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-qrnew .hc-empty__door { width: 64px; height: 80px; margin: 0; }
+.hc-qrnew__who { display: flex; flex-direction: column; align-items: center; gap: var(--hc-space-3); }
+.hc-qrnew__who strong { font-size: var(--hc-text-xl); line-height: 1.15; letter-spacing: var(--hc-tracking-tight); overflow-wrap: anywhere; }
+.hc-qrnew__who small { font-size: var(--hc-text-sm); overflow-wrap: anywhere; }
+.hc-onb__title.is-centered { align-items: center; text-align: center; }
+/* The three steps of the explainer: plain numbered lines, no rail, no tiles. */
+.hc-qrsteps { display: flex; flex-direction: column; gap: var(--hc-space-3); }
+.hc-qrsteps li { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); column-gap: var(--hc-space-2); line-height: 1.45; }
+.hc-qrsteps__n { font-weight: var(--hc-weight-bold); color: var(--hc-text-muted); }

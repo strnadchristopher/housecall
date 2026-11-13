@@ -1,0 +1,45 @@
+/*
+ * HC-040 section 8: message actions. Replaces .hc-msg__bar and its show/hide rules in index.css
+ * (including the two .hc-msg__bar lines in the 47.5em phone block). Works with plan A1: MessageList owns
+ * the one open id and sets .is-open.
+ */
+/* Wide screens: a small bar that rides the top edge of the row, at the right. */
+.hc-msg__bar {
+  position: absolute; top: -18px; right: 0; z-index: 2; display: flex; gap: 0; padding: 2px;
+  background: var(--hc-pop); border-radius: var(--hc-radius-md); box-shadow: var(--hc-float);
+  opacity: 0; pointer-events: none; transform: translateY(2px);
+  transition: opacity var(--hc-dur-fast) var(--hc-ease-in), transform var(--hc-dur-fast) var(--hc-ease-in);
+}
+.hc-msg.is-grouped .hc-msg__bar { top: -22px; }
+.hc-msg__bar .hc-ibtn { width: 30px; height: 30px; border-radius: var(--hc-radius-sm); }
+.hc-msg__bar .hc-icon { width: 18px; height: 18px; }
+.hc-msg__lab { display: none; }
+.hc-msg.is-open .hc-msg__bar, .hc-msg:focus-visible .hc-msg__bar, .hc-msg:has(:focus-visible) .hc-msg__bar {
+  opacity: 1; pointer-events: auto; transform: none;
+  transition: opacity var(--hc-dur-fast) var(--hc-ease-out), transform var(--hc-dur-base) var(--hc-ease-out);
+}
+@media (hover: hover) {
+  .hc-msg:hover .hc-msg__bar { opacity: 1; pointer-events: auto; transform: none; transition: opacity var(--hc-dur-fast) var(--hc-ease-out), transform var(--hc-dur-base) var(--hc-ease-out); }
+}
+
+/* A touch screen wider than a phone: the same bar, with full-size targets. */
+@media (pointer: coarse) and (min-width: 47.51em) { .hc-msg__bar { top: -26px; } .hc-msg__bar .hc-ibtn { width: var(--hc-hit); height: var(--hc-hit); } }
+
+/* Phones: the same toolbar is a tray at the thumb. Nothing in the list moves when it opens. */
+@media (max-width: 47.5em) {
+  .hc-msg__bar, .hc-msg.is-grouped .hc-msg__bar {
+    position: fixed; inset: auto 0 0 0; top: auto; justify-self: normal; z-index: 12; display: flex; justify-content: space-between; gap: 0;
+    padding: var(--hc-space-2) calc(var(--hc-space-2) + var(--hc-safe-right)) calc(var(--hc-space-2) + var(--hc-safe-bottom)) calc(var(--hc-space-2) + var(--hc-safe-left));
+    border-radius: var(--hc-radius-lg) var(--hc-radius-lg) 0 0; background: var(--hc-pop); box-shadow: var(--hc-lip);
+    opacity: 1; transform: translateY(100%); visibility: hidden; pointer-events: none;
+    transition: transform var(--hc-dur-fast) var(--hc-ease-in), visibility 0s linear var(--hc-dur-fast);
+  }
+  .hc-msg.is-open .hc-msg__bar { display: flex; flex-wrap: nowrap; transform: none; visibility: visible; pointer-events: auto; transition: transform var(--hc-dur-base) var(--hc-ease-out), visibility 0s; }
+  .hc-msg:focus-visible:not(.is-open) .hc-msg__bar, .hc-msg:has(:focus-visible):not(.is-open) .hc-msg__bar { transform: translateY(100%); visibility: hidden; }
+  .hc-msg__bar .hc-ibtn { flex: 1 1 0; min-width: 0; width: auto; height: 56px; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: var(--hc-radius-md); color: var(--hc-text); }
+  .hc-msg__bar .hc-icon { width: 22px; height: 22px; }
+  .hc-msg__lab { display: block; font-size: var(--hc-text-2xs); line-height: 1.2; color: var(--hc-text-muted); }
+  .hc-msg__bar .hc-ibtn--danger, .hc-msg__bar .hc-ibtn--danger .hc-msg__lab { color: var(--hc-danger); }
+  /* The open row is marked; the rest of the list steps back a little so the eye stays on it. */
+  .hc-msg.is-open::before { background: var(--hc-wash-selected); }
+}

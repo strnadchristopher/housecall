@@ -1,0 +1,38 @@
+/*
+ * HC-040 section 4: the LIVE mark and the stream preview. New rules; append to index.css.
+ */
+/* LIVE: a small solid plate in the live colour. No dot, no glow. It is a button: it opens the preview. */
+.hc-livepill {
+  display: inline-grid; place-items: center; flex: none; min-height: 18px; padding: 1px 5px 0; border-radius: var(--hc-radius-xs);
+  background: var(--hc-live); color: var(--hc-on-accent); font-size: var(--hc-text-2xs); font-weight: var(--hc-weight-bold); letter-spacing: 0.06em; line-height: 1;
+}
+.hc-livepill::before { content: ""; position: absolute; inset: -8px -6px; } /* a larger hit area than the plate */
+.hc-livepill { position: relative; }
+@media (prefers-reduced-motion: no-preference) {
+  /* It lands with a small spring, then breathes three times and rests. Nothing in the sidebar blinks forever. */
+  .hc-livepill.is-entering { animation: hc-live-in var(--hc-dur-slow) var(--hc-ease-spring) backwards, hc-live-breathe 1.6s var(--hc-ease-out) var(--hc-dur-slow) 3; }
+  @keyframes hc-live-in { from { opacity: 0; transform: scale(0.6); } }
+  @keyframes hc-live-breathe { 50% { opacity: 0.55; } }
+}
+
+/* Preview: a popover to the right of the row on wide screens, a sheet on phones. */
+.hc-preview-pop { width: 296px; gap: var(--hc-space-2); transform-origin: 0 var(--hc-space-5); }
+.hc-preview-pop__frame { position: relative; aspect-ratio: 16 / 9; border-radius: var(--hc-radius-md); overflow: hidden; background: var(--hc-stage); }
+.hc-preview-pop__frame img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.hc-preview-pop__frame .hc-livepill { position: absolute; top: var(--hc-space-2); left: var(--hc-space-2); }
+.hc-preview-pop__none { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--hc-space-1); color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-preview-pop__who { display: flex; align-items: center; gap: var(--hc-space-2); padding: var(--hc-space-1) var(--hc-space-1) 0; min-width: 0; }
+.hc-preview-pop__who > span:last-child { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.hc-preview-pop__who strong, .hc-preview-pop__who small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-preview-pop .hc-btn { min-height: 36px; margin: var(--hc-space-1) 0 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .hc-preview-pop.hc-anim-pop { animation: hc-pop-side var(--hc-dur-base) var(--hc-ease-out); }
+  .hc-presence[data-state="exit"] > .hc-preview-pop { animation: hc-pop-side-out var(--hc-dur-fast) var(--hc-ease-in) forwards; }
+  @keyframes hc-pop-side { from { opacity: 0; transform: translateX(-6px) scale(0.97); } }
+  @keyframes hc-pop-side-out { to { opacity: 0; transform: translateX(-4px) scale(0.98); } }
+}
+@media (max-width: 47.5em) {
+  /* In a sheet the same parts stack full width. */
+  .hc-sheet .hc-preview-pop__frame { border-radius: var(--hc-radius-md); }
+  .hc-sheet .hc-preview-pop__who { padding-inline: 0; }
+}
