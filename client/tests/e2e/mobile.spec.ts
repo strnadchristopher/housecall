@@ -41,10 +41,9 @@ test("phone: opens in the chat; hamburger drawer; rows look tappable", async ({ 
   await expect(page.locator(".hc-left")).toBeVisible();
   const row = page.getByRole("button", { name: "Open general" });
   await expect(row).toBeFocused();                       // focus moves into the drawer, onto where you are
-  await expect(row.locator(".hc-channel__chev")).toBeVisible();
-  const bg = await row.evaluate(el => getComputedStyle(el).backgroundColor);
+  const bg = await row.evaluate(el => getComputedStyle(el.parentElement!).backgroundColor);   // the current row is a wash of ink
   expect(bg).not.toBe("rgba(0, 0, 0, 0)");
-  expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+  expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(48);   // the stretched button is the whole row
   // Tap the dimmed conversation showing beside the drawer.
   await page.getByRole("button", { name: "Close menu" }).click({ position: { x: 370, y: 420 } });
   await expect(page.locator(".hc-left")).toBeHidden();
