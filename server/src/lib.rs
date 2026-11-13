@@ -14,6 +14,7 @@ pub mod plex;
 pub mod profile;
 pub mod push;
 /// 1:1 calls: ring and decline in a direct conversation.
+pub mod link;
 pub mod ring;
 pub mod servers;
 pub mod setup;
@@ -87,7 +88,7 @@ fn secret() -> String {
     OsRng.fill_bytes(&mut bytes);
     hex::encode(bytes)
 }
-fn hash(v: &str) -> String {
+pub(crate) fn hash(v: &str) -> String {
     hex::encode(Sha256::digest(v.as_bytes()))
 }
 #[derive(Clone)]
@@ -115,6 +116,8 @@ pub struct AppState {
     pub rings: Arc<Mutex<HashMap<String, i64>>>,
     /// Who is in which call and in what state, and screen-share previews. Memory only.
     pub live: Arc<voice::Live>,
+    /// QR login links (LINK-V1). Memory only.
+    pub links: link::Links,
 }
 #[derive(Clone)]
 pub struct InviteMailConfig {
@@ -265,6 +268,7 @@ impl AppState {
             }),
             rings: Default::default(),
             live: Default::default(),
+            links: Default::default(),
         })
     }
     fn limited(&self, key: String, max: u32) -> bool {
@@ -309,6 +313,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .merge(vm_reset::routes())
         .merge(servers::routes())
         .merge(identity::routes())
+        .merge(link::routes())
         .merge(access::routes())
         .merge(setup::routes())
         .merge(profile::routes())
@@ -345,6 +350,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
     let public = Router::new()
         .merge(passkeys::public_routes())
         .merge(access::public_routes())
+        .merge(link::public_routes())
         .route("/setup", post(setup))
         .route("/login", post(login))
         .route("/invites/accept", post(accept))
@@ -380,12 +386,20 @@ async fn public_limit(
     req: axum::extract::Request,
     next: Next,
 ) -> Result<Response, ApiError> {
-    let route = match req.uri().path().rsplit('/').next().unwrap_or_default() {
-        "login" => "login",
-        "accept" => "invite-accept",
-        _ => "public",
+    let path = req.uri().path();
+    let route = if path.ends_with("/link/claim") {
+        "link-claim"
+    } else if path.ends_with("/link/result") {
+        "link-result"
+    } else {
+        match path.rsplit('/').next().unwrap_or_default() {
+            "login" => "login",
+            "accept" => "invite-accept",
+            _ => "public",
+        }
     };
-    if s.limited(format!("public:{route}"), s.public_auth_limit) {
+    let max = if route == "link-result" { 600 } else { s.public_auth_limit };
+    if s.limited(format!("public:{route}"), max) {
         return Err(ApiError(StatusCode::TOO_MANY_REQUESTS, "try again later"));
     }
     Ok(next.run(req).await)
@@ -497,22 +511,42 @@ async fn password_hash(s: &AppState, password: String) -> Result<String, ApiErro
     .map_err(|_| bad("credential processing failed"))?
     .map_err(|_| bad("credential processing failed"))
 }
-fn session(db: &Connection, user: User, device_name: &str) -> Result<Value, ApiError> {
-    let (token, device_key, id) = (secret(), secret(), secret());
+fn session(db: &Connection, user: User, device_name: &str, via: &str) -> Result<Value, ApiError> {
+    let mut out = session_with(db, user, device_name, via, None)?;
+    out.as_object_mut().map(|o| o.remove("session_id"));
+    Ok(out)
+}
+/// Creates a session and raises "new device" (LINK-V1 11.4). With a `device_hash` the device key is
+/// the caller's (QR login), so none is generated or returned. The result carries the session id.
+pub(crate) fn session_with(
+    db: &Connection,
+    user: User,
+    device_name: &str,
+    via: &str,
+    device_hash: Option<String>,
+) -> Result<Value, ApiError> {
+    let (token, id) = (secret(), secret());
+    let device_key = if device_hash.is_some() { None } else { Some(secret()) };
+    let device_hash = device_hash.unwrap_or_else(|| hash(device_key.as_deref().unwrap()));
     let expires = now() + 30 * 24 * 3600 * 1000;
     db.execute(
-        "INSERT INTO sessions(id,user_id,token_hash,device_hash,device_name,created_at,expires_at) VALUES(?,?,?,?,?,?,?)",
+        "INSERT INTO sessions(id,user_id,token_hash,device_hash,device_name,created_at,expires_at,added_via) VALUES(?,?,?,?,?,?,?,?)",
+        params![id, user.id, hash(&token), device_hash, device_name, now(), expires, via],
+    )?;
+    db.execute(
+        "INSERT INTO events(user_id,kind,channel_id,payload,created_at) VALUES(?,?,NULL,?,?)",
         params![
-            id,
             user.id,
-            hash(&token),
-            hash(&device_key),
-            device_name,
-            now(),
-            expires
+            "device.added",
+            json!({"session_id":id,"device_name":device_name,"added_via":via}).to_string(),
+            now()
         ],
     )?;
-    Ok(json!({"token":token,"device_key":device_key,"user":user,"expires_at":expires}))
+    let mut out = json!({"token":token,"user":user,"expires_at":expires,"session_id":id});
+    if let Some(k) = device_key {
+        out["device_key"] = json!(k);
+    }
+    Ok(out)
 }
 #[derive(Deserialize)]
 struct Setup {
@@ -554,7 +588,7 @@ async fn setup(State(s): State<AppState>, Json(v): Json<Setup>) -> ApiResult<Val
         [],
     )?;
     servers::join(&tx, &u.id, "home")?;
-    let result = session(&tx, u, &v.device_name)?;
+    let result = session(&tx, u, &v.device_name, "setup")?;
     tx.commit()?;
     Ok(Json(result))
 }
@@ -622,7 +656,7 @@ async fn login(State(s): State<AppState>, Json(v): Json<Login>) -> ApiResult<Val
             None => unauthorized(),
         });
     }
-    Ok(Json(session(&db, u, &v.device_name)?))
+    Ok(Json(session(&db, u, &v.device_name, "password")?))
 }
 #[derive(Deserialize)]
 struct Invite {
@@ -827,7 +861,7 @@ async fn accept(State(s): State<AppState>, Json(v): Json<Accept>) -> ApiResult<V
         |r| r.get(0),
     )?;
     servers::join(&tx, &u.id, &server_id)?;
-    let result = session(&tx, u, &v.device_name)?;
+    let result = session(&tx, u, &v.device_name, "invite")?;
     tx.commit()?;
     Ok(Json(result))
 }
@@ -907,8 +941,8 @@ async fn devices(
     Extension(p): Extension<Principal>,
 ) -> ApiResult<Value> {
     let db = s.db.lock().unwrap();
-    let mut q=db.prepare("SELECT id,device_name,created_at,expires_at FROM sessions WHERE user_id=? AND expires_at>?")?;
-    let rows=q.query_map(params![p.user.id,now()],|r|{let id:String=r.get(0)?;Ok(json!({"current":id==p.session_id,"id":id,"device_name":r.get::<_,String>(1)?,"created_at":r.get::<_,i64>(2)?,"expires_at":r.get::<_,i64>(3)?}))})?.collect::<Result<Vec<_>,_>>()?;
+    let mut q=db.prepare("SELECT id,device_name,created_at,expires_at,added_via FROM sessions WHERE user_id=? AND expires_at>?")?;
+    let rows=q.query_map(params![p.user.id,now()],|r|{let id:String=r.get(0)?;Ok(json!({"current":id==p.session_id,"id":id,"device_name":r.get::<_,String>(1)?,"created_at":r.get::<_,i64>(2)?,"expires_at":r.get::<_,i64>(3)?,"added_via":r.get::<_,Option<String>>(4)?}))})?.collect::<Result<Vec<_>,_>>()?;
     Ok(Json(json!({"devices":rows})))
 }
 async fn revoke(

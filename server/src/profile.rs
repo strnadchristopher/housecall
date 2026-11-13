@@ -35,7 +35,7 @@ pub fn routes() -> Router<AppState> {
 
 /// Format characters (Unicode Cf) that render as nothing or reorder text, so a name can't
 /// look blank or flip direction next to the real username.
-fn invisible(c: char) -> bool {
+pub(crate) fn invisible(c: char) -> bool {
     matches!(
         c,
         '\u{00AD}'
