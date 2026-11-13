@@ -23,7 +23,7 @@ test("phone: content runs behind the status bar, controls stay clear of it", asy
   await expect(header).toHaveCSS("padding-top", "51px");  // 47 inset + 4 (space-1)
   await expect(page.locator(".hc-center")).toHaveCSS("padding-bottom", "34px");
   // The drawer clears the status bar too.
-  await page.getByRole("button", { name: "Menu" }).click();
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
   await expect(page.locator(".hc-left")).toHaveCSS("padding-top", "55px"); // 47 inset + 8 (space-2)
   await context.close();
 });
@@ -34,7 +34,7 @@ test("phone: opens in the chat; hamburger drawer; rows look tappable", async ({ 
   await signInOwner(page);
   await expect(page.locator(".hc-center .hc-header h1")).toHaveText("general");
   await expect(page.locator(".hc-left")).toBeHidden();
-  const menu = page.getByRole("button", { name: "Menu" });
+  const menu = page.getByRole("button", { name: "Menu", exact: true });
   await expect(menu).toBeVisible();
   await expect(page.locator(".hc-center .hc-header").getByRole("button", { name: "Back" })).toHaveCount(0);
   await menu.click();
@@ -67,7 +67,7 @@ test("phone: drag the drawer to close it", async ({ browser }) => {
   const context = await browser.newContext({ ...phone, hasTouch: false, isMobile: false });
   const page = await context.newPage();
   await signInOwner(page);
-  await page.getByRole("button", { name: "Menu" }).click();
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
   const drawer = page.locator(".hc-left");
   await expect(drawer).toBeVisible();
   // A short drag snaps back open.
