@@ -334,7 +334,15 @@ const WRAP_VERSION = 0x01;
 function qrUrl(origin, linkId, secret, showingPub) {
   return `${origin}/link#hcl1.${hex(linkId)}.${b64u(secret)}.${b64u(showingPub)}`;
 }
-function deepLink(origin, linkId, secret, showingPub) {
+/**
+ * The deep link carries no code (REVIEW-0.4.0 R-0). The /link page is served by the host, so anything
+ * it passes to the app could have been rewritten: a host that swaps A in a code-carrying deep link
+ * knows both shared secrets and can grind its claiming key until both devices show the same number.
+ * "Open in Housecall" therefore only opens the app's scanner, and the code is scanned again in the app.
+ */
+const SCAN_DEEP_LINK = "housecall://link-scan";
+/** The pre-review form, kept only to build the negative vectors. Clients must refuse it. */
+function legacyDeepLink(origin, linkId, secret, showingPub) {
   return `housecall://link?c=hcl1.${b64u(utf8(origin))}.${hex(linkId)}.${b64u(secret)}.${b64u(showingPub)}`;
 }
 
@@ -370,26 +378,34 @@ function parseQr(text) {
   return { origin, ...parseLinkFields(parts) };
 }
 
-/** Parses housecall://link?c=… */
+/** Accepts exactly housecall://link-scan, which opens the in-app scanner. Anything else throws. */
 function parseDeepLink(text) {
-  const prefix = "housecall://link?c=";
-  if (!text.startsWith(prefix) || text.length > 600) throw new Error("not a link deep link");
-  const parts = text.slice(prefix.length).split(".");
-  if (parts.length !== 5) throw new Error("bad link code");
-  const origin = dec.decode(unb64u(parts[1]));
-  if (!validOrigin(origin)) throw new Error("bad origin");
-  return { origin, ...parseLinkFields([parts[0], parts[2], parts[3], parts[4]]) };
+  if (text.startsWith("housecall://link?")) throw new Error("deep links never carry a login code");
+  if (text !== SCAN_DEEP_LINK) throw new Error("not a link deep link");
+  return { action: "scan" };
 }
 
 /**
- * Android form of the deep link for the /link page (REVIEW-0.4.0 R-10): an intent URL that names the
- * Housecall package, so another app that registered housecall:// cannot receive the secret.
+ * What a host gains from a code-carrying deep link (R-0), computed so the vector shows real numbers.
+ * The host replaces A with its own A2 in the deep link, so it knows X25519(a2, B) and the honest new
+ * device's number. It then tries claiming keys B3 until the showing device's number is the same.
  */
-const ANDROID_PACKAGE = "com.mapleavenuelabs.housecall";
-function androidIntent(deep) {
-  const prefix = "housecall://";
-  if (!deep.startsWith(prefix)) throw new Error("not a housecall deep link");
-  return `intent://${deep.slice(prefix.length)}#Intent;scheme=housecall;package=${ANDROID_PACKAGE};end`;
+function groundMitm({ linkId, secret, showingPub, claimingPub, claimingPriv, showingPriv }) {
+  const hostShowPriv = fixed("mitm host showing ephemeral");
+  const hostShowPub = x25519.getPublicKey(hostShowPriv);
+  const newDevice = linkKeys({ linkId, secret, showingPub: hostShowPub, claimingPub, sharedSecret: dh(claimingPriv, hostShowPub) });
+  const hostView = linkKeys({ linkId, secret, showingPub: hostShowPub, claimingPub, sharedSecret: dh(hostShowPriv, claimingPub) });
+  if (hostView.code !== newDevice.code) throw new Error("host should know the new device's number");
+  for (let i = 0; i < 10000; i++) {
+    const p = fixed(`mitm host claiming ephemeral ${i}`);
+    const P = x25519.getPublicKey(p);
+    const hostClaim = linkKeys({ linkId, secret, showingPub, claimingPub: P, sharedSecret: dh(p, showingPub) });
+    if (hostClaim.code !== newDevice.code) continue;
+    const showing = linkKeys({ linkId, secret, showingPub, claimingPub: P, sharedSecret: dh(showingPriv, P) });
+    if (!equalBytes(showing.claimTag, hostClaim.claimTag) || showing.code !== newDevice.code) throw new Error("mitm demo broken");
+    return { tries: i + 1, hostShowPub, hostClaimPub: P, newDeviceCode: newDevice.code, showingCode: showing.code, tagValid: true };
+  }
+  throw new Error("mitm demo found no match");
 }
 
 /**
@@ -781,10 +797,11 @@ function buildLink() {
   const attackerPub = x25519.getPublicKey(attackerPriv);
 
   const url = qrUrl(origin, linkId, secret, showingPub);
-  const deep = deepLink(origin, linkId, secret, showingPub);
+  const legacyDeep = legacyDeepLink(origin, linkId, secret, showingPub);
   const parsed = parseQr(url);
-  const parsedDeep = parseDeepLink(deep);
-  if (!equalBytes(parsed.showingPub, showingPub) || !equalBytes(parsedDeep.secret, secret) || parsedDeep.origin !== origin) throw new Error("qr parse failed");
+  if (!equalBytes(parsed.showingPub, showingPub) || !equalBytes(parsed.secret, secret) || parsed.origin !== origin) throw new Error("qr parse failed");
+  if (parseDeepLink(SCAN_DEEP_LINK).action !== "scan") throw new Error("scan deep link parse failed");
+  const mitm = groundMitm({ linkId, secret, showingPub, claimingPub, claimingPriv, showingPriv });
 
   // Claiming device side (knows A from the QR, holds b).
   const claimSide = linkKeys({ linkId, secret, showingPub, claimingPub, sharedSecret: dh(claimingPriv, showingPub) });
@@ -845,7 +862,10 @@ function buildLink() {
     { name: "server swapped the claiming key and knows A (browser path): person types the number from the device in their hand", kind: "code_entry", showing_device_code: showWithSwapped.code, typed: claimSide.code, expect: "deny: the showing device calls deny and shows the mismatch text", result: typedCodeMatches(claimSide.code, showWithSwapped.code) ? "approve" : "deny" },
     { name: "claim tag from a server that swapped the claiming key and does not know A", kind: "claim_tag", claiming_pub_seen_by_showing_device: hex(attackerPub), presented_tag: hex(claimSide.claimTag), recomputed_tag: hex(showWithSwapped.claimTag), expect: "reject: tags differ, showing device denies the link" },
     { name: "mismatched confirmation number: server swapped the claiming key and knows A", kind: "code", claiming_device_code: claimSide.code, showing_device_code: showWithSwapped.code, expect: claimSide.code === showWithSwapped.code ? "codes collide (1 in 100); vector generator must pick other fixed keys" : "codes differ, so the number the person types does not match and the link is denied" },
-    { name: "deep link for Android sent as a bare housecall:// URL", kind: "android_intent", text: deep, expect: "the /link page on Android must use android_intent instead (another app may own housecall://)" },
+    { name: "host rewrites A in a code-carrying deep link and grinds its claiming key (why the deep link carries no code)", kind: "deep_link_mitm",
+      legacy_deep_link_with_host_key: legacyDeepLink(origin, linkId, secret, mitm.hostShowPub), host_showing_pub: hex(mitm.hostShowPub), host_claiming_pub: hex(mitm.hostClaimPub),
+      tries: mitm.tries, new_device_code: mitm.newDeviceCode, showing_device_code: mitm.showingCode, claim_tag_valid: mitm.tagValid,
+      expect: "reject: the app refuses every housecall://link?… deep link", error: mustFail("legacy deep", () => parseDeepLink(legacyDeepLink(origin, linkId, secret, mitm.hostShowPub))) },
     { name: "wrapped_keys opened with the key a swapped claim would produce", kind: "wrapped_keys", wrapped_keys_hex: hex(wrapped), wrap_key_hex: hex(showWithSwapped.wrapKey), expect: "reject", error: mustFail("wk wrong key", () => openWrappedKeys(showWithSwapped.wrapKey, linkId, wrapped)) },
     { name: "wrapped_keys bound to another link id", kind: "wrapped_keys", wrapped_keys_hex: hex(wrapped), link_id_hex: hex(fixed("other link id", 16)), expect: "reject", error: mustFail("wk link", () => openWrappedKeys(claimSide.wrapKey, fixed("other link id", 16), wrapped)) },
     { name: "wrapped_keys wrong version byte", kind: "wrapped_keys", wrapped_keys_hex: hex(badVer), expect: "reject", server_expect: 400, error: mustFail("wk ver", () => openWrappedKeys(claimSide.wrapKey, linkId, badVer)) },
@@ -859,7 +879,8 @@ function buildLink() {
     { name: "QR with a fifth field", kind: "qr", text: url + ".extra", expect: "reject", error: mustFail("qr extra", () => parseQr(url + ".extra")) },
     { name: "QR with credentials in the origin", kind: "qr", text: url.replace("https://", "https://user@"), expect: "reject", error: mustFail("qr creds", () => parseQr(url.replace("https://", "https://user@"))) },
     { name: "QR with a path before /link", kind: "qr", text: url.replace("/link#", "/x/link#"), expect: "reject", error: mustFail("qr path", () => parseQr(url.replace("/link#", "/x/link#"))) },
-    { name: "deep link with an extra parameter", kind: "deep_link", text: deep + "&y=2", expect: "reject", error: mustFail("deep extra", () => parseDeepLink(deep + "&y=2")) },
+    { name: "pre-review deep link carrying the real code", kind: "deep_link", text: legacyDeep, expect: "reject", error: mustFail("deep legacy", () => parseDeepLink(legacyDeep)) },
+    { name: "scan deep link with a query", kind: "deep_link", text: SCAN_DEEP_LINK + "?c=x", expect: "reject", error: mustFail("deep query", () => parseDeepLink(SCAN_DEEP_LINK + "?c=x")) },
     { name: "small-order claiming key (all zero)", kind: "ephemeral", claiming_pub: hex(new Uint8Array(32)), expect: "reject", error: mustFail("eph zero", () => dh(showingPriv, new Uint8Array(32))) },
   ];
   if (claimSide.code === showWithSwapped.code) throw new Error("fixed keys produce a code collision; change the attacker seed");
@@ -884,8 +905,7 @@ function buildLink() {
     claiming: { ephemeral_priv: hex(claimingPriv), ephemeral_pub: hex(claimingPub), ephemeral_pub_b64u: b64u(claimingPub) },
     attacker: { ephemeral_priv: hex(attackerPriv), ephemeral_pub: hex(attackerPub) },
     qr_text: url,
-    deep_link: deep,
-    android_intent: androidIntent(deep),
+    deep_link: SCAN_DEEP_LINK,
     typed_code_examples: typed,
     shared_secret: hex(dh(claimingPriv, showingPub)),
     transcript_hex: hex(concat(utf8("housecall link v1"), linkId, secret, showingPub, claimingPub)),

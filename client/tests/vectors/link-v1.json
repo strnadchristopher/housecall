@@ -29,8 +29,7 @@
     "ephemeral_pub": "8b844d4b9052400028561f218ca67fb242a2fdb0938b586918e4c62f039bb90f"
   },
   "qr_text": "https://housecall.example.test/link#hcl1.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw",
-  "deep_link": "housecall://link?c=hcl1.aHR0cHM6Ly9ob3VzZWNhbGwuZXhhbXBsZS50ZXN0.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw",
-  "android_intent": "intent://link?c=hcl1.aHR0cHM6Ly9ob3VzZWNhbGwuZXhhbXBsZS50ZXN0.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw#Intent;scheme=housecall;package=com.mapleavenuelabs.housecall;end",
+  "deep_link": "housecall://link-scan",
   "typed_code_examples": [
     {
       "typed": "94",
@@ -215,10 +214,17 @@
       "expect": "codes differ, so the number the person types does not match and the link is denied"
     },
     {
-      "name": "deep link for Android sent as a bare housecall:// URL",
-      "kind": "android_intent",
-      "text": "housecall://link?c=hcl1.aHR0cHM6Ly9ob3VzZWNhbGwuZXhhbXBsZS50ZXN0.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw",
-      "expect": "the /link page on Android must use android_intent instead (another app may own housecall://)"
+      "name": "host rewrites A in a code-carrying deep link and grinds its claiming key (why the deep link carries no code)",
+      "kind": "deep_link_mitm",
+      "legacy_deep_link_with_host_key": "housecall://link?c=hcl1.aHR0cHM6Ly9ob3VzZWNhbGwuZXhhbXBsZS50ZXN0.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.r8z5tmbovnxbXPnGjj6BwdxMJ2aLLEFOfnOwdVj4TDE",
+      "host_showing_pub": "afccf9b666e8be7c5b5cf9c68e3e81c1dc4c27668b2c414e7e73b07558f84c31",
+      "host_claiming_pub": "6a5288adba6396f1666ec27265e9891821ae45d532d5c89a6f8d73efc9f3c860",
+      "tries": 12,
+      "new_device_code": "51",
+      "showing_device_code": "51",
+      "claim_tag_valid": true,
+      "expect": "reject: the app refuses every housecall://link?… deep link",
+      "error": "deep links never carry a login code"
     },
     {
       "name": "wrapped_keys opened with the key a swapped claim would produce",
@@ -315,11 +321,18 @@
       "error": "bad origin"
     },
     {
-      "name": "deep link with an extra parameter",
+      "name": "pre-review deep link carrying the real code",
       "kind": "deep_link",
-      "text": "housecall://link?c=hcl1.aHR0cHM6Ly9ob3VzZWNhbGwuZXhhbXBsZS50ZXN0.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw&y=2",
+      "text": "housecall://link?c=hcl1.aHR0cHM6Ly9ob3VzZWNhbGwuZXhhbXBsZS50ZXN0.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw",
       "expect": "reject",
-      "error": "bad base64url"
+      "error": "deep links never carry a login code"
+    },
+    {
+      "name": "scan deep link with a query",
+      "kind": "deep_link",
+      "text": "housecall://link-scan?c=x",
+      "expect": "reject",
+      "error": "not a link deep link"
     },
     {
       "name": "small-order claiming key (all zero)",
