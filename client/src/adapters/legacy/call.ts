@@ -3,6 +3,7 @@ import type { CallTransport, IncomingCall } from "../../core/call";
 import { ApiError } from "../../transport/api";
 import { RING_FRESH_MS } from "../../state/callEvents";
 import { applyVoiceEvent, roomsFromStates, sortRoster, type VoiceRooms } from "../../state/voiceRoster";
+import { PREVIEW_EVERY_MS, captureFrame, previewEnabled } from "../../state/streamPreview";
 import { callKit, isCallKit, onCallKit } from "../../transport/callkit";
 import { VoiceSession, availableVoiceInputs, type VoiceDevice, type VoiceInputs, type VoiceStatus } from "../../transport/voice";
 import { avatarPath, userName } from "../../data/people";
@@ -75,6 +76,22 @@ export function useLegacyCall(c: Housecall) {
     if (status.phase !== "live" || !channelId) return;
     void c.api.put(`/api/channels/${encodeURIComponent(channelId)}/voice/state`, { muted, deafened, camera, sharing: sharingNow }).catch(() => {});
   }, [status.phase, channelId, muted, deafened, camera, sharingNow, c.api]);
+
+  // While you share your screen, a small picture goes up every 15 s so others can peek before they join.
+  useEffect(() => {
+    if (status.phase !== "live" || !channelId || !sharingNow) return;
+    let stopped = false;
+    const send = async () => {
+      if (!previewEnabled()) return;
+      const stream = voice.localPicture();
+      const frame = stream && await captureFrame(stream);
+      if (stopped || !frame) return;
+      await c.api.putBlob(`/api/channels/${encodeURIComponent(channelId)}/voice/preview`, frame).catch(() => {});
+    };
+    const first = setTimeout(() => void send(), 1500);
+    const timer = setInterval(() => void send(), PREVIEW_EVERY_MS);
+    return () => { stopped = true; clearTimeout(first); clearInterval(timer); };
+  }, [status.phase, channelId, sharingNow, c.api]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The per-peer roster is reported only to a session that is in the call.
   useEffect(() => {

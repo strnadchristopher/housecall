@@ -2,12 +2,14 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useCall } from "../../core/context";
 import { copy } from "../copy";
 import { Button, ErrorLine, Field } from "../kit";
+import { previewEnabled, setPreviewEnabled } from "../../state/streamPreview";
 
 /** Microphone and camera choice, bitrate and noise suppression. Lives in Settings. */
 export function DeviceMenu() {
   const call = useCall();
   const [bitrate, setBitrate] = useState(String(call.bitrate));
   const [noise, setNoise] = useState(call.noiseSuppression);
+  const [preview, setPreview] = useState(previewEnabled());
   useEffect(() => { void call.refreshDevices(); }, []);
   const pick = (kind: "microphone" | "camera") => (
     <label className="hc-field">
@@ -26,6 +28,8 @@ export function DeviceMenu() {
       {pick("microphone")}
       {pick("camera")}
       <Button onClick={() => void call.refreshDevices()}>{copy.call.refresh}</Button>
+      <label className="hc-check"><input type="checkbox" checked={preview} onChange={event => { setPreview(event.target.checked); setPreviewEnabled(event.target.checked); }} /><span>{copy.call.previewMine}</span></label>
+      <p className="hc-note">{copy.call.previewMineHint}</p>
       {call.phase === "live" && (
         <form className="hc-stack" onSubmit={apply}>
           <Field label={copy.call.bitrate} type="number" min={6000} max={510000} value={bitrate} onChange={event => setBitrate(event.target.value)} />
