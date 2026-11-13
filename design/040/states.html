@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en" data-accent="lavender">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HC-040 · 16 Empty, loading and error states</title>
+<!-- states: default = first load (skeletons) · empty = a new server · error = lists failed, one toast · drawer-* = the same, phone drawer open -->
+<meta name="hc-states" content="default,empty,error,drawer-empty,drawer-error">
+<link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/b.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/c.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/accents.css">
+<link rel="stylesheet" href="../../client/src/ui/styles/index.css">
+<link rel="stylesheet" href="hc-040.css">
+<script src="icons.js"></script>
+<script src="mock.js"></script>
+</head>
+<body>
+<div class="hc-root">
+  <div class="hc-shell" id="shell">
+    <nav class="hc-left" aria-label="Housecall" data-part="left" data-opts='{"current":"general","call":"","me":false,"unread":false}'></nav>
+    <button type="button" class="hc-drawer-scrim" aria-label="Close menu" data-show="drawer-empty drawer-error"></button>
+    <main class="hc-center">
+      <div data-part="header" data-opts='{"kind":"text","name":"general"}' style="display:contents"></div>
+
+      <!-- loading: the first page of messages -->
+      <div class="hc-msgskels" aria-busy="true" aria-label="Loading messages" data-show="default">
+        <div class="hc-msgskel"><span class="hc-skel"></span><span class="hc-skel"></span><span class="hc-skel" style="--w:62%"></span></div>
+        <div class="hc-msgskel"><span class="hc-skel"></span><span class="hc-skel"></span><span class="hc-skel" style="--w:38%"></span><span class="hc-skel" style="--w:51%"></span></div>
+        <div class="hc-msgskel"><span class="hc-skel"></span><span class="hc-skel"></span><span class="hc-skel" style="--w:24%"></span></div>
+        <div class="hc-msgskel"><span class="hc-skel"></span><span class="hc-skel"></span><span class="hc-skel" style="--w:70%"></span><span class="hc-skel" style="--w:33%"></span></div>
+        <div class="hc-msgskel"><span class="hc-skel"></span><span class="hc-skel"></span><span class="hc-skel" style="--w:45%"></span></div>
+      </div>
+
+      <!-- empty: the start of a channel -->
+      <div class="hc-empty hc-empty--start" data-show="empty drawer-empty">
+        <span data-part="door" data-opts='{"kind":"ajar"}'></span>
+        <strong>This is the start of general</strong>
+        <p>Nothing has been said in here yet. The first word is yours.</p>
+      </div>
+
+      <!-- error: the timeline did not load -->
+      <div class="hc-empty" role="alert" data-show="error drawer-error">
+        <span data-part="door" data-opts='{"kind":"shut"}'></span>
+        <strong>Couldn't load general</strong>
+        <p>The host didn't answer. Nothing is lost; it is all still there.</p>
+        <button type="button" class="hc-btn hc-btn--primary">Try again</button>
+      </div>
+
+      <div class="hc-toasts" aria-live="polite" data-show="error">
+        <div class="hc-toast" data-kind="error" role="status"><i data-i="warn"></i><span>Couldn't send popcorn.jpg</span><button type="button" class="hc-btn hc-btn--text">Try again</button></div>
+      </div>
+      <div class="hc-toasts" aria-live="polite" data-show="default">
+        <div class="hc-toast" role="status"><i data-i="check"></i><span>Invite link copied</span></div>
+      </div>
+      <div data-part="composer" data-opts='{"name":"general"}' style="display:contents"></div>
+    </main>
+    <aside class="hc-right" aria-label="Details" id="right" data-part="right" data-tab="people"></aside>
+  </div>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const s = HC.state || "default";
+  const kind = s.replace("drawer-", "");
+  if (s.startsWith("drawer-")) document.getElementById("shell").dataset.screen = "list";
+  const list = document.querySelector(".hc-channels");
+  const head = (id, label, add) => `<div class="hc-group__head"><h2 class="hc-group__label" id="${id}">${label}</h2>${add ? `<button type="button" class="hc-group__add" aria-label="${add}">${HC.icon("plus")}</button>` : ""}</div>`;
+  const skel = widths => widths.map(w => `<li class="hc-skelrow"><span class="hc-skel" style="--w:${w}%"></span></li>`).join("");
+  if (kind === "default") {
+    list.setAttribute("aria-busy", "true");
+    list.innerHTML = `
+      <section class="hc-group"><div class="hc-group__head"><span class="hc-skel hc-skel--label"></span></div><ul class="hc-group__list">${skel([42, 58, 36, 50])}</ul></section>
+      <section class="hc-group"><div class="hc-group__head"><span class="hc-skel hc-skel--label"></span></div><ul class="hc-group__list">${skel([46, 34])}</ul></section>`;
+    document.querySelector("#right .hc-side__body").innerHTML = `<ul class="hc-skelpeople" aria-busy="true" aria-label="Loading people">${[40, 55, 34, 48].map(w =>
+      `<li class="hc-skelrow hc-skelrow--person"><span class="hc-skel" style="--w:${w}%"></span></li>`).join("")}</ul>`;
+  }
+  if (kind === "empty") {
+    list.innerHTML = `
+      <section class="hc-group">${head("g-text", "Text channels", "Create text channel")}<ul class="hc-group__list">${HC.channel("text", "general", { current: true })}</ul></section>
+      <section class="hc-group">${head("g-voice", "Voice channels", "Create voice channel")}<ul class="hc-group__list">
+        <li><button type="button" class="hc-channel hc-channel--add"><span class="hc-channel__glyph">${HC.icon("plus")}</span><span class="hc-channel__name">Add a voice channel</span></button></li></ul></section>`;
+    document.querySelector("#right .hc-side__body").innerHTML = `<ul class="hc-people"><li><button type="button" class="hc-person__open" aria-label="theo"></button>${HC.av("theo")}<span><strong>theo <em class="hc-role">Owner</em></strong><small>Kettle's on. Knock first.</small></span></li></ul>
+      <div class="hc-empty hc-empty--quiet"><strong>Just you so far</strong><p>Invite someone and they will show up here.</p><button type="button" class="hc-btn">Invite people</button></div>`;
+  }
+  if (kind === "error") {
+    list.innerHTML = `
+      <section class="hc-group">${head("g-text", "Text channels")}<ul class="hc-group__list"><li class="hc-group__none" role="alert"><span>Couldn't load channels.</span><button type="button" class="hc-btn hc-btn--text">Try again</button></li></ul></section>`;
+    const small = document.querySelector(".hc-picker__name small");
+    small.textContent = "Reconnecting"; small.dataset.state = "off";
+    document.querySelector("#right .hc-side__body").innerHTML = `<div class="hc-empty hc-empty--quiet" role="alert"><strong>Couldn't load people</strong><button type="button" class="hc-btn hc-btn--text">Try again</button></div>`;
+  }
+});
+</script>
+</body>
+</html>
