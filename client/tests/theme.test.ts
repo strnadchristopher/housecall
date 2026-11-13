@@ -37,6 +37,24 @@ describe("theme tokens", () => {
       }
     });
   }
+  it("the sidebar (shell) is the lighter surface and the open area (stage) the darker one, with readable text on both", () => {
+    const alias = (name: string) => tokens.match(new RegExp(`${name}:\\s*var\\((--hc-[a-z-]+)\\)`))?.[1];
+    expect(alias("--hc-shell")).toBe("--hc-surface");
+    expect(alias("--hc-stage")).toBe("--hc-bg");
+    for (const [name, t] of [["dark", dark], ["light", light]] as const) {
+      const shell = t["--hc-surface"], stage = t["--hc-bg"];
+      expect(luminance(shell), `${name} shell lighter than stage`).toBeGreaterThan(luminance(stage));
+      for (const surface of [shell, stage]) {
+        expect(contrast(t["--hc-text-muted"], surface), `${name} muted on ${surface}`).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(t["--hc-text"], surface), `${name} text on ${surface}`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+  it("the shell and stage tokens are used where the sidebar and open area are drawn", () => {
+    expect(styles).toMatch(/\.hc-center \{[^}]*background: var\(--hc-stage\)/);
+    expect(styles).toMatch(/\.hc-root \{[^}]*background: var\(--hc-shell\)/);
+    expect(styles).toMatch(/\.hc-settings-layer \{[^}]*background: var\(--hc-stage\)/);
+  });
   it("dark surfaces are a cool blue, not neutral or warm", () => {
     for (const key of ["--hc-bg", "--hc-surface", "--hc-surface-raised"]) {
       const [r, , b] = channels(dark[key]);

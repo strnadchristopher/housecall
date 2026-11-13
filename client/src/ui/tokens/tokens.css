@@ -40,6 +40,8 @@
   --hc-bg: #0b1018;
   --hc-surface: #121a26;
   --hc-surface-raised: #1b2535;
+  --hc-shell: var(--hc-surface); /* sidebar and window frame: the lighter blue */
+  --hc-stage: var(--hc-bg); /* the open chat or call: the darker blue */
   --hc-line: #6f7f99;
   --hc-text: #e8edf6;
   --hc-text-muted: #a3afc4;
