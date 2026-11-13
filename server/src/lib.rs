@@ -3,6 +3,7 @@ pub mod activities;
 pub mod attach_kind;
 pub mod dj;
 pub mod embeds;
+pub mod identity;
 pub mod gimme;
 pub mod giphy;
 pub mod image_blob;
@@ -307,6 +308,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .merge(vm_media::routes())
         .merge(vm_reset::routes())
         .merge(servers::routes())
+        .merge(identity::routes())
         .merge(access::routes())
         .merge(setup::routes())
         .merge(profile::routes())
@@ -499,7 +501,7 @@ fn session(db: &Connection, user: User, device_name: &str) -> Result<Value, ApiE
     let (token, device_key, id) = (secret(), secret(), secret());
     let expires = now() + 30 * 24 * 3600 * 1000;
     db.execute(
-        "INSERT INTO sessions VALUES(?,?,?,?,?,?,?)",
+        "INSERT INTO sessions(id,user_id,token_hash,device_hash,device_name,created_at,expires_at) VALUES(?,?,?,?,?,?,?)",
         params![
             id,
             user.id,
@@ -875,25 +877,27 @@ async fn redeem_invite(
     Ok(Json(json!({"server_id":server_id,"joined":!member})))
 }
 async fn me(State(s): State<AppState>, Extension(p): Extension<Principal>) -> Json<Value> {
-    let (display_name, avatar_rev, bio) =
+    let (display_name, avatar_rev, bio, key_rev) =
         s.db.lock()
             .unwrap()
             .query_row(
-                "SELECT display_name,avatar_rev,bio FROM users WHERE id=?",
+                "SELECT display_name,avatar_rev,bio,key_rev FROM users WHERE id=?",
                 [&p.user.id],
                 |r| {
                     Ok((
                         r.get::<_, Option<String>>(0)?,
                         r.get::<_, i64>(1)?,
                         r.get::<_, Option<String>>(2)?,
+                        r.get::<_, i64>(3)?,
                     ))
                 },
             )
-            .unwrap_or((None, 0, None));
+            .unwrap_or((None, 0, None, 0));
     let mut user = json!(p.user);
     user["display_name"] = json!(display_name);
     user["avatar_rev"] = json!(avatar_rev);
     user["bio"] = json!(bio);
+    user["key_rev"] = json!(key_rev);
     Json(
         json!({"user":user,"session_id":p.session_id,"capabilities":{"password":true,"passkeys":s.passkeys.is_some(),"chat":true,"embeds":true,"uploads":s.media.is_some(),"transcode":s.transcoder.is_some(),"plex":s.plex.is_some() && s.voice.is_some(),"voice":s.voice.is_some(),"activities":false,"activity_sync":true,"activity_playback":false,"vm_input":s.vm.is_some() && s.voice.is_some(),"vm_reset":s.vm.as_ref().is_some_and(|vm| vm.reset_socket.is_some()) && s.voice.is_some(),"vm_media":s.vm_media.configured() && s.voice.is_some(),"giphy":giphy::configured(),"gimme_dry_run":s.gimme.is_dry_run(),"dj":s.dj.is_some() && s.voice.is_some(),"push":false}}),
     )
@@ -1011,7 +1015,7 @@ async fn create_channel(
 async fn members(State(s): State<AppState>) -> ApiResult<Value> {
     let db = s.db.lock().unwrap();
     let mut q = db.prepare(
-        "SELECT id,username,is_owner,display_name,avatar_rev,bio FROM users WHERE disabled=0 ORDER BY username",
+        "SELECT id,username,is_owner,display_name,avatar_rev,bio,key_rev FROM users WHERE disabled=0 ORDER BY username",
     )?;
     let rows = q
         .query_map([], |r| {
@@ -1022,6 +1026,7 @@ async fn members(State(s): State<AppState>) -> ApiResult<Value> {
                 "display_name": r.get::<_, Option<String>>(3)?,
                 "avatar_rev": r.get::<_, i64>(4)?,
                 "bio": r.get::<_, Option<String>>(5)?,
+                "key_rev": r.get::<_, i64>(6)?,
             }))
         })?
         .collect::<Result<Vec<_>, _>>()?;
