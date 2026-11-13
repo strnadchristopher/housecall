@@ -21,6 +21,23 @@ use str0m::{
 };
 use tokio::sync::oneshot;
 
+/// Builder for every server-side connection. str0m's standard extension map offers
+/// `urn:3gpp:video-orientation` (id 13). The SFU never writes it on forwarded packets,
+/// so negotiating it would let a phone send unrotated pixels plus a flag that
+/// subscribers never see. Without it, the sender rotates the pixels itself.
+/// See docs/design/ROTATION-SPIKE.md.
+fn publish_builder() -> str0m::RtcConfig {
+    use str0m::rtp::{Extension, ExtensionMap};
+    let mut extensions = ExtensionMap::empty();
+    extensions.set(1, Extension::AudioLevel);
+    extensions.set(2, Extension::AbsoluteSendTime);
+    extensions.set(3, Extension::TransportSequenceNumber);
+    extensions.set(4, Extension::RtpMid);
+    extensions.set(10, Extension::RtpStreamId);
+    extensions.set(11, Extension::RepairedRtpStreamId);
+    Rtc::builder().set_extension_map(extensions)
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("voice session unauthorized")]
@@ -426,7 +443,7 @@ fn run(
                     }
                     // One connection per device in one voice channel; reconnect revokes old transport.
                     clients.retain(|c| c.session != session);
-                    let mut rtc = Rtc::builder()
+                    let mut rtc = publish_builder()
                         .set_sctp_max_message_size(peer::SIGNAL_MAX_BYTES as u32)
                         .set_sctp_max_buffered_amount(peer::SIGNAL_MAX_BYTES * 2)
                         .set_reordering_size_audio(3)
@@ -625,6 +642,23 @@ mod diagnostic_tests {
         assert!(stopped.elapsed() < Duration::from_secs(1));
         let idle = Ingress::start(UdpSocket::bind("127.0.0.1:0").unwrap()).unwrap();
         drop(idle);
+    }
+    #[test]
+    fn video_orientation_is_not_negotiated_on_the_publish_leg() {
+        use str0m::media::{Direction, MediaKind};
+        str0m::crypto::from_feature_flags().install_process_default();
+        let now = Instant::now();
+        let mut browser = Rtc::new(now);
+        let mut change = browser.sdp_api();
+        change.add_media(MediaKind::Video, Direction::SendOnly, None, None, None);
+        let (offer, _pending) = change.apply().unwrap();
+        let offer_text = offer.to_sdp_string();
+        assert!(offer_text.contains("urn:3gpp:video-orientation"), "fixture offer must carry it: {offer_text}");
+        let mut server = publish_builder().build(now);
+        let answer = server.sdp_api().accept_offer(offer).unwrap().to_sdp_string();
+        assert!(answer.contains("m=video"));
+        assert!(!answer.contains("urn:3gpp:video-orientation"), "{answer}");
+        assert!(answer.contains("urn:ietf:params:rtp-hdrext:sdes:mid"));
     }
     #[test]
     fn disconnect_history_is_bounded_expires_and_is_room_scoped() {

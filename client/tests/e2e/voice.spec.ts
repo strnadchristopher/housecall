@@ -639,6 +639,73 @@ test("screen share presets, share audio as its own track, and a separate volume 
   }
 });
 
+test("video orientation is not negotiated on the publish leg, and the subscribe leg is recorded", async ({ browser, request }) => {
+  test.setTimeout(90000);
+  let owner = await request.post("/api/setup", {
+    data: { setup_token: "test-setup-token-at-least-32-characters", username: "owner", password, device_name: "rotation fixture" },
+  });
+  if (owner.status() === 409) owner = await request.post("/api/login", { data: { username: "owner", password, device_name: "rotation fixture" } });
+  expect(owner.ok()).toBeTruthy();
+  const session = await owner.json();
+  const headers = { Authorization: `Bearer ${session.token}`, "X-Device-Key": session.device_key };
+  const me = await (await request.get("/api/me", { headers })).json();
+  test.skip(me.capabilities.voice !== true, "SFU transport not configured in this backend binary");
+  const invitation = await (await request.post("/api/invites", { headers, data: { email: "fixture@example.test", expires_in_seconds: 3600 } })).json();
+  expect((await request.post("/api/invites/accept", { data: { token: invitation.token, username: "rotate_hana", password, device_name: "rotation fixture" } })).ok()).toBeTruthy();
+  const contexts: BrowserContext[] = [];
+  try {
+    for (const username of ["owner", "rotate_hana"]) {
+      const context = await browser.newContext({ permissions: ["camera", "microphone"] });
+      contexts.push(context);
+      await context.addInitScript(() => {
+        const Base = window.RTCPeerConnection;
+        const log: { step: string; type: string; sdp: string }[] = [];
+        Object.assign(window, { sdpLog: log });
+        window.RTCPeerConnection = class extends Base {
+          override async setLocalDescription(description?: RTCLocalSessionDescriptionInit) {
+            await super.setLocalDescription(description);
+            log.push({ step: "local", type: this.localDescription!.type, sdp: this.localDescription!.sdp });
+          }
+          override async setRemoteDescription(description: RTCSessionDescriptionInit) {
+            await super.setRemoteDescription(description);
+            log.push({ step: "remote", type: description.type, sdp: description.sdp ?? "" });
+          }
+        };
+      });
+      const page = await context.newPage();
+      await page.goto("/");
+      await fillSignIn(page, username, password);
+      await logInButton(page).click();
+      await expect(page.getByTestId("screen-composer")).toBeVisible({ timeout: 30000 });
+    }
+    const [publisher, viewer] = contexts.map(context => context.pages()[0]);
+    await joinLounge(publisher);
+    await expect(publisher.getByTestId("call-bar")).toHaveAttribute("data-phase", "live", { timeout: 30000 });
+    await joinLounge(viewer);
+    await expect(viewer.getByTestId("call-bar")).toHaveAttribute("data-phase", "live", { timeout: 30000 });
+    await publisher.getByTestId("call-bar").getByRole("button", { name: "Camera on", exact: true }).click();
+    await expect(viewer.locator("[data-testid=call-tile][data-picture]")).toHaveCount(1, { timeout: 30000 });
+    // The viewer's picture is upright and landscape (the fake camera is 640x480); the sdp log is what the spike needs.
+    const orientation = "urn:3gpp:video-orientation";
+    const videoSection = (sdp: string) => sdp.split(/\r?\nm=/).filter(section => section.startsWith("video")).map(section => section.split(/\r?\n/).filter(line => line.startsWith("a=extmap:") || line.startsWith("m=") || line.startsWith("a=mid:")));
+    const dump = async (page: typeof publisher) => (await page.evaluate(() => (window as unknown as { sdpLog: { step: string; type: string; sdp: string }[] }).sdpLog)).map(item => ({ ...item, video: videoSection(item.sdp) }));
+    const publish = await dump(publisher);
+    const subscribe = await dump(viewer);
+    await writeFile("test-results/client-video-extmap.json", JSON.stringify({ publish, subscribe }, null, 2));
+    const offer = publish.find(item => item.step === "local" && item.type === "offer")!;
+    const answer = publish.find(item => item.step === "remote" && item.type === "answer")!;
+    console.log("publish offer video extmaps", JSON.stringify(offer.video));
+    console.log("publish answer video extmaps", JSON.stringify(answer.video));
+    // The browser offers it; the answer must not accept it, so the phone rotates the pixels itself.
+    expect(offer.sdp).toContain(orientation);
+    expect(answer.sdp).not.toContain(orientation);
+    // And no server offer to a viewer carries it either, whichever way it is negotiated.
+    for (const item of subscribe.filter(entry => entry.step === "remote" && entry.type === "offer")) expect(item.sdp).not.toContain(orientation);
+  } finally {
+    for (const context of contexts) await context.close();
+  }
+});
+
 test("joins and shows a warning when a saved device is missing",async ({ browser, request }) => {
   const setup = await request.post("/api/setup", {
     data: { setup_token: "test-setup-token-at-least-32-characters", username: "owner", password, device_name: "missing device fixture" },
