@@ -4,6 +4,7 @@ import { useChat } from "../../core/context";
 import { copy } from "../copy";
 import { time } from "../format";
 import { Avatar, Button, Icon, IconButton, Presence, cx } from "../kit";
+import { useDismiss } from "../useDismiss";
 import { Attachments } from "./Attachments";
 import { EmojiPicker } from "./EmojiPicker";
 import { GifClip } from "./GifPicker";
@@ -30,6 +31,8 @@ export const Message = memo(function Message({ message, grouped, me, day, stop, 
   };
   const [panel, setPanel] = useState<"" | "react" | "unsend">("");
   useEffect(() => { if (!open) setPanel(""); }, [open]);
+  // A reaction or unsend panel opened from a hover or focus bar also closes on an outside press or Escape.
+  useDismiss(panel !== "", () => setPanel(""), target => !!target.closest(".hc-emoji, .hc-msg__confirm, [data-panel-toggle]"));
   const [preview, setPreview] = useState<LinkPreview>();
   const onlyGif = message.gifs.length === 1 && /^https:\/\/giphy\.com\/gifs\/\w+$/.test(message.body.trim());
   return (
@@ -81,11 +84,11 @@ export const Message = memo(function Message({ message, grouped, me, day, stop, 
         </Presence>
       <div className="hc-msg__bar" role="toolbar" aria-label={copy.messages.label}>
         <IconButton tabIndex={toolTab} icon="reply" label={copy.messages.reply} onClick={() => chat.reply(message.id)} />
-        <IconButton tabIndex={toolTab} icon="emoji" label={copy.messages.react} active={panel === "react"} onClick={() => setPanel(panel === "react" ? "" : "react")} />
+        <IconButton data-panel-toggle="" tabIndex={toolTab} icon="emoji" label={copy.messages.react} active={panel === "react"} onClick={() => setPanel(panel === "react" ? "" : "react")} />
         <IconButton tabIndex={toolTab} icon="pin" off={message.pinned} label={message.pinned ? copy.messages.unpin : copy.messages.pin} onClick={() => void chat.pin(message.id)} />
         {message.link && !preview && <IconButton tabIndex={toolTab} icon="link" label={copy.messages.preview} onClick={() => void chat.preview(message.id).then(setPreview)} />}
         {message.canEdit && <IconButton tabIndex={toolTab} icon="edit" label={copy.messages.edit} onClick={() => chat.edit(message.id)} />}
-        {message.canUnsend && <IconButton tabIndex={toolTab} icon="trash" className="hc-ibtn--danger" label={copy.messages.unsend} active={panel === "unsend"} onClick={() => setPanel(panel === "unsend" ? "" : "unsend")} />}
+        {message.canUnsend && <IconButton data-panel-toggle="" tabIndex={toolTab} icon="trash" className="hc-ibtn--danger" label={copy.messages.unsend} active={panel === "unsend"} onClick={() => setPanel(panel === "unsend" ? "" : "unsend")} />}
       </div>
       </div>
     </li>

@@ -7,6 +7,7 @@ import { EmojiPicker } from "./EmojiPicker";
 import { GifPicker } from "./GifPicker";
 import { SnapCapture } from "./Snap";
 import { useCoarsePointer, usePhone } from "../tokens/motion";
+import { useDismiss } from "../useDismiss";
 
 /** Where `field-sizing: content` is missing (older WebKit), size the field to its text by hand. */
 const nativeGrowth = typeof CSS !== "undefined" && CSS.supports?.("field-sizing", "content");
@@ -31,6 +32,7 @@ export function Composer({ compact }: { compact?: boolean }) {
   const snaps = touch && chat.can.attach && !chat.editing;
   useEffect(() => { if (chat.replyingTo || chat.editing) input.current?.focus(); }, [chat.replyingTo?.id, chat.editing?.id]);
   useEffect(() => setPanel(""), [chat.current?.id]);
+  useDismiss(panel !== "", () => setPanel(""), target => !!target.closest(".hc-emoji, .hc-gifs, [data-panel-toggle]"));
   // Draft changes that do not come from typing (send, edit, emoji) also resize the field.
   useEffect(() => { if (input.current) grow(input.current); }, [chat.draft]);
   if (!chat.current) return null;
@@ -103,8 +105,8 @@ export function Composer({ compact }: { compact?: boolean }) {
         {snaps && <SnapCapture />}
         <textarea ref={input} rows={1} name="body" aria-label={copy.composer.label} placeholder={copy.composer.placeholder(chat.current.name)}
           value={chat.draft} onChange={event => { chat.setDraft(event.target.value); grow(event.target); }} onKeyDown={onKey} />
-        <IconButton icon="emoji" label={copy.composer.emoji} active={panel === "emoji"} onClick={() => setPanel(panel === "emoji" ? "" : "emoji")} />
-        {chat.can.gif && <IconButton icon="gif" label={copy.composer.gif} active={panel === "gif"} onClick={() => setPanel(panel === "gif" ? "" : "gif")} />}
+        <IconButton data-panel-toggle="" icon="emoji" label={copy.composer.emoji} active={panel === "emoji"} onClick={() => setPanel(panel === "emoji" ? "" : "emoji")} />
+        {chat.can.gif && <IconButton data-panel-toggle="" icon="gif" label={copy.composer.gif} active={panel === "gif"} onClick={() => setPanel(panel === "gif" ? "" : "gif")} />}
         <IconButton icon="send" className="hc-composer__send" label={chat.editing ? copy.composer.saveEdit : copy.composer.send} type="submit"
           disabled={chat.busy || !(chat.draft.trim() || chat.attached.length)} />
       </div>

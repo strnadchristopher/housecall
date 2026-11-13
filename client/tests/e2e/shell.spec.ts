@@ -239,3 +239,34 @@ test("phone: one message toolbar is open at a time; tapping elsewhere or Escape 
   await expect(open).toHaveCount(0);
   await context.close();
 });
+
+test("pickers: the emoji panel and a message's reaction panel close on an outside press or Escape", async ({ page }) => {
+  page.setDefaultTimeout(15000);
+  await page.goto("/");
+  await signIn(page, "owner");
+  await send(page, "Dismiss target");
+  const composer = page.getByTestId("screen-composer");
+  const emoji = page.getByRole("group", { name: "Emoji", exact: true });
+  // Composer panel: a press on the conversation closes it.
+  await composer.getByRole("button", { name: "Emoji", exact: true }).click();
+  await expect(emoji).toBeVisible();
+  await page.locator(".hc-header h1").first().click();
+  await expect(emoji).toHaveCount(0);
+  // Escape works even when focus is not inside the panel.
+  await composer.getByRole("button", { name: "Emoji", exact: true }).click();
+  await expect(emoji).toBeVisible();
+  await composer.getByLabel("Message", { exact: true }).focus();
+  await page.keyboard.press("Escape");
+  await expect(emoji).toHaveCount(0);
+  // The toggle itself still switches panels (a press on it is not "outside").
+  await composer.getByRole("button", { name: "Emoji", exact: true }).click();
+  await composer.getByRole("button", { name: "Emoji", exact: true }).click();
+  await expect(emoji).toHaveCount(0);
+  // A message's reaction panel closes on an outside press.
+  const message = page.locator(".hc-msg", { has: page.locator(".hc-md", { hasText: "Dismiss target" }) });
+  await message.hover();
+  await message.getByRole("button", { name: "React", exact: true }).click();
+  await expect(message.getByRole("group", { name: "Emoji", exact: true })).toBeVisible();
+  await page.locator(".hc-header h1").first().click();
+  await expect(message.getByRole("group", { name: "Emoji", exact: true })).toHaveCount(0);
+});

@@ -5,6 +5,7 @@ import { copy } from "../copy";
 import { createPortal } from "react-dom";
 import { Avatar, Button, ErrorLine, Field, Icon, Presence, cx } from "../kit";
 import { CreateServerWizard } from "../setup/CreateServerWizard";
+import { useDismiss } from "../useDismiss";
 
 /**
  * The server picker. The list stays mounted and is moved with transform and
@@ -44,15 +45,8 @@ export function ServerPicker() {
   useEffect(() => {
     if (open && !adding) list.current?.querySelector<HTMLElement>(`[data-index="${index}"]`)?.focus();
   }, [open, index, adding]);
-  useEffect(() => {
-    if (!open) return;
-    const away = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (!list.current?.contains(target) && !trigger.current?.contains(target)) close(false);
-    };
-    document.addEventListener("pointerdown", away);
-    return () => document.removeEventListener("pointerdown", away);
-  }, [open]);
+  // Escape is handled by onKey below (it refocuses the trigger); an outside press just closes.
+  useDismiss(open, () => close(false), target => !!list.current?.contains(target) || !!trigger.current?.contains(target), { escape: false });
 
   const choose = (at: number) => {
     const server = chat.servers[at];
