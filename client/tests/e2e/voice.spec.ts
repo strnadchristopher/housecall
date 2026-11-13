@@ -460,6 +460,185 @@ test("call stage on a phone: stage is the screen, chat opens as the sheet", asyn
   }
 });
 
+test("screen share presets, share audio as its own track, and a separate volume for it", async ({ browser, request }) => {
+  test.setTimeout(150000);
+  let owner = await request.post("/api/setup", {
+    data: { setup_token: "test-setup-token-at-least-32-characters", username: "owner", password, device_name: "share fixture" },
+  });
+  if (owner.status() === 409) owner = await request.post("/api/login", { data: { username: "owner", password, device_name: "share fixture" } });
+  expect(owner.ok()).toBeTruthy();
+  const session = await owner.json();
+  const headers = { Authorization: `Bearer ${session.token}`, "X-Device-Key": session.device_key };
+  const me = await (await request.get("/api/me", { headers })).json();
+  test.skip(me.capabilities.voice !== true, "SFU transport not configured in this backend binary");
+  const invitation = await (await request.post("/api/invites", { headers, data: { email: "fixture@example.test", expires_in_seconds: 3600 } })).json();
+  expect((await request.post("/api/invites/accept", { data: { token: invitation.token, username: "share_gina", password, device_name: "share fixture" } })).ok()).toBeTruthy();
+  const contexts: BrowserContext[] = [];
+  try {
+    for (const username of ["owner", "share_gina"]) {
+      const context = await browser.newContext({ permissions: ["camera", "microphone"] });
+      contexts.push(context);
+      await context.addInitScript(() => {
+        const Base = window.RTCPeerConnection;
+        const peers: RTCPeerConnection[] = [];
+        Object.assign(window, { testPeers: peers });
+        window.RTCPeerConnection = class extends Base {
+          constructor(configuration?: RTCConfiguration) { super(configuration); peers.push(this); }
+        };
+      });
+      const page = await context.newPage();
+      await page.goto("/");
+      await fillSignIn(page, username, password);
+      await logInButton(page).click();
+      await expect(page.getByTestId("screen-composer")).toBeVisible({ timeout: 30000 });
+    }
+    const [sharer, viewer] = contexts.map(context => context.pages()[0]);
+    for (const page of [sharer, viewer]) {
+      await joinLounge(page);
+      await expect(page.getByTestId("call-bar")).toHaveAttribute("data-phase", "live", { timeout: 30000 });
+    }
+
+    // The preset picker: three choices, a line that says what each is for, and the choice is remembered.
+    const bar = sharer.getByTestId("call-bar");
+    await bar.getByRole("button", { name: "Share quality", exact: true }).click();
+    const picker = sharer.getByTestId("share-quality");
+    await expect(picker.getByRole("radio")).toHaveCount(3);
+    await expect(picker.getByRole("radio", { name: "Smooth" })).toBeChecked();
+    await picker.getByText("Sharp", { exact: true }).click();
+    await expect(sharer.getByTestId("share-quality-hint")).toContainText("Documents and code");
+    expect(await sharer.evaluate(() => localStorage.getItem("hc.shareQuality"))).toBe("sharp");
+    await picker.getByRole("button", { name: "Done", exact: true }).click();
+    await expect(picker).toBeHidden();
+
+    // Screen capture. Chromium's own fake capture is tried first; if this build has none that works headless,
+    // a synthetic one stands in: a 1280x720 canvas at 30 fps and a 440 Hz tone.
+    const source = await sharer.evaluate(async () => {
+      const synthetic = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1280; canvas.height = 720;
+        const context = canvas.getContext("2d")!;
+        let tick = 0;
+        const timer = setInterval(() => {
+          tick++;
+          context.fillStyle = "#103060"; context.fillRect(0, 0, 1280, 720);
+          context.fillStyle = "#f0f0f0"; context.font = "48px monospace";
+          for (let line = 0; line < 12; line++) context.fillText(`line ${line} of the document ${tick}`, 40 + (tick % 40), 60 + line * 52);
+        }, 1000 / 30);
+        const audio = new AudioContext();
+        const oscillator = audio.createOscillator();
+        oscillator.frequency.value = 440;
+        const destination = audio.createMediaStreamDestination();
+        oscillator.connect(destination);
+        oscillator.start();
+        const stream = canvas.captureStream(30);
+        stream.addTrack(destination.stream.getAudioTracks()[0]);
+        (window as unknown as { testScreenStop: () => void }).testScreenStop = () => { clearInterval(timer); oscillator.stop(); for (const t of stream.getTracks()) { t.stop(); t.dispatchEvent(new Event("ended")); } };
+        return stream;
+      };
+      const native = navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);
+      let used = "chromium-fake";
+      let nativeAudio = false;
+      try {
+        const probe = await native({ video: true, audio: true });
+        nativeAudio = probe.getAudioTracks().length > 0;
+        for (const t of probe.getTracks()) t.stop();
+      } catch { used = "synthetic"; }
+      // Chromium's fake capture has a picture but no tone; the share-audio check needs a tone, so a missing one also falls back.
+      if (used === "chromium-fake" && !nativeAudio) used = "synthetic (fake capture has no audio)";
+      if (used !== "chromium-fake") navigator.mediaDevices.getDisplayMedia = async () => synthetic();
+      return { used, nativeAudio };
+    });
+
+    await bar.getByRole("button", { name: "Share screen", exact: true }).click();
+    await expect(bar.getByRole("button", { name: "Stop sharing", exact: true })).toBeVisible({ timeout: 15000 });
+
+    const outgoing = () => sharer.evaluate(async () => {
+      const peer = (window as unknown as { testPeers: RTCPeerConnection[] }).testPeers.at(-1)!;
+      const senders = peer.getSenders().filter(s => s.track);
+      const video = senders.find(s => s.track!.kind === "video")!;
+      const audio = senders.filter(s => s.track!.kind === "audio");
+      const parameters = video.getParameters() as RTCRtpSendParameters & { degradationPreference?: string };
+      return {
+        hint: video.track!.contentHint, degradation: parameters.degradationPreference, maxBitrate: parameters.encodings[0].maxBitrate,
+        audioSenders: audio.length, audioTrackIds: audio.map(s => s.track!.id),
+      };
+    });
+    const sharp = await outgoing();
+    expect(sharp).toMatchObject({ hint: "detail", degradation: "maintain-resolution", maxBitrate: 5_000_000 });
+    // Two audio senders carry a track: the microphone, and the screen's sound when the capture has one.
+    if (source.used.startsWith("synthetic") || source.nativeAudio) expect(sharp.audioSenders).toBe(2);
+
+    // Changing the preset during the share applies at once.
+    await bar.getByRole("button", { name: "Share quality", exact: true }).click();
+    await sharer.getByTestId("share-quality").getByText("Smooth", { exact: true }).click();
+    await expect.poll(async () => (await outgoing()).degradation).toBe("maintain-framerate");
+    expect(await outgoing()).toMatchObject({ hint: "motion", maxBitrate: 2_500_000 });
+    await sharer.getByTestId("share-quality").getByText("Source", { exact: true }).click();
+    await expect.poll(async () => (await outgoing()).maxBitrate).toBe(8_000_000);
+    await sharer.getByTestId("share-quality").getByRole("button", { name: "Done", exact: true }).click();
+
+    // The viewer gets a picture and, separately, the screen's sound.
+    const received = () => viewer.evaluate(async () => {
+      const peer = (window as unknown as { testPeers: RTCPeerConnection[] }).testPeers.at(-1)!;
+      const rows: Record<string, unknown>[] = [];
+      for (const stat of (await peer.getStats()).values()) {
+        const s = stat as unknown as Record<string, number | string>;
+        if (s.type === "inbound-rtp") rows.push({ kind: s.kind, packets: s.packetsReceived, width: s.frameWidth, height: s.frameHeight, fps: s.framesPerSecond, decoded: s.framesDecoded, mid: s.mid });
+      }
+      return rows;
+    });
+    await expect.poll(async () => (await received()).filter(r => r.kind === "video" && Number(r.decoded) > 30 && Number(r.width) > 0).length, { timeout: 30000 }).toBeGreaterThanOrEqual(1);
+    const hasSound = source.used.startsWith("synthetic") || source.nativeAudio;
+    if (hasSound) {
+      // voice from the sharer, plus the share audio, both with packets (the viewer's own microphone is outbound).
+      await expect.poll(async () => (await received()).filter(r => r.kind === "audio" && Number(r.packets) > 0).length, { timeout: 30000 }).toBeGreaterThanOrEqual(2);
+      const sharerTile = viewer.locator("[data-testid=call-tile]").filter({ hasText: "owner" });
+      await expect(sharerTile.locator("video[data-share]")).toHaveCount(1);
+      await expect(sharerTile.locator("video[data-testid=remote-media]:not([data-share])")).not.toHaveCount(0);
+      // The slider changes the screen's sound and leaves the voice alone.
+      const slider = sharerTile.getByTestId("share-volume");
+      await slider.fill("30");
+      await expect.poll(() => sharerTile.locator("video[data-share]").evaluate((v: HTMLVideoElement) => v.volume)).toBeCloseTo(0.3, 1);
+      expect(await sharerTile.locator("video[data-testid=remote-media]:not([data-share])").evaluateAll((all: HTMLVideoElement[]) => all.map(v => v.volume))).toEqual(
+        Array(await sharerTile.locator("video[data-testid=remote-media]:not([data-share])").count()).fill(1));
+    }
+    // Measured: resolution and frame rate the viewer decodes, at the Source preset.
+    await viewer.waitForTimeout(4000);
+    const numbers = (await received()).filter(r => r.kind === "video" && Number(r.width) > 0);
+    expect(numbers.length).toBeGreaterThanOrEqual(1);
+    const picture = numbers[0];
+    console.log(`share quality measured at Source: ${picture.width}x${picture.height} at ${picture.fps} fps (capture: ${source.used})`);
+    expect(Number(picture.width)).toBeGreaterThanOrEqual(640);
+    expect(Number(picture.fps)).toBeGreaterThan(5);
+    // The same measurement at the other two presets, a few seconds after each is applied live.
+    const perPreset: Record<string, unknown> = { source: picture };
+    for (const name of ["Sharp", "Smooth"]) {
+      await bar.getByRole("button", { name: "Share quality", exact: true }).click();
+      await sharer.getByTestId("share-quality").getByText(name, { exact: true }).click();
+      await sharer.getByTestId("share-quality").getByRole("button", { name: "Done", exact: true }).click();
+      await viewer.waitForTimeout(6000);
+      const row = (await received()).filter(r => r.kind === "video" && Number(r.width) > 0)[0];
+      perPreset[name.toLowerCase()] = row;
+      console.log(`share quality measured at ${name}: ${row.width}x${row.height} at ${row.fps} fps`);
+    }
+    await writeFile("test-results/client-share-quality.json", JSON.stringify({ note: "Viewer inbound-rtp video from getStats per preset, applied live during one share, localhost SFU", capture: source, perPreset, audio: (await received()).filter(r => r.kind === "audio") }, null, 2));
+
+    // Muting the microphone does not silence the share.
+    if (hasSound) {
+      await bar.getByRole("button", { name: "Mute", exact: true }).click();
+      expect((await outgoing()).audioSenders).toBe(2);
+      await bar.getByRole("button", { name: "Unmute", exact: true }).click();
+    }
+
+    // Stopping: the button goes back, the preset is cleared from the sender.
+    await sharer.evaluate(() => (window as unknown as { testScreenStop?: () => void }).testScreenStop?.());
+    if (!source.used.startsWith("synthetic")) await bar.getByRole("button", { name: "Stop sharing", exact: true }).click();
+    await expect(bar.getByRole("button", { name: "Share screen", exact: true })).toBeVisible({ timeout: 15000 });
+  } finally {
+    for (const context of contexts) await context.close();
+  }
+});
+
 test("joins and shows a warning when a saved device is missing",async ({ browser, request }) => {
   const setup = await request.post("/api/setup", {
     data: { setup_token: "test-setup-token-at-least-32-characters", username: "owner", password, device_name: "missing device fixture" },

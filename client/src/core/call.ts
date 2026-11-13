@@ -36,6 +36,8 @@ export interface CallMedia {
   /** Participant that published it, when the transport can tell. */
   participantId?: string;
   video: boolean;
+  /** The sound of a shared screen, not the person's voice. It has its own volume. */
+  share?: boolean;
 }
 
 export interface CallDevice {
@@ -79,6 +81,10 @@ export interface CallState {
   deafened: boolean;
   camera: boolean;
   sharing: boolean;
+  /** The preset a share uses, or will use: "smooth", "sharp" or "source". Remembered on this device. */
+  shareQuality: "smooth" | "sharp" | "source";
+  /** Your share is going out with sound. */
+  sharingSound: boolean;
   error: string;
   /** Non-fatal notice, e.g. a saved device was replaced by the default. */
   warning: string;
@@ -107,6 +113,8 @@ export interface CallTransport extends CallState {
   setDeafened(deafened: boolean): void;
   setCamera(on: boolean): Promise<void>;
   setSharing(on: boolean): Promise<void>;
+  /** Picks the preset for the next share and, if one is running, applies it at once. */
+  setShareQuality(quality: "smooth" | "sharp" | "source"): Promise<void>;
   refreshDevices(): Promise<void>;
   selectDevices(selected: { microphone?: string; camera?: string }): void;
   setAudio(bitrate: number, noiseSuppression: boolean): Promise<void>;

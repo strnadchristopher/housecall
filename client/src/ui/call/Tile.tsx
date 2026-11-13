@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { CallMedia, CallParticipant } from "../../core/call";
+import { personPrefs, readPrefs, setPersonPrefs, subscribePrefs } from "../../state/audioOutput";
 import { copy } from "../copy";
 import { Avatar, Icon, cx } from "../kit";
 import { useOutput } from "./useOutput";
@@ -40,14 +41,30 @@ function useFrames(element: React.RefObject<HTMLVideoElement | null>, enabled: b
   return flowing;
 }
 
+/** The prefs key for the volume of someone's screen sound. */
+export const shareKey = (personId: string) => `${personId}:share`;
+
+/** A slider for the sound that comes with someone's shared screen. Only on this device. */
+function ShareVolume({ personId, name }: { personId: string; name: string }) {
+  useSyncExternalStore(subscribePrefs, () => localStorage.getItem("hc.voicePrefs") ?? "", () => "");
+  const prefs = personPrefs(readPrefs(), shareKey(personId));
+  return (
+    <input type="range" className="hc-tile__sharevol" min={0} max={100} value={Math.round(prefs.volume * 100)} data-testid="share-volume"
+      aria-label={copy.call.shareSoundVolume(name)} title={copy.call.shareSoundVolume(name)}
+      onClick={event => event.stopPropagation()}
+      onChange={event => setPersonPrefs(shareKey(personId), { volume: Number(event.target.value) / 100 })} />
+  );
+}
+
 /** One remote stream. Always mounted, so audio plays whether or not a picture shows. */
 function RemoteMedia({ media, personId, deafened, onPicture }: { media: CallMedia; personId?: string; deafened: boolean; onPicture: (id: string, flowing: boolean) => void }) {
   const element = useStream(media.stream);
   const flowing = useFrames(element, media.video);
-  const muted = useOutput(element, personId);
+  // The sound of a shared screen has its own volume, apart from the person's voice.
+  const muted = useOutput(element, media.share && personId ? shareKey(personId) : personId);
   useEffect(() => { onPicture(media.id, flowing); return () => onPicture(media.id, false); }, [media.id, flowing]);
   return (
-    <video ref={element} autoPlay playsInline muted={deafened || muted} data-testid="remote-media" data-peer-id={media.participantId}
+    <video ref={element} autoPlay playsInline muted={deafened || muted} data-testid="remote-media" data-peer-id={media.participantId} data-share={media.share ? "" : undefined}
       className={cx("hc-tile__video", !(media.video && flowing) && "is-hidden")}
       aria-label={media.video ? copy.call.remoteVideo : copy.call.remoteAudio} />
   );
@@ -83,6 +100,7 @@ export function Tile({ participant, media, localVideo, speaking, muted, deafened
       <figcaption>
         <span className="hc-tile__name">{participant.name}{participant.me && <small> ({copy.call.you})</small>}</span>
         {participant.me && sharing && <Icon name="screen" />}
+        {!participant.me && participant.personId && media.some(item => item.share) && <ShareVolume personId={participant.personId} name={participant.name} />}
         {state && <span className="hc-tile__state" role="img" aria-label={state} title={state}><Icon name={deafened ? "headphones" : "mic"} off /></span>}
         {speaking && <span className="hc-sr">{copy.call.speaking}</span>}
       </figcaption>

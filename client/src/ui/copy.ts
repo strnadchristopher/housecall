@@ -7,7 +7,7 @@ export const copy = {
   app: { name: "Housecall" },
   common: {
     back: "Back", close: "Close", cancel: "Cancel", save: "Save", copy: "Copy", copied: "Copied", add: "Add",
-    remove: "Remove", retry: "Retry", search: "Search", loading: "Loading", none: "None", you: "You", dismiss: "Dismiss",
+    remove: "Remove", retry: "Retry", search: "Search", loading: "Loading", none: "None", you: "You", dismiss: "Dismiss", done: "Done",
   },
   state: { connected: "Connected", reconnecting: "Reconnecting", offline: "Offline" },
   onboarding: {
@@ -93,7 +93,14 @@ export const copy = {
   call: {
     label: "Call", inProgress: "Call in progress", join: "Join", joining: "Joining", leave: "Leave", mute: "Mute", unmute: "Unmute",
     deafen: "Deafen", undeafen: "Undeafen", cameraOn: "Camera on", cameraOff: "Camera off",
-    share: "Share screen", stopShare: "Stop sharing", devices: "Audio and video",
+    share: "Share screen", stopShare: "Stop sharing", shareQuality: "Share quality",
+    shareQualityNext: "Applies the next time you share your screen.", shareQualityLive: "Applies to your share right now.",
+    shareQualities: {
+      smooth: { name: "Smooth", hint: "Games and video. Keeps motion moving and softens the picture when the connection is slow." },
+      sharp: { name: "Sharp", hint: "Documents and code. Keeps text crisp and lowers the frame rate when the connection is slow." },
+      source: { name: "Source", hint: "Your screen as it is, up to 4K. Uses the most bandwidth." },
+    },
+    shareSoundVolume: (name: string) => `Volume for ${name}'s screen sound`, devices: "Audio and video",
     people: (n: number) => (n === 1 ? "1 person" : `${n} people`), failed: "Call failed", inCallIn: (name: string) => `In call in ${name}`, switchCall: "Switch call",
     previewMine: "Show a preview of my stream", previewMineHint: "People in this server can peek at your screen before they join. A small picture is sent every 15 seconds.",
     sounds: "Call sounds", soundsHint: "A short sound when someone joins or leaves, and while a call rings.", soundVolume: "Sound volume",

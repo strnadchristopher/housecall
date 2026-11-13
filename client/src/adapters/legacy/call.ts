@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CallTransport, IncomingCall } from "../../core/call";
 import { ApiError } from "../../transport/api";
+import { shareStreamId } from "../../transport/shareQuality";
 import { RING_FRESH_MS } from "../../state/callEvents";
 import { lossFraction } from "../../state/callQuality";
 import { applyVoiceEvent, roomsFromStates, sortRoster, type VoiceRooms } from "../../state/voiceRoster";
@@ -281,13 +282,16 @@ export function useLegacyCall(c: Housecall) {
     active: Object.fromEntries(Object.entries(rooms).map(([room, list]) => [room, list.map(p => ({ personId: p.personId, name: nameOf(p.personId), avatarUrl: avatarOf(p.personId) }))])),
     rooms: Object.fromEntries(Object.entries(rooms).map(([room, list]) => [room, sortRoster(list).map(p => ({ ...p, name: nameOf(p.personId), avatarUrl: avatarOf(p.personId) }))])),
     media: status.streams
-      .filter(stream => !publishers.has(status.sourcePeers?.[stream.id] ?? ""))
-      .map(stream => ({ id: stream.id, stream, participantId: status.sourcePeers?.[stream.id] || undefined, video: stream.getVideoTracks().length > 0 })),
+      .map(stream => ({ stream, ...shareStreamId(status.sourcePeers?.[stream.id] ?? "") }))
+      .filter(({ peer }) => !publishers.has(peer))
+      .map(({ stream, peer, share }) => ({ id: stream.id, stream, participantId: peer || undefined, video: stream.getVideoTracks().length > 0, share: share || undefined })),
     speaking: status.phase === "live" ? status.speaking ?? [] : [],
     localVideo: status.phase === "live" ? voice.localPicture() : undefined,
     joinedAt: status.phase === "live" ? joinedAt : undefined,
     muted, deafened, camera,
     sharing: voice.sharing,
+    shareQuality: voice.shareQuality,
+    sharingSound: !!status.sharingSound,
     error: error || (status.phase === "failed" ? status.error ?? "" : ""),
     warning: active ? status.warning ?? "" : "",
     devices: devices.map(device => ({ id: device.id, label: device.label, kind: device.kind === "audioinput" ? "microphone" as const : "camera" as const })),
@@ -359,6 +363,10 @@ export function useLegacyCall(c: Housecall) {
         if (on) await voice.screenShare(); else voice.stopScreenShare();
         setStatus(current => ({ ...current }));
       } catch (reason) { if (!(reason instanceof DOMException && reason.name === "NotAllowedError")) fail(reason); }
+    },
+    setShareQuality: async quality => {
+      setError("");
+      try { await voice.setShareQuality(quality); setStatus(current => ({ ...current })); } catch (reason) { fail(reason); }
     },
     refreshDevices: async () => {
       try {

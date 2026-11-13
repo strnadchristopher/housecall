@@ -1268,3 +1268,6 @@ p { text-wrap: pretty; }
   .hc-cam__bottom { left: 50%; right: auto; translate: -50% 0; width: min(100%, 26rem); }
   .hc-cam__top { top: var(--hc-space-4); left: var(--hc-space-4); right: var(--hc-space-4); }
 }
+
+/* Volume for the sound of a shared screen: a slider in the caption, 44 px tall to touch. */
+.hc-tile__sharevol { pointer-events: auto; width: 6rem; min-height: var(--hc-hit); margin: 0; accent-color: var(--hc-accent); }

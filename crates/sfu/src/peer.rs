@@ -130,6 +130,18 @@ pub(crate) struct TrackIn {
     origin: ClientId,
     mid: Mid,
     kind: MediaKind,
+    /// A publisher's second audio track: the sound of a shared screen, kept apart from the voice.
+    share: bool,
+}
+
+/// The stream id a subscriber sees for a track: the publisher's id, and for share audio the same
+/// id with a `-share` suffix, so the browser can tell the screen's sound from the voice.
+fn stream_id(track: &TrackIn) -> String {
+    if track.share {
+        format!("{}-share", track.origin.0)
+    } else {
+        track.origin.0.to_string()
+    }
 }
 
 #[derive(Debug)]
@@ -401,11 +413,14 @@ impl Client {
             self.disconnect("incoming_track_limit");
             return Propagated::Noop;
         }
+        let share = kind == MediaKind::Audio
+            && self.tracks_in.iter().any(|t| t.id.kind == MediaKind::Audio);
         let track_in = TrackInEntry {
             id: Arc::new(TrackIn {
                 origin: self.id,
                 mid,
                 kind,
+                share,
             }),
             last_keyframe_request: None,
         };
@@ -497,7 +512,7 @@ impl Client {
             match track.state {
                 TrackOutState::ToOpen => {
                     if let Some(track_in) = track.track_in.upgrade() {
-                        let stream_id = track_in.origin.to_string();
+                        let stream_id = stream_id(&track_in);
                         let mid = change.add_media(
                             track_in.kind,
                             Direction::SendOnly,
@@ -788,6 +803,50 @@ mod tests {
         assert_eq!(clients[0].tracks_out.len(), 1);
         assert_eq!(clients[2].tracks_out.len(), 2);
         assert!(clients[1].tracks_out.is_empty());
+    }
+    #[test]
+    fn a_second_audio_track_is_share_audio_and_reaches_subscribers_under_its_own_stream() {
+        str0m::crypto::from_feature_flags().install_process_default();
+        let now = Instant::now();
+        let mut sharer = Client::new(Rtc::new(now), "room".into(), "sharer".into(), "s1".into());
+        let events = [
+            sharer.handle_media_added("0".into(), MediaKind::Audio),
+            sharer.handle_media_added("1".into(), MediaKind::Video),
+            sharer.handle_media_added("2".into(), MediaKind::Audio),
+        ];
+        // Three tracks are the limit a publisher may open: voice, picture, share audio.
+        assert_eq!(sharer.tracks_in.len(), 3);
+        let origin = sharer.id.0.to_string();
+        let ids: Vec<String> = sharer.tracks_in.iter().map(|t| stream_id(&t.id)).collect();
+        assert_eq!(ids, vec![origin.clone(), origin.clone(), format!("{origin}-share")]);
+        let viewer = Client::new(Rtc::new(now), "room".into(), "viewer".into(), "v1".into());
+        let mut clients = [sharer, viewer];
+        for event in &events {
+            propagate(event, &mut clients);
+        }
+        // The subscriber is offered all three, and the share audio is not folded into the voice track.
+        assert_eq!(clients[1].tracks_out.len(), 3);
+        let kinds: Vec<(MediaKind, bool)> = clients[1]
+            .tracks_out
+            .iter()
+            .filter_map(|o| o.track_in.upgrade())
+            .map(|t| (t.kind, t.share))
+            .collect();
+        assert_eq!(
+            kinds,
+            vec![(MediaKind::Audio, false), (MediaKind::Video, false), (MediaKind::Audio, true)]
+        );
+    }
+    #[test]
+    fn a_fourth_incoming_track_is_refused() {
+        str0m::crypto::from_feature_flags().install_process_default();
+        let mut peer = Client::new(Rtc::new(Instant::now()), "room".into(), "p".into(), "s".into());
+        for (mid, kind) in [("0", MediaKind::Audio), ("1", MediaKind::Video), ("2", MediaKind::Audio)] {
+            peer.handle_media_added(mid.into(), kind);
+        }
+        assert!(peer.tracks_in.len() == 3 && peer.disconnect_reason.is_none());
+        peer.handle_media_added("3".into(), MediaKind::Audio);
+        assert_eq!(peer.disconnect_reason, Some("incoming_track_limit"));
     }
     #[test]
     fn signaling_backpressure_preserves_payload_then_sends_once_without_spinning() {

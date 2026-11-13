@@ -23,16 +23,17 @@ class Peer extends EventTarget {
   ontrack = null;
   onconnectionstatechange = null;
   close = vi.fn();
-  senders: { track: MediaStreamTrack | null; replaceTrack: ReturnType<typeof vi.fn>;
+  senders: { kind: string; track: MediaStreamTrack | null; replaceTrack: ReturnType<typeof vi.fn>;
     getParameters: () => { encodings: {}[] }; setParameters: ReturnType<typeof vi.fn> }[] = [];
   constructor() { super(); Peer.created.push(this); }
   addTransceiver(value: MediaStreamTrack | string) {
-    const sender = { track: typeof value === "string" ? null : value,
+    const sender = { kind: typeof value === "string" ? value : value.kind, track: typeof value === "string" ? null : value,
       replaceTrack: vi.fn(async () => {}), getParameters: () => ({ encodings: [{}] }), setParameters: vi.fn(async () => {}) };
     this.senders.push(sender);
+    return { sender };
   }
   getSenders() { return this.senders; }
-  getTransceivers() { return this.senders.map(sender => ({ sender, receiver: { track: { kind: sender.track?.kind ?? "video" } } })); }
+  getTransceivers() { return this.senders.map(sender => ({ sender, receiver: { track: { kind: sender.kind } } })); }
   createDataChannel() { return { onmessage: null, close: vi.fn(), send: vi.fn() }; }
   async createOffer() { return { type: "offer", sdp: "v=0\r\n" }; }
   async setLocalDescription(value: RTCSessionDescriptionInit) { this.localDescription = value; }
@@ -71,8 +72,34 @@ it("joins audio-only with selected microphone and retains a video slot for expli
   const { session, media } = fixture(async () => stream([track("audio")]));
   await session.join("room", false, { microphone: "chosen-mic", camera: "unused-camera" });
   expect(media.getUserMedia).toHaveBeenCalledWith({ audio: expect.objectContaining({ deviceId: { exact: "chosen-mic" }, noiseSuppression: false }), video: false });
-  expect(Peer.created[0].senders).toHaveLength(2);
+  // microphone, an empty video slot, and the empty audio slot for the sound of a shared screen
+  expect(Peer.created[0].senders).toHaveLength(3);
+  expect(Peer.created[0].senders[2].kind).toBe("audio");
+  expect(Peer.created[0].senders[2].track).toBeNull();
   expect(Peer.created[0].senders[1].track).toBeNull();
+});
+
+it("sends a share's picture on the video slot and its sound on the share audio slot, with the preset applied", async () => {
+  const microphone = track("audio");
+  const { session, media, updates } = fixture(async () => stream([microphone]));
+  await session.join("room", false);
+  const picture = track("video"), sound = track("audio");
+  media.getDisplayMedia.mockImplementation(async () => stream([picture, sound]));
+  await session.screenShare("sharp");
+  const [, video, shareAudio] = Peer.created[0].senders;
+  expect(media.getDisplayMedia).toHaveBeenCalledWith(expect.objectContaining({ audio: expect.objectContaining({ echoCancellation: false }), video: expect.objectContaining({ frameRate: { ideal: 30 } }) }));
+  expect(video.replaceTrack).toHaveBeenCalledWith(picture);
+  expect(shareAudio.replaceTrack).toHaveBeenCalledWith(sound);
+  expect((picture as unknown as { contentHint: string }).contentHint).toBe("detail");
+  expect(updates.at(-1)?.sharingSound).toBe(true);
+  // Muting the call closes the microphone only.
+  session.mute(true);
+  expect(microphone.enabled).toBe(false);
+  expect(sound.enabled).toBe(true);
+  // The end of the share takes its sound off the wire too.
+  session.stopScreenShare();
+  expect(shareAudio.replaceTrack).toHaveBeenLastCalledWith(null);
+  expect(sound.stop).toHaveBeenCalled();
 });
 
 it("does not publish a screen selected after leaving the call", async () => {

@@ -1,5 +1,6 @@
 import type { Api } from "./api";
 import { isSpeaking } from "../core/call";
+import { SHARE_PRESETS, applyShareQuality, captureConstraints, clearShareQuality, readShareQuality, shareStreamId, writeShareQuality, type ShareQuality } from "./shareQuality";
 export interface VoiceInputs { microphone?: string; camera?: string }
 export interface VoiceDevice { id: string; label: string; kind: "audioinput" | "videoinput" }
 /** Enumeration does not request permission; labels may be blank until an explicit capture grant. */
@@ -25,6 +26,8 @@ export interface VoiceStatus {
   /** Non-fatal notice, e.g. a saved device was replaced by the default. */
   warning?: string;
   camera?: boolean;
+  /** Your share is going out with sound of its own. */
+  sharingSound?: boolean;
 }
 export function opusFullband(sdp: string, bitrate = 510000) {
   const payloads = [...sdp.matchAll(/a=rtpmap:(\d+) opus\/48000/gi)].map(
@@ -107,6 +110,10 @@ export class VoiceSession {
   private dc?: RTCDataChannel;
   private local: MediaStream[] = [];
   private screenTrack?:MediaStreamTrack;
+  /** The capture stream of a share. Kept out of `local` so muting the microphone never mutes the screen's sound. */
+  private shareStream?: MediaStream;
+  private shareAudio?: RTCRtpSender;
+  private shareQualityNow?: ShareQuality;
   private cameraTrack?: MediaStreamTrack;
   private channelId?: string;
   private timer?: ReturnType<typeof setInterval>;
@@ -160,6 +167,10 @@ export class VoiceSession {
       for (const track of stream.getTracks())
         pc.addTransceiver(track, { direction: "sendonly", streams: [stream] });
       if (!cameraOn) pc.addTransceiver("video", { direction: "sendonly" });
+      // A third, empty m-line for the sound of a shared screen. It is created now, last, so sharing never
+      // renegotiates (that would race the server's offers) and the SFU, which counts a publisher's second
+      // audio m-line as share audio, sees it in a fixed place.
+      this.shareAudio = pc.addTransceiver("audio", { direction: "sendonly" }).sender;
       pc.ontrack = (event) => {
         if (this.pc !== pc) return;
         const remote = new MediaStream([event.track]);
@@ -241,32 +252,65 @@ export class VoiceSession {
       throw error;
     }
   }
-  async screenShare() {
+  /**
+   * Shares a screen or window at the given preset. The picture goes out on the video sender (replacing the
+   * camera for the time being); the sound the browser offers with it goes out on its own audio sender.
+   */
+  async screenShare(quality: ShareQuality = readShareQuality()) {
     if (this.screenTrack?.readyState === "live") throw new Error("Screen sharing is already active; stop it from the capture control first");
     const pc = this.pc;
     if (!pc || pc.connectionState !== "connected") throw new Error("Join voice before sharing your screen");
     const sender = pc.getTransceivers().find(t => t.receiver.track.kind === "video")?.sender;
     if (!sender) throw new Error("A video transceiver is required");
     const original = sender.track;
-    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-    if (this.pc !== pc) { for (const track of stream.getTracks()) track.stop(); return; }
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: captureConstraints(quality),
+      // Raw sound: no echo cancelling, noise suppression or gain, which would flatten music and games.
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    });
+    const release = () => { for (const item of stream.getTracks()) item.stop(); };
+    if (this.pc !== pc) { release(); return; }
     const track = stream.getVideoTracks()[0];
-    if (!track) { for (const item of stream.getTracks()) item.stop(); throw new Error("Screen capture returned no video"); }
-    try { await sender.replaceTrack(track); }
-    catch (error) { for (const item of stream.getTracks()) item.stop(); if (this.pc === pc) throw error; return; }
-    if (this.pc !== pc) { for (const item of stream.getTracks()) item.stop(); return; }
-    this.local.push(stream);
+    if (!track) { release(); throw new Error("Screen capture returned no video"); }
+    const sound = stream.getAudioTracks()[0];
+    const soundSender = this.shareAudio;
+    try {
+      track.contentHint = SHARE_PRESETS[quality].contentHint;
+      await sender.replaceTrack(track);
+      await applyShareQuality(sender, track, quality);
+      if (sound && soundSender) {
+        await soundSender.replaceTrack(sound);
+        const parameters = soundSender.getParameters();
+        if (!parameters.encodings?.length) parameters.encodings = [{}];
+        for (const encoding of parameters.encodings) encoding.maxBitrate = 192000;
+        await soundSender.setParameters(parameters);
+      }
+    } catch (error) { release(); if (this.pc === pc) throw error; return; }
+    if (this.pc !== pc) { release(); return; }
+    this.shareStream = stream;
     this.screenTrack = track;
+    this.shareQualityNow = quality;
+    this.update({ sharingSound: !!sound });
     track.onended = () => {
       if (this.pc !== pc || this.screenTrack !== track) return;
       this.screenTrack = undefined;
-      this.local = this.local.filter(local => local !== stream);
-      this.update({});
+      this.shareStream = undefined;
+      release();
+      void soundSender?.replaceTrack(null).catch(() => {});
+      this.update({ sharingSound: false });
       const camera = this.cameraTrack?.readyState === "live" ? this.cameraTrack : original?.readyState === "live" ? original : null;
-      void sender.replaceTrack(camera).catch(() => {});
+      void sender.replaceTrack(camera).then(() => clearShareQuality(sender)).catch(() => {});
     };
   }
-  /** Ends a screen share started by this session and restores the camera, if one is on. */
+  /** Changes the preset of a share that is already running. */
+  async setShareQuality(quality: ShareQuality) {
+    writeShareQuality(quality);
+    this.shareQualityNow = quality;
+    const track = this.screenTrack;
+    const sender = this.pc?.getTransceivers().find(t => t.receiver.track.kind === "video")?.sender;
+    if (track?.readyState === "live" && sender) await applyShareQuality(sender, track, quality);
+  }
+  /** Ends a share started by this session and restores the camera, if one is on. */
   stopScreenShare() {
     const track = this.screenTrack;
     if (!track) return;
@@ -275,6 +319,9 @@ export class VoiceSession {
   }
   get sharing() {
     return this.screenTrack?.readyState === "live";
+  }
+  get shareQuality(): ShareQuality {
+    return this.shareQualityNow ?? readShareQuality();
   }
   /** Turns the camera on or off inside a live call by swapping the outgoing video track. */
   async camera(on: boolean, deviceId?: string) {
@@ -343,9 +390,10 @@ export class VoiceSession {
     if (this.pc !== pc) return;
     const owner = new Map<string, string>();
     for (const stream of this.state.streams) {
-      const peer = this.state.sourcePeers?.[stream.id];
+      const { peer, share } = shareStreamId(this.state.sourcePeers?.[stream.id] ?? "");
       const track = stream.getAudioTracks()[0];
-      if (peer && track) owner.set(track.id, peer);
+      // A screen's sound is not someone speaking.
+      if (peer && track && !share) owner.set(track.id, peer);
     }
     const microphoneOpen = this.local.some(stream => stream.getAudioTracks().some(track => track.enabled));
     const speaking = new Set<string>();
@@ -393,6 +441,9 @@ export class VoiceSession {
     this.cancellation.abort();
     this.cancellation = new AbortController();
     this.screenTrack=undefined;
+    this.shareStream?.getTracks().forEach(track => { track.onended = null; track.stop(); });
+    this.shareStream = undefined;
+    this.shareAudio = undefined;
     this.cameraTrack = undefined;
     clearInterval(this.timer);
     clearInterval(this.levelTimer);
