@@ -1,0 +1,26 @@
+/*
+ * HC-040 section 14: the motion that belongs to no single surface (sheets, dialogs, changing room).
+ * PASTE: inside the existing "@media (prefers-reduced-motion: no-preference)" block at the end of
+ * client/src/ui/styles/index.css, after the hc-anim-* rules.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  /* The sheet motion. Phone: up from the bottom edge. The scrim fades with it. */
+  .hc-sheet { animation: hc-sheet-in var(--hc-dur-slow) var(--hc-ease-out); }
+  .hc-sheet-scrim { animation: hc-fade-in var(--hc-dur-base) var(--hc-ease-out); }
+  .hc-presence[data-state="exit"] > .hc-sheet { animation: hc-sheet-out var(--hc-dur-base) var(--hc-ease-in) forwards; }
+  .hc-presence[data-state="exit"] > .hc-sheet-scrim { animation: hc-fade-out var(--hc-dur-base) var(--hc-ease-in) forwards; }
+  @keyframes hc-sheet-in { from { transform: translateY(100%); } }
+  @keyframes hc-sheet-out { to { transform: translateY(100%); } }
+
+  /* Changing room: the new conversation settles in. Nothing plays for the one you left. */
+  .hc-center[data-switch] > .hc-messages, .hc-center[data-switch] > .hc-stage { animation: hc-room-in var(--hc-dur-base) var(--hc-ease-out); }
+  @keyframes hc-room-in { from { opacity: 0; transform: translateY(var(--hc-space-1)); } }
+}
+/* Wide screens: the same sheet is a centred dialog, so it scales in place. (translate centres it; the
+   animation uses transform, so the two do not fight.) */
+@media (prefers-reduced-motion: no-preference) and (min-width: 47.51em) {
+  @keyframes hc-sheet-in { from { opacity: 0; transform: translateY(var(--hc-space-2)) scale(0.97); } }
+  @keyframes hc-sheet-out { to { opacity: 0; transform: translateY(var(--hc-space-1)) scale(0.98); } }
+  .hc-sheet { animation-duration: var(--hc-dur-base); }
+  .hc-presence[data-state="exit"] > .hc-sheet { animation-duration: var(--hc-dur-fast); }
+}
