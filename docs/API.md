@@ -12,11 +12,16 @@ All timestamps are epoch milliseconds and JSON fields snake_case. Except health/
 - `POST /api/access-requests` (public, rate limited): `{username, password, device_name, message?}` (message ≤ 500 characters) → `{id, status:"pending"}`. Creates a disabled account that reserves the username. 409 username taken, 403 requests closed, 429 when 50 requests are already pending. `GET /api/access-requests/{id}/status` (public): `{status}` with `pending|approved|declined`; the id is 256 random bits and reveals nothing else.
 - Owner: `GET /api/access-requests` → `{requests:[{id,username,message,status,created_at,decided_at,server_id}]}` (pending first; `username` is empty after a decline). `POST /api/access-requests/{id}/approve {server_id?}` enables the account and joins the server → `{status,server_id}`. `POST /api/access-requests/{id}/decline` deletes the account (the username is free again) → `{status}`. A decided request answers 409.
 - `POST /api/login` for an account whose request is still pending answers 403 `access request pending` (only after the password is correct; wrong passwords and unknown names stay 401). A declined account no longer exists, so it answers the normal 401; clients read "declined" from the status endpoint. `GET /api/members` no longer lists disabled accounts.
-- `GET /api/me`: `{user:{id,username,is_owner},session_id,capabilities:{...}}`.
+- `GET /api/me`: `{user:{id,username,is_owner,display_name,avatar_rev,bio},session_id,capabilities:{...}}`. `display_name` and `bio` are `string|null`; `avatar_rev` is an integer.
+- `PATCH /api/me`: `{display_name?: string|null, bio?: string|null}` → `{display_name: string|null, bio: string|null}` (the stored values). Only the keys present in the body change, so `{"bio":"hi"}` leaves the name alone. `display_name`: trimmed, 1–32 characters, `null` clears. `bio`: trimmed, at most 190 characters (counted as characters, not bytes), newlines and tabs allowed; an empty string or `null` clears it. Any other control character or invisible/direction-changing character (U+202E, U+200B, U+FEFF and the like) in either field → 400. Emits `member.updated` to every channel the caller is in:
+
+  ```json
+  {"kind":"member.updated","channel_id":"<channel id>","payload":{"user_id":"<id>","display_name":"Ali","avatar_rev":0,"bio":"Builds things"}}
+  ```
 - `GET /api/devices`: `{devices:[{id,device_name,created_at,expires_at,current}]}`. `DELETE /api/devices/:id`: own session only.
-- `GET /api/channels`: `{channels:[{id,name,kind}]}`. General is automatically joined.
-- `POST /api/channels`: `{name,kind:"channel"|"dm"|"group_dm",member_ids:[]}`. Only owner creates channels. DM includes requester and selected members.
-- `GET /api/members`: `{members:[{id,username,is_owner}]}` (private instance membership).
+- `GET /api/channels`: `{channels:[{id,name,kind,server_id,peer_id}]}`. `kind` is `"channel"`, `"voice"`, `"dm"` or `"group_dm"`. General is automatically joined, and so is every voice channel of a server you are in.
+- `POST /api/channels`: `{name,kind:"channel"|"voice"|"dm"|"group_dm",member_ids:[]}` → `{id,name,kind,server_id}`. Only the owner creates `channel` and `voice` channels. DM includes requester and selected members. See "Voice channels" below for `voice`.
+- `GET /api/members`: `{members:[{id,username,is_owner,display_name,avatar_rev,bio}]}` (private instance membership). `GET /api/servers/:id/members` returns the same fields.
 - `GET /api/channels/:id/messages?before=<millis>&q=<text>&pinned=true`: `{messages:[{id,channel_id,author_id,body,reply_to,created_at,edited_at,revision,pinned,mention_ids,reactions:[{emoji,user_id}]}]}`. Latest 100, ascending.
 - `POST /api/channels/:id/messages`: `{body,reply_to:null,mention_ids:[]}` → message. Mention IDs must be current conversation members. `@everyone` owner only.
 - `PATCH /api/messages/:id`: `{body,revision}` → message. Author only, optimistic revision conflict 409.
@@ -84,6 +89,46 @@ Set both `SFU_BIND=<udp address:port>` and `SFU_PUBLIC_IP=<routable address>` to
 - `POST /api/channels/:id/voice/join`: raw SDP offer JSON `{type:"offer",sdp}` → `{peer_id,answer:{type:"answer",sdp}}`.
 - `GET /api/channels/:id/voice/stats`: `{peers:[...]}`, authorized room stats.
 - `DELETE /api/channels/:id/voice/:peer_id`: leaves only the caller's own session/peer.
+
+### Voice channels (0.4.0)
+
+A voice channel is a channel with a call attached. `POST /api/channels {"name":"Game night","kind":"voice"}` (owner only, others get 403; optional `server_id`, default `home`) → `{"id":"<id>","name":"Game night","kind":"voice","server_id":"home"}`. It always includes every member of the server, and anyone who joins the server later is added to it. Every server has at least one: the server creates a voice channel named `Lounge` for any server that has none, at startup and when a server is created, so there is never a second one. Messages, replies, reactions, uploads, search, unread counts and read marks work in a voice channel exactly as in a text channel; it has a text chat. The server still accepts `voice/join` on any conversation (0.3.0 clients rely on it); only the UI decides where to offer calls.
+
+### Live voice state and events (0.4.0)
+
+State lives in server memory and is cleared on leave, when the SFU stops listing the peer (checked every 3 seconds, and on each `GET /api/voice/rooms`) and on restart. A person with several devices in a call has one state and is announced once.
+
+State record (used in `states` and in events):
+
+```json
+{"user_id":"<id>","muted":false,"deafened":false,"camera":false,"sharing":false,"joined_at":1731500000000}
+```
+
+- `PUT /api/channels/:id/voice/state` with `{"muted":true,"deafened":false,"camera":false,"sharing":true}` → `200` and the record plus the channel:
+
+  ```json
+  {"channel_id":"<id>","user_id":"<id>","muted":true,"deafened":false,"camera":false,"sharing":true,"joined_at":1731500000000}
+  ```
+
+  Every flag is optional; a flag left out keeps its value. The caller must be a member of the channel (403 otherwise) and currently in its call (409 `not in this call` otherwise). Setting `sharing:false` deletes the stream preview.
+- `GET /api/voice/rooms` → `{"rooms":{"<channel_id>":["<user_id>"]},"states":{"<channel_id>":[<state record>]}}`. `rooms` is unchanged from 0.3.0: user ids only, one per person, only channels the caller belongs to. `states` has the same channels' records, oldest `joined_at` first. Without the SFU: `{"rooms":{},"states":{}}`. 0.3.0 clients read only `rooms` and are unaffected.
+- Events, delivered through `GET /api/events` to the members of the channel and nobody else (the person who changed state gets them too):
+
+  ```json
+  {"kind":"voice.joined","channel_id":"<id>","payload":{"channel_id":"<id>","user_id":"<id>","muted":false,"deafened":false,"camera":false,"sharing":false,"joined_at":1731500000000}}
+  {"kind":"voice.state","channel_id":"<id>","payload":{"channel_id":"<id>","user_id":"<id>","muted":true,"deafened":false,"camera":false,"sharing":true,"joined_at":1731500000000}}
+  {"kind":"voice.left","channel_id":"<id>","payload":{"channel_id":"<id>","user_id":"<id>"}}
+  ```
+
+  `voice.joined` fires when someone's first device joins (all four flags `false`); `voice.left` fires on leave and on peer timeout. `voice.state` fires on every `PUT`, even if nothing changed.
+
+### Stream previews (0.4.0)
+
+A small picture of someone's screen share, for the channel's call card. Memory only; never written to disk or the database.
+
+- `PUT /api/channels/:id/voice/preview`, `Content-Type: image/jpeg`, raw JPEG bytes → `200 {"ok":true,"stored_at":1731500000000}`. Members only (403), only while the caller's state has `sharing:true` (409), body must start with the JPEG signature and be sent as `image/jpeg` (415), at most 65536 bytes (413), at most one accepted per 10 seconds per person (429; the stored image stays as it was). A new image replaces the old one.
+- `GET /api/channels/:id/voice/preview/:user_id` → the JPEG, with `Content-Type: image/jpeg`, `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`. Channel members only (403); 404 when there is none. Poll no faster than every 10 seconds, and send the usual auth headers (an `<img>` tag cannot, so fetch it and use an object URL).
+- The preview is deleted when the person stops sharing (`PUT .../voice/state` with `sharing:false`), leaves, times out, or the server restarts.
 
 When SFU is configured, activity launch/read/control/stop requires a connected voice session and the synchronized roster contains only connected peers. Without configured SFU, `activity_sync` remains a domain synchronization prototype and `activity_playback` remains false. Live camera/Opus decode, bitrate, browser compatibility, screen share and latency need their own measurements; synthetic encrypted RTP forwarding is not glass-to-glass evidence.
 
