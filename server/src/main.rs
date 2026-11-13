@@ -107,6 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     housecall_server::vm::configure(&mut state)?;
     housecall_server::vm_media::configure(&mut state)?;
     housecall_server::voice::configure(&mut state)?;
+    housecall_server::voice::spawn_sweeper(&state);
     housecall_server::vm_media::start(&state).await?;
     housecall_server::transcode::configure(&mut state)?;
     housecall_server::plex::configure(&mut state)?;

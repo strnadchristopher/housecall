@@ -20,6 +20,7 @@ pub fn init(db: &Connection) -> rusqlite::Result<()> {
         ("invites", "uses", "INTEGER NOT NULL DEFAULT 0"),
         ("users", "disabled", "INTEGER NOT NULL DEFAULT 0"),
         ("users", "display_name", "TEXT"),
+        ("users", "bio", "TEXT"),
         ("users", "avatar", "BLOB"),
         ("users", "avatar_type", "TEXT"),
         ("users", "avatar_rev", "INTEGER NOT NULL DEFAULT 0"),
@@ -47,6 +48,35 @@ pub fn init(db: &Connection) -> rusqlite::Result<()> {
         [],
     )?;
     db.execute("INSERT OR IGNORE INTO server_members SELECT 'home',user_id FROM members WHERE channel_id='general'",[])?;
+    let ids = db
+        .prepare("SELECT id FROM servers")?
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    for id in ids {
+        ensure_lounge(db, &id)?;
+    }
+    Ok(())
+}
+/// Every server has at least one voice channel. A server without one gets `Lounge`, with the
+/// people who are in the server's general channel. Safe to call any number of times.
+pub fn ensure_lounge(db: &Connection, sid: &str) -> rusqlite::Result<()> {
+    let has_voice: bool = db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM channels WHERE server_id=? AND kind='voice')",
+        [sid],
+        |r| r.get(0),
+    )?;
+    if has_voice {
+        return Ok(());
+    }
+    let id = secret();
+    db.execute(
+        "INSERT INTO channels(id,name,kind,server_id) VALUES(?,'Lounge','voice',?)",
+        params![id, sid],
+    )?;
+    db.execute(
+        "INSERT OR IGNORE INTO members SELECT ?1,m.user_id FROM members m JOIN servers s ON s.general_channel_id=m.channel_id WHERE s.id=?2",
+        params![id, sid],
+    )?;
     Ok(())
 }
 pub fn routes() -> Router<AppState> {
@@ -95,6 +125,11 @@ pub fn join(db: &Connection, uid: &str, sid: &str) -> Result<(), ApiError> {
         "INSERT OR IGNORE INTO members VALUES(?,?)",
         params![general, uid],
     )?;
+    // Voice channels are server-wide: everyone in the server is in every voice channel.
+    db.execute(
+        "INSERT OR IGNORE INTO members SELECT id,?1 FROM channels WHERE server_id=?2 AND kind='voice'",
+        params![uid, sid],
+    )?;
     emit(
         db,
         &general,
@@ -138,6 +173,7 @@ async fn create(
         "INSERT INTO channels(id,name,kind,server_id) VALUES(?,'general','channel',?)",
         params![general, id],
     )?;
+    ensure_lounge(&tx, &id)?;
     join(&tx, &p.user.id, &id)?;
     tx.commit()?;
     Ok(Json(
@@ -176,7 +212,7 @@ async fn members(
 ) -> ApiResult<Value> {
     let db = s.db.lock().unwrap();
     member(&db, &p.user.id, &sid)?;
-    let mut q=db.prepare("SELECT u.id,u.username,u.is_owner,u.display_name,u.avatar_rev FROM users u JOIN server_members m ON m.user_id=u.id WHERE m.server_id=? ORDER BY u.username")?;
+    let mut q=db.prepare("SELECT u.id,u.username,u.is_owner,u.display_name,u.avatar_rev,u.bio FROM users u JOIN server_members m ON m.user_id=u.id WHERE m.server_id=? ORDER BY u.username")?;
     let rows = q
         .query_map([sid], |r| {
             Ok(json!({
@@ -185,6 +221,7 @@ async fn members(
                 "is_owner": r.get::<_, bool>(2)?,
                 "display_name": r.get::<_, Option<String>>(3)?,
                 "avatar_rev": r.get::<_, i64>(4)?,
+                "bio": r.get::<_, Option<String>>(5)?,
             }))
         })?
         .collect::<Result<Vec<_>, _>>()?;

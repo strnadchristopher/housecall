@@ -454,3 +454,95 @@ async fn icon_is_hidden_from_non_members() {
     assert_eq!(got.status, StatusCode::FORBIDDEN);
     drop(state);
 }
+fn person<'a>(list: &'a Value, name: &str) -> &'a Value {
+    list["members"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|m| m["username"] == name)
+        .unwrap()
+}
+#[tokio::test]
+async fn bio_round_trips_through_me_and_members_and_emits_member_updated() {
+    let (api, _, owner, alice) = fixture().await;
+    let bio = "b".repeat(190);
+    let r = call(
+        &api,
+        "PATCH",
+        "/api/me",
+        &alice,
+        json!({"bio":format!("  {bio}  ")}),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK);
+    assert_eq!(r.json()["bio"], bio);
+    let me = call(&api, "GET", "/api/me", &alice, Value::Null)
+        .await
+        .json();
+    assert_eq!(me["user"]["bio"], bio);
+    let members = call(&api, "GET", "/api/members", &owner, Value::Null)
+        .await
+        .json();
+    assert_eq!(person(&members, "alice")["bio"], bio);
+    let scoped = call(
+        &api,
+        "GET",
+        "/api/servers/home/members",
+        &owner,
+        Value::Null,
+    )
+    .await
+    .json();
+    assert_eq!(person(&scoped, "alice")["bio"], bio);
+    let events = call(&api, "GET", "/api/events", &owner, Value::Null)
+        .await
+        .json();
+    let updated = events["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e.to_string().contains("member.updated"))
+        .last()
+        .unwrap()
+        .to_string();
+    assert!(updated.contains(&bio), "{updated}");
+}
+#[tokio::test]
+async fn bio_without_a_name_leaves_the_name_alone_and_empty_clears_the_bio() {
+    let (api, _, _, alice) = fixture().await;
+    call(
+        &api,
+        "PATCH",
+        "/api/me",
+        &alice,
+        json!({"display_name":"Ali"}),
+    )
+    .await;
+    call(&api, "PATCH", "/api/me", &alice, json!({"bio":"hello"})).await;
+    let me = call(&api, "GET", "/api/me", &alice, Value::Null)
+        .await
+        .json();
+    assert_eq!(me["user"]["display_name"], "Ali");
+    assert_eq!(me["user"]["bio"], "hello");
+    let r = call(&api, "PATCH", "/api/me", &alice, json!({"bio":""})).await;
+    assert_eq!(r.status, StatusCode::OK);
+    let me = call(&api, "GET", "/api/me", &alice, Value::Null)
+        .await
+        .json();
+    assert_eq!(me["user"]["display_name"], "Ali");
+    assert!(me["user"]["bio"].is_null());
+}
+#[tokio::test]
+async fn bad_bios_are_rejected() {
+    let (api, _, _, alice) = fixture().await;
+    for bio in [
+        "x".repeat(191),
+        "a\u{202E}b".to_owned(),
+        "a\u{7}b".to_owned(),
+    ] {
+        let r = call(&api, "PATCH", "/api/me", &alice, json!({"bio":bio})).await;
+        assert_eq!(r.status, StatusCode::BAD_REQUEST, "{bio:?}");
+    }
+    let r = call(&api, "PATCH", "/api/me", &alice, json!({"bio":"one\ntwo"})).await;
+    assert_eq!(r.status, StatusCode::OK);
+}
