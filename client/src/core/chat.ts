@@ -15,6 +15,8 @@ export interface Person {
   owner: boolean;
   /** Authenticated media path; undefined means show initials. */
   avatarUrl?: string;
+  /** Plain text, up to 190 characters (HC-040 7.2). */
+  bio?: string;
 }
 
 /** One picker row: a server on a connected host. */

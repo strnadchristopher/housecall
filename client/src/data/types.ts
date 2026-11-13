@@ -5,6 +5,7 @@ export interface User {
   is_owner: boolean;
   display_name?: string | null;
   avatar_rev?: number;
+  bio?: string | null;
 }
 export interface Auth extends Session {
   user: User;

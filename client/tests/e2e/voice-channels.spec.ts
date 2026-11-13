@@ -77,4 +77,10 @@ test("voice channels are their own group; one click joins, everyone sees who is 
   await dialog.getByLabel("Channel name").fill("Game night");
   await dialog.getByRole("button", { name: "Create channel", exact: true }).click();
   await expect(ownerPage.getByRole("button", { name: "Open Game night", exact: true })).toBeVisible();
+
+  // Settings, About shows both versions (A7).
+  await ownerPage.getByRole("button", { name: "Server settings", exact: true }).click();
+  await ownerPage.getByTestId("screen-settings").getByRole("button", { name: "About", exact: true }).click();
+  await expect(ownerPage.getByTestId("client-version")).toHaveText(/^\d+\.\d+\.\d+/);
+  await expect(ownerPage.getByTestId("server-version")).toHaveText(/^\d+\.\d+\.\d+/);
 });

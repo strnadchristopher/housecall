@@ -189,6 +189,10 @@ export interface IdentityProvider extends IdentityState {
   deleteRole(roleId: string): Promise<void>;
   /** Presentation only; the username stays the sign-in name. Resolves true on success. */
   setDisplayName(name: string | null): Promise<boolean>;
+  /** Saves display name and bio together. Bio is already normalised (data/bio.ts). */
+  setProfile(name: string | null, bio: string | null): Promise<boolean>;
+  /** The server software version, from the public health route. Undefined when it cannot be read. */
+  serverVersion(): Promise<string | undefined>;
   /** `undefined` removes the avatar. The image must already be small (see resizeImage). */
   setAvatar(image: Blob | undefined): Promise<boolean>;
   /** Server settings (owner only). */

@@ -28,6 +28,7 @@ export function ChannelHeader() {
       <div className="hc-header__title">
         <h1>{chat.current?.name}</h1>
         {(chat.current?.kind === "channel" || chat.current?.kind === "voice") && <small>{copy.header.in(identity.serverName)}</small>}
+        {peer?.bio && <small className="hc-header__bio">{peer.bio}</small>}
       </div>
       {call.available && peer && !calling && <IconButton icon="phone" label={copy.call.callPerson(peer.name)} onClick={() => void call.callPerson(peer.id)} />}
       <IconButton icon="search" label={copy.header.search} active={nav.side.kind === "search"} onClick={() => side("search")} />

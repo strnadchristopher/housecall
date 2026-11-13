@@ -352,7 +352,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
             "/api",
             private
                 .merge(public)
-                .route("/health", get(|| async { Json(json!({"ok":true})) })),
+                .route("/health", get(|| async { Json(json!({"ok":true,"version":env!("CARGO_PKG_VERSION")})) })),
         )
         .with_state(state);
     if let Some(path) = static_dir {

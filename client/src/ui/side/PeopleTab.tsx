@@ -16,7 +16,7 @@ export function PeopleTab() {
       {chat.people.map(person => (
         <li key={person.id}>
           <Avatar name={person.name} src={person.avatarUrl} />
-          <span><strong>{person.name}</strong>{person.owner && <small>{copy.side.owner}</small>}</span>
+          <span><strong>{person.name}{person.owner && <em className="hc-role">{copy.side.owner}</em>}</strong>{person.bio && <small className="hc-muted">{person.bio}</small>}</span>
           {call.available && person.id !== chat.me.id && (
             <IconButton icon="phone" label={copy.call.callPerson(person.name)}
               onClick={() => { nav.set({ main: "chat", screen: "main" }); void call.callPerson(person.id); }} />

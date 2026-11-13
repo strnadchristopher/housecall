@@ -19,7 +19,7 @@ const GIF_LINK = /https:\/\/giphy\.com\/gifs\/([A-Za-z0-9]{1,64})(?![A-Za-z0-9])
 const SNAP_TYPES: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const VIDEO_NAME =/\.(mp4|m4v|mov|mkv|webm|avi)$/i;
 
-export const person = (user: User): Person => ({ id: user.id, name: userName(user), username: user.username, owner: user.is_owner, avatarUrl: avatarPath(user) });
+export const person = (user: User): Person => ({ id: user.id, name: userName(user), username: user.username, owner: user.is_owner, avatarUrl: avatarPath(user), bio: user.bio ?? undefined });
 
 /** The signed-in user as the server last reported them, so a changed display name or avatar shows at once. */
 export const currentUser = (c: Pick<Housecall, "auth" | "members">): User | undefined =>

@@ -300,6 +300,8 @@ export function useLegacyIdentity(
     assignRole: (roleId, personId) => c.run(async () => { await c.api.post(`/api/roles/${roleId}/members`, { user_id: personId }); await loadRoles(); }),
     deleteRole: roleId => c.run(async () => { await c.api.delete(`/api/roles/${roleId}`); await loadRoles(); }),
     setDisplayName: name => c.attempt(async () => { await c.api.patch("/api/me", { display_name: name }); await c.refresh(); }),
+    setProfile: (name, bio) => c.attempt(async () => { await c.api.patch("/api/me", { display_name: name, bio }); await c.refresh(); }),
+    serverVersion: async () => { try { const health = await c.api.get<{ version?: string }>("/api/health"); return health.version; } catch { return undefined; } },
     setAvatar: image => c.attempt(async () => {
       if (image) await c.api.putBlob("/api/me/avatar", image); else await c.api.delete("/api/me/avatar");
       await c.refresh();

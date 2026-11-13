@@ -3,7 +3,9 @@ import { ACCENTS, type AccentId } from "../tokens/accent";
 import type { AccessRequestRecord, InviteRecord, InviteResult } from "../../core/identity";
 import { useChat, useIdentity } from "../../core/context";
 import { copy } from "../copy";
-import { Avatar, Button, Field, Icon, MediaDropzone } from "../kit";
+import { Avatar, Button, Field, Icon, MediaDropzone, cx } from "../kit";
+import { BIO_MAX, normalizeBio } from "../../data/bio";
+import { CLIENT_VERSION } from "../../version";
 import { useNav } from "../shell/nav";
 import { prepareImage } from "./resizeImage";
 
@@ -43,13 +45,35 @@ export function Account() {
   const me = identity.me!;
   const [name, setName] = useState(me.name === me.username ? "" : me.name);
   const saved = me.name === me.username ? "" : me.name;
-  const submit = (event: FormEvent) => { event.preventDefault(); void identity.setDisplayName(name.trim() || null); };
+  const [bio, setBio] = useState(me.bio ?? "");
+  const [justSaved, setJustSaved] = useState(false);
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    void identity.setProfile(name.trim() || null, normalizeBio(bio)).then(ok => { setJustSaved(ok); if (ok) setBio(normalizeBio(bio) ?? ""); });
+  };
+  const count = bio.length;
+  const preview = normalizeBio(bio);
   return (
-    <div className="hc-stack" data-testid="screen-account">
-      <p className="hc-person"><Avatar name={me.name} src={me.avatarUrl} size="lg" /><span><strong>{me.name}</strong><small>{me.username} · {identity.serverName}</small></span></p>
-      <form className="hc-inline" onSubmit={submit}>
-        <Field label={copy.profile.displayName} value={name} placeholder={me.username} maxLength={32} onChange={event => setName(event.target.value)} />
-        <Button kind="primary" type="submit" busy={identity.busy} disabled={name.trim() === saved}>{copy.profile.saveName}</Button>
+    <div className="hc-stack hc-profile" data-testid="screen-account">
+      <div className="hc-profile__card" aria-label={copy.profile.howOthersSee}>
+        <Avatar name={name.trim() || me.username} src={me.avatarUrl} size="xl" />
+        <div>
+          <h3>{name.trim() || me.username}</h3>
+          <small>{me.username} · {identity.serverName}</small>
+          <p className={preview ? undefined : "is-empty"} data-testid="bio-preview">{preview ?? copy.profile.noBio}</p>
+        </div>
+      </div>
+      <form className="hc-profile__fields" onSubmit={submit}>
+        <Field label={copy.profile.displayName} value={name} placeholder={me.username} maxLength={32} onChange={event => { setName(event.target.value); setJustSaved(false); }} />
+        <label className="hc-field">
+          <span className="hc-field__row"><span className="hc-field__label">{copy.profile.bio}</span>
+            <span className={cx("hc-field__count", count > BIO_MAX - 20 && "is-near", count > BIO_MAX && "is-over")} aria-live="polite" data-testid="bio-count">{copy.profile.bioCount(count, BIO_MAX)}</span></span>
+          <textarea className="hc-bio" aria-label={copy.profile.bio} rows={3} maxLength={BIO_MAX} value={bio} onChange={event => { setBio(event.target.value); setJustSaved(false); }} />
+        </label>
+        <div className="hc-profile__save">
+          <Button kind="primary" type="submit" busy={identity.busy} disabled={name.trim() === saved && (normalizeBio(bio) ?? "") === (me.bio ?? "")}>{copy.profile.saveProfile}</Button>
+          {justSaved && <span className="hc-muted" role="status">{copy.profile.saved}</span>}
+        </div>
       </form>
       <PictureField label={copy.profile.avatar} remove={copy.profile.removeAvatar} saveLabel={copy.profile.saveAvatar}current={me.avatarUrl} shape="arch" name={me.name}
         save={image => identity.setAvatar(image)} clear={() => identity.setAvatar(undefined)} />
@@ -425,8 +449,13 @@ export function Appearance({ accent, onChange }: { accent: AccentId; onChange: (
 
 export function About() {
   const identity = useIdentity();
+  const [server, setServer] = useState<string>();
+  const [known, setKnown] = useState(false);
+  useEffect(() => { void identity.serverVersion().then(version => { setServer(version); setKnown(true); }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <ul className="hc-results" data-testid="screen-about">
+      <li className="hc-pair"><span>{copy.profile.clientVersion}</span><strong data-testid="client-version">{CLIENT_VERSION}</strong></li>
+      <li className="hc-pair"><span>{copy.profile.serverVersion}</span><strong data-testid="server-version">{known ? server ?? copy.profile.versionUnknown : copy.common.loading}</strong></li>
       {identity.capabilities.filter(capability => capability.id in copy.capabilities).map(capability => (
         <li key={capability.id} className="hc-pair">
           <span>{copy.capabilities[capability.id]}</span>

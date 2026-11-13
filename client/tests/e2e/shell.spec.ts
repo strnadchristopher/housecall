@@ -156,10 +156,18 @@ test("profile: display name and avatar show in the user bar and on new messages;
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   const account = page.getByTestId("screen-account");
   await account.getByLabel("Display name", { exact: true }).fill("Ada Fixture");
-  await account.getByRole("button", { name: "Save name", exact: true }).click();
+  await account.getByRole("button", { name: "Save profile", exact: true }).click();
   const bar = page.locator(".hc-userbar");
   await expect(bar).toContainText("Ada Fixture");
   await expect(account).toContainText("owner");
+  // Bio: a counter, whitespace collapsed on save, shown as the user bar's second line, never as markup.
+  await expect(account.getByTestId("bio-count")).toHaveText("0 / 190");
+  await account.getByLabel("Bio", { exact: true }).fill("Kettle's   on.\n**Knock** first.");
+  await expect(account.getByTestId("bio-count")).toHaveText("31 / 190");
+  await expect(account.getByTestId("bio-preview")).toHaveText("Kettle's on. **Knock** first.");
+  await account.getByRole("button", { name: "Save profile", exact: true }).click();
+  await expect(bar).toContainText("Kettle's on. **Knock** first.");
+  await expect(bar.locator("strong b, strong strong")).toHaveCount(0);
   await drop("screen-account", "Save picture");
   await expect(bar.locator(".hc-avatar img")).toBeVisible();
 

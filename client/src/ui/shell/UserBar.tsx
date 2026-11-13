@@ -16,7 +16,7 @@ export function UserBar() {
         <Avatar name={chat.me.name} src={chat.me.avatarUrl} />
         <span className="hc-userbar__name">
           <strong>{chat.me.name}</strong>
-          <small>{chat.online ? copy.state.connected : copy.state.reconnecting}</small>
+          <small data-state={chat.online ? undefined : "off"}>{!chat.online ? copy.state.reconnecting : chat.me.bio ?? copy.state.connected}</small>
         </span>
       </button>
       <span className="hc-userbar__mail">

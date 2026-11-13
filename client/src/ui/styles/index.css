@@ -1132,3 +1132,50 @@ p { text-wrap: pretty; }
 .hc-callstrip[data-state="connecting"] small, .hc-callstrip[data-state="reconnecting"] small { color: var(--hc-text-muted); }
 .hc-callstrip[data-state="failed"] small { color: var(--hc-danger); }
 
+/*
+ * HC-040 section 7: profile, bio, and where a bio shows. New rules; the People rules replace
+ * ".hc-people li, .hc-person" and the two rules after it in index.css.
+ */
+/* People rows: name, a quiet role word, one line of bio. The whole row opens the person card. */
+.hc-people { display: flex; flex-direction: column; gap: 2px; }
+.hc-people li, .hc-person { position: relative; display: flex; align-items: center; gap: var(--hc-space-3); padding: var(--hc-space-1) var(--hc-space-2); min-height: var(--hc-space-7); border-radius: var(--hc-radius-md); }
+.hc-people span:not(.hc-avatar), .hc-person span:not(.hc-avatar) { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.hc-people li > span:not(.hc-avatar) { flex: 1; }
+.hc-people li strong { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.hc-people li small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--hc-text-xs); }
+.hc-role { font-style: normal; font-weight: var(--hc-weight-regular); font-size: var(--hc-text-xs); color: var(--hc-text-muted); }
+.hc-people li:active { background: var(--hc-wash-press); }
+@media (hover: hover) { .hc-people li:hover { background: var(--hc-wash-hover); } }
+
+/* Person card: a popover beside the row on wide screens, a sheet on phones. Also the per-person call controls. */
+.hc-personcard { width: 280px; padding: var(--hc-space-4); gap: var(--hc-space-3); }
+.hc-personcard__top { display: flex; align-items: flex-end; gap: var(--hc-space-3); }
+.hc-personcard__top > span:last-child { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; padding-bottom: 2px; }
+.hc-personcard__top strong { font-size: var(--hc-text-lg); letter-spacing: var(--hc-tracking-tight); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-personcard__bio { font-size: var(--hc-text-sm); line-height: 1.45; overflow-wrap: anywhere; }
+.hc-personcard__actions { display: flex; gap: var(--hc-space-2); }
+.hc-personcard__actions .hc-btn { flex: 1; }
+.hc-personcard__vol { display: flex; flex-direction: column; gap: var(--hc-space-1); font-size: var(--hc-text-sm); color: var(--hc-text-muted); }
+.hc-personcard__vol input[type="range"] { width: 100%; accent-color: var(--hc-accent); margin: 0; height: 24px; }
+.hc-personcard .hc-switchrow { min-height: 40px; padding-inline: 0; background: none; font-size: var(--hc-text-sm); }
+.hc-sheet .hc-personcard { width: auto; padding: 0; background: none; box-shadow: none; position: static; }
+
+/* Your profile (Settings, Profile): how others see you, then the fields. */
+.hc-profile { display: flex; flex-direction: column; gap: var(--hc-space-5); }
+.hc-profile__card { display: flex; align-items: flex-end; gap: var(--hc-space-4); padding: var(--hc-space-5) var(--hc-space-5) var(--hc-space-4); border-radius: var(--hc-radius-lg); background: var(--hc-shell); }
+.hc-profile__card > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hc-profile__card h3 { font-size: var(--hc-text-xl); line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-profile__card small { font-size: var(--hc-text-sm); }
+.hc-profile__card p { padding-top: var(--hc-space-2); font-size: var(--hc-text-sm); overflow-wrap: anywhere; }
+.hc-profile__card p.is-empty { color: var(--hc-text-muted); }
+.hc-profile__fields { display: flex; flex-direction: column; gap: var(--hc-space-4); }
+.hc-field__row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--hc-space-2); }
+.hc-field__count { font-size: var(--hc-text-xs); color: var(--hc-text-muted); }
+.hc-field__count.is-near { color: var(--hc-text); }
+.hc-field__count.is-over { color: var(--hc-danger); font-weight: var(--hc-weight-bold); }
+.hc-field textarea.hc-bio { min-height: 84px; resize: none; line-height: 1.45; field-sizing: content; }
+.hc-profile__save { display: flex; align-items: center; gap: var(--hc-space-3); }
+@media (max-width: 47.5em) {
+  .hc-profile__card { padding: var(--hc-space-4); gap: var(--hc-space-3); }
+  .hc-profile__save .hc-btn { flex: 1; min-height: 52px; font-size: var(--hc-text-md); }
+}

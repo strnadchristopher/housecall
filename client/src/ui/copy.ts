@@ -126,6 +126,8 @@ export const copy = {
     remove: "Remove image",
   },
   profile: {
+    bio: "Bio", noBio: "No bio yet", saveProfile: "Save profile", saved: "Saved", howOthersSee: "How others see you", bioCount: (n: number, max: number) => `${n} / ${max}`,
+    clientVersion: "Housecall app", serverVersion: "Housecall server", versionUnknown: "Unknown",
     displayName: "Display name", avatar: "Profile picture", username: "Username", removeAvatar: "Remove picture",
     serverName: "Server name", serverIcon: "Server icon", removeIcon: "Remove icon",
     saveName: "Save name", saveAvatar: "Save picture", saveIcon: "Save icon",
