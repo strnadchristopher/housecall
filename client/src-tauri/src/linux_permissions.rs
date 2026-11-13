@@ -3,7 +3,7 @@ use tauri::{
     Webview,
 };
 
-/// Media capture is requested only after the user presses a voice Join action.
+/// Media capture (microphone, camera, screen share) is requested only after the user presses a voice Join or Share action.
 /// Keep that consent scoped to the packaged app's own webview origin; Linux
 /// WebKitGTK otherwise defaults new media permission requests to Deny.
 pub(super) fn handle(webview: Webview, kind: PermissionKind) -> PermissionResponse {
@@ -14,7 +14,10 @@ pub(super) fn handle(webview: Webview, kind: PermissionKind) -> PermissionRespon
 }
 
 fn response_for(url: &tauri::Url, kind: PermissionKind) -> PermissionResponse {
-    if is_app_origin(url) && matches!(kind, PermissionKind::Microphone | PermissionKind::Camera) {
+    if is_app_origin(url) && matches!(
+            kind,
+            PermissionKind::Microphone | PermissionKind::Camera | PermissionKind::DisplayCapture
+        ) {
         PermissionResponse::Allow
     } else {
         PermissionResponse::Deny
@@ -63,7 +66,7 @@ mod tests {
     }
 
     #[test]
-    fn grants_only_camera_and_microphone_for_the_app_origin() {
+    fn grants_only_capture_kinds_for_the_app_origin() {
         let app = Url::parse("tauri://localhost/").unwrap();
         assert_eq!(
             response_for(&app, PermissionKind::Microphone),
@@ -79,7 +82,7 @@ mod tests {
         );
         assert_eq!(
             response_for(&app, PermissionKind::DisplayCapture),
-            PermissionResponse::Deny
+            PermissionResponse::Allow
         );
 
         let remote = Url::parse("https://chat.example.com/").unwrap();
@@ -89,6 +92,10 @@ mod tests {
         );
         assert_eq!(
             response_for(&remote, PermissionKind::Camera),
+            PermissionResponse::Deny
+        );
+        assert_eq!(
+            response_for(&remote, PermissionKind::DisplayCapture),
             PermissionResponse::Deny
         );
     }

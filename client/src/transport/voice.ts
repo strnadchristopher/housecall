@@ -3,11 +3,21 @@ import { isSpeaking } from "../core/call";
 import { SHARE_PRESETS, applyShareQuality, captureConstraints, clearShareQuality, readShareQuality, shareStreamId, writeShareQuality, type ShareQuality } from "./shareQuality";
 export interface VoiceInputs { microphone?: string; camera?: string }
 export interface VoiceDevice { id: string; label: string; kind: "audioinput" | "videoinput" }
-/** Enumeration does not request permission; labels may be blank until an explicit capture grant. */
+/** Labels are blank until a capture grant (always so in WebKitGTK). When every label is blank, ask once for the
+ *  microphone, release it at once, and list again so names appear. A refusal leaves the blank list as it was. */
 export async function availableVoiceInputs(): Promise<VoiceDevice[]> {
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  return devices.filter(device => device.kind === "audioinput" || device.kind === "videoinput")
+  const list = async () => (await navigator.mediaDevices.enumerateDevices())
+    .filter(device => device.kind === "audioinput" || device.kind === "videoinput")
     .map(device => ({ id: device.deviceId, label: device.label, kind: device.kind as VoiceDevice["kind"] }));
+  let devices = await list();
+  if (devices.length > 0 && devices.every(device => !device.label)) {
+    try {
+      const probe = await navigator.mediaDevices.getUserMedia({ audio: true });
+      probe.getTracks().forEach(track => track.stop());
+      devices = await list();
+    } catch { /* refused or no device: keep the unlabeled list */ }
+  }
+  return devices;
 }
 export interface VoiceStatus {
   phase: "idle" | "connecting" | "live" | "failed";

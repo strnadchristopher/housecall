@@ -144,13 +144,24 @@ it("drops stale statistics and rejects nonfinite bitrate", async () => {
   await expect(session.setAudio(Number.NaN, false)).rejects.toThrow("Opus bitrate");
 });
 
-it("enumerates input devices without starting capture", async () => {
-  const { media } = fixture(async () => stream([]));
-  media.enumerateDevices.mockResolvedValue([
-    { deviceId: "mic", label: "", kind: "audioinput" },
-    { deviceId: "speaker", label: "speaker", kind: "audiooutput" },
-  ] as never);
+it("asks once when labels are blank, releases the probe and lists again with labels", async () => {
+  const probe = track("audio");
+  const { media } = fixture(async () => stream([probe]));
+  media.enumerateDevices
+    .mockResolvedValueOnce([{ deviceId: "mic", label: "", kind: "audioinput" }, { deviceId: "speaker", label: "speaker", kind: "audiooutput" }] as never)
+    .mockResolvedValueOnce([{ deviceId: "mic", label: "Desk mic", kind: "audioinput" }] as never);
+  expect(await availableVoiceInputs()).toEqual([{ id: "mic", label: "Desk mic", kind: "audioinput" }]);
+  expect(media.getUserMedia).toHaveBeenCalledOnce();
+  expect(probe.stop).toHaveBeenCalledOnce();
+});
+
+it("keeps the unlabeled list when the permission probe is refused, and does not ask when labels exist", async () => {
+  const { media } = fixture(async () => { throw new Error("denied"); });
+  media.enumerateDevices.mockResolvedValue([{ deviceId: "mic", label: "", kind: "audioinput" }] as never);
   expect(await availableVoiceInputs()).toEqual([{ id: "mic", label: "", kind: "audioinput" }]);
+  media.getUserMedia.mockClear();
+  media.enumerateDevices.mockResolvedValue([{ deviceId: "mic", label: "Desk mic", kind: "audioinput" }] as never);
+  await availableVoiceInputs();
   expect(media.getUserMedia).not.toHaveBeenCalled();
 });
 
