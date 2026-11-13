@@ -944,11 +944,13 @@ async fn create_channel(
 ) -> ApiResult<Value> {
     if v.name.trim().is_empty()
         || v.name.len() > 80
-        || !matches!(v.kind.as_str(), "channel" | "dm" | "group_dm")
+        || !matches!(v.kind.as_str(), "channel" | "voice" | "dm" | "group_dm")
     {
         return Err(bad("invalid conversation"));
     }
-    if v.kind == "channel" {
+    // `voice` is a channel with a call attached: same owner-only rule, same server scope.
+    let in_server = matches!(v.kind.as_str(), "channel" | "voice");
+    if in_server {
         owner(&p)?
     }
     v.member_ids.push(p.user.id);
@@ -962,11 +964,21 @@ async fn create_channel(
     }
     let mut db = s.db.lock().unwrap();
     let tx = db.transaction()?;
-    let server_id = if v.kind == "channel" {
+    let server_id = if in_server {
         Some(v.server_id.unwrap_or_else(|| "home".into()))
     } else {
         None
     };
+    if let (Some(sid), "voice") = (&server_id, v.kind.as_str()) {
+        servers::exists(&tx, sid)?;
+        let everyone = tx
+            .prepare("SELECT user_id FROM server_members WHERE server_id=?")?
+            .query_map([sid], |r| r.get::<_, String>(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+        v.member_ids.extend(everyone);
+        v.member_ids.sort();
+        v.member_ids.dedup();
+    }
     for id in &v.member_ids {
         if let Some(sid) = &server_id {
             servers::member(&tx, id, sid)?;

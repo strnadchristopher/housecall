@@ -48,6 +48,35 @@ pub fn init(db: &Connection) -> rusqlite::Result<()> {
         [],
     )?;
     db.execute("INSERT OR IGNORE INTO server_members SELECT 'home',user_id FROM members WHERE channel_id='general'",[])?;
+    let ids = db
+        .prepare("SELECT id FROM servers")?
+        .query_map([], |r| r.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    for id in ids {
+        ensure_lounge(db, &id)?;
+    }
+    Ok(())
+}
+/// Every server has at least one voice channel. A server without one gets `Lounge`, with the
+/// people who are in the server's general channel. Safe to call any number of times.
+pub fn ensure_lounge(db: &Connection, sid: &str) -> rusqlite::Result<()> {
+    let has_voice: bool = db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM channels WHERE server_id=? AND kind='voice')",
+        [sid],
+        |r| r.get(0),
+    )?;
+    if has_voice {
+        return Ok(());
+    }
+    let id = secret();
+    db.execute(
+        "INSERT INTO channels(id,name,kind,server_id) VALUES(?,'Lounge','voice',?)",
+        params![id, sid],
+    )?;
+    db.execute(
+        "INSERT OR IGNORE INTO members SELECT ?1,m.user_id FROM members m JOIN servers s ON s.general_channel_id=m.channel_id WHERE s.id=?2",
+        params![id, sid],
+    )?;
     Ok(())
 }
 pub fn routes() -> Router<AppState> {
@@ -96,6 +125,11 @@ pub fn join(db: &Connection, uid: &str, sid: &str) -> Result<(), ApiError> {
         "INSERT OR IGNORE INTO members VALUES(?,?)",
         params![general, uid],
     )?;
+    // Voice channels are server-wide: everyone in the server is in every voice channel.
+    db.execute(
+        "INSERT OR IGNORE INTO members SELECT id,?1 FROM channels WHERE server_id=?2 AND kind='voice'",
+        params![uid, sid],
+    )?;
     emit(
         db,
         &general,
@@ -139,6 +173,7 @@ async fn create(
         "INSERT INTO channels(id,name,kind,server_id) VALUES(?,'general','channel',?)",
         params![general, id],
     )?;
+    ensure_lounge(&tx, &id)?;
     join(&tx, &p.user.id, &id)?;
     tx.commit()?;
     Ok(Json(
