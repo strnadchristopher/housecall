@@ -642,8 +642,6 @@ a { color: var(--hc-accent); }
   .hc-shell[data-screen="list"] .hc-left { transform: translateX(var(--hc-drag, 0px)); visibility: visible; transition: transform var(--hc-dur-slow) var(--hc-ease-out), visibility 0s; }
   .hc-shell[data-dragging] .hc-left { transition: none; }
   .hc-drawer-scrim { position: absolute; inset: 0; z-index: 5; background: color-mix(in oklab, var(--hc-bg) 62%, transparent); }
-  /* Conversation rows: each one a tappable surface with a chevron, a full thumb tall. */
-  }
   .hc-right {
     position: absolute; inset: auto 0 0 0; width: auto; height: 78%;
     border-radius: var(--hc-radius-lg) var(--hc-radius-lg) 0 0;
