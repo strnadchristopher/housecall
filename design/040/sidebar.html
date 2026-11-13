@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" data-accent="lavender">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HC-040 · 3 Sidebar channel model</title>
+<!-- states: default = in Lounge, reading #general · idle = not in a call, hover on Porch · member = not the owner -->
+<meta name="hc-states" content="default,idle,member,create">
+<link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/b.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/c.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/accents.css">
+<link rel="stylesheet" href="../../client/src/ui/styles/index.css">
+<link rel="stylesheet" href="hc-040.css">
+<script src="icons.js"></script>
+<script src="mock.js"></script>
+</head>
+<body>
+<div class="hc-root">
+  <!-- On a phone this mockup shows the drawer open (data-screen="list"). -->
+  <div class="hc-shell" data-screen="list">
+    <nav class="hc-left" aria-label="Housecall" data-part="left"
+      data-opts='{"current":"general","call":"connected","me":true}'
+      data-opts-idle='{"call":"","me":false}'
+      data-opts-member='{"call":"","me":false,"owner":false}'></nav>
+    <button type="button" class="hc-drawer-scrim" aria-label="Close menu" data-show-phone="1"></button>
+    <main class="hc-center">
+      <div data-part="header" data-opts='{"kind":"text","name":"general"}' style="display:contents"></div>
+      <div data-part="messages" style="display:contents"></div>
+      <div data-part="composer" data-opts='{"name":"general"}' style="display:contents"></div>
+    </main>
+    <aside class="hc-right" aria-label="Details" data-part="right" data-tab="people"></aside>
+  </div>
+</div>
+<!-- create: the owner pressed + on "Voice channels" -->
+<div data-show="create">
+  <div class="hc-sheet-scrim"></div>
+  <form class="hc-sheet" role="dialog" aria-labelledby="cc-title">
+    <span class="hc-sheet__grip"></span>
+    <div class="hc-sheet__head"><h2 id="cc-title">Create channel</h2><button type="button" class="hc-ibtn" aria-label="Close"><i data-i="close"></i></button></div>
+    <fieldset class="hc-seg" aria-label="Kind">
+      <label><input type="radio" name="kind" value="channel"><i data-i="hash"></i>Text</label>
+      <label><input type="radio" name="kind" value="voice" checked><i data-i="speaker"></i>Voice</label>
+    </fieldset>
+    <label class="hc-field"><span class="hc-field__label">Channel name</span><input value="Porch" maxlength="48"></label>
+    <p class="hc-note"><i data-i="people"></i><span>Everyone in Theo's place can join. Joining rings nobody.</span></p>
+    <div class="hc-sheet__actions"><button type="submit" class="hc-btn hc-btn--primary">Create channel</button><button type="button" class="hc-btn hc-btn--text">Cancel</button></div>
+  </form>
+</div>
+<script>
+  // idle: show the hover state on Porch (mock-only class).
+  document.addEventListener("DOMContentLoaded", () => {
+    if (HC.state === "idle") [...document.querySelectorAll(".hc-channel")].find(el => el.textContent.includes("Porch"))?.classList.add("is-hover");
+  });
+</script>
+</body>
+</html>

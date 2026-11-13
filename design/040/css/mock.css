@@ -1,0 +1,18 @@
+/*
+ * Mock-only. Nothing here ships. It stands in for :hover and :focus-visible so a still picture can
+ * show them, and lays out the boards that put several states side by side.
+ */
+html[data-ready] body { overflow: hidden; }
+.hc-channel.is-hover { background: var(--hc-wash-hover); color: var(--hc-text); }
+.hc-channel.is-hover .hc-channel__side { opacity: 1; }
+.is-ring { outline: 2px solid var(--hc-focus); outline-offset: 2px; }
+
+/* Boards: several states of one component on one page, each with a caption. */
+.m-board { height: 100dvh; overflow: auto; padding: var(--hc-space-5); display: grid; gap: var(--hc-space-5); grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); align-content: start; background: var(--hc-shell); }
+.m-board--stage { background: var(--hc-stage); }
+.m-cell { display: flex; flex-direction: column; gap: var(--hc-space-2); min-width: 0; }
+.m-cap { font-size: var(--hc-text-xs); color: var(--hc-text-muted); }
+.m-cap b { color: var(--hc-text); font-weight: var(--hc-weight-bold); }
+.m-on-stage { background: var(--hc-stage); border-radius: var(--hc-radius-md); padding: var(--hc-space-3); }
+.m-on-shell { background: var(--hc-shell); border-radius: var(--hc-radius-md); padding: var(--hc-space-3); }
+@media (max-width: 47.5em) { .m-board { padding: var(--hc-space-3); gap: var(--hc-space-4); grid-template-columns: minmax(0, 1fr); } }

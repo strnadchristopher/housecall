@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en" data-accent="lavender">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HC-040 · 8 Message actions</title>
+<!-- default = one message open (wide: the bar on the row; phone: the tray at the thumb) · closed = nothing open -->
+<meta name="hc-states" content="default,closed">
+<link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/b.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/c.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/accents.css">
+<link rel="stylesheet" href="../../client/src/ui/styles/index.css">
+<link rel="stylesheet" href="hc-040.css">
+<script src="icons.js"></script>
+<script src="mock.js"></script>
+</head>
+<body>
+<div class="hc-root">
+  <div class="hc-shell" data-screen="main">
+    <nav class="hc-left" aria-label="Housecall" data-part="left" data-opts='{"current":"general","unread":false}'></nav>
+    <main class="hc-center">
+      <div data-part="header" data-opts='{"kind":"text","name":"general"}' style="display:contents"></div>
+      <div data-part="messages" data-opts='{"open":true}' data-opts-closed='{"open":false}' style="display:contents"></div>
+      <div data-part="composer" data-opts='{"name":"general"}' style="display:contents"></div>
+    </main>
+    <aside class="hc-right" aria-label="Details" data-part="right" data-tab="people"></aside>
+  </div>
+</div>
+</body>
+</html>

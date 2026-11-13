@@ -1,0 +1,87 @@
+/*
+ * HC-040 section 9: snap camera and the QR scan mode that reuses it. New rules; append to index.css.
+ * An always-dark, full-screen layer: tokens are pinned to the night values so it reads the same in daylight.
+ */
+.hc-cam {
+  --hc-text: var(--hc-night-text); --hc-text-muted: var(--hc-night-muted); --hc-accent: var(--hc-accent-night); --hc-on-accent: var(--hc-on-accent-night);
+  --hc-danger: var(--hc-night-danger); --hc-focus: color-mix(in oklab, var(--hc-accent-night) 55%, white);
+  --hc-wash-hover: color-mix(in oklab, var(--hc-night-text) 12%, transparent); --hc-wash-selected: color-mix(in oklab, var(--hc-night-text) 20%, transparent); --hc-wash-press: color-mix(in oklab, var(--hc-night-text) 26%, transparent);
+  --hc-cam-pad: var(--hc-space-4);
+  position: fixed; inset: 0; z-index: 1000; overflow: hidden; background: var(--hc-night); color: var(--hc-text);
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation;
+}
+/* The picture: live video, or the still under review. Full bleed, behind everything. */
+.hc-cam__view { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; background: var(--hc-night); }
+.hc-cam__view.is-front { transform: scaleX(-1); } /* a mirror, as people expect of a front camera; the saved photo is not mirrored */
+/* Shades keep the controls readable over any picture. Long, eased, and they end before they could band. */
+.hc-cam__shade { position: absolute; inset-inline: 0; pointer-events: none; }
+.hc-cam__shade--top { top: 0; height: calc(128px + var(--hc-safe-top)); background: linear-gradient(to bottom, color-mix(in oklab, var(--hc-night) 78%, transparent), color-mix(in oklab, var(--hc-night) 52%, transparent) 34%, color-mix(in oklab, var(--hc-night) 22%, transparent) 66%, color-mix(in oklab, var(--hc-night) 6%, transparent) 88%, transparent); }
+.hc-cam__shade--bottom { bottom: 0; height: calc(240px + var(--hc-safe-bottom)); background: linear-gradient(to top, color-mix(in oklab, var(--hc-night) 86%, transparent), color-mix(in oklab, var(--hc-night) 62%, transparent) 30%, color-mix(in oklab, var(--hc-night) 28%, transparent) 62%, color-mix(in oklab, var(--hc-night) 8%, transparent) 86%, transparent); }
+
+.hc-cam__top { position: absolute; top: calc(var(--hc-space-2) + var(--hc-safe-top)); left: calc(var(--hc-space-2) + var(--hc-safe-left)); right: calc(var(--hc-space-2) + var(--hc-safe-right)); display: flex; align-items: center; justify-content: space-between; gap: var(--hc-space-2); }
+.hc-cam__title { flex: 1; text-align: center; font-size: var(--hc-text-md); font-weight: var(--hc-weight-bold); }
+/* Controls over the picture: bare icons, 48 px targets. */
+.hc-cam__btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--hc-space-2); min-width: 48px; height: 48px; padding: 0 var(--hc-space-3); border-radius: 24px; color: var(--hc-text); font-size: var(--hc-text-md); font-weight: var(--hc-weight-bold); }
+.hc-cam__btn .hc-icon { width: 24px; height: 24px; stroke-width: 1.7; }
+.hc-cam__btn:active:not(:disabled) { background: var(--hc-wash-press); }
+.hc-cam__btn.is-lit { color: var(--hc-accent); } /* flash or torch is on */
+@media (hover: hover) { .hc-cam__btn:hover:not(:disabled) { background: var(--hc-wash-hover); } }
+.hc-cam__spacer { width: 48px; }
+
+.hc-cam__bottom {
+  position: absolute; inset-inline: 0; bottom: 0; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--hc-space-4);
+  padding: 0 calc(var(--hc-space-5) + var(--hc-safe-right)) calc(var(--hc-space-6) + var(--hc-safe-bottom)) calc(var(--hc-space-5) + var(--hc-safe-left));
+}
+.hc-cam__bottom > :first-child { justify-self: start; }
+.hc-cam__bottom > :last-child { justify-self: end; }
+/* Shutter: a 72 px ring with a disc inside. The disc gives under the thumb. */
+.hc-cam__shutter { position: relative; width: 72px; height: 72px; border-radius: 50%; box-shadow: inset 0 0 0 4px var(--hc-text); }
+.hc-cam__shutter::before { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--hc-text); transition: transform var(--hc-dur-base) var(--hc-ease-spring); }
+.hc-cam__shutter:active:not(:disabled)::before { transform: scale(0.86); transition: transform var(--hc-dur-fast) var(--hc-ease-out); }
+.hc-cam__shutter:focus-visible { outline-offset: 4px; }
+/* Feedback layers: the blink when a photo is taken, and the white screen that lights a face for the front camera. */
+.hc-cam__blink, .hc-cam__fill { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+.hc-cam__blink { background: var(--hc-night); }
+.hc-cam__fill { background: white; }
+.hc-cam__fill.is-on { opacity: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .hc-cam__blink.is-on { animation: hc-cam-blink var(--hc-dur-base) var(--hc-ease-out); }
+  @keyframes hc-cam-blink { 30% { opacity: 0.7; } }
+  .hc-cam__fill { transition: opacity var(--hc-dur-fast) var(--hc-ease-out); }
+  .hc-cam.is-review .hc-cam__view { animation: hc-cam-settle var(--hc-dur-slow) var(--hc-ease-out); }
+  @keyframes hc-cam-settle { from { transform: scale(1.04); } }
+  .hc-cam__send, .hc-cam__once { animation: hc-card-in var(--hc-dur-slow) var(--hc-ease-out) backwards; }
+}
+
+/* Review: the still, Retake at the left, Send at the right, the one rule of a snap above them. */
+.hc-cam__bottom > .hc-cam__once { grid-column: 1 / -1; justify-self: center; }
+.hc-cam__once { display: inline-flex; align-items: center; gap: var(--hc-space-2); font-size: var(--hc-text-sm); color: var(--hc-text-muted); }
+.hc-cam__once .hc-icon { width: 16px; height: 16px; }
+.hc-cam.is-review .hc-cam__bottom { grid-template-columns: 1fr 1fr; row-gap: var(--hc-space-3); padding-bottom: calc(var(--hc-space-5) + var(--hc-safe-bottom)); }
+.hc-cam__send { min-width: 132px; min-height: 52px; padding-inline: var(--hc-space-5); border-radius: 26px; font-size: var(--hc-text-md); gap: var(--hc-space-2); }
+.hc-cam__send .hc-icon { width: 20px; height: 20px; stroke-width: 2; }
+
+/* QR scan mode: no shutter. A square finder, everything outside it dimmed, one line of help. */
+.hc-cam__finder {
+  position: absolute; top: 44%; left: 50%; translate: -50% -50%; width: min(68vw, 272px, 52dvh); aspect-ratio: 1; border-radius: 30px;
+  box-shadow: 0 0 0 100vmax color-mix(in oklab, var(--hc-night) 62%, transparent); color: var(--hc-text);
+}
+.hc-cam__corners { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; fill: none; stroke: currentColor; stroke-width: 4; stroke-linecap: round; transition: transform var(--hc-dur-slow) var(--hc-ease-spring); }
+.hc-cam__finder.is-found { color: var(--hc-accent); }
+.hc-cam__finder.is-found .hc-cam__corners { transform: scale(0.93); }
+.hc-cam__hint { position: absolute; top: calc(44% + min(34vw, 136px, 26dvh) + var(--hc-space-5)); left: 50%; translate: -50% 0; width: min(100% - var(--hc-space-6) * 2, 20rem); display: flex; flex-direction: column; align-items: center; gap: var(--hc-space-2); text-align: center; font-size: var(--hc-text-md); }
+.hc-cam__hint small { font-size: var(--hc-text-sm); color: var(--hc-text-muted); }
+.hc-cam__hint small.is-error { color: var(--hc-danger); }
+
+/* The camera could not start: say why and what to do, on the same dark layer. */
+.hc-cam__blocked { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--hc-space-2); padding: var(--hc-space-6); text-align: center; }
+.hc-cam__blocked strong { font-size: var(--hc-text-lg); letter-spacing: var(--hc-tracking-tight); }
+.hc-cam__blocked p { max-width: 22rem; color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-cam__blocked .hc-btn { margin-top: var(--hc-space-3); min-height: var(--hc-hit); padding-inline: var(--hc-space-5); }
+.hc-cam__blocked .hc-icon { width: 32px; height: 32px; color: var(--hc-text-muted); margin-bottom: var(--hc-space-2); }
+
+/* Wide screens: the same layer; the controls gather in the middle instead of spreading to the corners. */
+@media (min-width: 47.51em) {
+  .hc-cam__bottom { left: 50%; right: auto; translate: -50% 0; width: min(100%, 26rem); }
+  .hc-cam__top { top: var(--hc-space-4); left: var(--hc-space-4); right: var(--hc-space-4); }
+}

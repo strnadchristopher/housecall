@@ -1,0 +1,78 @@
+/*
+ * HC-040 section 11: encryption surfaces. New rules; append to index.css.
+ */
+/* The label in a DM header: an icon and the exact words of 11.1. It is a button (opens the details sheet). */
+.hc-lockline { display: inline-flex; align-items: center; gap: var(--hc-space-1); flex: none; min-height: var(--hc-space-5); padding: 0 var(--hc-space-1); margin-inline: calc(var(--hc-space-1) * -1); border-radius: var(--hc-radius-xs); color: var(--hc-text-muted); font-size: var(--hc-text-sm); white-space: nowrap; }
+.hc-lockline .hc-icon { width: 14px; height: 14px; stroke-width: 1.8; }
+.hc-lockline.is-alert { color: var(--hc-danger); }
+@media (hover: hover) { .hc-lockline:hover { color: var(--hc-text); background: var(--hc-wash-hover); } .hc-lockline.is-alert:hover { color: var(--hc-danger); } }
+.hc-tip--wrap { white-space: normal; width: max-content; max-width: 16rem; text-align: start; line-height: 1.4; padding: var(--hc-space-2) var(--hc-space-3); }
+.hc-tip[data-below] { bottom: auto; top: calc(100% + var(--hc-space-2)); }
+.hc-lockline > span:not(.hc-tip) { overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 47.5em) { .hc-header__bio { display: none; } .hc-lockline { min-width: 0; min-height: 0; margin: 0; padding: 0; font-size: var(--hc-text-xs); } }
+
+/* A mark in the timeline: where encryption starts, where a key changed. Sits like the day label. */
+.hc-mark { display: flex; align-items: center; justify-content: center; gap: var(--hc-space-2); padding: var(--hc-space-4) var(--hc-space-5) var(--hc-space-2); font-size: var(--hc-text-xs); color: var(--hc-text-muted); text-align: center; }
+.hc-mark .hc-icon { width: 14px; height: 14px; flex: none; }
+.hc-mark.is-alert { color: var(--hc-danger); }
+
+/* A message this device cannot open. */
+.hc-sealed { display: inline-flex; align-items: center; gap: var(--hc-space-2); color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-sealed .hc-icon { width: 16px; height: 16px; }
+
+/* The note above the composer: not encrypted yet, or sending paused. */
+.hc-composer__note { display: flex; align-items: center; gap: var(--hc-space-2); padding: 0 var(--hc-space-2) var(--hc-space-1); font-size: var(--hc-text-sm); color: var(--hc-text-muted); }
+.hc-composer__note .hc-icon { width: 16px; height: 16px; flex: none; }
+
+/* The banner that stops you when a key changed, or when this device has no keys. One card above the composer. */
+.hc-keybanner { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--hc-space-3); row-gap: var(--hc-space-1); margin: 0 var(--hc-space-4) var(--hc-space-2); padding: var(--hc-space-4); border-radius: var(--hc-radius-md); background: var(--hc-surface-raised); box-shadow: var(--hc-lip); }
+.hc-keybanner > .hc-icon { grid-row: 1 / span 2; width: 22px; height: 22px; margin-top: 1px; color: var(--hc-text-muted); }
+.hc-keybanner.is-alert > .hc-icon { color: var(--hc-danger); }
+.hc-keybanner strong { grid-column: 2; }
+.hc-keybanner p { grid-column: 2; font-size: var(--hc-text-sm); color: var(--hc-text-muted); max-width: 38rem; }
+.hc-keybanner__actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: var(--hc-space-2); padding-top: var(--hc-space-2); }
+.hc-keybanner__actions .hc-btn:not(.hc-btn--primary, .hc-btn--text) { background: var(--hc-wash-selected); }
+@media (max-width: 47.5em) {
+  .hc-keybanner { margin-inline: var(--hc-space-2); padding: var(--hc-space-3); }
+  .hc-keybanner__actions { grid-column: 1 / -1; flex-direction: column; }
+}
+
+/* Safety number: twelve groups of five digits. Tabular, bold, easy to read aloud. */
+.hc-safety__who { display: flex; align-items: center; gap: var(--hc-space-2); color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-safety__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--hc-space-3) var(--hc-space-2); padding: var(--hc-space-4); border-radius: var(--hc-radius-md); background: var(--hc-wash-hover); font-size: var(--hc-text-md); font-weight: var(--hc-weight-bold); letter-spacing: 0.04em; text-align: center; font-variant-numeric: tabular-nums; -webkit-user-select: text; user-select: text; }
+.hc-sheet__text { font-size: var(--hc-text-sm); color: var(--hc-text-muted); line-height: 1.45; }
+.hc-sheet__text strong { color: var(--hc-text); }
+@media (max-width: 26em) { .hc-safety__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* Recovery key: 24 numbered words, read down each column. */
+.hc-words { display: grid; grid-auto-flow: column; grid-template-rows: repeat(6, auto); grid-auto-columns: minmax(0, 1fr); gap: var(--hc-space-1) var(--hc-space-3); padding: var(--hc-space-4); border-radius: var(--hc-radius-lg); background: var(--hc-surface-raised); box-shadow: var(--hc-lip); counter-reset: hc-word; -webkit-user-select: text; user-select: text; }
+.hc-words li { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); align-items: baseline; column-gap: var(--hc-space-1); min-height: 28px; counter-increment: hc-word; font-weight: var(--hc-weight-bold); }
+.hc-words li::before { content: counter(hc-word); font-size: var(--hc-text-xs); font-weight: var(--hc-weight-regular); color: var(--hc-text-muted); text-align: end; padding-inline-end: 2px; -webkit-user-select: none; user-select: none; }
+.hc-words.is-hidden li { color: transparent; }
+.hc-words.is-hidden li::after { content: ""; grid-column: 2; grid-row: 1; align-self: center; height: 10px; width: 80%; border-radius: 5px; background: var(--hc-wash-selected); }
+.hc-recovery { display: flex; flex-direction: column; gap: var(--hc-space-4); }
+.hc-recovery__row { display: flex; align-items: center; gap: var(--hc-space-2); flex-wrap: wrap; }
+.hc-recovery__row .hc-ring { margin-inline-start: auto; }
+.hc-recovery__pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--hc-space-3); }
+/* The recovery screens are a little wider than a sign-in form. */
+.hc-onb__screen.is-wide { max-width: calc(34rem + var(--hc-space-5) * 2); }
+@media (max-width: 47.5em) {
+  .hc-words { grid-template-rows: repeat(8, auto); padding: var(--hc-space-3); column-gap: var(--hc-space-2); }
+  .hc-words li { min-height: 32px; grid-template-columns: 1.25rem minmax(0, 1fr); font-size: var(--hc-text-sm); }
+}
+
+/* Security in Settings: a status card, then rows. */
+.hc-status { display: flex; align-items: center; gap: var(--hc-space-3); padding: var(--hc-space-4); border-radius: var(--hc-radius-lg); background: var(--hc-shell); }
+.hc-status > .hc-icon { width: 24px; height: 24px; flex: none; color: var(--hc-live); }
+.hc-status.is-off > .hc-icon { color: var(--hc-text-muted); }
+.hc-status > span { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
+.hc-status small { font-size: var(--hc-text-sm); }
+
+/* The reset warning: a list of what will happen, and a box to tick before the red button wakes. */
+.hc-consequences { display: flex; flex-direction: column; gap: var(--hc-space-2); font-size: var(--hc-text-sm); }
+.hc-consequences li { display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: var(--hc-space-2); line-height: 1.45; }
+.hc-consequences .hc-icon { width: 16px; height: 16px; margin-top: 2px; color: var(--hc-danger); stroke-width: 2; }
+.hc-consequences .is-kept .hc-icon { color: var(--hc-text-muted); }
+.hc-sheet .hc-check { align-items: flex-start; gap: var(--hc-space-3); padding: var(--hc-space-3); border-radius: var(--hc-radius-md); background: var(--hc-wash-hover); line-height: 1.4; }
+.hc-sheet .hc-check input { margin-top: 2px; flex: none; }
+.hc-sheet__icon { width: 28px; height: 28px; color: var(--hc-danger); }

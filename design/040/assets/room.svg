@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" preserveAspectRatio="xMidYMid slice">
+  <!-- Stand-in for the rear camera: a hallway at night, the far door open and lit. Mock content only, not UI. -->
+  <defs>
+    <linearGradient id="wallL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1b2030"/><stop offset="1" stop-color="#2c3247"/></linearGradient>
+    <linearGradient id="wallR" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#151927"/><stop offset="1" stop-color="#272c40"/></linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a3a2c"/><stop offset="1" stop-color="#1a1512"/></linearGradient>
+    <linearGradient id="ceil" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#2b3044"/><stop offset="1" stop-color="#11141f"/></linearGradient>
+    <linearGradient id="spill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd9a0" stop-opacity=".75"/><stop offset=".5" stop-color="#f3b566" stop-opacity=".22"/><stop offset="1" stop-color="#f3b566" stop-opacity="0"/></linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffd9a0" stop-opacity=".28"/><stop offset="1" stop-color="#ffd9a0" stop-opacity="0"/></radialGradient>
+    <filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="11"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .08 0"/></filter>
+    <filter id="blur"><feGaussianBlur stdDeviation="2.2"/></filter>
+  </defs>
+  <rect width="1200" height="1200" fill="#11141f"/>
+  <g filter="url(#blur)">
+    <path d="M0 0H1200L760 380H440Z" fill="url(#ceil)"/>
+    <path d="M0 0L440 380V780L0 1200Z" fill="url(#wallL)"/>
+    <path d="M1200 0L760 380V780L1200 1200Z" fill="url(#wallR)"/>
+    <path d="M440 780H760L1200 1200H0Z" fill="url(#floor)"/>
+    <rect x="440" y="380" width="320" height="400" fill="#232839"/>
+    <!-- far doorway -->
+    <path d="M520 780V560a80 80 0 0 1 160 0v220Z" fill="#ffe2b3"/>
+    <path d="M520 780V560a80 80 0 0 1 12-42l58 34v228Z" fill="#6b4a22" fill-opacity=".7"/>
+    <path d="M520 780h160l300 420H220Z" fill="url(#spill)"/>
+    <ellipse cx="600" cy="640" rx="330" ry="330" fill="url(#glow)"/>
+    <!-- picture frames and a coat hook on the left wall, a shelf on the right -->
+    <path d="M120 360l150 62v190l-150 40Z" fill="#111522"/><path d="M138 388l114 46v150l-114 30Z" fill="#3a4160"/>
+    <path d="M310 446l80 30v120l-80 22Z" fill="#111522"/>
+    <path d="M1010 470l-170 60v22l170-48Z" fill="#0d101a"/>
+    <path d="M960 420l-60 22v70l60-18Z" fill="#40334a"/>
+  </g>
+  <rect width="1200" height="1200" filter="url(#grain)"/>
+</svg>
