@@ -1,68 +1,174 @@
 name: Desktop release
 
+# Builds on self-hosted runners by default: Linux + Windows (cargo-xwin cross) on council-linux,
+# macOS universal on council-macos. Each build uploads straight to a draft release; the publish job writes
+# latest.json, verifies every asset and publishes the release as latest.
+# GitHub-hosted fallback: set repo variable CI_HOSTED=true or dispatch with hosted=true.
+# Server deploy is separate: .github/workflows/deploy.yml (manual dispatch only).
+
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag (leave empty for an automatic draft tag)
-        required: false
+        description: Release tag to build (must exist)
+        required: true
         type: string
+      hosted:
+        description: Use GitHub-hosted runners instead of the self-hosted ones
+        type: boolean
+        default: false
+      publish:
+        description: Publish the release (false leaves it as a draft)
+        type: boolean
+        default: true
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+  HOSTED: ${{ (github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && 'true' || 'false' }}
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GH_REPO: ${{ github.repository }}
+
 jobs:
-  bundle:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: ubuntu-22.04
-            args: --bundles appimage,deb
-            targets: ""
-          - platform: windows-latest
-            args: --bundles nsis
-            targets: ""
-          - platform: macos-14
-            args: --target universal-apple-darwin --bundles dmg
-            targets: aarch64-apple-darwin,x86_64-apple-darwin
-    runs-on: ${{ matrix.platform }}
-    env:
-      RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag || format('v0.1.0-manual.{0}', github.run_number) }}
+  prepare:
+    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"ubuntu-22.04"' || '["self-hosted","council-linux"]') }}
+    outputs:
+      version: ${{ steps.v.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: client/package-lock.json
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.targets }}
-
-      - name: Install Linux bundle dependencies
-        if: matrix.platform == 'ubuntu-22.04'
+        with: { ref: "${{ env.TAG }}" }
+      - id: v
+        run: echo "version=$(jq -r .version client/src-tauri/tauri.conf.json)" >> "$GITHUB_OUTPUT"
+      - name: Create or reuse the draft release
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf xdg-utils
+          if gh release view "$TAG" >/dev/null 2>&1; then echo "release exists"; else
+            gh release create "$TAG" --verify-tag --draft --title "Housecall $TAG" \
+              --notes "Housecall ${{ steps.v.outputs.version }}"
+          fi
 
-      - name: Install frontend dependencies
-        run: npm ci --prefix client
+  linux:
+    needs: prepare
+    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"ubuntu-22.04"' || '["self-hosted","council-linux"]') }}
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ env.TAG }}" }
+      - uses: ./.github/actions/toolchain
+        with: { hosted: "${{ env.HOSTED }}", linux-gui: "true", cache-key: linux }
+      - run: npm ci --prefix client
+      - run: cd client && npx tauri build --bundles appimage,deb
+      - name: Upload to draft release
+        run: |
+          B="${CARGO_TARGET_DIR:-client/src-tauri/target}/release/bundle"
+          V=${{ needs.prepare.outputs.version }}
+          ls -la "$B"/appimage "$B"/deb
+          gh release upload "$TAG" --clobber "$B"/appimage/*_${V}_*.AppImage{,.sig} "$B"/deb/*_${V}_*.deb{,.sig}
+          ldd --version | head -1
 
-      - uses: tauri-apps/tauri-action@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          projectPath: client
-          tagName: ${{ env.RELEASE_TAG }}
-          releaseName: Housecall ${{ env.RELEASE_TAG }}
-          releaseBody: Desktop installers for Windows, macOS, and Linux.
-          releaseDraft: true
-          prerelease: false
-          args: ${{ matrix.args }}
+  windows:
+    needs: prepare
+    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"windows-latest"' || '["self-hosted","council-linux"]') }}
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ env.TAG }}" }
+      - uses: ./.github/actions/toolchain
+        with: { hosted: "${{ env.HOSTED }}", cache-key: windows }
+      - run: npm ci --prefix client
+      - name: Build NSIS installer
+        run: |
+          cd client
+          if [ "$RUNNER_OS" = Windows ]; then npx tauri build --bundles nsis
+          else npx tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --bundles nsis; fi
+      - name: Upload to draft release
+        run: |
+          V=${{ needs.prepare.outputs.version }}
+          T="${CARGO_TARGET_DIR:-client/src-tauri/target}"
+          B="$T/x86_64-pc-windows-msvc/release/bundle/nsis"; [ -d "$B" ] || B="$T/release/bundle/nsis"
+          ls -la "$B"
+          gh release upload "$TAG" --clobber "$B"/*_${V}_x64-setup.exe{,.sig}
+
+  macos:
+    needs: prepare
+    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"macos-14"' || '["self-hosted","council-macos"]') }}
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ env.TAG }}" }
+      - uses: ./.github/actions/toolchain
+        with: { hosted: "${{ env.HOSTED }}", rust-targets: "aarch64-apple-darwin,x86_64-apple-darwin", cache-key: macos }
+      - run: npm ci --prefix client
+      - run: cd client && npx tauri build --target universal-apple-darwin --bundles app,dmg
+      - name: Upload to draft release
+        run: |
+          V=${{ needs.prepare.outputs.version }}
+          T="${CARGO_TARGET_DIR:-client/src-tauri/target}/universal-apple-darwin/release/bundle"
+          ls -la "$T"/dmg "$T"/macos
+          M="$RUNNER_TEMP/mac"; rm -rf "$M"; mkdir -p "$M"
+          cp "$T"/dmg/*_${V}_universal.dmg "$M/"
+          cp "$T"/macos/Housecall.app.tar.gz "$M/Housecall_${V}_universal.app.tar.gz"
+          cp "$T"/macos/Housecall.app.tar.gz.sig "$M/Housecall_${V}_universal.app.tar.gz.sig"
+          gh release upload "$TAG" --clobber "$M"/*
+          rm -rf "$M"
+
+  publish:
+    needs: [prepare, linux, windows, macos]
+    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"ubuntu-22.04"' || '["self-hosted","council-linux"]') }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ env.TAG }}" }
+      - name: Write latest.json and verify assets
+        run: |
+          V=${{ needs.prepare.outputs.version }}
+          D="$RUNNER_TEMP/rel"; rm -rf "$D"; mkdir -p "$D"
+          gh release download "$TAG" -D "$D" -p '*.sig'
+          git fetch -q origin "refs/tags/$TAG:refs/tags/$TAG" --force || true
+          NOTES=$(git tag -l --format='%(contents)' "$TAG" | sed '/^-----BEGIN/,$d' | sed '/^\s*$/d' | head -20)
+          [ -n "$NOTES" ] || NOTES="Housecall $V"
+          BASE="https://github.com/$GH_REPO/releases/download/$TAG"
+          python3 - "$D" "$V" "$BASE" "$NOTES" <<'PY'
+          import json, sys, os, datetime
+          d, v, base, notes = sys.argv[1:]
+          def sig(name): return open(os.path.join(d, name + ".sig")).read().strip()
+          app = f"Housecall_{v}_amd64.AppImage"; deb = f"Housecall_{v}_amd64.deb"
+          exe = f"Housecall_{v}_x64-setup.exe"; mac = f"Housecall_{v}_universal.app.tar.gz"
+          files = {
+            "linux-x86_64": app, "linux-x86_64-appimage": app, "linux-x86_64-deb": deb,
+            "windows-x86_64": exe, "windows-x86_64-nsis": exe,
+            "darwin-aarch64": mac, "darwin-x86_64": mac, "darwin-aarch64-app": mac, "darwin-x86_64-app": mac,
+          }
+          out = {"version": v, "notes": notes,
+                 "pub_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                 "platforms": {k: {"signature": sig(f), "url": f"{base}/{f}"} for k, f in files.items()}}
+          json.dump(out, open(os.path.join(d, "latest.json"), "w"), indent=2)
+          print("platforms:", ", ".join(out["platforms"]))
+          PY
+          gh release upload "$TAG" --clobber "$D/latest.json"
+          want="Housecall_${V}_amd64.AppImage Housecall_${V}_amd64.AppImage.sig Housecall_${V}_amd64.deb Housecall_${V}_amd64.deb.sig Housecall_${V}_x64-setup.exe Housecall_${V}_x64-setup.exe.sig Housecall_${V}_universal.dmg Housecall_${V}_universal.app.tar.gz Housecall_${V}_universal.app.tar.gz.sig latest.json"
+          have=$(gh release view "$TAG" --json assets --jq '.assets[].name')
+          miss=0; for a in $want; do grep -qxF "$a" <<<"$have" || { echo "MISSING $a"; miss=1; }; done
+          [ $miss = 0 ] && echo "all assets present"
+          rm -rf "$D"
+          exit $miss
+      - name: Publish as latest
+        if: github.event_name == 'push' || github.event.inputs.publish == 'true'
+        run: |
+          gh release edit "$TAG" --draft=false --prerelease=false --latest --title "Housecall $TAG"
+          gh release view "$TAG" --json isDraft,isPrerelease,url --jq '"draft=\(.isDraft) prerelease=\(.isPrerelease) \(.url)"'

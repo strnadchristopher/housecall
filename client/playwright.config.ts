@@ -14,6 +14,8 @@ export default defineConfig({
       ? "**/upload-video.spec.ts"
       : process.env.HOUSECALL_TEST_DANA === "1"
       ? "**/dana.spec.ts" // rewrites docs/ux/phase-2; run on purpose with tests/run-dana.mjs
+      : process.env.HOUSECALL_TEST_README === "1"
+      ? "**/readme.spec.ts" // rewrites docs/readme; run on purpose
       : process.env.HOUSECALL_TEST_SHOTS === "1"
       ? "**/shots.spec.ts" // rewrites the tracked PNGs in design/shots; never part of an acceptance run
       : process.env.HOUSECALL_TEST_LINDA === "1"

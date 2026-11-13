@@ -1,72 +1,89 @@
 name: verify
-on: [push, pull_request, workflow_dispatch]
+# Self-hosted (council-linux/council-macos runners) by default; repo variable CI_HOSTED=true switches back to GitHub-hosted.
+# pull_request runs only for same-repo branches: fork PRs must never reach self-hosted runners.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   public-safe:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ${{ fromJSON(vars.CI_HOSTED == 'true' && '"ubuntu-latest"' || '["self-hosted","council-linux"]') }}
     steps:
       - uses: actions/checkout@v4
       - run: scripts/check-public-safe.sh
   rust:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ${{ fromJSON(vars.CI_HOSTED == 'true' && '"ubuntu-latest"' || '["self-hosted","council-linux"]') }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg pkg-config libssl-dev
+      - uses: ./.github/actions/toolchain
+        with: { hosted: "${{ vars.CI_HOSTED == 'true' }}", rust-components: "rustfmt,clippy", cache-key: ci-rust }
+      - if: vars.CI_HOSTED == 'true'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg pkg-config libssl-dev
       - run: bash scripts/test-server.sh
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-audit,cargo-deny
       - run: cargo audit && cargo deny check
   client:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ${{ fromJSON(vars.CI_HOSTED == 'true' && '"ubuntu-latest"' || '["self-hosted","council-linux"]') }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: client/package-lock.json
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: ./.github/actions/toolchain
+        with: { hosted: "${{ vars.CI_HOSTED == 'true' }}", cache-key: ci-client }
+      - if: vars.CI_HOSTED != 'true'
+        run: ln -sfn "$CARGO_TARGET_DIR" target   # e2e fixture expects ./target/debug/housecall-server
       - run: npm ci --prefix client
       - run: npm run build --prefix client && npm test --prefix client
       - run: cargo build --locked
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - if: vars.CI_HOSTED == 'true'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: cd client && npx playwright install --with-deps chromium && npm run e2e && npm run test:voice && node tests/run-plex.mjs
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: e2e-evidence
-          path: |
-            evidence/
-            client/test-results/
   desktop:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+        include:
+          - name: linux
+            hosted: '"ubuntu-24.04"'
+            self: '["self-hosted","council-linux"]'
+          - name: windows
+            hosted: '"windows-latest"'
+            self: '["self-hosted","council-linux"]'
+          - name: macos
+            hosted: '"macos-latest"'
+            self: '["self-hosted","council-macos"]'
+    name: desktop (${{ matrix.name }})
+    runs-on: ${{ fromJSON(vars.CI_HOSTED == 'true' && matrix.hosted || matrix.self) }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - uses: dtolnay/rust-toolchain@stable
-      - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      - uses: ./.github/actions/toolchain
+        with: { hosted: "${{ vars.CI_HOSTED == 'true' }}", linux-gui: "true", cache-key: "ci-desktop-${{ matrix.name }}" }
       - run: npm ci --prefix client
-      - if: runner.os == 'Linux'
+      - if: matrix.name == 'linux'
         run: cargo test --locked --manifest-path patches/glib/Cargo.toml --release --test housecall_variant_regression
-      - run: cd client && npx tauri build --no-bundle
-      - uses: actions/upload-artifact@v4
-        with:
-          name: desktop-${{ matrix.os }}
-          path: client/src-tauri/target/release/housecall*
+      - name: Build (no bundle)
+        run: |
+          cd client
+          if [ "${{ matrix.name }}" = windows ] && [ "$RUNNER_OS" = Linux ]; then
+            npx tauri build --no-bundle --runner cargo-xwin --target x86_64-pc-windows-msvc
+          else npx tauri build --no-bundle; fi
 
   android:
+    # Needs the Android SDK/NDK, which the self-hosted Linux image does not carry yet: hosted-only, opt-in.
+    if: vars.CI_HOSTED == 'true'
     runs-on: ubuntu-24.04
     env:
       CARGO_BUILD_JOBS: 1
