@@ -1776,6 +1776,40 @@ mod tests {
         }
     }
     #[tokio::test]
+    async fn encrypted_dm_message_pushes_ids_only_never_the_envelope() {
+        let fixture = Fixture::new(vec![200], false);
+        let mut s = seed(":memory:");
+        s.push = worker(Kind::Apns, &fixture.origin);
+        {
+            let db = s.db.lock().unwrap();
+            db.execute("UPDATE users SET key_rev=1 WHERE id IN ('alice','bob')", []).unwrap();
+            db.execute("INSERT INTO channels(id,name,kind) VALUES('dm','','dm')", []).unwrap();
+            db.execute("INSERT INTO members(channel_id,user_id) VALUES('dm','alice'),('dm','bob')", []).unwrap();
+        }
+        register_bob(&s, Kind::Apns).await;
+        let mut raw = vec![1u8, 0, 0, 0, 1, 0, 0, 0, 1];
+        raw.extend(vec![0xABu8; 24 + 256 + 16]);
+        let envelope = crate::identity::b64u(&raw);
+        let (status, body) = call(&s, Some('a'), "POST", "/api/channels/dm/messages", json!({"enc":1,"envelope":envelope,"mention_ids":["bob"]})).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let id = body["id"].as_str().unwrap().to_owned();
+        let events = states(&s).await;
+        assert_eq!(events["events"][0]["message_id"], id);
+        assert!(!events.to_string().contains(&envelope));
+        s.push.tick(&s.db).await.unwrap();
+        let payloads = fixture.payloads();
+        assert_eq!(payloads.len(), 1);
+        assert_eq!(payloads[0]["operation"], "alert");
+        assert!(payloads[0].get("alert").is_none() && payloads[0]["aps"].get("alert").is_none());
+        let text = payloads[0].to_string();
+        assert!(!text.contains(&envelope) && !text.contains("envelope") && !text.contains("Encrypted message"));
+        // CallKit for the same DM carries no message content either.
+        let (status, _) = call(&s, Some('a'), "POST", "/api/channels/dm/ring", json!({})).await;
+        assert_eq!(status, StatusCode::OK);
+        let ring: String = s.db.lock().unwrap().query_row("SELECT payload FROM events WHERE kind='call.ring'", [], |r| r.get(0)).unwrap();
+        assert!(!ring.contains(&envelope) && !ring.contains("envelope"));
+    }
+    #[tokio::test]
     async fn unsend_before_dispatch_removes_alert_and_transaction_rollback_removes_intents() {
         let fixture = Fixture::new(vec![200], false);
         let mut s = seed(":memory:");
