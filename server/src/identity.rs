@@ -363,3 +363,57 @@ pub fn is_encrypted_dm(db: &Connection, cid: &str) -> Result<bool, ApiError> {
         |r| r.get::<_, bool>(0),
     ).optional()?.unwrap_or(false))
 }
+
+pub const ENC_PLACEHOLDER: &str = "Encrypted message. Update Housecall to read it.";
+const ENVELOPE_MAX_CHARS: usize = 22252;
+pub fn invalid_envelope() -> ApiError {
+    ApiError(StatusCode::UNPROCESSABLE_ENTITY, "invalid encrypted message")
+}
+pub fn not_available() -> ApiError {
+    ApiError(StatusCode::UNPROCESSABLE_ENTITY, "encryption is not available in this conversation")
+}
+pub fn plaintext_refused() -> ApiError {
+    ApiError(StatusCode::UNPROCESSABLE_ENTITY, "this conversation is end-to-end encrypted; update Housecall to send")
+}
+pub fn is_sealed(db: &Connection, upload: &uuid::Uuid) -> Result<bool, ApiError> {
+    Ok(db.query_row("SELECT EXISTS(SELECT 1 FROM sealed_uploads WHERE upload_id=?)", [upload.to_string()], |r| r.get(0))?)
+}
+/// DM-V1 15.2. Header-only envelope checks; the envelope is never parsed further or logged.
+#[allow(clippy::too_many_arguments)]
+pub fn check_send(db: &Connection, author: &str, cid: &str, sealed_dm: bool, enc: i64, envelope: Option<&str>, body: &str, view_once: bool, roles: &[String], mentions: &[String]) -> Result<(), ApiError> {
+    if enc == 0 {
+        if sealed_dm {
+            tracing::info!(user=%author, channel=%cid, "plaintext refused in encrypted dm");
+            return Err(plaintext_refused());
+        }
+        return Ok(());
+    }
+    if !sealed_dm {
+        tracing::info!(user=%author, channel=%cid, "encrypted message refused outside an encrypted dm");
+        return Err(not_available());
+    }
+    let refuse = || {
+        tracing::info!(user=%author, channel=%cid, "invalid encrypted message");
+        invalid_envelope()
+    };
+    let envelope = envelope.filter(|e| e.len() <= ENVELOPE_MAX_CHARS).ok_or_else(refuse)?;
+    let bytes = unb64u(envelope).ok_or_else(refuse)?;
+    let n = bytes.len().checked_sub(33 + 16).filter(|r| r % 256 == 0).map(|r| r / 256);
+    if !n.is_some_and(|n| (1..=65).contains(&n)) || bytes[0] != 1 {
+        return Err(refuse());
+    }
+    let sender = u32::from_be_bytes(bytes[1..5].try_into().unwrap());
+    let recipient = u32::from_be_bytes(bytes[5..9].try_into().unwrap());
+    if sender == 0 || recipient == 0 || !body.is_empty() || view_once || !roles.is_empty() {
+        return Err(refuse());
+    }
+    let peer: String = db.query_row("SELECT user_id FROM members WHERE channel_id=? AND user_id<>?", params![cid, author], |r| r.get(0))?;
+    if mentions.iter().any(|m| *m != peer) {
+        return Err(refuse());
+    }
+    let rev = |u: &str| -> Result<i64, ApiError> { Ok(db.query_row("SELECT key_rev FROM users WHERE id=?", [u], |r| r.get(0))?) };
+    if i64::from(sender) != rev(author)? || i64::from(recipient) != rev(&peer)? {
+        return Err(conflict("security key changed; reload keys"));
+    }
+    Ok(())
+}

@@ -379,3 +379,160 @@ async fn keys_changed_event_reaches_own_devices_and_dm_peers() {
     let events = call(&api, "GET", "/api/events?after=0", &owner, Value::Null).await.json();
     assert!(events["events"].as_array().unwrap().iter().all(|e| e["kind"] != "keys.changed"), "strangers get nothing");
 }
+
+// ---- task 2: encrypted messages ----
+fn envelope(sender: u32, recipient: u32, blocks: usize) -> String {
+    let mut e = vec![1u8];
+    e.extend(sender.to_be_bytes());
+    e.extend(recipient.to_be_bytes());
+    e.extend(vec![7u8; 24 + 256 * blocks + 16]);
+    B64.encode(e)
+}
+async fn dm(api: &Router, a: &Value, b: &Value) -> String {
+    let r = call(api, "POST", "/api/channels", a, json!({"name":"dm","kind":"dm","member_ids":[uid(b)]})).await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.json());
+    r.json()["id"].as_str().unwrap().to_owned()
+}
+async fn keyed_dm() -> (Router, AppState, Value, Value, Value, String) {
+    let (api, st, owner, alice, bob) = fixture().await;
+    publish(&api, &alice, 1).await;
+    publish(&api, &bob, 2).await;
+    let c = dm(&api, &alice, &bob).await;
+    (api, st, owner, alice, bob, c)
+}
+async fn send(api: &Router, who: &Value, c: &str, body: Value) -> Reply {
+    call(api, "POST", &format!("/api/channels/{c}/messages"), who, body).await
+}
+
+#[tokio::test]
+async fn plaintext_is_refused_in_an_encrypted_dm_but_allowed_if_one_side_has_no_keys() {
+    let (api, _, _, alice, bob, c) = keyed_dm().await;
+    let r = send(&api, &alice, &c, json!({"body":"hi"})).await;
+    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(r.error(), "this conversation is end-to-end encrypted; update Housecall to send");
+    let r = send(&api, &alice, &c, json!({"body":"hi","enc":0})).await;
+    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY);
+    let _ = bob;
+    let (api, _, owner, alice, _) = fixture().await;
+    publish(&api, &alice, 1).await;
+    let c = dm(&api, &alice, &owner).await;
+    assert_eq!(send(&api, &alice, &c, json!({"body":"hi"})).await.status, StatusCode::OK);
+    let r = send(&api, &alice, &c, json!({"enc":1,"envelope":envelope(1,1,1)})).await;
+    assert_eq!((r.status, r.error()), (StatusCode::UNPROCESSABLE_ENTITY, json!("encryption is not available in this conversation")));
+}
+#[tokio::test]
+async fn encrypted_is_refused_outside_dms() {
+    let (api, _, owner, alice, _) = fixture().await;
+    publish(&api, &alice, 1).await;
+    let ch = call(&api, "POST", "/api/channels", &owner, json!({"name":"room","kind":"channel"})).await.json()["id"].as_str().unwrap().to_owned();
+    let r = send(&api, &owner, &ch, json!({"enc":1,"envelope":envelope(1,1,1)})).await;
+    assert_eq!((r.status, r.error()), (StatusCode::UNPROCESSABLE_ENTITY, json!("encryption is not available in this conversation")));
+}
+#[tokio::test]
+async fn envelope_shape_is_validated() {
+    let (api, _, _, alice, bob, c) = keyed_dm().await;
+    let good = envelope(1, 1, 1);
+    let mut cases: Vec<(&str, Value)> = vec![
+        ("missing", json!({"enc":1})),
+        ("padded", json!({"enc":1,"envelope":format!("{good}=")})),
+        ("std alphabet", json!({"enc":1,"envelope":format!("{good}+")})),
+        ("too short", json!({"enc":1,"envelope":B64.encode(vec![1u8; 304])})),
+        ("not a block", json!({"enc":1,"envelope":B64.encode(vec![1u8; 306])})),
+        ("66 blocks", json!({"enc":1,"envelope":envelope(1,1,66)})),
+        ("zero sender rev", json!({"enc":1,"envelope":envelope(0,1,1)})),
+        ("zero recipient rev", json!({"enc":1,"envelope":envelope(1,0,1)})),
+        ("body present", json!({"enc":1,"envelope":good,"body":"x"})),
+        ("view once", json!({"enc":1,"envelope":good,"view_once":true})),
+        ("role mention", json!({"enc":1,"envelope":good,"role_mention_ids":["r"]})),
+        ("mention self", json!({"enc":1,"envelope":good,"mention_ids":[uid(&alice)]})),
+    ];
+    let mut bad_version = B64.decode(&good).unwrap();
+    bad_version[0] = 2;
+    cases.push(("version", json!({"enc":1,"envelope":B64.encode(bad_version)})));
+    for (name, body) in cases {
+        let r = send(&api, &alice, &c, body).await;
+        assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{name}");
+        assert_eq!(r.error(), "invalid encrypted message", "{name}");
+    }
+    let r = send(&api, &alice, &c, json!({"enc":1,"envelope":envelope(1,1,65)})).await;
+    assert_eq!(r.status, StatusCode::OK);
+    let _ = bob;
+}
+#[tokio::test]
+async fn stale_key_revisions_are_409() {
+    let (api, _, _, alice, bob, c) = keyed_dm().await;
+    for e in [envelope(2, 1, 1), envelope(1, 2, 1), envelope(1, 3, 1)] {
+        let r = send(&api, &alice, &c, json!({"enc":1,"envelope":e})).await;
+        assert_eq!((r.status, r.error()), (StatusCode::CONFLICT, json!("security key changed; reload keys")));
+    }
+    // bob sends: sender rev is his (1), recipient alice (1)
+    assert_eq!(send(&api, &bob, &c, json!({"enc":1,"envelope":envelope(1,1,1)})).await.status, StatusCode::OK);
+}
+#[tokio::test]
+async fn sealed_message_is_stored_without_body_searched_never_and_read_back_with_envelope() {
+    let (api, st, _, alice, bob, c) = keyed_dm().await;
+    let e = envelope(1, 1, 2);
+    let m = send(&api, &alice, &c, json!({"enc":1,"envelope":e,"mention_ids":[uid(&bob)]})).await;
+    assert_eq!(m.status, StatusCode::OK);
+    let m = m.json();
+    assert_eq!((m["enc"].clone(), m["envelope"].clone()), (json!(1), json!(e)));
+    assert_eq!(m["body"], "Encrypted message. Update Housecall to read it.");
+    let stored: (String, i64) = st.db.lock().unwrap().query_row("SELECT body,enc FROM messages WHERE id=?", [m["id"].as_str().unwrap()], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+    assert_eq!(stored, (String::new(), 1));
+    for q in ["Encrypted", "message", "update"] {
+        let r = call(&api, "GET", &format!("/api/channels/{c}/messages?q={q}"), &bob, Value::Null).await;
+        assert_eq!(r.json()["messages"].as_array().unwrap().len(), 0, "search for {q} must not find a sealed message");
+    }
+    let r = call(&api, "GET", &format!("/api/channels/{c}/messages"), &bob, Value::Null).await;
+    assert_eq!(r.json()["messages"][0]["envelope"], json!(e));
+}
+#[tokio::test]
+async fn edits_keep_enc_and_unsend_works() {
+    let (api, _, _, alice, bob, c) = keyed_dm().await;
+    let m = send(&api, &alice, &c, json!({"enc":1,"envelope":envelope(1,1,1)})).await.json();
+    let mid = m["id"].as_str().unwrap();
+    let path = format!("/api/messages/{mid}");
+    let e2 = envelope(1, 1, 3);
+    let r = call(&api, "PATCH", &path, &alice, json!({"enc":1,"envelope":e2,"revision":1})).await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.json());
+    assert_eq!((r.json()["envelope"].clone(), r.json()["revision"].clone()), (json!(e2), json!(2)));
+    for (name, body) in [
+        ("plaintext edit of a sealed message", json!({"body":"x","revision":2})),
+        ("enc 0 with envelope", json!({"enc":0,"envelope":e2,"revision":2})),
+        ("bad envelope", json!({"enc":1,"envelope":"AAAA","revision":2})),
+        ("body present", json!({"enc":1,"envelope":e2,"body":"x","revision":2})),
+    ] {
+        let r = call(&api, "PATCH", &path, &alice, body).await;
+        assert!(r.status == StatusCode::UNPROCESSABLE_ENTITY || r.status == StatusCode::BAD_REQUEST, "{name}");
+    }
+    let r = call(&api, "PATCH", &path, &alice, json!({"enc":1,"envelope":envelope(2,1,1),"revision":2})).await;
+    assert_eq!(r.status, StatusCode::CONFLICT);
+    assert_eq!(call(&api, "PATCH", &path, &bob, json!({"enc":1,"envelope":e2,"revision":2})).await.status, StatusCode::FORBIDDEN);
+    assert_eq!(call(&api, "DELETE", &path, &alice, Value::Null).await.status, StatusCode::OK);
+}
+#[tokio::test]
+async fn old_plaintext_cannot_be_edited_after_keys_but_can_be_deleted() {
+    let (api, _, _, alice, bob) = fixture().await;
+    let c = dm(&api, &alice, &bob).await;
+    let m = send(&api, &alice, &c, json!({"body":"old"})).await.json();
+    publish(&api, &alice, 1).await;
+    publish(&api, &bob, 2).await;
+    let path = format!("/api/messages/{}", m["id"].as_str().unwrap());
+    let r = call(&api, "PATCH", &path, &alice, json!({"body":"new","revision":0})).await;
+    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY);
+    let r = call(&api, "PATCH", &path, &alice, json!({"enc":1,"envelope":envelope(1,1,1),"revision":0})).await;
+    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "enc cannot be changed");
+    assert_eq!(call(&api, "DELETE", &path, &alice, Value::Null).await.status, StatusCode::OK);
+}
+#[tokio::test]
+async fn sealed_message_events_carry_ids_only() {
+    let (api, st, _, alice, _, c) = keyed_dm().await;
+    send(&api, &alice, &c, json!({"enc":1,"envelope":envelope(1,1,1)})).await;
+    let payloads: Vec<String> = {
+        let db = st.db.lock().unwrap();
+        let mut q = db.prepare("SELECT payload FROM events WHERE kind='message.created'").unwrap();
+        q.query_map([], |r| r.get(0)).unwrap().map(|x| x.unwrap()).collect()
+    };
+    assert!(!payloads.is_empty());
+    assert!(payloads.iter().all(|p| !p.contains("envelope") && !p.contains(&envelope(1, 1, 1))));
+}

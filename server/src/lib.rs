@@ -1041,7 +1041,10 @@ struct MessageQuery {
 }
 /// `viewer` decides what a snap shows: whether this user already opened it.
 fn message(db: &Connection, id: &str, viewer: &str) -> Result<Value, ApiError> {
-    let mut msg=db.query_row("SELECT id,channel_id,author_id,body,reply_to,created_at,edited_at,revision,pinned,mention_ids FROM messages WHERE id=?",[id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"channel_id":r.get::<_,String>(1)?,"author_id":r.get::<_,String>(2)?,"body":r.get::<_,String>(3)?,"reply_to":r.get::<_,Option<String>>(4)?,"created_at":r.get::<_,i64>(5)?,"edited_at":r.get::<_,Option<i64>>(6)?,"revision":r.get::<_,i64>(7)?,"pinned":r.get::<_,bool>(8)?,"mention_ids":serde_json::from_str::<Value>(&r.get::<_,String>(9)?).unwrap_or(json!([]))}))).optional()?.ok_or_else(missing)?;
+    let mut msg=db.query_row("SELECT id,channel_id,author_id,body,reply_to,created_at,edited_at,revision,pinned,mention_ids,enc,envelope FROM messages WHERE id=?",[id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"channel_id":r.get::<_,String>(1)?,"author_id":r.get::<_,String>(2)?,"body":r.get::<_,String>(3)?,"reply_to":r.get::<_,Option<String>>(4)?,"created_at":r.get::<_,i64>(5)?,"edited_at":r.get::<_,Option<i64>>(6)?,"revision":r.get::<_,i64>(7)?,"pinned":r.get::<_,bool>(8)?,"mention_ids":serde_json::from_str::<Value>(&r.get::<_,String>(9)?).unwrap_or(json!([])),"enc":r.get::<_,i64>(10)?,"envelope":r.get::<_,Option<String>>(11)?}))).optional()?.ok_or_else(missing)?;
+    if msg["enc"] == 1 {
+        msg["body"] = json!(identity::ENC_PLACEHOLDER);
+    }
     let mut q = db.prepare("SELECT emoji,user_id FROM reactions WHERE message_id=?")?;
     let reactions = q
         .query_map([id], |r| {
@@ -1056,7 +1059,7 @@ fn message(db: &Connection, id: &str, viewer: &str) -> Result<Value, ApiError> {
     msg["role_mention_ids"] = json!(roles);
     let mut q =
         db.prepare("SELECT upload_id,filename,length,(SELECT id FROM media_jobs WHERE source_id=attachments.upload_id AND status='ready' ORDER BY created_at DESC LIMIT 1),view_once FROM attachments WHERE message_id=?")?;
-    let attachments=q.query_map([id],|r|{if r.get::<_,i64>(4)?!=snaps::NONE{return snaps::describe(db,&r.get::<_,String>(0)?,r.get::<_,i64>(4)?,viewer)}let job=r.get::<_,Option<String>>(3)?;let filename=r.get::<_,String>(1)?;let kind=attach_kind::kind(&filename,job.is_some());Ok(json!({"id":r.get::<_,String>(0)?,"filename":filename,"kind":kind,"length":r.get::<_,String>(2)?,"video_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/video")),"thumbnail_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/thumbnail"))}))})?.collect::<Result<Vec<_>,_>>()?;
+    let attachments=q.query_map([id],|r|{if r.get::<_,i64>(4)?!=snaps::NONE{return snaps::describe(db,&r.get::<_,String>(0)?,r.get::<_,i64>(4)?,viewer)}let job=r.get::<_,Option<String>>(3)?;let filename=r.get::<_,String>(1)?;if db.query_row("SELECT EXISTS(SELECT 1 FROM sealed_uploads WHERE upload_id=?)",[r.get::<_,String>(0)?],|x|x.get::<_,bool>(0))?{return Ok(json!({"id":r.get::<_,String>(0)?,"filename":"sealed","kind":"sealed","length":r.get::<_,String>(2)?}))}let kind=attach_kind::kind(&filename,job.is_some());Ok(json!({"id":r.get::<_,String>(0)?,"filename":filename,"kind":kind,"length":r.get::<_,String>(2)?,"video_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/video")),"thumbnail_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/thumbnail"))}))})?.collect::<Result<Vec<_>,_>>()?;
     msg["attachments"] = json!(attachments);
     Ok(msg)
 }
@@ -1116,7 +1119,11 @@ async fn messages(
 }
 #[derive(Deserialize)]
 struct SendMessage {
+    #[serde(default)]
     body: String,
+    #[serde(default)]
+    enc: i64,
+    envelope: Option<String>,
     reply_to: Option<String>,
     #[serde(default)]
     mention_ids: Vec<String>,
@@ -1139,10 +1146,21 @@ async fn send_message(
     Path(cid): Path<String>,
     Json(mut v): Json<SendMessage>,
 ) -> ApiResult<Value> {
-    if v.view_once && v.attachment_ids.len() != 1 {
+    if v.enc != 0 && v.enc != 1 {
+        return Err(bad("invalid enc"));
+    }
+    if v.enc == 0 && v.envelope.is_some() {
+        return Err(bad("envelope requires enc"));
+    }
+    if v.enc == 1 {
+        if v.attachment_ids.len() > 20 || v.mention_ids.len() > 30 {
+            return Err(identity::invalid_envelope());
+        }
+    } else if v.view_once && v.attachment_ids.len() != 1 {
         return Err(bad("a snap carries exactly one photo"));
     }
-    if v.attachment_ids.is_empty() {
+    if v.enc == 1 {
+    } else if v.attachment_ids.is_empty() {
         body_valid(&v.body)?;
     } else if v.body.len() > 16384 || v.attachment_ids.len() > 20 {
         return Err(bad("invalid attachment message"));
@@ -1153,13 +1171,15 @@ async fn send_message(
     let mut db = s.db.lock().unwrap();
     let tx = db.transaction()?;
     member(&tx, &p.user.id, &cid)?;
+    let sealed_dm = identity::is_encrypted_dm(&tx, &cid)?;
+    identity::check_send(&tx, &p.user.id, &cid, sealed_dm, v.enc, v.envelope.as_deref(), &v.body, v.view_once, &v.role_mention_ids, &v.mention_ids)?;
     if let Some(reply) = &v.reply_to {
         let (rc, _, _) = message_access(&tx, &p, reply)?;
         if rc != cid {
             return Err(bad("reply must be in this conversation"));
         }
     }
-    if v.body.contains("@everyone") {
+    if v.enc == 0 && v.body.contains("@everyone") {
         owner(&p)?;
         let mut q = tx.prepare("SELECT user_id FROM members WHERE channel_id=?")?;
         v.mention_ids = q
@@ -1179,7 +1199,8 @@ async fn send_message(
     for upload_id in &v.attachment_ids {
         let store = s.media.as_ref().ok_or_else(|| bad("media unavailable"))?;
         let upload = store.inspect(*upload_id, &p.user.id)?;
-        if upload.channel_id != cid || upload.status != housecall_media::Status::Ready {
+        let sealed = identity::is_sealed(&tx, upload_id)?;
+        if upload.channel_id != cid || upload.status != housecall_media::Status::Ready || sealed != (v.enc == 1) {
             return Err(bad("attachment must be clean and in this conversation"));
         }
         if v.view_once && attach_kind::kind(&upload.filename, false) != "image" {
@@ -1208,7 +1229,7 @@ async fn send_message(
         attachments.push(upload);
     }
     let id = secret();
-    tx.execute("INSERT INTO messages(id,channel_id,author_id,body,reply_to,created_at,mention_ids) VALUES(?,?,?,?,?,?,?)",params![id,cid,p.user.id,v.body,v.reply_to,now(),json!(v.mention_ids).to_string()])?;
+    tx.execute("INSERT INTO messages(id,channel_id,author_id,body,reply_to,created_at,mention_ids,enc,envelope) VALUES(?,?,?,?,?,?,?,?,?)",params![id,cid,p.user.id,if v.enc==1{""}else{v.body.as_str()},v.reply_to,now(),json!(v.mention_ids).to_string(),v.enc,v.envelope])?;
     for role in &v.role_mention_ids {
         tx.execute("INSERT INTO message_roles VALUES(?,?)", params![id, role])?;
     }
@@ -1240,7 +1261,11 @@ async fn send_message(
 }
 #[derive(Deserialize)]
 struct EditMessage {
+    #[serde(default)]
     body: String,
+    #[serde(default)]
+    enc: i64,
+    envelope: Option<String>,
     revision: i64,
 }
 async fn edit_message(
@@ -1249,19 +1274,33 @@ async fn edit_message(
     Path(id): Path<String>,
     Json(v): Json<EditMessage>,
 ) -> ApiResult<Value> {
-    body_valid(&v.body)?;
+    if v.enc != 0 && v.enc != 1 {
+        return Err(bad("invalid enc"));
+    }
+    if v.enc == 0 {
+        if v.envelope.is_some() {
+            return Err(bad("envelope requires enc"));
+        }
+        body_valid(&v.body)?;
+    }
     let mut db = s.db.lock().unwrap();
     let tx = db.transaction()?;
     let (cid, author, revision) = message_access(&tx, &p, &id)?;
     if author != p.user.id {
         return Err(forbidden());
     }
+    let stored_enc: i64 = tx.query_row("SELECT enc FROM messages WHERE id=?", [&id], |r| r.get(0))?;
+    let sealed_dm = identity::is_encrypted_dm(&tx, &cid)?;
+    if stored_enc != v.enc {
+        return Err(identity::invalid_envelope());
+    }
+    identity::check_send(&tx, &p.user.id, &cid, sealed_dm, v.enc, v.envelope.as_deref(), &v.body, false, &[], &[])?;
     if revision != v.revision {
         return Err(conflict("message changed; reload before editing"));
     }
     tx.execute(
-        "UPDATE messages SET body=?,edited_at=?,revision=revision+1 WHERE id=?",
-        params![v.body, now(), id],
+        "UPDATE messages SET body=?,envelope=?,edited_at=?,revision=revision+1 WHERE id=?",
+        params![if v.enc == 1 { "" } else { v.body.as_str() }, v.envelope, now(), id],
     )?;
     emit(&tx, &cid, "message.edited", json!({"message_id":id}))?;
     let result = message(&tx, &id, &p.user.id)?;
