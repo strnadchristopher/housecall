@@ -1,7 +1,9 @@
 use crate::{conflict, emit, member, now, ApiError, ApiResult, AppState, Principal};
 use axum::{
-    extract::{Path, State},
-    http::StatusCode,
+    body::Bytes,
+    extract::{DefaultBodyLimit, Path, State},
+    http::{header, HeaderMap, HeaderValue, StatusCode},
+    response::{IntoResponse, Response},
     routing::{delete, get, post, put},
     Extension, Json, Router,
 };
@@ -18,6 +20,11 @@ pub fn routes() -> Router<AppState> {
         .route("/channels/{id}/voice/join", post(join))
         .route("/channels/{id}/voice/stats", get(stats))
         .route("/channels/{id}/voice/state", put(put_state))
+        .route(
+            "/channels/{id}/voice/preview",
+            put(put_preview).layer(DefaultBodyLimit::max(MAX_PREVIEW_BYTES)),
+        )
+        .route("/channels/{id}/voice/preview/{user_id}", get(get_preview))
         .route("/voice/rooms", get(rooms))
         .route("/channels/{id}/voice/{peer}", delete(leave))
 }
@@ -166,6 +173,87 @@ pub fn rooms_json(db: &Connection, live: &Live, user: &str, peers: &[(String, St
         })
         .collect();
     json!({"rooms":rooms,"states":states})
+}
+const MAX_PREVIEW_BYTES: usize = 64 * 1024;
+const PREVIEW_INTERVAL_MS: i64 = 10_000;
+/// Store a JPEG thumbnail of your own screen share, for the channel's member list. Only while
+/// your state says `sharing`, at most one per 10 seconds, memory only.
+async fn put_preview(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(room): Path<String>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> ApiResult<Value> {
+    let db = s.db.lock().unwrap();
+    member(&db, &p.user.id, &room)?;
+    let key = (room, p.user.id);
+    let sharing = s
+        .live
+        .states
+        .lock()
+        .unwrap()
+        .get(&key)
+        .is_some_and(|st| st.sharing);
+    if !sharing {
+        return Err(conflict("not sharing a screen"));
+    }
+    let is_jpeg_type = headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.trim().eq_ignore_ascii_case("image/jpeg"));
+    if !is_jpeg_type || !body.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        return Err(ApiError(
+            StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            "previews must be image/jpeg",
+        ));
+    }
+    let at = now();
+    let mut previews = s.live.previews.lock().unwrap();
+    if previews
+        .get(&key)
+        .is_some_and(|old| at - old.stored_at < PREVIEW_INTERVAL_MS)
+    {
+        return Err(ApiError(
+            StatusCode::TOO_MANY_REQUESTS,
+            "one preview every 10 seconds",
+        ));
+    }
+    previews.insert(
+        key,
+        Preview {
+            bytes: body.to_vec(),
+            stored_at: at,
+        },
+    );
+    Ok(Json(json!({"ok":true,"stored_at":at})))
+}
+async fn get_preview(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path((room, user)): Path<(String, String)>,
+) -> Result<Response, ApiError> {
+    {
+        let db = s.db.lock().unwrap();
+        member(&db, &p.user.id, &room)?;
+    }
+    let bytes = s
+        .live
+        .previews
+        .lock()
+        .unwrap()
+        .get(&(room, user))
+        .map(|pv| pv.bytes.clone())
+        .ok_or_else(crate::missing)?;
+    let mut response = bytes.into_response();
+    let h = response.headers_mut();
+    h.insert(header::CONTENT_TYPE, HeaderValue::from_static("image/jpeg"));
+    h.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    h.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    Ok(response)
 }
 #[derive(Deserialize)]
 struct StateBody {

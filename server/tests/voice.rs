@@ -524,6 +524,187 @@ async fn a_0_3_0_client_reading_only_rooms_sees_the_same_shape_as_before() {
         );
     }
 }
+// ---- B3: stream preview -----------------------------------------------------------------
+
+fn jpeg(len: usize) -> Vec<u8> {
+    let mut bytes = vec![0xFF, 0xD8, 0xFF, 0xE0];
+    bytes.resize(len - 2, 7);
+    bytes.extend_from_slice(&[0xFF, 0xD9]);
+    bytes
+}
+fn preview_path(w: &World) -> String {
+    format!("/api/channels/{}/voice/preview", w.lounge)
+}
+async fn put_preview(w: &World, who: &Value, body: Vec<u8>) -> Reply {
+    raw(&w.api, "PUT", &preview_path(w), who, "image/jpeg", body).await
+}
+async fn get_preview(w: &World, who: &Value, of: &str) -> Reply {
+    call(
+        &w.api,
+        "GET",
+        &format!("{}/{of}", preview_path(w)),
+        who,
+        Value::Null,
+    )
+    .await
+}
+/// Alice is in the call and sharing her screen.
+async fn sharing(w: &World) {
+    enter(w, &w.alice_id);
+    let r = call(&w.api, "PUT", &state_path(w), &w.alice, json!({"sharing":true})).await;
+    assert_eq!(r.status, StatusCode::OK);
+}
+/// Pretend the last preview was stored long ago, so the rate limit has passed.
+fn age_preview(w: &World) {
+    for p in w.state.live.previews.lock().unwrap().values_mut() {
+        p.stored_at -= 11_000;
+    }
+}
+#[tokio::test]
+async fn a_preview_round_trips_with_safe_headers_to_members() {
+    let w = world().await;
+    sharing(&w).await;
+    let image = jpeg(5_000);
+    let put = put_preview(&w, &w.alice, image.clone()).await;
+    assert_eq!(put.status, StatusCode::OK, "{:?}", put.json());
+    let got = get_preview(&w, &w.owner, &w.alice_id).await;
+    assert_eq!(got.status, StatusCode::OK);
+    assert_eq!(got.bytes, image);
+    assert_eq!(got.headers["content-type"], "image/jpeg");
+    assert_eq!(got.headers["cache-control"], "no-store");
+    assert_eq!(got.headers["x-content-type-options"], "nosniff");
+}
+#[tokio::test]
+async fn a_preview_needs_an_active_share() {
+    let w = world().await;
+    // Not in the call at all.
+    assert_eq!(
+        put_preview(&w, &w.alice, jpeg(500)).await.status,
+        StatusCode::CONFLICT
+    );
+    // In the call but not sharing.
+    enter(&w, &w.alice_id);
+    assert_eq!(
+        put_preview(&w, &w.alice, jpeg(500)).await.status,
+        StatusCode::CONFLICT
+    );
+}
+#[tokio::test]
+async fn preview_size_limit_is_64_kilobytes() {
+    let w = world().await;
+    sharing(&w).await;
+    assert_eq!(
+        put_preview(&w, &w.alice, jpeg(64 * 1024 + 1)).await.status,
+        StatusCode::PAYLOAD_TOO_LARGE
+    );
+    assert_eq!(
+        put_preview(&w, &w.alice, jpeg(64 * 1024)).await.status,
+        StatusCode::OK
+    );
+}
+#[tokio::test]
+async fn previews_are_limited_to_one_per_ten_seconds() {
+    let w = world().await;
+    sharing(&w).await;
+    assert_eq!(
+        put_preview(&w, &w.alice, jpeg(500)).await.status,
+        StatusCode::OK
+    );
+    assert_eq!(
+        put_preview(&w, &w.alice, jpeg(600)).await.status,
+        StatusCode::TOO_MANY_REQUESTS
+    );
+    // The refused one did not replace the stored image.
+    assert_eq!(get_preview(&w, &w.owner, &w.alice_id).await.bytes.len(), 500);
+    age_preview(&w);
+    assert_eq!(
+        put_preview(&w, &w.alice, jpeg(600)).await.status,
+        StatusCode::OK
+    );
+    assert_eq!(get_preview(&w, &w.owner, &w.alice_id).await.bytes.len(), 600);
+}
+#[tokio::test]
+async fn only_jpeg_is_accepted() {
+    let w = world().await;
+    sharing(&w).await;
+    let wrong_type = raw(&w.api, "PUT", &preview_path(&w), &w.alice, "image/svg+xml", jpeg(500)).await;
+    assert_eq!(wrong_type.status, StatusCode::UNSUPPORTED_MEDIA_TYPE);
+    let not_jpeg = raw(
+        &w.api,
+        "PUT",
+        &preview_path(&w),
+        &w.alice,
+        "image/jpeg",
+        b"<svg xmlns='http://www.w3.org/2000/svg'></svg>".to_vec(),
+    )
+    .await;
+    assert_eq!(not_jpeg.status, StatusCode::UNSUPPORTED_MEDIA_TYPE);
+}
+#[tokio::test]
+async fn non_members_can_neither_read_nor_write_previews() {
+    let w = world().await;
+    sharing(&w).await;
+    put_preview(&w, &w.alice, jpeg(500)).await;
+    evict_carol(&w);
+    assert_eq!(
+        get_preview(&w, &w.carol, &w.alice_id).await.status,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        put_preview(&w, &w.carol, jpeg(500)).await.status,
+        StatusCode::FORBIDDEN
+    );
+}
+#[tokio::test]
+async fn no_preview_is_a_404() {
+    let w = world().await;
+    sharing(&w).await;
+    assert_eq!(
+        get_preview(&w, &w.owner, &w.alice_id).await.status,
+        StatusCode::NOT_FOUND
+    );
+}
+#[tokio::test]
+async fn stopping_the_share_clears_the_preview() {
+    let w = world().await;
+    sharing(&w).await;
+    put_preview(&w, &w.alice, jpeg(500)).await;
+    call(&w.api, "PUT", &state_path(&w), &w.alice, json!({"sharing":false})).await;
+    assert_eq!(
+        get_preview(&w, &w.owner, &w.alice_id).await.status,
+        StatusCode::NOT_FOUND
+    );
+}
+#[tokio::test]
+async fn leaving_clears_the_preview_and_a_late_one_is_refused() {
+    let w = world().await;
+    sharing(&w).await;
+    put_preview(&w, &w.alice, jpeg(500)).await;
+    {
+        let db = w.state.db.lock().unwrap();
+        housecall_server::voice::peer_left(&db, &w.state.live, &w.lounge, &w.alice_id);
+    }
+    assert_eq!(
+        get_preview(&w, &w.owner, &w.alice_id).await.status,
+        StatusCode::NOT_FOUND
+    );
+    age_preview(&w);
+    assert_eq!(
+        put_preview(&w, &w.alice, jpeg(500)).await.status,
+        StatusCode::CONFLICT
+    );
+}
+#[tokio::test]
+async fn a_peer_timeout_clears_the_preview() {
+    let w = world().await;
+    sharing(&w).await;
+    put_preview(&w, &w.alice, jpeg(500)).await;
+    housecall_server::voice::reconcile(&w.state, &[], housecall_server::now() + 60_000);
+    assert_eq!(
+        get_preview(&w, &w.owner, &w.alice_id).await.status,
+        StatusCode::NOT_FOUND
+    );
+}
 #[tokio::test]
 async fn rooms_and_states_hide_channels_the_caller_is_not_in() {
     let w = world().await;
