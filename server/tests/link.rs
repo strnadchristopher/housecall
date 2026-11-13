@@ -491,3 +491,40 @@ async fn no_secret_appears_in_logs() {
         assert!(!logs.contains(&secret), "log leaked {secret}");
     }
 }
+
+#[tokio::test]
+async fn the_link_page_is_static_strict_and_sends_nothing() {
+    let (api, _state, _o, _a, _b) = fixture().await;
+    for (path, kind) in [("/link", "text/html"), ("/link.js", "text/javascript"), ("/link.css", "text/css")] {
+        let req = Request::builder().method("GET").uri(path).body(Body::empty()).unwrap();
+        let r = api.clone().oneshot(req).await.unwrap();
+        assert_eq!(r.status(), StatusCode::OK, "{path}");
+        let h = r.headers().clone();
+        assert!(h["content-type"].to_str().unwrap().starts_with(kind));
+        assert_eq!(h["referrer-policy"], "no-referrer");
+        assert_eq!(h["x-content-type-options"], "nosniff");
+        assert_eq!(h["cache-control"], "no-store");
+        let csp = h["content-security-policy"].to_str().unwrap();
+        assert!(csp.contains("script-src 'self'") && !csp.contains("unsafe-inline") && csp.contains("default-src 'self'"), "{csp}");
+        let body = String::from_utf8(r.into_body().collect().await.unwrap().to_bytes().to_vec()).unwrap();
+        if path == "/link" {
+            assert!(body.contains("Open in Housecall") && body.contains("Continue in browser"));
+            assert!(body.contains("housecall://link-scan") && !body.contains("link?c="));
+            assert!(!body.contains("Get the app"));
+            // every script is external
+            for tail in body.split("<script").skip(1) {
+                assert!(tail.trim_start().starts_with("src="), "inline script");
+            }
+        }
+        if path == "/link.js" {
+            for banned in ["fetch(", "XMLHttpRequest", "sendBeacon", "WebSocket", "new Image", "localStorage", "sessionStorage", "document.cookie", "location.href", "location.assign", "console."] {
+                assert!(!body.contains(banned), "link.js uses {banned}");
+            }
+            // the fragment is dropped from the address bar before anything else is read
+            assert!(body.find("replaceState").unwrap() < body.find("getElementById").unwrap());
+            assert!(!body.contains('\u{2014}'));
+        }
+    }
+    let req = Request::builder().method("POST").uri("/link").body(Body::empty()).unwrap();
+    assert_eq!(api.clone().oneshot(req).await.unwrap().status(), StatusCode::METHOD_NOT_ALLOWED);
+}

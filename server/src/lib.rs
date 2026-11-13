@@ -371,7 +371,24 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
     router
         .layer(cors)
         .layer(DefaultBodyLimit::max(128 * 1024))
+        .layer(middleware::from_fn(link_page))
         .layer(middleware::from_fn(headers))
+}
+/// The static page a scanned QR code opens (LINK-V1 section 3). It is answered before routing so the
+/// standard security headers still apply: script and style only from this origin, no referrer.
+async fn link_page(request: axum::extract::Request, next: Next) -> Response {
+    use axum::{http::Method, response::IntoResponse};
+    let (kind, body) = match request.uri().path() {
+        "/link" => ("text/html; charset=utf-8", include_str!("link_page/index.html")),
+        "/link.js" => ("text/javascript; charset=utf-8", include_str!("link_page/link.js")),
+        "/link.css" => ("text/css; charset=utf-8", include_str!("link_page/link.css")),
+        _ => return next.run(request).await,
+    };
+    match *request.method() {
+        Method::GET => ([(axum::http::header::CONTENT_TYPE, kind)], body).into_response(),
+        Method::HEAD => ([(axum::http::header::CONTENT_TYPE, kind)], ()).into_response(),
+        _ => StatusCode::METHOD_NOT_ALLOWED.into_response(),
+    }
 }
 async fn headers(request: axum::extract::Request, next: Next) -> Response {
     let mut r = next.run(request).await;

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Finish logging in</title>
+<link rel="stylesheet" href="/link.css">
+</head>
+<body>
+<main>
+<h1>Finish logging in</h1>
+<p id="host" class="host"></p>
+<noscript><p class="note">This page needs scripts to read your login code. Open Housecall and scan the code from there.</p></noscript>
+<section id="ok" hidden>
+<a id="app" class="button primary" href="housecall://link-scan">Open in Housecall</a>
+<p class="note">Then scan this code again from inside the app.</p>
+<a id="web" class="button" href="/">Continue in browser</a>
+<p class="note">A browser loads Housecall from this server, so whoever runs it could keep a copy of your security key. The app doesn't have this risk.</p>
+<p class="note">To log in to the Housecall app, open it and scan this code again from there.</p>
+</section>
+<section id="bad" hidden>
+<p class="note">This isn't a Housecall login code.</p>
+</section>
+</main>
+<script src="/link.js"></script>
+</body>
+</html>
