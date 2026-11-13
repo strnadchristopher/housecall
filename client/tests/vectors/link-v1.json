@@ -1,0 +1,219 @@
+{
+  "spec": "docs/security/LINK-V1.md",
+  "generator": "client/scripts/security-vectors.mjs",
+  "note": "Fixed keys for testing only. Hex is lowercase; b64u is base64url without padding.",
+  "constants": {
+    "transcript_prefix": "housecall link v1",
+    "info_wrap": "housecall link v1 wrap",
+    "info_claim": "housecall link v1 claim",
+    "info_code": "housecall link v1 code",
+    "code_rule": "u32be(first 4 bytes of code output) mod 100, two digits, leading zero kept"
+  },
+  "origin": "https://housecall.example.test",
+  "link_id_hex": "8225e96943baf1a9fa848d610f40fac5",
+  "secret_hex": "31dd706eb369dd1da7b82796d802956fd0afb33813a8ae748269ea749f3a120d",
+  "secret_b64u": "Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0",
+  "secret_sha256_hex": "08644b5912a361db1ad048d84cae811881cb73c85f51296f8e75a76c4c2a3c0a",
+  "showing": {
+    "ephemeral_priv": "091ee58b1d4fccb6a86983b5964af1748b97f1117b229fd0b6f7aa90b31511bc",
+    "ephemeral_pub": "8d07e60ace551701b714129cf8bd3ca0a0f8eb9cee04e0bf56fe8121210ad03c",
+    "ephemeral_pub_b64u": "jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw"
+  },
+  "claiming": {
+    "ephemeral_priv": "a8c01a2739c88e79fbcf4b469f48e47ba99242c87c1fed1e8d51e8fb9f345736",
+    "ephemeral_pub": "c5dea9a16d7f87e18273a391a143e29fc7e0d469bc138fc6dc2b6b2dd16f4a76",
+    "ephemeral_pub_b64u": "xd6poW1_h-GCc6ORoUPin8fg1Gm8E4_G3CtrLdFvSnY"
+  },
+  "attacker": {
+    "ephemeral_priv": "c26b1fc86594eba86cdd08a82733d5835a26984d0f24185f672abb81fae1b21e",
+    "ephemeral_pub": "8b844d4b9052400028561f218ca67fb242a2fdb0938b586918e4c62f039bb90f"
+  },
+  "qr_text": "https://housecall.example.test/link#hcl1.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw",
+  "deep_link": "housecall://link?c=hcl1.aHR0cHM6Ly9ob3VzZWNhbGwuZXhhbXBsZS50ZXN0.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw",
+  "shared_secret": "0f7458678779bd643abccd09a209b3b0e66920afd601b63805369faeccabc806",
+  "transcript_hex": "686f75736563616c6c206c696e6b2076318225e96943baf1a9fa848d610f40fac531dd706eb369dd1da7b82796d802956fd0afb33813a8ae748269ea749f3a120d8d07e60ace551701b714129cf8bd3ca0a0f8eb9cee04e0bf56fe8121210ad03cc5dea9a16d7f87e18273a391a143e29fc7e0d469bc138fc6dc2b6b2dd16f4a76",
+  "salt": "f1b8ec77280b38519a4b26b8fae63126ba6a54a3401d05ab3eceaa9b2e224226",
+  "wrap_key": "c06e4fbd20e7a7bfd2e6f94baf5f4c8cd4df0abe308c09732dc88aa6a943cf29",
+  "claim_tag": "2ee7faa158ecf6bcaa97f4fe4691b458",
+  "claim_tag_b64u": "Luf6oVjs9ryql_T-RpG0WA",
+  "code_bytes": "523e8dfe",
+  "code": "94",
+  "code_reduction_examples": [
+    {
+      "bytes_hex": "00000000",
+      "u32be": 0,
+      "code": "00"
+    },
+    {
+      "bytes_hex": "00000063",
+      "u32be": 99,
+      "code": "99"
+    },
+    {
+      "bytes_hex": "00000064",
+      "u32be": 100,
+      "code": "00"
+    },
+    {
+      "bytes_hex": "ffffffff",
+      "u32be": 4294967295,
+      "code": "95"
+    },
+    {
+      "bytes_hex": "12345678",
+      "u32be": 305419896,
+      "code": "96"
+    }
+  ],
+  "wrapped_keys": {
+    "identity_seed": "adcacc8342b638f543feaff2f5cfd11703ee355259f6cc5c99c060ddf73c7454",
+    "identity_key_b64u": "AbH5jbiGvuvaHV3kG_6oZEcMoJ3Az7nyG1EVfp3iztwbAvgNSBLgTvFUlXIMURiJe_0OM7rlejJXE4AvmTl6XFE",
+    "pins": [
+      {
+        "origin": "https://housecall.example.test",
+        "user_id": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0",
+        "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI",
+        "key_rev": 1,
+        "verified": true
+      }
+    ],
+    "pins_json_utf8": "[{\"origin\":\"https://housecall.example.test\",\"user_id\":\"0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0\",\"identity_key\":\"AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI\",\"key_rev\":1,\"verified\":true}]",
+    "nonce": "da1e42bf1b0c7b4865215e5bec40dd893d4366b8632be9bf",
+    "associated_data_hex": "018225e96943baf1a9fa848d610f40fac5",
+    "blob_hex": "01da1e42bf1b0c7b4865215e5bec40dd893d4366b8632be9bf392e6fdcf1eacb236d86792f9a71128e0c091646bfc21f86e965de11106a620eb5cf1b9bd1162d5913b7b41f6026147d452c899983f0fa0affbf2f721bcc21995dd64171de15fa8ec8355c141f9529796a2df6d93a27eb82b6dfe1b742cbd5d382c96f3b691ddcc646344bbb2e7564524ca97ec990b562dd008a75ad4a59d1e2e5f1f0d41c713aacc1ef067af3fa533a2148fadb2b216da0df2d302e1718e05269d78e78297a80d79cf4de31a05f8c252896cdc35da11192c95bb7b865e47102d2d7a8378a12043ac5b7789b56ef39eee445d5727b7efd2bf3c39a9c35a5c035ddd5063bc506afc845baa021593da6679ebfbed72bbfb7341c44f3554317f58ab23d05faa03a086a1a63c57e8e695960da7f5cf6c76580dd69954738afd2ca33ae812cf73900a55729922c0d1f20fa",
+    "blob_b64u": "AdoeQr8bDHtIZSFeW-xA3Yk9Q2a4Yyvpvzkub9zx6ssjbYZ5L5pxEo4MCRZGv8Ifhull3hEQamIOtc8bm9EWLVkTt7QfYCYUfUUsiZmD8PoK_78vchvMIZld1kFx3hX6jsg1XBQflSl5ai322Ton64K23-G3QsvV04LJbztpHdzGRjRLuy51ZFJMqX7JkLVi3QCKda1KWdHi5fHw1BxxOqzB7wZ68_pTOiFI-tsrIW2g3y0wLhcY4FJp1454KXqA15z03jGgX4wlKJbNw12hEZLJW7e4ZeRxAtLXqDeKEgQ6xbd4m1bvOe7kRdVye379K_PDmpw1pcA13dUGO8UGr8hFuqAhWT2mZ56_vtcrv7c0HETzVUMX9YqyPQX6oDoIahpjxX6OaVlg2n9c9sdlgN1plUc4r9LKM66BLPc5AKVXKZIsDR8g-g"
+  },
+  "claim_request_example": {
+    "link_id": "8225e96943baf1a9fa848d610f40fac5",
+    "secret": "Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0",
+    "device_name": "Pixel 9",
+    "device_key": "9875939317a8ad9e1ce9d18b20413f1ec709ace4cca43de4ce06dc8acef51cb3",
+    "ephemeral_pub": "xd6poW1_h-GCc6ORoUPin8fg1Gm8E4_G3CtrLdFvSnY",
+    "claim_tag": "Luf6oVjs9ryql_T-RpG0WA"
+  },
+  "negative": [
+    {
+      "name": "claim tag from a server that swapped the claiming key and does not know A",
+      "kind": "claim_tag",
+      "claiming_pub_seen_by_showing_device": "8b844d4b9052400028561f218ca67fb242a2fdb0938b586918e4c62f039bb90f",
+      "presented_tag": "2ee7faa158ecf6bcaa97f4fe4691b458",
+      "recomputed_tag": "26542270bb42795d3bc01ea110c76a57",
+      "expect": "reject: tags differ, showing device denies the link"
+    },
+    {
+      "name": "mismatched confirmation number: server swapped the claiming key and knows A",
+      "kind": "code",
+      "claiming_device_code": "94",
+      "showing_device_code": "61",
+      "expect": "codes differ, the person taps Deny"
+    },
+    {
+      "name": "wrapped_keys opened with the key a swapped claim would produce",
+      "kind": "wrapped_keys",
+      "wrapped_keys_hex": "01da1e42bf1b0c7b4865215e5bec40dd893d4366b8632be9bf392e6fdcf1eacb236d86792f9a71128e0c091646bfc21f86e965de11106a620eb5cf1b9bd1162d5913b7b41f6026147d452c899983f0fa0affbf2f721bcc21995dd64171de15fa8ec8355c141f9529796a2df6d93a27eb82b6dfe1b742cbd5d382c96f3b691ddcc646344bbb2e7564524ca97ec990b562dd008a75ad4a59d1e2e5f1f0d41c713aacc1ef067af3fa533a2148fadb2b216da0df2d302e1718e05269d78e78297a80d79cf4de31a05f8c252896cdc35da11192c95bb7b865e47102d2d7a8378a12043ac5b7789b56ef39eee445d5727b7efd2bf3c39a9c35a5c035ddd5063bc506afc845baa021593da6679ebfbed72bbfb7341c44f3554317f58ab23d05faa03a086a1a63c57e8e695960da7f5cf6c76580dd69954738afd2ca33ae812cf73900a55729922c0d1f20fa",
+      "wrap_key_hex": "9a1f1deb9c723ecb9fcd3b510edb82f562298a474405605db7af651cfe74a66f",
+      "expect": "reject",
+      "error": "invalid tag"
+    },
+    {
+      "name": "wrapped_keys bound to another link id",
+      "kind": "wrapped_keys",
+      "wrapped_keys_hex": "01da1e42bf1b0c7b4865215e5bec40dd893d4366b8632be9bf392e6fdcf1eacb236d86792f9a71128e0c091646bfc21f86e965de11106a620eb5cf1b9bd1162d5913b7b41f6026147d452c899983f0fa0affbf2f721bcc21995dd64171de15fa8ec8355c141f9529796a2df6d93a27eb82b6dfe1b742cbd5d382c96f3b691ddcc646344bbb2e7564524ca97ec990b562dd008a75ad4a59d1e2e5f1f0d41c713aacc1ef067af3fa533a2148fadb2b216da0df2d302e1718e05269d78e78297a80d79cf4de31a05f8c252896cdc35da11192c95bb7b865e47102d2d7a8378a12043ac5b7789b56ef39eee445d5727b7efd2bf3c39a9c35a5c035ddd5063bc506afc845baa021593da6679ebfbed72bbfb7341c44f3554317f58ab23d05faa03a086a1a63c57e8e695960da7f5cf6c76580dd69954738afd2ca33ae812cf73900a55729922c0d1f20fa",
+      "link_id_hex": "7b605bba1519009ac2bb959cb605b19c",
+      "expect": "reject",
+      "error": "invalid tag"
+    },
+    {
+      "name": "wrapped_keys wrong version byte",
+      "kind": "wrapped_keys",
+      "wrapped_keys_hex": "02da1e42bf1b0c7b4865215e5bec40dd893d4366b8632be9bf392e6fdcf1eacb236d86792f9a71128e0c091646bfc21f86e965de11106a620eb5cf1b9bd1162d5913b7b41f6026147d452c899983f0fa0affbf2f721bcc21995dd64171de15fa8ec8355c141f9529796a2df6d93a27eb82b6dfe1b742cbd5d382c96f3b691ddcc646344bbb2e7564524ca97ec990b562dd008a75ad4a59d1e2e5f1f0d41c713aacc1ef067af3fa533a2148fadb2b216da0df2d302e1718e05269d78e78297a80d79cf4de31a05f8c252896cdc35da11192c95bb7b865e47102d2d7a8378a12043ac5b7789b56ef39eee445d5727b7efd2bf3c39a9c35a5c035ddd5063bc506afc845baa021593da6679ebfbed72bbfb7341c44f3554317f58ab23d05faa03a086a1a63c57e8e695960da7f5cf6c76580dd69954738afd2ca33ae812cf73900a55729922c0d1f20fa",
+      "expect": "reject",
+      "server_expect": 400,
+      "error": "unknown wrapped_keys version"
+    },
+    {
+      "name": "wrapped_keys truncated by 1 byte",
+      "kind": "wrapped_keys",
+      "wrapped_keys_hex": "01da1e42bf1b0c7b4865215e5bec40dd893d4366b8632be9bf392e6fdcf1eacb236d86792f9a71128e0c091646bfc21f86e965de11106a620eb5cf1b9bd1162d5913b7b41f6026147d452c899983f0fa0affbf2f721bcc21995dd64171de15fa8ec8355c141f9529796a2df6d93a27eb82b6dfe1b742cbd5d382c96f3b691ddcc646344bbb2e7564524ca97ec990b562dd008a75ad4a59d1e2e5f1f0d41c713aacc1ef067af3fa533a2148fadb2b216da0df2d302e1718e05269d78e78297a80d79cf4de31a05f8c252896cdc35da11192c95bb7b865e47102d2d7a8378a12043ac5b7789b56ef39eee445d5727b7efd2bf3c39a9c35a5c035ddd5063bc506afc845baa021593da6679ebfbed72bbfb7341c44f3554317f58ab23d05faa03a086a1a63c57e8e695960da7f5cf6c76580dd69954738afd2ca33ae812cf73900a55729922c0d1f20",
+      "expect": "reject",
+      "error": "invalid tag"
+    },
+    {
+      "name": "wrapped_keys ciphertext bit flipped",
+      "kind": "wrapped_keys",
+      "wrapped_keys_hex": "01da1e42bf1b0c7b4865215e5bec40dd893d4366b8632be9bf392e6fdcf1ebcb236d86792f9a71128e0c091646bfc21f86e965de11106a620eb5cf1b9bd1162d5913b7b41f6026147d452c899983f0fa0affbf2f721bcc21995dd64171de15fa8ec8355c141f9529796a2df6d93a27eb82b6dfe1b742cbd5d382c96f3b691ddcc646344bbb2e7564524ca97ec990b562dd008a75ad4a59d1e2e5f1f0d41c713aacc1ef067af3fa533a2148fadb2b216da0df2d302e1718e05269d78e78297a80d79cf4de31a05f8c252896cdc35da11192c95bb7b865e47102d2d7a8378a12043ac5b7789b56ef39eee445d5727b7efd2bf3c39a9c35a5c035ddd5063bc506afc845baa021593da6679ebfbed72bbfb7341c44f3554317f58ab23d05faa03a086a1a63c57e8e695960da7f5cf6c76580dd69954738afd2ca33ae812cf73900a55729922c0d1f20fa",
+      "expect": "reject",
+      "error": "invalid tag"
+    },
+    {
+      "name": "QR with a query string",
+      "kind": "qr",
+      "text": "https://housecall.example.test/link?x=1#hcl1.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw",
+      "expect": "reject",
+      "error": "wrong path"
+    },
+    {
+      "name": "QR with plain http to a public host",
+      "kind": "qr",
+      "text": "http://housecall.example.test/link#hcl1.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw",
+      "expect": "reject",
+      "error": "bad origin"
+    },
+    {
+      "name": "QR with wrong version tag hcl2",
+      "kind": "qr",
+      "text": "https://housecall.example.test/link#hcl2.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw",
+      "expect": "reject",
+      "error": "not a Housecall link code"
+    },
+    {
+      "name": "QR with upper-case link id",
+      "kind": "qr",
+      "text": "https://housecall.example.test/link#hcl1.8225E96943BAF1A9FA848D610F40FAC5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw",
+      "expect": "reject",
+      "error": "bad link id"
+    },
+    {
+      "name": "QR with padded base64",
+      "kind": "qr",
+      "text": "https://housecall.example.test/link#hcl1.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw=",
+      "expect": "reject",
+      "error": "bad base64url"
+    },
+    {
+      "name": "QR with a fifth field",
+      "kind": "qr",
+      "text": "https://housecall.example.test/link#hcl1.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw.extra",
+      "expect": "reject",
+      "error": "bad link code"
+    },
+    {
+      "name": "QR with credentials in the origin",
+      "kind": "qr",
+      "text": "https://user@housecall.example.test/link#hcl1.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw",
+      "expect": "reject",
+      "error": "bad origin"
+    },
+    {
+      "name": "QR with a path before /link",
+      "kind": "qr",
+      "text": "https://housecall.example.test/x/link#hcl1.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw",
+      "expect": "reject",
+      "error": "bad origin"
+    },
+    {
+      "name": "deep link with an extra parameter",
+      "kind": "deep_link",
+      "text": "housecall://link?c=hcl1.aHR0cHM6Ly9ob3VzZWNhbGwuZXhhbXBsZS50ZXN0.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.jQfmCs5VFwG3FBKc-L08oKD465zuBOC_Vv6BISEK0Dw&y=2",
+      "expect": "reject",
+      "error": "bad base64url"
+    },
+    {
+      "name": "small-order claiming key (all zero)",
+      "kind": "ephemeral",
+      "claiming_pub": "0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "reject",
+      "error": "invalid private or public key received"
+    }
+  ]
+}
