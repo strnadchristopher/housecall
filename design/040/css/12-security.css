@@ -1,0 +1,99 @@
+/*
+ * HC-040 section 12: how security works. Three slides after an account is first created, and the
+ * same three ideas as a page in Settings with the "What the host can see" table.
+ * PASTE: at the end of client/src/ui/styles/index.css.
+ */
+
+/* ---- Illustrations (viewBox 0 0 240 180). Flat tone, one lit thing per picture. -------------- */
+.hc-ill { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; overflow: visible; pointer-events: none; }
+.hc-ill__wall { fill: color-mix(in oklab, var(--hc-text) 13%, var(--hc-stage)); }
+.hc-ill__paper { fill: color-mix(in oklab, var(--hc-text) 20%, var(--hc-stage)); }
+.hc-ill__ink { fill: var(--hc-text); }
+.hc-ill__lit { fill: var(--hc-live); }
+.hc-ill__leaf { fill: var(--hc-on-accent); opacity: 0.38; transform-box: fill-box; transform-origin: left center; }
+.hc-ill__pane { fill: color-mix(in oklab, var(--hc-live) 42%, transparent); }
+.hc-ill__cut { fill: var(--hc-stage); }
+.hc-ill__word { fill: color-mix(in oklab, var(--hc-text) 18%, transparent); }
+.hc-ill__stop { stop-color: var(--hc-live); }
+.hc-ill__rule, .hc-ill__crease, .hc-ill__hole { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.hc-ill__rule { stroke: var(--hc-line-soft); stroke-width: 2; }
+.hc-ill__rule.is-dotted { stroke-width: 2.5; stroke-dasharray: 0.1 7; }
+.hc-ill__crease { stroke: var(--hc-stage); stroke-width: 2.5; }
+.hc-ill__hole { stroke: var(--hc-on-accent); stroke-width: 2.6; }
+.hc-ill__env, .hc-ill__seal, .hc-ill__key, .hc-ill__spill { transform-box: fill-box; transform-origin: center; }
+.hc-ill__spill { transform-origin: center top; }
+.hc-ill__key { transform-origin: 19% 60%; } /* the middle of the bow: the key turns in the hand */
+
+/* ---- Slides ---------------------------------------------------------------------------------- */
+.hc-slides .hc-onb__top { justify-content: space-between; }
+.hc-slides .hc-onb__top > :only-child { margin-inline-start: auto; }
+/* Progress: three doorways. The one you are in is lit. */
+.hc-slides__steps { display: flex; align-items: flex-end; gap: var(--hc-space-2); padding-inline-end: var(--hc-space-1); }
+.hc-slides__steps li { width: 10px; height: 12px; border-radius: 50% 50% 2px 2px / 42% 42% 2px 2px; background: var(--hc-wash-press); }
+.hc-slides__steps li.is-done { background: var(--hc-text-muted); }
+.hc-slides__steps li.is-current { background: var(--hc-live); }
+.hc-slide { flex: 1; display: flex; flex-direction: column; gap: var(--hc-space-3); }
+.hc-slide > .hc-ill { max-width: 20rem; align-self: center; margin-block: auto; }
+.hc-slide .hc-onb__title { gap: var(--hc-space-2); padding-block: var(--hc-space-2) 0; }
+.hc-slide .hc-onb__title p { line-height: 1.5; }
+.hc-slide .hc-onb__title p.hc-slide__lede { color: var(--hc-text); }
+@media (min-width: 47.51em) {
+  .hc-slides .hc-onb__screen { justify-content: center; }
+  .hc-slide { flex: none; min-height: 29rem; }
+  .hc-slide > .hc-ill { margin-block: 0 var(--hc-space-2); }
+  .hc-slides .hc-onb__actions { margin-top: var(--hc-space-4); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* A slide comes in from the side you are going to (--hc-slide-dir: 1 forward, -1 back). */
+  .hc-slide { animation: hc-slide-in var(--hc-dur-slow) var(--hc-ease-out) backwards; }
+  .hc-slide[data-state="exit"] { animation: hc-slide-out var(--hc-dur-fast) var(--hc-ease-in) forwards; }
+  @keyframes hc-slide-in { from { opacity: 0; transform: translateX(calc(var(--hc-space-5) * var(--hc-slide-dir, 1))); } }
+  @keyframes hc-slide-out { to { opacity: 0; transform: translateX(calc(var(--hc-space-4) * var(--hc-slide-dir, 1) * -1)); } }
+
+  /* Each picture moves once. The drawn state is the end of the motion. */
+  .hc-slide .hc-ill--house .hc-ill__leaf { animation: hc-ill-door var(--hc-dur-slower) var(--hc-ease-spring) var(--hc-dur-base) backwards; }
+  .hc-slide .hc-ill--house .hc-ill__spill { animation: hc-ill-spill var(--hc-dur-slower) var(--hc-ease-out) var(--hc-dur-base) backwards; }
+  .hc-slide .hc-ill--house .hc-ill__pane { animation: hc-ill-fade var(--hc-dur-slow) var(--hc-ease-out) backwards; animation-delay: calc(var(--hc-dur-slower) + var(--hc-stagger) * var(--i, 0)); }
+  .hc-slide .hc-ill--letter .hc-ill__env { animation: hc-ill-carry var(--hc-dur-slower) var(--hc-ease-out) backwards; }
+  .hc-slide .hc-ill--letter .hc-ill__seal { animation: hc-ill-stamp var(--hc-dur-slow) var(--hc-ease-spring) var(--hc-dur-slow) backwards; }
+  .hc-slide .hc-ill--letter .hc-ill__speed { animation: hc-ill-fade var(--hc-dur-slow) var(--hc-ease-out) var(--hc-dur-slow) backwards; }
+  .hc-slide .hc-ill--key .hc-ill__key { animation: hc-ill-turn var(--hc-dur-slower) var(--hc-ease-spring) var(--hc-stagger) backwards; }
+  .hc-slide .hc-ill--key .hc-ill__word { animation: hc-ill-fade var(--hc-dur-base) var(--hc-ease-out) backwards; animation-delay: calc(var(--hc-dur-slow) + 25ms * var(--i, 0)); }
+  @keyframes hc-ill-door { from { transform: scaleX(2.35); } }
+  @keyframes hc-ill-spill { from { opacity: 0; transform: scaleY(0.4); } }
+  @keyframes hc-ill-fade { from { opacity: 0; } }
+  @keyframes hc-ill-carry { from { opacity: 0; transform: translateX(-36px); } }
+  @keyframes hc-ill-stamp { from { opacity: 0; transform: scale(1.7); } }
+  @keyframes hc-ill-turn { from { opacity: 0; transform: rotate(-18deg); } }
+}
+
+/* ---- The page in Settings -------------------------------------------------------------------- */
+.hc-explain { display: flex; flex-direction: column; gap: var(--hc-space-5); }
+.hc-explain h3 { font-size: var(--hc-text-md); }
+.hc-explain__part { display: flex; flex-direction: column; gap: var(--hc-space-2); }
+.hc-explain__part > p { color: var(--hc-text-muted); font-size: var(--hc-text-sm); line-height: 1.5; }
+/* The three ideas: a small picture and a few lines each. */
+.hc-points { display: flex; flex-direction: column; gap: var(--hc-space-4); }
+.hc-point { display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: var(--hc-space-4); align-items: center; }
+.hc-point > span { display: flex; flex-direction: column; gap: 2px; }
+.hc-point small { font-size: var(--hc-text-sm); line-height: 1.45; }
+
+/* What the host can see. A real table; each row is a tile. An eye: the host can see it. A lock: it is sealed. */
+.hc-hostsees { display: flex; flex-direction: column; gap: 2px; width: 100%; font-size: var(--hc-text-sm); text-align: start; }
+.hc-hostsees caption { text-align: start; font-size: var(--hc-text-md); font-weight: var(--hc-weight-bold); letter-spacing: var(--hc-tracking-tight); padding-bottom: var(--hc-space-2); }
+.hc-hostsees thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.hc-hostsees tbody { display: flex; flex-direction: column; gap: 2px; }
+.hc-hostsees tr { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: var(--hc-space-3); align-items: center; min-height: 56px; padding: var(--hc-space-2) var(--hc-space-4); background: var(--hc-surface-raised); border-radius: var(--hc-radius-sm); }
+.hc-hostsees tr:first-child { border-top-left-radius: var(--hc-radius-md); border-top-right-radius: var(--hc-radius-md); }
+.hc-hostsees tr:last-child { border-bottom-left-radius: var(--hc-radius-md); border-bottom-right-radius: var(--hc-radius-md); }
+.hc-hostsees th { font-weight: var(--hc-weight-regular); text-align: start; line-height: 1.3; }
+.hc-hostsees td { display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: var(--hc-space-2); align-items: start; line-height: 1.3; }
+.hc-hostsees td > .hc-icon { width: 16px; height: 16px; margin-top: 1px; color: var(--hc-text-muted); }
+.hc-hostsees td[data-sees="sealed"] > .hc-icon { color: var(--hc-live); }
+.hc-hostsees td strong { grid-column: 2; }
+.hc-hostsees td small { grid-column: 2; font-size: var(--hc-text-xs); line-height: 1.35; }
+@media (max-width: 47.5em) {
+  .hc-point { grid-template-columns: 72px minmax(0, 1fr); column-gap: var(--hc-space-3); }
+  .hc-hostsees tr { padding-inline: var(--hc-space-3); }
+}
