@@ -353,20 +353,26 @@ function linkKeys({ linkId, secret, showingPub, claimingPub, sharedSecret }) {
   return { salt, wrapKey, claimTag, codeBytes, code };
 }
 
-function sealWrappedKeys(wrapKey, linkId, nonce, identitySeed, pins) {
-  const plaintext = concat(identitySeed, utf8(JSON.stringify(pins)));
+/** plaintext = seed (32) ‖ u32be(recovery_rev) ‖ UTF-8 JSON array of pins */
+function sealWrappedKeys(wrapKey, linkId, nonce, identitySeed, recoveryRev, pins) {
+  if (recoveryRev < 1) throw new Error("recovery_rev must be at least 1");
+  const plaintext = concat(identitySeed, u32be(recoveryRev), utf8(JSON.stringify(pins)));
   const header = new Uint8Array([WRAP_VERSION]);
   const ct = aeadSeal(wrapKey, nonce, plaintext, concat(header, linkId));
   return concat(header, nonce, ct);
 }
+const WRAP_MIN = 1 + 24 + 32 + 4 + 2 + 16; // 79: empty pin list "[]"
 function openWrappedKeys(wrapKey, linkId, blob) {
-  if (blob.length < 1 + 24 + 32 + 2 + 16) throw new Error("wrapped_keys too short");
   if (blob.length > 65536) throw new Error("wrapped_keys too long");
+  if (blob.length < 1) throw new Error("wrapped_keys too short");
   if (blob[0] !== WRAP_VERSION) throw new Error("unknown wrapped_keys version");
+  if (blob.length < WRAP_MIN) throw new Error("wrapped_keys too short");
   const p = aeadOpen(wrapKey, blob.slice(1, 25), blob.slice(25), concat(blob.slice(0, 1), linkId));
-  const pins = JSON.parse(dec.decode(p.slice(32)));
+  const recoveryRev = readU32(p, 32);
+  if (recoveryRev === 0) throw new Error("recovery_rev 0 is invalid");
+  const pins = JSON.parse(dec.decode(p.slice(36)));
   if (!Array.isArray(pins)) throw new Error("pins must be an array");
-  return { identitySeed: p.slice(0, 32), pins };
+  return { identitySeed: p.slice(0, 32), recoveryRev, pins };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -657,9 +663,12 @@ function buildLink() {
     { origin, user_id: "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0", identity_key: b64u(deriveIdentity(fixed("bob identity seed")).identityKey), key_rev: 1, verified: true },
   ];
   const wrapNonce = fixed("wrapped keys nonce", 24);
-  const wrapped = sealWrappedKeys(showSide.wrapKey, linkId, wrapNonce, alice.seed, pins);
+  const wrapRecoveryRev = 2;
+  const wrapped = sealWrappedKeys(showSide.wrapKey, linkId, wrapNonce, alice.seed, wrapRecoveryRev, pins);
   const opened = openWrappedKeys(claimSide.wrapKey, linkId, wrapped);
-  if (!equalBytes(opened.identitySeed, alice.seed)) throw new Error("wrapped keys round trip failed");
+  if (!equalBytes(opened.identitySeed, alice.seed) || opened.recoveryRev !== wrapRecoveryRev) throw new Error("wrapped keys round trip failed");
+  const emptyPins = sealWrappedKeys(showSide.wrapKey, linkId, wrapNonce, alice.seed, 1, []);
+  if (emptyPins.length !== WRAP_MIN) throw new Error("WRAP_MIN is wrong");
 
   const codeFor = (bytes) => (readU32(bytes, 0) % 100).toString().padStart(2, "0");
   const reductions = [
@@ -721,12 +730,16 @@ function buildLink() {
     wrapped_keys: {
       identity_seed: hex(alice.seed),
       identity_key_b64u: b64u(alice.identityKey),
+      recovery_rev: wrapRecoveryRev,
       pins,
       pins_json_utf8: JSON.stringify(pins),
+      plaintext_hex: hex(concat(alice.seed, u32be(wrapRecoveryRev), utf8(JSON.stringify(pins)))),
       nonce: hex(wrapNonce),
       associated_data_hex: hex(concat(new Uint8Array([WRAP_VERSION]), linkId)),
       blob_hex: hex(wrapped),
       blob_b64u: b64u(wrapped),
+      empty_pins_recovery_rev_1_blob_hex: hex(emptyPins),
+      min_length: WRAP_MIN,
     },
     claim_request_example: {
       link_id: hex(linkId),
