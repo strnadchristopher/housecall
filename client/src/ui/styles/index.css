@@ -800,3 +800,155 @@ a { color: var(--hc-accent); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+/* ---- Inherited refinements (index.css) ------------------------------------------------------ */
+
+/* Surfaces (plan A4). */
+body, .hc-root { background: var(--hc-shell); }
+.hc-center, .hc-settings-layer, .hc-onb, .hc-wizard { background: var(--hc-stage); }
+/* Everything that floats shares one fill and the one shadow. */
+.hc-picker__list, .hc-incoming, .hc-confirm-join__panel { background: var(--hc-pop); box-shadow: var(--hc-float); }
+@media (max-width: 68.75em) { .hc-right { background: var(--hc-pop); box-shadow: var(--hc-lip); } }
+@media (max-width: 47.5em) { .hc-left { background: var(--hc-shell); } }
+
+/* Type. Numbers line up; large type is pulled in a hair; text never touches its own ellipsis. */
+body { font-variant-numeric: tabular-nums; text-rendering: optimizeLegibility; }
+h1, h2, h3 { letter-spacing: var(--hc-tracking-tight); text-wrap: balance; }
+p { text-wrap: pretty; }
+::selection { background: color-mix(in oklab, var(--hc-accent) 38%, transparent); }
+
+/* Focus: one ring everywhere, 2 px, 2 px off the edge, in the control's own radius. */
+:focus-visible { outline: 2px solid var(--hc-focus); outline-offset: 2px; }
+
+/* Scrollbars: thin, ink-tinted, no track. */
+* { scrollbar-width: thin; scrollbar-color: var(--hc-line-soft) transparent; }
+
+/* Hover and selection are washes. Hover only where there is a real pointer. */
+.hc-ibtn:active:not(:disabled), .hc-ibtn.is-active, .hc-ibtn.is-active:hover:not(:disabled) { background: var(--hc-wash-selected); color: var(--hc-text); }
+.hc-ibtn--danger.is-active, .hc-ibtn--danger:active:not(:disabled) { background: var(--hc-wash-danger); color: var(--hc-danger); }
+@media (hover: hover) {
+  .hc-ibtn:hover:not(:disabled) { background: var(--hc-wash-hover); color: var(--hc-text); }
+  .hc-ibtn.is-active:hover:not(:disabled) { background: var(--hc-wash-selected); }
+  .hc-ibtn--danger:hover:not(:disabled) { background: var(--hc-wash-danger); color: var(--hc-danger); }
+  .hc-picker__trigger:hover, .hc-chord:hover, .hc-rowbtn:hover { background: var(--hc-wash-hover); }
+}
+.hc-picker[data-open] .hc-picker__trigger { background: var(--hc-wash-selected); }
+.hc-ibtn:active:not(:disabled) .hc-icon, .hc-btn:active:not(:disabled) { transform: scale(0.96); }
+.hc-ibtn .hc-icon, .hc-btn { transition: transform var(--hc-dur-fast) var(--hc-ease-out), background-color var(--hc-dur-fast) var(--hc-ease-out), opacity var(--hc-dur-fast) var(--hc-ease-out); }
+
+/* Buttons: text sits optically centred in Inria Sans (its caps ride high), and danger gets a solid form. */
+.hc-btn { padding-block: var(--hc-space-1) calc(var(--hc-space-1) - 1px); }
+.hc-btn--danger-solid { background: var(--hc-danger); color: var(--hc-on-danger); }
+.hc-btn--wide { width: 100%; min-height: var(--hc-hit); font-size: var(--hc-text-md); }
+
+/* Header: one line, 56 px. The room's glyph, its name, then quiet detail. The server name is not repeated. */
+.hc-header { min-height: 56px; padding: var(--hc-space-2) var(--hc-space-3) var(--hc-space-2) var(--hc-space-4); gap: var(--hc-space-1); }
+.hc-header__title { flex-direction: row; align-items: center; gap: var(--hc-space-2); padding-inline: var(--hc-space-1); line-height: 1.25; }
+.hc-header__glyph { display: grid; flex: none; color: var(--hc-text-muted); }
+.hc-header h1 { font-size: var(--hc-text-lg); flex: 0 1 auto; }
+.hc-header__meta { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: var(--hc-space-3); font-size: var(--hc-text-sm); color: var(--hc-text-muted); white-space: nowrap; padding-top: 2px; }
+.hc-header__bio { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Phones: the detail drops under the name, so the name keeps its room beside the buttons. */
+@media (max-width: 47.5em) {
+  .hc-header { padding: var(--hc-space-1) var(--hc-space-1) var(--hc-space-1) var(--hc-space-1); }
+  .hc-header__title { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: var(--hc-space-2); row-gap: 0; }
+  .hc-header__glyph, .hc-header__title > .hc-avatar { grid-row: 1 / span 2; }
+  .hc-header h1 { grid-column: 2; line-height: 1.2; }
+  .hc-header__meta { grid-column: 2; grid-row: 2; gap: var(--hc-space-1); padding-top: 0; font-size: var(--hc-text-xs); line-height: 1.3; }
+  .hc-header__meta .hc-signal { width: 20px; height: 16px; padding: 1px 2px 2px; margin-inline-start: -2px; }
+}
+
+/* Fields: the composer and inline fields lose the hard outline at rest; the focus ring is the edge. */
+.hc-composer__row { border-color: transparent; background: var(--hc-surface-raised); box-shadow: var(--hc-lip); border-radius: calc(var(--hc-radius-md) + 2px); }
+
+/* The right column shares the shell; its tabs read as type, not buttons. */
+.hc-tab { font-size: var(--hc-text-md); padding-inline: var(--hc-space-2); }
+.hc-side__head h2 { font-size: var(--hc-text-md); }
+
+/* Message rows: the hover band is a wash, so it reads on the stage. */
+.hc-msg.is-open::before { background: var(--hc-wash-hover); }
+@media (hover: hover) { .hc-msg:hover::before { background: var(--hc-wash-hover); } }
+/* A mention is marked by tone and by the name itself. No accent wash on the surface, no bar on the edge. */
+.hc-msg.is-mention::before { background: var(--hc-wash-hover); box-shadow: none; }
+.hc-mention.is-me { background: var(--hc-wash-selected); color: var(--hc-accent); font-weight: var(--hc-weight-bold); }
+.hc-msg__head strong { letter-spacing: var(--hc-tracking-tight); }
+
+/* A real tooltip (replaces title= on anything that carries information). Shown by hover, by keyboard
+   focus, and by a tap on touch (the trigger toggles [data-open]). */
+.hc-tipped { position: relative; }
+.hc-tip {
+  position: absolute; z-index: 20; left: 50%; bottom: calc(100% + var(--hc-space-2)); translate: -50% 0; pointer-events: none; white-space: nowrap;
+  padding: 3px var(--hc-space-2) 2px; border-radius: var(--hc-radius-sm); background: var(--hc-pop); box-shadow: var(--hc-float);
+  color: var(--hc-text); font-size: var(--hc-text-xs); font-weight: var(--hc-weight-regular); line-height: 1.5;
+  opacity: 0; transform: translateY(2px); transition: opacity var(--hc-dur-fast) var(--hc-ease-in), transform var(--hc-dur-fast) var(--hc-ease-in);
+}
+.hc-tip[data-side="start"] { left: 0; translate: 0 0; }
+.hc-tip[data-side="end"] { left: auto; right: 0; translate: 0 0; }
+.hc-tipped:focus-visible > .hc-tip, .hc-tipped[data-open] > .hc-tip { opacity: 1; transform: none; transition: opacity var(--hc-dur-fast) var(--hc-ease-out), transform var(--hc-dur-base) var(--hc-ease-out); }
+@media (hover: hover) {
+  .hc-tipped:hover > .hc-tip { opacity: 1; transform: none; transition: opacity var(--hc-dur-fast) var(--hc-ease-out) 350ms, transform var(--hc-dur-base) var(--hc-ease-out) 350ms; }
+}
+
+/* Avatar: one more size for rows inside rows, and the speaking ring (opacity only). */
+.hc-avatar { border-radius: var(--hc-arch); }
+.hc-avatar--xs { width: 20px; height: 22.5px; font-size: var(--hc-text-2xs); padding-top: 1px; border-radius: 50% 50% var(--hc-radius-xs) var(--hc-radius-xs) / 44.4% 44.4% var(--hc-radius-xs) var(--hc-radius-xs); }
+.hc-avatar--xl { width: var(--hc-space-8); height: calc(var(--hc-space-8) * 1.125); font-size: var(--hc-text-xl); }
+.hc-face { position: relative; display: inline-grid; flex: none; --hc-face-r: calc(var(--hc-radius-sm) + 3px); }
+.hc-face:has(.hc-avatar--xs) { --hc-face-r: calc(var(--hc-radius-xs) + 3px); }
+.hc-face::after {
+  content: ""; position: absolute; inset: -3px; pointer-events: none; border: 1.5px solid var(--hc-live);
+  border-radius: 50% 50% var(--hc-face-r) var(--hc-face-r) / 44.4% 44.4% var(--hc-face-r) var(--hc-face-r);
+  opacity: 0; transition: opacity var(--hc-dur-base) var(--hc-ease-in);
+}
+.hc-face.is-speaking::after { opacity: 1; transition: opacity var(--hc-dur-fast) var(--hc-ease-out); }
+
+/* Sheets (phone) and popovers (wide) share one surface. */
+.hc-sheet-scrim { position: fixed; inset: 0; z-index: 30; background: var(--hc-scrim); }
+.hc-sheet {
+  position: fixed; z-index: 31; inset: auto 0 0 0; max-height: 86dvh; display: flex; flex-direction: column; gap: var(--hc-space-3);
+  padding: var(--hc-space-2) calc(var(--hc-space-4) + var(--hc-safe-right)) calc(var(--hc-space-4) + var(--hc-safe-bottom)) calc(var(--hc-space-4) + var(--hc-safe-left));
+  border-radius: var(--hc-radius-lg) var(--hc-radius-lg) 0 0; background: var(--hc-pop); box-shadow: var(--hc-lip); overflow-y: auto; overscroll-behavior: contain;
+}
+.hc-sheet__grip { align-self: center; flex: none; width: 36px; height: 4px; border-radius: 2px; background: var(--hc-line-soft); }
+.hc-sheet__head { display: flex; align-items: center; gap: var(--hc-space-2); min-height: var(--hc-hit); }
+.hc-sheet__head h2 { flex: 1; min-width: 0; font-size: var(--hc-text-lg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-sheet__actions { display: flex; flex-direction: column; gap: var(--hc-space-1); padding-top: var(--hc-space-1); }
+.hc-sheet__actions .hc-btn { min-height: 52px; font-size: var(--hc-text-md); }
+.hc-sheet__actions .hc-btn--text { min-height: var(--hc-hit); }
+.hc-popover {
+  position: absolute; z-index: 20; display: flex; flex-direction: column; gap: var(--hc-space-3); padding: var(--hc-space-2);
+  border-radius: calc(var(--hc-radius-md) + var(--hc-space-2)); background: var(--hc-pop); box-shadow: var(--hc-float);
+}
+/* Wide screens: a sheet becomes a centred dialog. */
+@media (min-width: 47.51em) {
+  .hc-sheet { inset: 50% auto auto 50%; translate: -50% -50%; width: min(26rem, calc(100vw - var(--hc-space-6) * 2)); max-height: min(40rem, calc(100dvh - var(--hc-space-6) * 2)); padding: var(--hc-space-5); border-radius: var(--hc-radius-lg); box-shadow: var(--hc-float); }
+  .hc-sheet__grip { display: none; }
+  .hc-sheet__actions { flex-direction: row-reverse; justify-content: flex-start; gap: var(--hc-space-2); padding-top: var(--hc-space-2); }
+  .hc-sheet__actions .hc-btn { min-height: 40px; font-size: var(--hc-text-sm); }
+  .hc-sheet__actions .hc-btn--text { min-height: 40px; }
+}
+
+/* A quiet note with a bare icon: empty states, hints, honest labels. No tile behind the icon. */
+.hc-note { display: flex; align-items: flex-start; gap: var(--hc-space-2); color: var(--hc-text-muted); font-size: var(--hc-text-sm); line-height: 1.45; }
+.hc-note > .hc-icon { width: 16px; height: 16px; margin-top: 2px; }
+.hc-note strong { color: var(--hc-text); }
+.hc-note--danger { color: var(--hc-danger); }
+
+/* Empty state: the doorway, one line, at most one action. Centred in the space it has. */
+.hc-empty { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--hc-space-2); padding: var(--hc-space-5); text-align: center; color: var(--hc-text-muted); }
+.hc-empty__door { width: 48px; height: 60px; margin-bottom: var(--hc-space-2); overflow: visible; }
+/* The doorway drawing (viewBox 0 0 24 30). Shut: nothing here, or it failed. Ajar and lit: come in. */
+.hc-door__frame { fill: color-mix(in oklab, var(--hc-text) 14%, transparent); }
+.hc-door__shut { fill: color-mix(in oklab, var(--hc-text) 9%, var(--hc-stage)); }
+.hc-door__knob { fill: none; stroke: var(--hc-text-muted); stroke-width: 1.6; stroke-linecap: round; }
+.hc-door__lit { fill: var(--hc-live); }
+.hc-door__leaf { fill: var(--hc-on-accent); opacity: 0.38; transform-box: fill-box; transform-origin: left center; }
+.hc-empty strong { color: var(--hc-text); font-size: var(--hc-text-lg); letter-spacing: var(--hc-tracking-tight); }
+.hc-empty p { max-width: 22rem; font-size: var(--hc-text-sm); }
+.hc-empty .hc-btn { margin-top: var(--hc-space-2); }
+
+/* Loading: a placeholder breathes (opacity only). Never a spinner on a surface that has a shape. */
+.hc-skel { border-radius: var(--hc-radius-sm); background: var(--hc-wash-selected); }
+@media (prefers-reduced-motion: no-preference) {
+  .hc-skel { animation: hc-breathe 1.4s var(--hc-ease-out) infinite alternate; }
+  @keyframes hc-breathe { from { opacity: 0.45; } to { opacity: 1; } }
+}

@@ -114,3 +114,66 @@
     --hc-focus: var(--hc-text);
   }
 }
+/* ---- Tokens (tokens.css) ------------------------------------------------------------------- */
+:root {
+  /* Surfaces. Shell: the hall you move through (sidebar, right column, page). Stage: the room you
+     are in (open chat, call, settings). At night the stage is the deeper blue. */
+  --hc-shell: var(--hc-surface);
+  --hc-stage: var(--hc-bg);
+  /* Anything that floats above either (menus, popovers, sheets, toasts). */
+  --hc-pop: color-mix(in oklab, var(--hc-text) 5%, var(--hc-surface-raised));
+
+  /* Tone steps. Ink washes, so a hover or a selection reads on any surface and never vanishes. */
+  --hc-wash-hover: color-mix(in oklab, var(--hc-text) 6%, transparent);
+  --hc-wash-selected: color-mix(in oklab, var(--hc-text) 11%, transparent);
+  --hc-wash-press: color-mix(in oklab, var(--hc-text) 15%, transparent);
+  --hc-wash-danger: color-mix(in oklab, var(--hc-danger) 14%, transparent);
+
+  /* Edges. --hc-line stays the 3:1 boundary of a form field. Everything else is separated by tone;
+     where an edge is needed it is the surface's own colour catching light, never a drawn rule. */
+  --hc-line-soft: color-mix(in oklab, var(--hc-text) 16%, transparent);
+  --hc-lip: inset 0 0 0 1px color-mix(in oklab, var(--hc-text) 5%, transparent), inset 0 1px 0 color-mix(in oklab, var(--hc-text) 7%, transparent);
+  /* The one shadow: tight, cast downward, tinted to the night. Only on things that float. */
+  --hc-float: var(--hc-lip), 0 12px 28px -16px color-mix(in oklab, var(--hc-bg) 30%, black), 0 2px 6px -3px color-mix(in oklab, var(--hc-bg) 30%, black);
+  --hc-scrim: color-mix(in oklab, var(--hc-bg) 66%, transparent);
+
+  --hc-on-danger: #2b0b0b;
+  /* A QR code is always dark on white, whatever the scheme, so a camera can read it. */
+  --hc-qr-paper: #ffffff;
+  --hc-qr-ink: #0b1018;
+  /* Always-dark surfaces (camera, snap viewer): pinned night values. */
+  --hc-night: #080b11;
+  --hc-night-text: #e8edf6;
+  --hc-night-muted: #c0c8d6;
+  --hc-night-danger: #f39191;
+
+  /* Type. Two more steps: 11 px for counts and the LIVE mark, 36 px for one headline per screen. */
+  --hc-text-2xs: 0.6875rem;
+  --hc-text-2xl: 2.25rem;
+  --hc-tracking-tight: -0.012em;
+
+  /* Shape. xs for marks inside rows; the arch is the house silhouette (avatars, number plates, seals). */
+  --hc-radius-xs: 4px;
+  --hc-arch: 50% 50% var(--hc-radius-sm) var(--hc-radius-sm) / 44.4% 44.4% var(--hc-radius-sm) var(--hc-radius-sm);
+
+  /* Density. One row height per pointer. */
+  --hc-row: 32px;
+  --hc-row-touch: 48px;
+  --hc-hit: 44px;
+
+  /* Motion. One longer step, for the splash only. */
+  --hc-dur-slower: 560ms;
+  --hc-stagger: 60ms;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --hc-on-danger: #ffffff;
+    --hc-lip: inset 0 0 0 1px color-mix(in oklab, var(--hc-text) 10%, transparent), inset 0 1px 0 color-mix(in oklab, white 70%, transparent);
+    --hc-float: var(--hc-lip), 0 12px 28px -16px color-mix(in oklab, var(--hc-text) 55%, transparent), 0 2px 6px -3px color-mix(in oklab, var(--hc-text) 30%, transparent);
+    --hc-scrim: color-mix(in oklab, var(--hc-text) 38%, transparent);
+  }
+}
+@media (pointer: coarse) {
+  :root { --hc-row: var(--hc-row-touch); }
+}
+
