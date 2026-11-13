@@ -1,6 +1,6 @@
 # DM-V1: end-to-end encryption for one-to-one DMs (Housecall 0.4.0)
 
-Status: contract for implementation. Nothing here is built yet. It has been reviewed by nobody outside the project. Before W5 code starts, an Opus session reviews it as an attacker (PLAN S4); after the code is built, a fresh session attacks the running system (PLAN C6, report in `ATTACK-RUN-0.4.0.md`).
+Status: contract for implementation. Nothing here is built yet. It has been reviewed by nobody outside the project. The paper attack review is `REVIEW-0.4.0.md`; its fixes are folded into this text and marked with their finding numbers (R-n). After the code is built, a fresh session attacks the running system (PLAN C6, report in `ATTACK-RUN-0.4.0.md`).
 
 Scope: one-to-one DMs (channel `kind = "dm"`, exactly two members) only. Group DMs, channels, voice channels and calls are not end-to-end encrypted in 0.4.0 (decision A1). Device linking and QR login are in `LINK-V1.md`. `PROTOCOL.md` is a future design and does not apply.
 
@@ -30,6 +30,17 @@ PLAN W5 C2 and C3 were the outline. These are the places where this contract dif
 16. **Push needs no server change for the text.** Push events already carry ids only (`server/src/push.rs`). The device builds the notification text, and for `enc = 1` it uses the generic sentence (section 14.2).
 17. **The web client never creates, resets or displays keys** (section 13). It can only receive them, by QR approval or recovery words, and holds them in memory.
 
+Changes from the paper review (`REVIEW-0.4.0.md`):
+
+18. **Pins keep the whole key history and it is closed** (R-1, R-11). At first contact the client pins every revision the server lists. After that it never accepts a key for an older revision from the server.
+19. **Rollbacks cannot be acknowledged** (R-3). A lower `key_rev`, a rewritten old revision or a superseded key coming back puts the peer in `KEY_ROLLBACK`, which has no "I understand". The server refuses to publish a superseded key again.
+20. **Plaintext in an encrypted DM is marked** (R-2). A message with `enc = 0` never shows the lock, and in a DM with a pinned peer it carries "Not encrypted".
+21. **Replies are bound inside the sealed payload** (R-8): `re` is the nonce of the message being replied to.
+22. **Readers validate the payload and FileRef fields fully, and show only a fixed list of MIME types inline** (R-9, R-17).
+23. **Agreement keys must be canonically encoded** (R-13).
+24. **Using the key in a browser is shown as a risk** (R-4): before words are typed into a browser, and in Settings → Security afterwards.
+25. **Replace recovery key now says it does not protect against words that have already leaked** (R-7). Leaked words need a reset.
+
 ## 1. The design in one paragraph
 
 Each person has one identity: a 32-byte seed from which an X25519 agreement key and an Ed25519 signing key are derived. The public halves are published on every host the person uses. Two people in a DM each compute the same X25519 shared secret and derive a conversation key from it with HKDF-SHA256, bound to the channel id, both user ids and both public keys. Every message is sealed with XChaCha20-Poly1305 under that key, with a random 24-byte nonce and associated data naming the channel, sender, recipient and key revisions. Each file gets a random key, carried inside the sealed message. Clients pin the peer's public key the first time they see it and refuse to send while it is changed and not acknowledged. A recovery key (24 words) opens an encrypted copy of the seed stored on the host. There is no forward secrecy: whoever later gets either person's seed can read every message between them.
@@ -38,11 +49,11 @@ Each person has one identity: a 32-byte seed from which an X25519 agreement key 
 
 | Adversary | What we stop | What we do not stop | What the user is told |
 |---|---|---|---|
-| **Hostile host** (reads and writes the database, serves any API response, serves the web client) | Reading DM text and file contents sent between two native apps that have pinned each other's keys. Forging a DM or changing who sent it. Silently downgrading a pinned DM to plaintext: the client refuses (section 10.2). Opening `key_backup`, which needs 256-bit words the host never sees. | Seeing who talks to whom, when, how often, message sizes (to 256 bytes), file sizes, reactions, replies, read state and typing. Swapping a key on a device's **first** contact with a peer (trust on first use) or on a device restored from recovery words, until safety numbers are compared. Dropping, delaying, reordering or replaying messages, or rolling back an edit. Reading anything in the **web client** (it serves the code). Listening to DM calls (they are relayed). Replaying a genuine message from one host into a DM on another host it also controls. | Explainer slide 2 and the Settings table "What the host can see". A web user sees "Encrypted in browser" with the reason (section 14.1). Calls say "Relayed by the host". |
+| **Hostile host** (reads and writes the database, serves any API response, serves the web client) | Reading DM text and file contents sent between two native apps that have pinned each other's keys. Forging a DM or changing who sent it, including under a made-up older key revision (section 10.4). Passing off a plaintext message as encrypted (section 10.7). Moving a reply onto a different message unnoticed (section 10.8). Silently downgrading a pinned DM to plaintext: the client refuses (section 10.2). Rolling a peer back to an older key (section 10.2, `KEY_ROLLBACK`). Opening `key_backup`, which needs 256-bit words the host never sees. | Seeing who talks to whom, when, how often, message sizes (to 256 bytes), file sizes, reactions, which messages are replies, read state and typing. Swapping a key on a device's **first** contact with a peer (trust on first use) or on a device restored from recovery words, until safety numbers are compared. Dropping, delaying, reordering or replaying messages, or rolling back an edit. Reading anything in the **web client** (it serves the code). **Keeping the seed of anyone who ever used it in a browser on this host** (by recovery words or QR), and from then on reading their DMs on every device and host until they reset (section 13). Listening to DM calls (they are relayed). Replaying a genuine message from one host into a DM on another host it also controls. | Explainer slide 2 and the Settings table "What the host can see". A web user sees "Encrypted in browser" with the reason (section 14.1), and is warned before putting their key into the browser (section 13). Calls say "Relayed by the host". |
 | **Hostile member** (a signed-in user who is not in the DM) | Reading or forging the DM: they cannot derive the key. Creating a DM in someone's name. | Being the other person in a DM and then sharing what they read: screenshots, copies, forwarding. The other person can also make a fake "message from you" on their own screen, since both hold the same key; nobody else can. | Nothing beyond "Only the two of you can read this". The explainer says the other person keeps what you send. |
 | **Network attacker** | Everything TLS stops, plus everything listed for the hostile host, because the host cannot do more than it can. | Traffic analysis of TLS (sizes, timing). | Nothing new. |
 | **Someone who photographs the QR code** | Covered in `LINK-V1.md`: a photo alone does not log in or deliver keys without the person tapping Approve after a number check. | | `LINK-V1.md` section 2. |
-| **Someone who steals an unlocked device** | Nothing while it is unlocked: they are you. After it is locked, keys are in OS secure storage (section 3.4). | Reading every encrypted DM the device can read, past and future, until you reset your keys. Revoking the device's session stops it fetching new messages but does not erase the seed from it. Using it to link another device of theirs by QR. | Settings → Devices, under "Log out this device": "If this device was stolen, also reset your security key in Settings → Security. Logging it out stops new messages but it still has your old key." |
+| **Someone who steals an unlocked device** | Copying your key to a device of theirs by QR: approving needs the phone's own unlock (Face ID, fingerprint or passcode) or, on a computer, your password (`LINK-V1.md` section 9.1). Seeing the recovery words: needs the password. Resetting or replacing keys: needs the password. After the device locks, keys are in OS secure storage (section 3.4). | Reading every encrypted DM the app shows while it stays unlocked, past and future, until you reset your keys. Revoking the device's session stops it fetching new messages but does not erase the seed from it. A thief who also knows the phone's passcode can link a device of theirs. | Settings → Devices, under "Log out this device": "If this device was stolen, also reset your security key in Settings → Security. Logging it out stops new messages but it still has your old key." |
 | **A lost password** | A password is never a key: no password-derived blob exists anywhere. Someone who steals the password still cannot read encrypted DMs. To reset keys they also need the password, and every device and every DM peer sees it happen. | A thief with your password can sign in and reset your keys. Peers then see "security key changed" and cannot send until they acknowledge it. Housecall has no self-service password reset, so a lost password with no signed-in device means asking the host for help. | Reset screen (section 11.5). Your other devices show "Your security key was replaced on <device>. If this wasn't you, change your password and reset your key again." |
 
 ## 3. Identity
@@ -75,7 +86,9 @@ The seed leaves a device only inside `key_backup` (section 4), inside `wrapped_k
 identity_key = 0x01 ‖ agree_pub (32) ‖ sign_pub (32)         65 bytes; JSON: b64u, 87 characters
 ```
 
-`0x01` is the key format version. A client parsing an `identity_key` must reject: length other than 65; first byte other than `0x01`; an all-zero `agree_pub`; a `sign_pub` that is not a valid Ed25519 point encoding or is of small order. Other small-order X25519 keys are caught when `X25519` throws (vectors: "small-order peer agreement key"). The server checks the length and the version byte only (it has no curve code).
+`0x01` is the key format version. A client parsing an `identity_key` must reject: length other than 65; first byte other than `0x01`; an all-zero `agree_pub`; an `agree_pub` that is not canonical, meaning bit 255 is set (`agree_pub[31] & 0x80`) or its little-endian value is at least `p = 2^255 − 19` (R-13); a `sign_pub` that is not a valid Ed25519 point encoding or is of small order. Other small-order X25519 keys are caught when `X25519` throws (vectors: "small-order peer agreement key"). The server checks the length, the version byte, the all-zero `agree_pub` and the two canonical-encoding rules, which are byte comparisons (it has no curve code).
+
+Why canonical matters: X25519 ignores bit 255 and reduces modulo `p`, so two different 65-byte values can be the same key. Without the rule a host could hand each side a different byte string for one key: both compute the same shared secret but different `info` (section 5), so their conversation keys differ, and pins and safety numbers disagree for no visible reason (vector "identity key with agreement key bit 255 set").
 
 `key_rev` is a counter the **server** assigns per user: `0` means no keys; the first published key gets `1`; each different key gets the previous value plus one. Publishing the same key again does not change it. Clients never choose it; they read it and copy it into envelopes.
 
@@ -125,13 +138,19 @@ The client tries the `key_backup` this host returns. There is no attempt limit o
 
 ### 4.4 Showing and confirming
 
-After creating or replacing the recovery key, the client shows the 24 words numbered 1 to 24, with "I've written them down". It then picks two different positions uniformly at random and asks for those two words ("Type word 7" and "Type word 19"). Each answer is normalised as in 4.3 and compared with the word at that position. A wrong answer says "That's not word 7. Check what you wrote." and offers "Show the words again". The client must not continue, publish keys or upload `key_backup` until both answers match (vectors `confirm_two_example` and `confirm_two_wrong`).
+After creating or replacing the recovery key, the client shows the 24 words numbered 1 to 24, with "I've written them down". It then picks two different positions uniformly at random and asks for those two words ("Type word 7" and "Type word 19"). Each answer is normalised as in 4.3 and compared with the word at that position. A wrong answer says "That's not word 7. Check what you wrote." and offers "Show the words again". "Show the words again" goes back to the full list, and when the person returns, the client picks two **new** positions, so nobody can pass by copying the two words just shown (R-16). The words are never on screen at the same time as the "Type word n" fields. The client must not continue, publish keys or upload `key_backup` until both answers match (vectors `confirm_two_example` and `confirm_two_wrong`). The positions come from `crypto.getRandomValues` with rejection sampling, not `Math.random`.
+
+This check is there to stop a person skipping the words by accident. It is not a security boundary: the person who could bypass it is the account owner, and the only person harmed is them.
 
 "View recovery key" (Settings → Security) asks for the account password first: `POST /api/me/password-check`, section 16.4. The client then fetches `key_backup`, reads its `recovery_rev`, derives `R`, checks that `R` opens it, and shows the words. If it does not open, the client shows "Your recovery key was replaced on another device. Use Replace recovery key to make a new one here." and does not show any words. The words are never copied to the clipboard automatically. A "Copy" button exists. Screenshots are not blocked.
 
 ### 4.5 Replace
 
-"Replace recovery key": confirm with the password, `recovery_rev + 1`, show and confirm the new words (4.4), then upload a new `key_backup` to **every host this install is signed in to**. The old words stop opening the new backup. A host the install cannot reach keeps the older backup, and the old words still open that one until the install next signs in there (section 11.3 uploads the current one). Wording on the replace screen: "Your old recovery key will stop working. Anyone who already has a copy of your old words and could sign in to your account could have used them before now; if you think that happened, reset your security key instead."
+"Replace recovery key": confirm with the password, `recovery_rev + 1`, show and confirm the new words (4.4), then upload a new `key_backup` to **every host this install is signed in to**. The old words stop opening the new backup. A host the install cannot reach keeps the older backup, and the old words still open that one until the install next signs in there (section 11.3 uploads the current one).
+
+What Replace does **not** do (R-7): the seed stays the same, and every old `key_backup` sealed with the old words still exists somewhere: in the host's database, the host's backups, and any copy anyone made. Anyone who has the old words and any one of those old blobs gets the seed, at any time, without signing in. So Replace is for "I want a fresh copy of the words" (for example, the paper was damaged). It is not a fix for words that someone else may have seen. That needs a reset (11.5), which makes a new seed.
+
+Wording on the replace screen: "You'll get new recovery words. Your security key stays the same, so if someone else may have seen your old words, use Reset security key instead. Replacing does not stop old words that have already leaked."
 
 ## 5. Conversation key
 
@@ -155,15 +174,17 @@ A DM with the same two people on another host, or a second DM channel between th
 UTF-8 JSON object, at most 16384 bytes after encoding:
 
 ```json
-{ "v": 1, "text": "Hello", "files": [ FileRef, … ] }
+{ "v": 1, "text": "Hello", "files": [ FileRef, … ], "re": "<b64u of 24 bytes>" }
 ```
 
 - `v`: must be `1`. A reader rejects any other value with "This message needs a newer version of Housecall."
 - `text`: string, may be empty only when `files` is non-empty.
-- `files`: optional, at most 20 entries. `FileRef` is section 7.3.
+- `files`: optional array, at most 20 entries. `FileRef` is section 7.3.
+- `re`: optional. When the message is a reply, the 24-byte nonce of the envelope it replies to, as b64u (43 characters). Section 10.8 (R-8).
 - Readers ignore unknown keys. Writers must not add keys outside this document in v1.
+- The payload must be a JSON object. Any field present with the wrong type or out of range rejects the whole message with "This message couldn't be decrypted." (R-17; vectors "malformed payload: …"). A reader never shows part of a message whose payload failed.
 
-Replies, reactions and pins are not in the payload: they stay in the existing clear fields (`reply_to`, the reactions route, the pin route). The host sees them (section 14.4).
+Reactions and pins are not in the payload: they stay in the existing clear routes. `reply_to` also stays a clear field, so the host sees which messages are replies (section 14.4), but it can no longer move a reply to a different message unnoticed, because of `re`.
 
 ### 6.2 Padding
 
@@ -190,13 +211,13 @@ Opening, in this order (the server runs steps 1 to 3 as well):
 1. b64u-decode strictly.
 2. Length is `33 + 256·n + 16` with `1 ≤ n ≤ 65`.
 3. Byte 0 is `0x01`; both key revisions are non-zero.
-4. Pick keys: my private key for `recipient_key_rev` (or `sender_key_rev` when I sent it), and the peer's public key for the other revision, from pins first and the server's key history otherwise (section 10.4). If my own key for that revision is gone (I reset since), show "Sent to your old security key. It can't be read on this device."
+4. Pick keys: my private key for `recipient_key_rev` (or `sender_key_rev` when I sent it), and the peer's public key for the other revision **from the pin's history only** (section 10.4, R-1). Never fetch a single missing revision from the server and trust it. If my own key for that revision is gone (I reset since), show "Sent to your old security key. It can't be read on this device." If the peer revision is at or below the pinned `key_rev` and not in the history, show "This message was sealed with a security key this device never checked." If it is above the pinned `key_rev`, follow section 10.3.
 5. AEAD-open with `ad` built from the **channel id, sender id and recipient id the client already knows** for this DM (the sender is the message's `author_id`, which must be one of the two members; the recipient is the other member). A failure shows "This message couldn't be decrypted." and nothing else. Never show partial plaintext.
-6. Unpad, parse JSON, check `v`.
+6. Unpad, parse JSON, validate every field (6.1, 7.3).
 
 ### 6.4 Replays and duplicates
 
-The host can store the same envelope twice under two message ids. A reader keeps, per DM, the set of nonces it has opened in loaded history, and shows a second message with a nonce already seen as a duplicate: it is hidden, and in debug builds it is logged as a duplicate with no content (vector "replayed envelope under a second server message id"). This catches replays within loaded history only. The host can still reorder, drop or delay messages, or serve an old version of an edited message (section 18).
+The host can store the same envelope twice under two message ids. A reader keeps, per DM, the set of nonces it has opened in loaded history (including the nonces of the current envelopes of edited messages), checks it **before** rendering, and shows a second message with a nonce already seen as a duplicate: it is hidden, and in debug builds it is logged as a duplicate with no content (vector "replayed envelope under a second server message id"). This catches replays within loaded history only. The host can still reorder, drop or delay messages, or serve an old version of an edited message (section 18).
 
 ### 6.5 Edits and deletes
 
@@ -238,7 +259,16 @@ The file key is wrapped by the message: it travels inside the sealed payload and
   "w": <optional integer pixel width>, "h": <optional integer pixel height> }
 ```
 
+Field rules (R-17), any failure rejects the whole message: `id` is 1 to 64 characters of `[0-9a-f-]`; `key` decodes strictly to 32 bytes; `name` is 1 to 255 bytes of UTF-8; `mime` is at most 127 characters matching `^[a-z0-9][a-z0-9.+-]*/[a-z0-9][a-z0-9.+-]*$` (no parameters, no spaces, lower case); `size` is an integer from 0 to 104857600; `w` and `h`, when present, are integers from 1 to 16384.
+
 A reader must check that `id` is one of the message's `attachments[].id` values from the server and that the decrypted length equals `size`. On a mismatch it shows the same failure text as 7.1. It never auto-opens a file, never executes it, and shows the name and size from the `FileRef`, not from the server.
+
+**`mime` and `name` come from the other person and are not trusted** (R-9). A `blob:` URL has the app's origin, so a blob created as `text/html` or `image/svg+xml` and opened in a tab or frame would run the sender's script with the app's session. Rules:
+
+- Inline display only for exactly these types: `image/jpeg`, `image/png`, `image/gif`, `image/webp`, `image/avif`, `video/mp4`, `video/webm`, `video/quicktime`, `audio/mpeg`, `audio/mp4`, `audio/aac`, `audio/ogg`, `audio/webm`, `audio/wav`. Images go only into `<img>`, video and audio only into `<video>` and `<audio>`.
+- Every other type, including `image/svg+xml`, `text/html`, `application/xhtml+xml`, `application/pdf` and `text/*`, is only offered as a download. The `Blob` is created with type `application/octet-stream` whatever `mime` says, and the link has the `download` attribute.
+- Never navigate to, `window.open`, or put in an `<iframe>`, `<object>` or `<embed>` a `blob:` URL made from a sealed file.
+- The download file name is `name` with path separators, control characters and bidirectional-override characters replaced by `_`, and leading dots removed. On screen the name is shown as text, never as HTML.
 
 ## 8. Safety number
 
@@ -274,6 +304,13 @@ CREATE TABLE IF NOT EXISTS user_keys(user_id TEXT NOT NULL REFERENCES users(id),
 
 Every published key is inserted here as well as into `users`, so history survives resets. For `enc = 1` rows `messages.body` is stored as the empty string.
 
+```sql
+CREATE TABLE IF NOT EXISTS key_exposures(user_id TEXT NOT NULL REFERENCES users(id), kind TEXT NOT NULL,
+  session_id TEXT, device_name TEXT, created_at INTEGER NOT NULL);
+```
+
+One row per `POST /api/me/key-exposure` (section 13, R-4). At most 100 rows per user; the oldest is deleted first.
+
 ## 10. Client rules
 
 ### 10.1 Pins
@@ -283,6 +320,11 @@ A pin is per `(host origin, peer user id)`:
 ```
 { identity_key: 65 bytes, key_rev: u32, verified: bool, history: { key_rev → identity_key } }
 ```
+
+`history` always contains `key_rev → identity_key` for the current key, and every revision the device accepted before it (R-1):
+
+- **First contact** (no pin yet): the client calls `GET /api/users/{id}/keys` and pins the current key **and every entry of `history` at once**. That is the one moment the device trusts the server for the peer's keys (trust on first use). The response must be consistent: revisions strictly ascending, ending at `key_rev` with the current key, each key valid (3.3), and no key at two revisions. If not, nothing is pinned and the peer is treated as `KEY_ROLLBACK` until a consistent answer arrives.
+- **After that the history is closed.** The client never adds a revision at or below the pinned `key_rev`, whatever the server says later. New revisions above it enter only through "I understand" (10.2).
 
 Pins live in the platform's secure storage next to the identity on native builds, and in memory on the web. They are not secrets, but they must not be editable by the host.
 
@@ -294,14 +336,27 @@ NONE ─────────────────────────
   │ server returns a valid key
   ▼  (trust on first use: pin it, verified = false)
 PINNED ── server key equals pin ──────────────────► PINNED    label "End-to-end encrypted" (native)
-  │ server key differs from pin, OR server says no key, OR an envelope names a peer key_rev above the pin
-  ▼
-CHANGED_UNACKNOWLEDGED ── user taps "I understand" ─► PINNED (new key, verified = false; old key kept in history)
+  │
+  ├─ server lists a NEW key at a key_rev above the pin, OR server says no key
+  │    ▼
+  │  CHANGED_UNACKNOWLEDGED ── user taps "I understand" ─► PINNED (new key, verified = false; every
+  │                                                        revision above the old pin added to history)
+  │
+  └─ server key_rev below the pin, OR server's key for a revision in the pin's history differs,
+     OR a key from the pin's history comes back at a new revision
+       ▼
+     KEY_ROLLBACK ── server later returns a view consistent with the pin ─► PINNED
+                     (no "I understand"; the user cannot accept it)
 ```
+
+An envelope that names a peer `key_rev` above the pin does **not** change state by itself (R-12). It makes the client fetch the peer's keys at once (ignoring the once-a-minute limit, at most once per envelope revision). Only the server's answer moves the state, by the rules above. If the server does not list that revision, the message shows "This message couldn't be decrypted." and nothing else changes. Otherwise a host could inject envelopes with made-up revisions to raise the "key changed" banner over and over, until people tap "I understand" out of habit.
+
+**`KEY_ROLLBACK`** (R-3). `key_rev` never goes down, an old revision's key never changes, and the server refuses to publish a key that was already used at an earlier revision (15.4). So any of the three triggers means the host is lying or broken. The classic attack: christopher's phone is stolen, christopher resets (`key_rev` 3), and the host then serves the stolen key again so that christopher's peers encrypt to it. In `KEY_ROLLBACK` the composer is disabled and the banner says: "The server is showing an older security key for christopher. You can't send messages until this is fixed. This can mean the server is broken, or that someone is trying to read your messages." Buttons: "Compare safety numbers" only. Messages under revisions in the pin's history still decrypt and show normally, because their keys are pinned. Label: "Key problem" (level 0).
 
 - **No silent downgrade.** Once a peer is PINNED, the client never sends plaintext to that DM, whatever the server says. A server that reports no key for a pinned peer puts it in CHANGED_UNACKNOWLEDGED. A legitimate key is never removed (there is no route to remove one), so this only happens if the host is lying or broken. Acknowledging it does not unlock plaintext: the composer stays disabled with "christopher has no security key on this server. Messages can't be sent until they set one up again."
 - **While CHANGED_UNACKNOWLEDGED:** the composer is disabled. The banner says "christopher's security key changed. This can happen if they reset their key or got a new device without their recovery key. It can also mean someone is trying to read your messages. Compare safety numbers with them before you continue." Buttons: "Compare safety numbers", "I understand". The label is "Key changed" (level 0).
-- **Where changes are noticed:** on opening a DM (`GET /api/users/{id}/keys`, at most once per minute per peer), on the `keys.changed` event, and on receiving an envelope whose peer revision is above the pinned one.
+- **Where changes are noticed:** on opening a DM (`GET /api/users/{id}/keys`, at most once per minute per peer), on the `keys.changed` event, and on receiving an envelope whose peer revision is above the pinned one (which triggers a fetch, as above).
+- **On "I understand":** the client fetches the keys again and adds every revision above the old pin, up to and including the current one, to `history`. The same consistency rules as first contact apply.
 - Pin on first use happens without asking. The DM details show "Not verified" until the user marks the safety number as verified.
 
 ### 10.3 Receiving under a changed key
@@ -310,7 +365,11 @@ Messages whose peer `key_rev` is above the pinned revision are not decrypted or 
 
 ### 10.4 Keys for old messages
 
-To open an envelope the client needs the peer's key for the revision it names. It looks in the pin's `history` first. Otherwise it uses `history` from `GET /api/users/{id}/keys`. A historical key that came only from the server is trusted on first use, like any first contact, and is then added to the pin's history. A device restored from recovery words therefore trusts the server for all keys until safety numbers are compared (section 18 item 3).
+To open an envelope the client needs the peer's key for the revision it names, and takes it **only from the pin's `history`** (R-1). It never fetches one missing revision from the server and trusts it.
+
+Why: the earlier text trusted any historical key the server supplied for a revision the pin did not have. A host could then invent "christopher's key at revision 1" (its own key), seal messages to me under it, and show them as from christopher in a DM labelled End-to-end encrypted, even after we had compared safety numbers, with no key-change warning (vector `pin_state` "server inserts a forged older revision that the pin never saw").
+
+Because first contact pins the whole history at once (10.1), a device that pins christopher today can still read christopher's messages from before christopher's last reset. A device restored from recovery words pins everything at first contact, which is trust on first use for all of it, until safety numbers are compared (section 18 item 3). A device linked by QR gets the full histories from the approving device (`LINK-V1.md` section 7).
 
 ### 10.5 Sending
 
@@ -324,6 +383,20 @@ To open an envelope the client needs the peer's key for the revision it names. I
 ### 10.6 The other person has not updated
 
 Old history stays as it was. When both people have keys, the first `enc = 1` message gets a timeline marker above it: "Messages below are end-to-end encrypted." While the peer has no key, the composer says "Not encrypted yet: they haven't updated" and the DM header shows no lock. A 0.3.0 client that receives an encrypted message shows the server's placeholder text (section 14.3). A 0.3.0 client of a person who has keys cannot send in an encrypted DM: the server returns 422 and the 0.3.0 client shows that error's text, "this conversation is end-to-end encrypted; update Housecall to send".
+
+### 10.7 Receiving plaintext in an encrypted DM (R-2)
+
+The server refuses `enc = 0` in an encrypted DM (15.2), but a hostile host does not have to obey its own rules: it can insert a row with `enc = 0`, `author_id` = the peer, and any `body`, dated after encryption started. Without a rule the client would show it as an ordinary message from the peer under the "End-to-end encrypted" label.
+
+Rule: in a 1:1 DM where the peer is PINNED, CHANGED_UNACKNOWLEDGED or `KEY_ROLLBACK`, every message with `enc = 0` (text, files, snaps, GIFs, system-looking rows, anything) is shown with a small marker beside the time: "Not encrypted". Its detail says: "This message wasn't end-to-end encrypted. The host could have written or changed it." The marker is also on genuine old messages from before encryption started, which is accurate: the host could have changed those too. The lock icon and the encrypted colour are never used on an `enc = 0` message. Where the timeline marker "Messages below are end-to-end encrypted." is drawn is decided from the first `enc = 1` message, but it never hides the "Not encrypted" marker on a plaintext row below it (vector `plaintext_in_encrypted_dm`).
+
+### 10.8 Replies (R-8)
+
+`reply_to` is a clear field the host controls. Without a binding, a host could move christopher's genuine "Yes, go ahead" from "Shall I cancel the trip?" to "Shall I send the money?".
+
+- Sending a reply in an encrypted DM: the payload's `re` is the nonce (bytes 9 to 32) of the current envelope of the message being replied to, and `reply_to` is set as today.
+- Reading: if the payload has `re`, the client looks up the message the server names in `reply_to`, and shows the quoted message only if it is an `enc = 1` message in this DM whose current envelope nonce equals `re`. In every other case (no `reply_to`, a different message, a plaintext message, a message not loaded and not fetchable) it shows the reply with "The message this replies to couldn't be checked." instead of a quote. If `reply_to` is set but the payload has no `re`, the same text is shown.
+- Editing the quoted message later changes its nonce, so its replies then show "The message this replies to was edited." when the server's `reply_to` target is an edited `enc = 1` message from this DM. This is the accepted cost of binding to the envelope rather than to a server id.
 
 ## 11. Key lifecycle
 
@@ -364,7 +437,7 @@ No new words. The same recovery key works on every host. The explainer says that
 This install has identity X and the host has identity Y for this account (for example, another device created Y on this host before this install arrived). The client must not overwrite either silently. Screen: "This account already has a different security key on <host>." Options:
 
 - "Get the key from your other device" or "Enter recovery key": obtain Y and make Y this install's identity. Every other host this install uses then gets Y, which is a reset there (11.5, with the password per host).
-- "Use this device's key here": `PUT /api/me/keys` with X and the password. This is a reset on this host (11.5).
+- "Use this device's key here": `PUT /api/me/keys` with X and the password. This is a reset on this host (11.5). If X was already used for this account on this host at an earlier revision, the server refuses it (15.4, 409 `this security key was replaced earlier`), and the client says: "This device's key was replaced on <host> earlier, so it can't be used there again. Get the current key from your other device, or reset your security key."
 - "Not now".
 
 ### 11.5 Reset (keys lost, or a stolen device)
@@ -383,7 +456,7 @@ What others see: the server increments `key_rev`, keeps the old key in `user_key
 - 0: no keys. Never goes back to 0.
 - First `PUT /api/me/keys`: 1.
 - Same key again: unchanged, 200.
-- Different key (reset, collision fix): +1, needs the password, needs the account to already have keys.
+- Different key (reset, collision fix): +1, needs the password, needs the account to already have keys, and the key must never have been this account's key at an earlier revision.
 - Envelopes carry the revisions used. `user_keys` keeps every revision.
 
 ## 12. Multi-device
@@ -403,6 +476,15 @@ There is no third way. A device never generates a second identity for an account
 - Label in the web client, even with keys: "Encrypted in browser" (never "End-to-end encrypted"). Detail: "This browser loads its app from the host, so the host could change it and read this conversation. Use the Housecall app for end-to-end encryption."
 - Pins in the web client are memory only and start empty each session (trust on first use every time). This is part of why the web label is weaker.
 
+**Putting the key into a browser hands it to the host if the host is dishonest** (R-4). The browser runs whatever JavaScript the host serves. If the host serves a modified client the moment you type your recovery words or approve a browser by QR, it gets the seed. From then on it can read every encrypted DM of yours, on every device and every host, past and future, until you reset. Your apps and your peers' apps would still say "End-to-end encrypted", because nothing on their side can tell. A3 allows web reading, so the fix is to say this plainly at the moment it happens and leave a trace:
+
+- Before the recovery-words field in a browser, a notice the person must dismiss: "This browser loads Housecall from <host>. If you type your recovery key here, whoever runs <host> could keep a copy and read your encrypted DMs from now on, on every device. Only continue if you trust them. The Housecall app doesn't have this risk." Buttons: "Continue" and "Cancel".
+- The QR path has the same warning on both devices (`LINK-V1.md` sections 9.1 and 9.4).
+- After a browser receives the key, the web client calls `POST /api/me/key-exposure` `{ "kind": "browser" }` (private, no body beyond that, 6 per minute). The server records the time and session, and every native device of the account shows under Settings → Security: "Your security key was used in a web browser on <host> on <date>. If you don't fully trust that host, reset your security key." This is honest-path bookkeeping: a hostile host can skip it, and the text says "used in a browser", not "is safe".
+- Explainer and section 18 item 9 state that a peer who uses Housecall in a browser exposes your DMs with them to their host in the same way, and that you cannot see this from your side.
+
+What protects the web client against a modified client: nothing beyond the label, the warning and TLS to the host. There is no code signing, Subresource Integrity against the host, or service-worker pinning in 0.4.0; the host serves all of those too, so none of them would help.
+
 ## 14. What people see
 
 ### 14.1 Labels (decision S-3)
@@ -415,6 +497,8 @@ There is no third way. A device never generates a second identity for an account
 | Peer has no keys | "Not encrypted yet" | "christopher hasn't updated Housecall yet. Messages are readable by the host until they do." |
 | I have no keys on this host | "Not encrypted" | "Set up your security key to encrypt your DMs." |
 | CHANGED_UNACKNOWLEDGED | "Key changed" | Banner text in 10.2 |
+| `KEY_ROLLBACK` | "Key problem" | Banner text in 10.2 |
+| Any `enc = 0` message inside a DM that has the lock | Per message: "Not encrypted" | "This message wasn't end-to-end encrypted. The host could have written or changed it." (10.7) |
 | Group DM, channel, voice channel | "Not end-to-end encrypted" | "The host can read messages here. Only one-to-one DMs are end-to-end encrypted." |
 | DM call (any DM) | Call bar: "Relayed by the host" | "Calls go through the host's server, which could listen. Only messages and files in this DM are end-to-end encrypted." |
 
@@ -479,7 +563,7 @@ Message JSON gains `"enc": 0|1` and `"envelope": string|null`. For `enc = 1`, `b
 
 ### 15.4 Keys
 
-- `PUT /api/me/keys`: `identity_key` must decode (strict b64u) to 65 bytes starting with `0x01` and an `agree_pub` that is not all zero, else **400** `invalid identity key`. Same as the current key: 200, unchanged. No current key: store, `key_rev = 1`. Different key: requires `password` (Argon2 verify through the existing `auth_slots` semaphore). A wrong or missing password gives **403** `password required`. Then store, `key_rev + 1`, `key_backup = NULL`. Every accepted change inserts into `user_keys` and emits `keys.changed` (15.6).
+- `PUT /api/me/keys`: `identity_key` must decode (strict b64u) to 65 bytes starting with `0x01`, with an `agree_pub` that is not all zero, has bit 255 clear, and is below `p` as a little-endian number (compare bytes 31 down to 0 with `ed ff … ff 7f`), else **400** `invalid identity key`. Same as the current key: 200, unchanged. No current key: store, `key_rev = 1`. Different key: requires `password` (Argon2 verify through the existing `auth_slots` semaphore). A wrong or missing password gives **403** `password required`. A key that is already in `user_keys` for this user at an earlier revision gives **409** `this security key was replaced earlier` (R-3), checked after the password. Then store, `key_rev + 1`, `key_backup = NULL`. Every accepted change inserts into `user_keys` and emits `keys.changed` (15.6).
 - Disabled users: 404 on reads, as elsewhere.
 - No route deletes keys.
 
@@ -498,6 +582,7 @@ Message JSON gains `"enc": 0|1` and `"envelope": string|null`. For `enc = 1`, `b
 |---|---|
 | `PUT /api/me/keys` | 3 per minute per user |
 | `PUT /api/me/key-backup` | 6 per minute per user |
+| `POST /api/me/key-exposure` | 6 per minute per user |
 | `POST /api/me/password-check` | 5 per minute per user, plus `auth_slots` |
 | `GET /api/users/{id}/keys`, `GET /api/me/key-backup` | the session's general 600 per minute |
 
@@ -542,6 +627,11 @@ GET → 200 `{ "key_backup": "<b64u>" }` or `{ "key_backup": null }`.
 
 `{ "password": "…" }` → 200 `{ "ok": true }` or 403 `password required`. Used before "View recovery key" and "Replace recovery key". It makes no state change.
 
+### 16.4a `POST /api/me/key-exposure` and `GET /api/me/key-exposure`
+
+POST `{ "kind": "browser" }` → 200 `{}`. Any other `kind`: 400. Limit 6 per minute per user. Records a row in `key_exposures` with the calling session's id and device name (section 13, R-4).
+GET → 200 `{ "exposures": [ { "kind": "browser", "device_name": "Firefox on Linux", "created_at": 1763049720000 } ] }`, newest first, at most 20.
+
 ### 16.5 Uploads
 
 `POST /api/uploads` gains an optional `"class": "sealed"`. For `sealed`:
@@ -558,7 +648,7 @@ Today's per-chunk `PATCH` and resume behaviour is unchanged.
 
 Send: `{ "enc": 1, "envelope": "<b64u>", "attachment_ids": ["<uuid>"], "reply_to": "<id or null>", "mention_ids": ["<peer id>"] }`.
 Edit: `{ "enc": 1, "envelope": "<b64u>", "revision": 3 }`.
-Read: message objects gain `enc` and `envelope` (15.3).
+Read: message objects gain `enc` and `envelope` (15.3). In an encrypted DM a reply's `reply_to` is also bound by `re` inside the envelope (10.8).
 
 ### 16.7 Members
 
@@ -576,27 +666,28 @@ All in `client/src/crypto/`, pure functions over `Uint8Array` with no DOM or net
 |---|---|---|
 | `identity.ts` | `newSeed()`, `deriveIdentity(seed) → { agreePriv, signSeed, agreePub, signPub, identityKey }`, `parseIdentityKey(bytes)`, `b64u`, `unb64u` (strict), `lp`, `u32be`, `IdentityStore` interface (`get/set/remove`) with the native implementation over the secure-session plugin and the memory implementation for web | `identities`, identity-key negatives |
 | `backup.ts` | `recoveryKey(seed, rev)`, `recoveryWords(r)`, `normaliseWords(s)`, `wordsToRecoveryKey(s)`, `pickConfirmPositions(rng) → [a, b]`, `checkConfirm(words, positions, typed)`, `sealBackup(seed, rev)`, `openBackup(blob, r, expectedIdentityKey)` | `recovery`, recovery-words and key_backup negatives |
-| `dm.ts` | `conversationKey(...)`, `pad`, `unpad`, `sealMessage(...)`, `parseEnvelope(bytes)`, `openMessage(...)`, `sealFile(fileKey, bytes)`, `openFile(fileKey, blob)`, `NonceSet` for duplicate detection | `conversation`, `messages`, `attachment`, message, replay and file negatives |
+| `dm.ts` | `conversationKey(...)`, `pad`, `unpad`, `sealMessage(...)`, `parseEnvelope(bytes)`, `openMessage(...)` (runs `validatePayload`), `validatePayload(obj)`, `inlineMimeAllowed(mime)`, `safeDownloadName(name)`, `sealFile(fileKey, bytes)`, `openFile(fileKey, blob)`, `NonceSet` for duplicate detection | `conversation`, `messages`, `attachment`, message, replay and file negatives |
 | `safetyNumber.ts` | `safetyNumber(identityKeyA, identityKeyB) → "ddddd ddddd ddddd ddddd ddddd ddddd"` | `safety_number` |
 | `link.ts` | `LINK-V1.md` section 12 | `link-v1.json` |
 
-Pin state, the state machine in 10.2 and the label rules belong in `client/src/core/` (interface) and `client/src/adapters/legacy/` (REST), not in `crypto/`. Copy goes in `client/src/ui/copy.ts`.
+Pin state, the state machine in 10.2 (tested with the `pin_state` vectors), the plaintext marker (10.7), reply checking (10.8, `reply_binding` vectors) and the label rules belong in `client/src/core/` (interface) and `client/src/adapters/legacy/` (REST), not in `crypto/`. Copy goes in `client/src/ui/copy.ts`.
 
 ## 18. Known limits (stated plainly)
 
 1. **No forward secrecy.** Whoever later gets either person's seed (a stolen unlocked device, recovery words together with account access, malware) can read every encrypted message between them, past and future, until both reset.
 2. **Metadata is visible to the host:** who talks to whom, when, how often, sizes to 256 bytes, file sizes, reactions, reply structure, pins, read and typing state, device names, IP addresses.
-3. **Trust on first use.** The first time a device sees a peer's key (and on any device restored from recovery words, and in every web session) the host can substitute its own key. Only comparing safety numbers detects it.
+3. **Trust on first use.** The first time a device sees a peer (and on any device restored from recovery words, and in every web session) the host can substitute its own key, or keys for any of that peer's older revisions, because they are all pinned at that moment. Only comparing safety numbers detects a swapped current key. A swapped older revision is not covered by the safety number, which shows current keys only; it can only make old messages unreadable or, on that first-contact device, show forged old messages. After first contact the history is closed (10.4).
 4. **Calls are relayed and not end-to-end encrypted**, including DM calls. The host could listen.
 5. **No outside audit.** The design and code are reviewed and attack-tested by models working for the project, not by an independent firm.
 6. **The same identity on several hosts is linkable.** Two hosts that compare `identity_key` values can tell it is the same person.
-7. **A password thief can reset your keys.** They cannot read old messages, but after a reset, peers who tap "I understand" without checking will send to the thief's key. Every peer sees the change, and every device that still has the old key raises an alarm.
-8. **The host can drop, delay, reorder or replay messages and roll back edits.** Clients catch replays only within loaded history. There is no sequence numbering in v1.
-9. **The web client is only as trustworthy as the host** that serves it.
-10. **Either person can fake a message "from" the other on their own screen.** Both hold the same key, so encrypted messages prove nothing to a third party. This is intended: there is no non-repudiation.
+7. **A password thief can reset your keys.** They cannot read old messages, but after a reset, peers who tap "I understand" without checking will send to the thief's key. Every peer sees the change, and every device that still has the old key raises an alarm. The host can do the same without the password (it controls the server); the effect on peers is identical.
+8. **The host can drop, delay, reorder or replay messages and roll back edits.** Clients catch replays only within loaded history. There is no sequence numbering in v1. Replies are bound (10.8); the order of messages and which edit is current are not.
+9. **The web client is only as trustworthy as the host** that serves it. Typing your recovery words into a browser, or approving a browser by QR, gives a dishonest host your seed for good (section 13). The same is true for your peer: if they use a browser on their host, that host can read your DMs with them, and you cannot tell.
+10. **Either person can fake a message "from" the other on their own screen.** Both hold the same key, so encrypted messages prove nothing to a third party. This is intended: there is no non-repudiation. A peer who colludes with the host can also make your own devices show a message "from you" that you never sent, because the host sets `author_id`; nobody else can.
 11. **A replay across hosts:** a host that controls two servers where the same two people have DMs, and copies channel and user ids, can replay a genuine message from one into the other.
 12. **Deleting is not erasure.** The other person's device, backups and the host's disk may keep ciphertext. The host cannot read it, but anyone who later gets a seed can.
-13. **The recovery words are the spare key.** Anyone with the words and access to the account can take the identity.
+13. **The recovery words are the spare key.** Anyone with the words and access to the account can take the identity. Anyone with the words and **any old copy of `key_backup`** (the host has one, and so do its backups) can take it without the account. Replacing the words does not undo a leak; only a reset does (4.5).
+14. **First contact can be a downgrade.** Before a device has pinned a peer, the host can say the peer has no keys, and the DM stays "Not encrypted yet". The label says so; nothing stops it.
 
 ## 19. Attack-run checklist (input to PLAN C6)
 
@@ -613,3 +704,34 @@ Each must fail against the built system. The report says how it was tried.
 - Reset keys with a stolen session and no password (403).
 - Make the web client persist the seed anywhere.
 - Get any plaintext into server logs, push payloads, preview fetches or reports without the user choosing to report.
+- Insert a forged `user_keys` row for an older revision of a pinned peer and a message sealed under it (not shown as from the peer; R-1).
+- Roll a peer back to a lower `key_rev`, rewrite an old revision, and re-publish a superseded key (`KEY_ROLLBACK`, no acknowledge; server 409 on the re-publish; R-3).
+- Insert an `enc = 0` row from the peer into an encrypted DM (shown with "Not encrypted", never the lock; R-2).
+- Change `reply_to` on an encrypted reply (shown with "couldn't be checked"; R-8).
+- Send a sealed file with `mime` `text/html` and `image/svg+xml` and try to get it to run (offered as download only; R-9).
+- Send an envelope naming peer `key_rev` 999 (no banner; R-12).
+
+## 20. Implementer traps
+
+The mistakes most likely to be made building this, each with the test that catches it. "Vector" means a case in `client/tests/vectors/dm-v1.json` that the module's vitest file must run.
+
+| # | Trap | Test that catches it |
+|---|---|---|
+| 1 | Fetching a missing old revision from `GET /api/users/{id}/keys` when an envelope names it, and trusting it ("it's only history"). | `pin_state` vector "server inserts a forged older revision that the pin never saw": the core test feeds that server answer and envelope and expects no decrypt and no history change. |
+| 2 | Treating every server key that differs from the pin as CHANGED, which lets the user acknowledge a rollback. | `pin_state` vectors "rolls the peer back", "reissues a superseded key", "rewrites a pinned historical revision": expect `KEY_ROLLBACK` and no acknowledge action in the state's available actions. Server: `server/tests/` re-publishing a key from `user_keys` returns 409. |
+| 3 | Rendering `enc = 0` rows in an encrypted DM through the normal message component with no marker. | `plaintext_in_encrypted_dm` vector in a component test: the rendered row has the "Not encrypted" marker and no lock element. |
+| 4 | Building the associated data from the envelope or the server row instead of the DM the client already knows (for example, taking the sender from a field next to the envelope). | Vector "associated data altered: sender relabelled as bob" must fail; also a core test that swaps `author_id` on a fetched row and expects "couldn't be decrypted". |
+| 5 | Catching the X25519 error for small-order keys and continuing with the all-zero secret. | Vectors "small-order peer agreement key (all zero)" and "(order 8 point)" must throw out of `conversationKey`. |
+| 6 | Accepting a non-canonical `agree_pub` because noble accepts it. | Vectors "agreement key bit 255 set" and "u >= p" must throw in `parseIdentityKey`; the server test sends both to `PUT /api/me/keys` and expects 400. |
+| 7 | A lenient base64 decoder (`atob`, `Buffer.from(…, "base64")`) that accepts padding, `+`, `/` or whitespace. | Unit test of `unb64u` with `"AA=="`, `"A+"`, `"A/"`, `" AA"` and a non-canonical tail (`"AB"` for one byte): all throw. |
+| 8 | Checking only `v` and `text` in the payload, so a hostile peer's odd `files` crashes the timeline. | Every "malformed payload: …" vector must reject in `openMessage`, and a timeline test renders each as "couldn't be decrypted" without throwing. |
+| 9 | Creating `new Blob([bytes], { type: fileRef.mime })` and putting its URL in an `<a target="_blank">`, an `<iframe>` or `window.open`. | Component test: a sealed file with `mime` `text/html` or `image/svg+xml` renders as a download link whose blob type is `application/octet-stream`, with a `download` attribute and no `target`. |
+| 10 | Showing a reply's quote from the server's `reply_to` without comparing `re`. | `reply_binding` vectors in a component test: the quote is replaced by "couldn't be checked". |
+| 11 | Reusing a nonce: a counter, a fixed nonce left over from the vectors, or the same nonce for an edit. | Unit test: seal the same payload twice and expect different envelopes; a lint or grep check that `fixed(` and vector nonces are not imported in `client/src`. |
+| 12 | Showing a duplicate after rendering it (dedupe in a later pass), or keying dedupe on message id instead of nonce. | Vector "replayed envelope under a second server message id": the timeline test renders exactly one message. |
+| 13 | Writing the seed, pins or decrypted text to `localStorage`, IndexedDB or a log on the web build. | E2E (UI lane) after a web QR login: dump `localStorage`, `sessionStorage` and IndexedDB and grep for the seed hex and b64u and for a known message text; expect none. |
+| 14 | Letting an envelope with a high peer revision move the state machine directly. | `pin_state` vector "envelope names a peer revision above the pin that the server does not list": state stays PINNED. |
+| 15 | Publishing keys before the two words are confirmed, or resuming after a crash with new positions but an already-uploaded backup. | Core test: kill between steps 2 and 4 (11.1) and assert no `PUT /api/me/keys` was sent until `checkConfirm` passed. |
+| 16 | Using `Math.random` for the confirm positions or any key material. | Grep check in the test suite: `Math.random` does not appear in `client/src/crypto/`. |
+| 17 | Comparing secrets or tags with `===` on strings or an early-return loop. | Code review item; `ctEqual` unit test with equal and one-bit-different inputs of the same length, and different lengths. |
+| 18 | Server parsing the envelope beyond the header, or logging it on a 422. | `server/tests/`: send an invalid envelope and assert the captured log has no b64u of it. |
