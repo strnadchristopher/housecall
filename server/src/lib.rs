@@ -112,6 +112,8 @@ pub struct AppState {
     pub invite_mail: Arc<InviteMailConfig>,
     /// Last ring time (ms) per conversation, for the one-ring-per-10-seconds limit.
     pub rings: Arc<Mutex<HashMap<String, i64>>>,
+    /// Who is in which call and in what state, and screen-share previews. Memory only.
+    pub live: Arc<voice::Live>,
 }
 #[derive(Clone)]
 pub struct InviteMailConfig {
@@ -261,6 +263,7 @@ impl AppState {
                 public_url: "http://localhost:1420".into(),
             }),
             rings: Default::default(),
+            live: Default::default(),
         })
     }
     fn limited(&self, key: String, max: u32) -> bool {

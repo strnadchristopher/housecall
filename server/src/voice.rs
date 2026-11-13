@@ -1,20 +1,207 @@
-use crate::{member, now, ApiError, ApiResult, AppState, Principal};
+use crate::{conflict, emit, member, now, ApiError, ApiResult, AppState, Principal};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    routing::{delete, get, post},
+    routing::{delete, get, post, put},
     Extension, Json, Router,
 };
-use rusqlite::params;
+use rusqlite::{params, Connection};
+use serde::Deserialize;
 use serde_json::{json, Value};
-use std::sync::Arc;
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::{Arc, Mutex},
+};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/channels/{id}/voice/join", post(join))
         .route("/channels/{id}/voice/stats", get(stats))
+        .route("/channels/{id}/voice/state", put(put_state))
         .route("/voice/rooms", get(rooms))
         .route("/channels/{id}/voice/{peer}", delete(leave))
+}
+
+/// A peer the SFU stopped listing is only reaped once it is this old, so a snapshot taken just
+/// before a join finished cannot evict the person who just joined.
+const REAP_GRACE_MS: i64 = 5_000;
+
+/// What other people see about someone in a call. Memory only: gone on leave, timeout or restart.
+#[derive(Clone, Copy)]
+pub struct VoiceState {
+    pub muted: bool,
+    pub deafened: bool,
+    pub camera: bool,
+    pub sharing: bool,
+    pub joined_at: i64,
+}
+/// A screen-share thumbnail. Memory only.
+pub struct Preview {
+    pub bytes: Vec<u8>,
+    pub stored_at: i64,
+}
+/// Live call state, keyed by `(channel_id, user_id)`. Lock order: the database first, then these.
+#[derive(Default)]
+pub struct Live {
+    pub states: Mutex<BTreeMap<(String, String), VoiceState>>,
+    pub previews: Mutex<HashMap<(String, String), Preview>>,
+}
+fn state_fields(user: &str, st: &VoiceState) -> Value {
+    json!({"user_id":user,"muted":st.muted,"deafened":st.deafened,"camera":st.camera,"sharing":st.sharing,"joined_at":st.joined_at})
+}
+/// The event and `PUT .../voice/state` payload: the record plus the channel it belongs to.
+fn state_payload(room: &str, user: &str, st: &VoiceState) -> Value {
+    let mut v = state_fields(user, st);
+    v["channel_id"] = json!(room);
+    v
+}
+/// Someone is now in a call. Announces it once per person, however many devices they join from.
+pub fn peer_joined(s: &AppState, room: &str, user: &str) {
+    let db = s.db.lock().unwrap();
+    let fresh = {
+        let mut states = s.live.states.lock().unwrap();
+        let key = (room.to_owned(), user.to_owned());
+        if states.contains_key(&key) {
+            None
+        } else {
+            let st = VoiceState {
+                muted: false,
+                deafened: false,
+                camera: false,
+                sharing: false,
+                joined_at: now(),
+            };
+            states.insert(key, st);
+            Some(st)
+        }
+    };
+    if let Some(st) = fresh {
+        let _ = emit(&db, room, "voice.joined", state_payload(room, user, &st));
+    }
+}
+/// Someone is no longer in a call (left, or their connection timed out). Clears their state and
+/// preview and announces it. Returns whether they were there.
+pub fn peer_left(db: &Connection, live: &Live, room: &str, user: &str) -> bool {
+    let key = (room.to_owned(), user.to_owned());
+    live.previews.lock().unwrap().remove(&key);
+    let was = live.states.lock().unwrap().remove(&key).is_some();
+    if was {
+        let _ = emit(
+            db,
+            room,
+            "voice.left",
+            json!({"channel_id":room,"user_id":user}),
+        );
+    }
+    was
+}
+/// Drop everyone the SFU no longer lists (`present` is its `(room, user)` list) who has been in
+/// for longer than the grace period.
+pub fn reconcile(s: &AppState, present: &[(String, String)], at: i64) {
+    let gone: Vec<(String, String)> = s
+        .live
+        .states
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|((room, user), st)| {
+            at - st.joined_at > REAP_GRACE_MS
+                && !present.iter().any(|(r, u)| r == room && u == user)
+        })
+        .map(|(k, _)| k.clone())
+        .collect();
+    if gone.is_empty() {
+        return;
+    }
+    let db = s.db.lock().unwrap();
+    for (room, user) in gone {
+        peer_left(&db, &s.live, &room, &user);
+    }
+}
+/// Check the SFU every few seconds so a peer that timed out stops showing in the channel.
+pub fn spawn_sweeper(s: &AppState) {
+    let state = s.clone();
+    tokio::spawn(async move {
+        let mut timer = tokio::time::interval(std::time::Duration::from_secs(3));
+        timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            timer.tick().await;
+            let Some(engine) = state.voice.clone() else {
+                continue;
+            };
+            if let Ok(peers) = engine.rooms().await {
+                reconcile(&state, &peers, now());
+            }
+        }
+    });
+}
+/// `GET /api/voice/rooms`: `rooms` is exactly what 0.3.0 returned; `states` is new.
+pub fn rooms_json(db: &Connection, live: &Live, user: &str, peers: &[(String, String)]) -> Value {
+    let mut rooms: BTreeMap<String, Vec<String>> = Default::default();
+    for (room, who) in peers {
+        if member(db, user, room).is_err() {
+            continue;
+        }
+        let users = rooms.entry(room.clone()).or_default();
+        if !users.contains(who) {
+            users.push(who.clone());
+        }
+    }
+    let mut by_room: BTreeMap<String, Vec<(i64, String, Value)>> = Default::default();
+    for ((room, who), st) in live.states.lock().unwrap().iter() {
+        if member(db, user, room).is_err() {
+            continue;
+        }
+        by_room.entry(room.clone()).or_default().push((
+            st.joined_at,
+            who.clone(),
+            state_fields(who, st),
+        ));
+    }
+    let states: BTreeMap<String, Vec<Value>> = by_room
+        .into_iter()
+        .map(|(room, mut rows)| {
+            rows.sort_by(|a, b| (a.0, &a.1).cmp(&(b.0, &b.1)));
+            (room, rows.into_iter().map(|r| r.2).collect())
+        })
+        .collect();
+    json!({"rooms":rooms,"states":states})
+}
+#[derive(Deserialize)]
+struct StateBody {
+    muted: Option<bool>,
+    deafened: Option<bool>,
+    camera: Option<bool>,
+    sharing: Option<bool>,
+}
+/// Set your own mute, deafen, camera and share flags while you are in the call. Flags you leave
+/// out keep their value.
+async fn put_state(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(room): Path<String>,
+    Json(v): Json<StateBody>,
+) -> ApiResult<Value> {
+    let db = s.db.lock().unwrap();
+    member(&db, &p.user.id, &room)?;
+    let key = (room.clone(), p.user.id.clone());
+    let new = {
+        let mut states = s.live.states.lock().unwrap();
+        let Some(cur) = states.get_mut(&key) else {
+            return Err(conflict("not in this call"));
+        };
+        cur.muted = v.muted.unwrap_or(cur.muted);
+        cur.deafened = v.deafened.unwrap_or(cur.deafened);
+        cur.camera = v.camera.unwrap_or(cur.camera);
+        cur.sharing = v.sharing.unwrap_or(cur.sharing);
+        *cur
+    };
+    if !new.sharing {
+        s.live.previews.lock().unwrap().remove(&key);
+    }
+    let payload = state_payload(&room, &p.user.id, &new);
+    emit(&db, &room, "voice.state", payload.clone())?;
+    Ok(Json(payload))
 }
 /// Enable explicitly with the UDP bind address and routable advertised IP from environment.
 pub fn configure(state: &mut AppState) -> Result<(), String> {
@@ -79,29 +266,25 @@ async fn join(
     let offer = serde_json::from_value::<housecall_sfu::SdpOffer>(offer)
         .map_err(|_| ApiError(StatusCode::BAD_REQUEST, "invalid SDP offer"))?;
     let joined = engine
-        .join(room, p.user.id, p.session_id, offer)
+        .join(room.clone(), p.user.id.clone(), p.session_id, offer)
         .await
         .map_err(error)?;
+    peer_joined(&s, &room, &p.user.id);
     Ok(Json(json!(joined)))
 }
-/// Who is in a call, per channel the caller belongs to. User ids only: no peer ids, no diagnostics.
+/// Who is in a call (`rooms`: user ids only, no peer ids, no diagnostics) and what state each
+/// person is in (`states`), per channel the caller belongs to.
 async fn rooms(State(s): State<AppState>, Extension(p): Extension<Principal>) -> ApiResult<Value> {
-    let Some(engine) = s.voice.clone() else {
-        return Ok(Json(json!({"rooms":{}})));
+    let peers = match s.voice.clone() {
+        Some(engine) => {
+            let peers = engine.rooms().await.map_err(error)?;
+            reconcile(&s, &peers, now());
+            peers
+        }
+        None => Vec::new(),
     };
-    let peers = engine.rooms().await.map_err(error)?;
     let db = s.db.lock().unwrap();
-    let mut rooms: std::collections::BTreeMap<String, Vec<String>> = Default::default();
-    for (room, user) in peers {
-        if member(&db, &p.user.id, &room).is_err() {
-            continue;
-        }
-        let users = rooms.entry(room).or_default();
-        if !users.contains(&user) {
-            users.push(user);
-        }
-    }
-    Ok(Json(json!({"rooms":rooms})))
+    Ok(Json(rooms_json(&db, &s.live, &p.user.id, &peers)))
 }
 async fn stats(
     State(s): State<AppState>,
@@ -124,10 +307,18 @@ async fn leave(
         let db = s.db.lock().unwrap();
         member(&db, &p.user.id, &room)?;
     }
-    engine(&s)?
-        .leave(room, p.session_id, peer)
+    let engine = engine(&s)?;
+    engine
+        .leave(room.clone(), p.session_id, peer)
         .await
         .map_err(error)?;
+    // Someone with two devices in the call is still in it until the last one leaves.
+    if let Ok(peers) = engine.rooms().await {
+        if !peers.iter().any(|(r, u)| *r == room && *u == p.user.id) {
+            let db = s.db.lock().unwrap();
+            peer_left(&db, &s.live, &room, &p.user.id);
+        }
+    }
     Ok(Json(json!({"left":true})))
 }
 

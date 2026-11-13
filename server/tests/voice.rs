@@ -316,3 +316,221 @@ async fn a_voice_channel_has_a_text_chat_that_works_like_any_channel() {
     .json();
     assert!(found.to_string().contains("anyone here?"));
 }
+
+// ---- B2: live voice state and events ----------------------------------------------------
+
+async fn events_of(w: &World, who: &Value, kind: &str) -> Vec<Value> {
+    call(&w.api, "GET", "/api/events", who, Value::Null).await.json()["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["kind"] == kind)
+        .cloned()
+        .collect()
+}
+fn state_path(w: &World) -> String {
+    format!("/api/channels/{}/voice/state", w.lounge)
+}
+fn enter(w: &World, user: &str) {
+    housecall_server::voice::peer_joined(&w.state, &w.lounge, user);
+}
+/// Carol leaves the channel's member list, so she is a stranger to it.
+fn evict_carol(w: &World) {
+    w.state
+        .db
+        .lock()
+        .unwrap()
+        .execute(
+            "DELETE FROM members WHERE channel_id=? AND user_id=?",
+            [&w.lounge, &w.carol_id],
+        )
+        .unwrap();
+}
+
+#[tokio::test]
+async fn state_from_a_non_member_is_refused() {
+    let w = world().await;
+    evict_carol(&w);
+    let r = call(
+        &w.api,
+        "PUT",
+        &state_path(&w),
+        &w.carol,
+        json!({"muted":true,"deafened":false,"camera":false,"sharing":false}),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::FORBIDDEN);
+}
+#[tokio::test]
+async fn state_from_someone_not_in_the_room_is_a_conflict() {
+    let w = world().await;
+    let r = call(
+        &w.api,
+        "PUT",
+        &state_path(&w),
+        &w.alice,
+        json!({"muted":true,"deafened":false,"camera":false,"sharing":false}),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::CONFLICT);
+}
+#[tokio::test]
+async fn joining_announces_defaults_and_state_changes_reach_members_only() {
+    let w = world().await;
+    evict_carol(&w);
+    enter(&w, &w.alice_id);
+    let joined = events_of(&w, &w.owner, "voice.joined").await;
+    assert_eq!(joined.len(), 1);
+    assert_eq!(joined[0]["channel_id"], w.lounge.as_str());
+    let p = &joined[0]["payload"];
+    assert_eq!(p["channel_id"], w.lounge.as_str());
+    assert_eq!(p["user_id"], w.alice_id.as_str());
+    for key in ["muted", "deafened", "camera", "sharing"] {
+        assert_eq!(p[key], false, "{key}");
+    }
+    assert!(p["joined_at"].as_i64().unwrap() > 0);
+    // Joining again from a second device does not announce a second time.
+    enter(&w, &w.alice_id);
+    assert_eq!(events_of(&w, &w.owner, "voice.joined").await.len(), 1);
+
+    let r = call(
+        &w.api,
+        "PUT",
+        &state_path(&w),
+        &w.alice,
+        json!({"muted":true,"deafened":true,"camera":false,"sharing":true}),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.json());
+    let body = r.json();
+    assert_eq!(body["user_id"], w.alice_id.as_str());
+    assert_eq!(body["muted"], true);
+    assert_eq!(body["sharing"], true);
+    let changed = events_of(&w, &w.owner, "voice.state").await;
+    assert_eq!(changed.len(), 1);
+    assert_eq!(changed[0]["payload"]["deafened"], true);
+    assert_eq!(changed[0]["payload"]["user_id"], w.alice_id.as_str());
+    // Alice hears her own change too, so a second device of hers stays in sync.
+    assert_eq!(events_of(&w, &w.alice, "voice.state").await.len(), 1);
+    // Carol is not in the channel: she hears none of it.
+    for kind in ["voice.joined", "voice.state", "voice.left"] {
+        assert!(events_of(&w, &w.carol, kind).await.is_empty(), "{kind}");
+    }
+}
+#[tokio::test]
+async fn a_partial_update_keeps_the_other_flags() {
+    let w = world().await;
+    enter(&w, &w.alice_id);
+    call(&w.api, "PUT", &state_path(&w), &w.alice, json!({"muted":true})).await;
+    let r = call(&w.api, "PUT", &state_path(&w), &w.alice, json!({"camera":true})).await;
+    assert_eq!(r.json()["muted"], true);
+    assert_eq!(r.json()["camera"], true);
+    assert_eq!(r.json()["sharing"], false);
+}
+#[tokio::test]
+async fn leaving_and_timing_out_clear_state_and_announce_it() {
+    let w = world().await;
+    enter(&w, &w.alice_id);
+    enter(&w, &w.owner_id);
+    // Alice leaves through the handler path.
+    {
+        let db = w.state.db.lock().unwrap();
+        housecall_server::voice::peer_left(&db, &w.state.live, &w.lounge, &w.alice_id);
+    }
+    let left = events_of(&w, &w.owner, "voice.left").await;
+    assert_eq!(left.len(), 1);
+    assert_eq!(left[0]["payload"]["user_id"], w.alice_id.as_str());
+    let r = call(&w.api, "PUT", &state_path(&w), &w.alice, json!({"muted":true})).await;
+    assert_eq!(r.status, StatusCode::CONFLICT, "state is gone after leave");
+    // The owner's peer times out: the SFU no longer lists them.
+    let later = housecall_server::now() + 60_000;
+    housecall_server::voice::reconcile(&w.state, &[], later);
+    let left = events_of(&w, &w.alice, "voice.left").await;
+    assert!(left
+        .iter()
+        .any(|e| e["payload"]["user_id"] == w.owner_id.as_str()));
+    let rooms = call(&w.api, "GET", "/api/voice/rooms", &w.alice, Value::Null)
+        .await
+        .json();
+    assert_eq!(rooms["states"], json!({}));
+}
+#[tokio::test]
+async fn a_peer_the_sfu_still_lists_is_not_reaped() {
+    let w = world().await;
+    enter(&w, &w.alice_id);
+    let later = housecall_server::now() + 60_000;
+    housecall_server::voice::reconcile(&w.state, &[(w.lounge.clone(), w.alice_id.clone())], later);
+    assert!(events_of(&w, &w.owner, "voice.left").await.is_empty());
+}
+#[tokio::test]
+async fn a_peer_that_only_just_joined_is_not_reaped_by_a_stale_snapshot() {
+    let w = world().await;
+    enter(&w, &w.alice_id);
+    housecall_server::voice::reconcile(&w.state, &[], housecall_server::now());
+    assert!(events_of(&w, &w.owner, "voice.left").await.is_empty());
+}
+#[tokio::test]
+async fn rooms_keeps_its_old_shape_and_adds_states() {
+    let w = world().await;
+    enter(&w, &w.alice_id);
+    call(&w.api, "PUT", &state_path(&w), &w.alice, json!({"muted":true})).await;
+    // Without an SFU the call list is empty; the new key is still there.
+    let r = call(&w.api, "GET", "/api/voice/rooms", &w.owner, Value::Null)
+        .await
+        .json();
+    assert_eq!(r["rooms"], json!({}));
+    let states = r["states"][&w.lounge].as_array().unwrap();
+    assert_eq!(states.len(), 1);
+    assert_eq!(states[0]["user_id"], w.alice_id.as_str());
+    assert_eq!(states[0]["muted"], true);
+    assert!(states[0]["joined_at"].as_i64().unwrap() > 0);
+}
+#[tokio::test]
+async fn a_0_3_0_client_reading_only_rooms_sees_the_same_shape_as_before() {
+    let w = world().await;
+    enter(&w, &w.alice_id);
+    enter(&w, &w.owner_id);
+    let peers = vec![
+        (w.lounge.clone(), w.alice_id.clone()),
+        (w.lounge.clone(), w.alice_id.clone()), // a second device of the same person
+        (w.lounge.clone(), w.owner_id.clone()),
+        ("not-a-channel-alice-is-in".to_owned(), w.owner_id.clone()),
+    ];
+    let body = {
+        let db = w.state.db.lock().unwrap();
+        housecall_server::voice::rooms_json(&db, &w.state.live, &w.alice_id, &peers)
+    };
+    // Exactly what 0.3.0 produced: {"rooms": {channel_id: [user_id, ...]}}, one entry per person,
+    // only for channels the caller belongs to.
+    assert_eq!(
+        body["rooms"],
+        json!({ w.lounge.clone(): [w.alice_id.clone(), w.owner_id.clone()] })
+    );
+    let mut keys: Vec<_> = body.as_object().unwrap().keys().cloned().collect();
+    keys.sort();
+    assert_eq!(keys, ["rooms", "states"]);
+    for users in body["rooms"].as_object().unwrap().values() {
+        assert!(users.as_array().unwrap().iter().all(Value::is_string));
+    }
+    // States: one record per person.
+    let states = body["states"][&w.lounge].as_array().unwrap();
+    assert_eq!(states.len(), 2);
+    for s in states {
+        let mut k: Vec<_> = s.as_object().unwrap().keys().cloned().collect();
+        k.sort();
+        assert_eq!(
+            k,
+            ["camera", "deafened", "joined_at", "muted", "sharing", "user_id"]
+        );
+    }
+}
+#[tokio::test]
+async fn rooms_and_states_hide_channels_the_caller_is_not_in() {
+    let w = world().await;
+    enter(&w, &w.alice_id);
+    evict_carol(&w);
+    let r = call(&w.api, "GET", "/api/voice/rooms", &w.carol, Value::Null)
+        .await
+        .json();
+    assert_eq!(r["states"], json!({}));
+}
