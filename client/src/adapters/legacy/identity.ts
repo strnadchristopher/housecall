@@ -233,6 +233,17 @@ export function useLegacyIdentity(
       checked.current[origin] = info.name;
       return { origin, name: info.name, requestsOpen: info.requests_open };
     },
+    preflight: async address => {
+      try {
+        const { origin } = parseServerInput(address || location.origin);
+        if (!isNative() && origin !== location.origin) return undefined;
+        const response = await fetch(origin + "/api/preflight", { credentials: "omit", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10_000) });
+        if (!response.ok) return undefined;
+        const data = (await response.json()) as Record<string, { ok?: unknown; reason?: unknown }>;
+        const pick = (key: string) => ({ ok: data[key]?.ok === true, reason: typeof data[key]?.reason === "string" ? data[key].reason as string : undefined });
+        return { https: pick("https"), call_port: pick("call_port"), storage: pick("storage") };
+      } catch { return undefined; }
+    },
     requestAccess: input => c.attempt(async () => {
       const origin = parseServerInput(input.origin).origin;
       if (!isNative() && origin !== location.origin) throw new Error("This app can only join the server it was opened from.");

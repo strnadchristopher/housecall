@@ -16,6 +16,15 @@ export const copy = {
     address: "Server address", username: "Username",
     password: "Password", newPassword: "Password, 12 or more characters",
     setupToken: "Setup token", inviteCode: "Invite code",
+    preflight: {
+      title: "Before you start", checking: "Checking this server", unavailable: "Could not run the checks.", guide: "Open the guide", recheck: "Check again",
+      labels: { https: "Reachable over HTTPS", call_port: "Call port ready", storage: "Storage writable" },
+      help: {
+        https: { plain_http: "Put the server behind HTTPS, then reload this page.", default: "Make the server reachable over HTTPS, then reload this page." },
+        call_port: { voice_off: "Turn on calls and open the call port on your router or firewall.", default: "Open the call port on your router or firewall." },
+        storage: { not_writable: "Make the data folder writable by the server, then restart it.", default: "Make the data folder writable by the server." },
+      } as Record<"https" | "call_port" | "storage", Record<string, string>>,
+    },
     serverOrInvite: "Server address, invite code or link",
     signUpTitle: "Where are you joining?",
     signUpHelp: "Paste the invite code you were sent, or type the server's address.",

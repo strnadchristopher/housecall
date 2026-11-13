@@ -98,6 +98,9 @@ export type UpdateState =
   | { kind: "installing"; version: string }
   | { kind: "failed"; version: string };
 
+export type PreflightCheck = { ok: boolean; reason?: string };
+export type Preflight = { https: PreflightCheck; call_port: PreflightCheck; storage: PreflightCheck };
+
 export interface IdentityState {
   signedIn: boolean;
   busy: boolean;
@@ -164,6 +167,8 @@ export interface IdentityProvider extends IdentityState {
   dismissJoin(): void;
   /** Ask a server (public) what it is. Rejects with a user-facing message when it is not a HouseCall server. */
   checkServer(address: string): Promise<ServerInfo>;
+  /** First-run checks for a server with no owner yet; undefined once it has one or cannot answer. */
+  preflight(address: string): Promise<Preflight | undefined>;
   /** Ask the owner for an account. Resolves true when the request was sent and saved. */
   requestAccess(input: { origin: string; username: string; password: string; message?: string }): Promise<boolean>;
   refreshPending(): Promise<void>;

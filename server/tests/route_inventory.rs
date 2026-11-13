@@ -137,6 +137,8 @@ async fn every_declared_private_route_rejects_missing_stolen_and_revoked_credent
         ("POST".into(), "/api/access-requests".into()),
         ("GET".into(), "/api/access-requests/{id}/status".into()),
         ("HEAD".into(), "/api/access-requests/{id}/status".into()),
+        ("GET".into(), "/api/preflight".into()),
+        ("HEAD".into(), "/api/preflight".into()),
         ("GET".into(), "/api/health".into()),
         ("HEAD".into(), "/api/health".into()),
         ("POST".into(), "/api/passkeys/login/start".into()),

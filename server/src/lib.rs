@@ -10,6 +10,7 @@ pub mod media;
 pub(crate) mod media_index;
 pub mod passkeys;
 pub mod plex;
+pub mod preflight;
 pub mod profile;
 pub mod push;
 /// 1:1 calls: ring and decline in a direct conversation.
@@ -343,6 +344,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
     let public = Router::new()
         .merge(passkeys::public_routes())
         .merge(access::public_routes())
+        .merge(preflight::routes())
         .route("/setup", post(setup))
         .route("/login", post(login))
         .route("/invites/accept", post(accept))

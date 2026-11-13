@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
-import type { ServerInfo } from "../../core/identity";
+import type { Preflight, ServerInfo } from "../../core/identity";
 import { useIdentity } from "../../core/context";
 import { Logo } from "../brand/Logo";
 import { copy } from "../copy";
+import { preflightRows } from "../setup/preflight";
 import { Button, ErrorLine, Field, IconButton, NavRow, cx } from "../kit";
 
 type Mode = "welcome" | "sign-up" | "server" | "request" | "pending" | "sign-in" | "join" | "setup";
@@ -397,6 +398,39 @@ function SignIn({ preset, onBack, onSignUp }: { preset?: Preset; onBack: () => v
   );
 }
 
+function Checklist({ address }: { address: string }) {
+  const identity = useIdentity();
+  const [result, setResult] = useState<Preflight | undefined | null>(null);
+  const [run, setRun] = useState(0);
+  useEffect(() => {
+    let live = true;
+    void identity.preflight(address).then(value => { if (live) setResult(value); });
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address, run]);
+  const P = C.preflight;
+  if (result === undefined) return null;
+  return (
+    <section className="hc-preflight" aria-label={P.title} aria-live="polite" data-testid="preflight">
+      <h2 className="hc-preflight__title">{P.title}</h2>
+      {result === null ? <p className="hc-preflight__help">{P.checking}</p> : (
+        <ul className="hc-preflight__list">
+          {preflightRows(result).map(row => (
+            <li key={row.id} className="hc-preflight__row" data-ok={row.ok} data-testid={`preflight-${row.id}`}>
+              <span className="hc-preflight__mark" aria-hidden="true">{row.ok ? "✓" : "!"}</span>
+              <span className="hc-preflight__text">
+                <span>{row.label}<span className="hc-sr"> {row.ok ? "passed" : "needs attention"}</span></span>
+                {row.help && <span className="hc-preflight__help">{row.help} <a href={`/${row.href}`} target="_blank" rel="noreferrer">{P.guide}</a></span>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {result && <Button kind="text" type="button" onClick={() => { setResult(null); setRun(n => n + 1); }}>{P.recheck}</Button>}
+    </section>
+  );
+}
+
 function Setup({ onBack }: { onBack: () => void }) {
   const identity = useIdentity();
   const [address, setAddress] = useState(identity.address);
@@ -411,6 +445,7 @@ function Setup({ onBack }: { onBack: () => void }) {
     <form className="hc-onb__form" onSubmit={submit}>
       <Top onBack={onBack} />
       <Title text={C.setupTitle} />
+      <Checklist address={address} />
       {identity.native && (
         <Field label={C.address} value={address} onChange={event => setAddress(event.target.value)}
           inputMode="url" autoComplete="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} required />
