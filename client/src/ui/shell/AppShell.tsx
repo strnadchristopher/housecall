@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useCall, useChat } from "../../core/context";
+import { useCallSounds } from "../call/useCallSounds";
+import { useCallShortcuts } from "../call/useCallShortcuts";
 import { ChannelHeader } from "../chat/ChannelHeader";
 import { MessageList } from "../chat/MessageList";
 import { CallBar } from "../chat/CallBar";
@@ -28,6 +30,8 @@ export function AppShell() {
   const chat = useChat();
   const call = useCall();
   const phone = usePhone();
+  useCallSounds();
+  useCallShortcuts();
   const sheet = useSheet();
   const [nav, setNav] = useState<Nav>({ left: "channels", main: "chat", section: null, side: { kind: "tabs", tab: "people" }, screen: "main", sheet: false });
   const set = (next: Partial<Nav>) => setNav(current => ({ ...current, ...next }));

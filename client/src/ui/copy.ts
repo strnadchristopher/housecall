@@ -91,7 +91,7 @@ export const copy = {
     previewMine: "Show a preview of my stream", previewMineHint: "People in this server can peek at your screen before they join. A small picture is sent every 15 seconds.",
     sounds: "Call sounds", soundsHint: "A short sound when someone joins or leaves, and while a call rings.", soundVolume: "Sound volume",
     speaker: "Speaker", speakerDefault: "System default", volumeFor: (name: string) => `Volume for ${name}`, muteForMe: "Mute for me", unmuteForMe: "Unmute for me", mutedForMe: "Muted for you",
-    shortcuts: "Shortcuts", shortcutMute: "Mute or unmute", shortcutDeafen: "Deafen or undeafen", shortcutsHint: "Work anywhere in the desktop app, even when another window is in front.",
+    shortcuts: "Shortcuts", shortcutMute: "Mute or unmute", shortcutDeafen: "Deafen or undeafen", shortcutsHint: "They work while you are in a call and Housecall is in front.",
     connection: "Connection", latency: (ms: number) => `${ms} ms to server`, measuring: "Measuring", noConnection: "No connection",
     connected: "Voice connected", connecting: "Connecting", reconnecting: "Reconnecting", weak: "Weak connection", tryAgain: "Try again",
     microphone: "Microphone", camera: "Camera", defaultDevice: "System default", refresh: "Refresh devices",

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CallMedia, CallParticipant } from "../../core/call";
 import { copy } from "../copy";
 import { Avatar, Icon, cx } from "../kit";
+import { useOutput } from "./useOutput";
 
 /** A picture counts as live while frames keep arriving. A camera that is switched off stops sending. */
 const STALE_MS = 4000;
@@ -40,12 +41,13 @@ function useFrames(element: React.RefObject<HTMLVideoElement | null>, enabled: b
 }
 
 /** One remote stream. Always mounted, so audio plays whether or not a picture shows. */
-function RemoteMedia({ media, deafened, onPicture }: { media: CallMedia; deafened: boolean; onPicture: (id: string, flowing: boolean) => void }) {
+function RemoteMedia({ media, personId, deafened, onPicture }: { media: CallMedia; personId?: string; deafened: boolean; onPicture: (id: string, flowing: boolean) => void }) {
   const element = useStream(media.stream);
   const flowing = useFrames(element, media.video);
+  const muted = useOutput(element, personId);
   useEffect(() => { onPicture(media.id, flowing); return () => onPicture(media.id, false); }, [media.id, flowing]);
   return (
-    <video ref={element} autoPlay playsInline muted={deafened} data-testid="remote-media" data-peer-id={media.participantId}
+    <video ref={element} autoPlay playsInline muted={deafened || muted} data-testid="remote-media" data-peer-id={media.participantId}
       className={cx("hc-tile__video", !(media.video && flowing) && "is-hidden")}
       aria-label={media.video ? copy.call.remoteVideo : copy.call.remoteAudio} />
   );
@@ -75,7 +77,7 @@ export function Tile({ participant, media, localVideo, speaking, muted, deafened
       data-speaking={speaking ? "" : undefined} data-picture={showing ? "" : undefined}>
       {participant.me
         ? localVideo && <video ref={local} autoPlay playsInline muted data-testid="local-media" className="hc-tile__video" aria-label={copy.call.localVideo} />
-        : media.map(item => <RemoteMedia key={item.id} media={item} deafened={deafened} onPicture={onPicture} />)}
+        : media.map(item => <RemoteMedia key={item.id} media={item} personId={participant.personId} deafened={deafened} onPicture={onPicture} />)}
       {!showing && <span className="hc-tile__face"><Avatar name={participant.name} src={participant.avatarUrl} size="lg" /></span>}
       <button type="button" className="hc-tile__pin" aria-pressed={pinned} aria-label={pinned ? copy.call.unpin(participant.name) : copy.call.pin(participant.name)} onClick={onPin} />
       <figcaption>

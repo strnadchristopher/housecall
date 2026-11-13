@@ -6,6 +6,7 @@ import { Avatar, Button, ErrorLine, Field, Icon, IconButton, cx, type IconName }
 import { Sheet } from "../Sheet";
 import { useFlip, usePhone } from "../tokens/motion";
 import { StreamPreview, type PreviewTarget } from "../call/StreamPreview";
+import { PersonVolume } from "../call/PersonVolume";
 import { useNav } from "./nav";
 
 const LEAVE_MS = 110;
@@ -140,6 +141,7 @@ export function ChannelList() {
   const [sheet, setSheet] = useState<string>();
   const [switching, setSwitching] = useState<string>();
   const [preview, setPreview] = useState<PreviewTarget>();
+  const [person, setPerson] = useState<VoiceRoomMember>();
   const voiceList = useRef<HTMLUListElement>(null);
   const text = chat.conversations.filter(conversation => conversation.kind === "channel");
   const voice = chat.conversations.filter(conversation => conversation.kind === "voice");
@@ -201,7 +203,7 @@ export function ChannelList() {
               {members.length > 0 && (
                 <People channelName={channel.name} members={members} meId={chat.me.id}
                   onLive={(member, anchor, pinned) => setPreview({ channelId: channel.id, member, anchor, pinned })}
-                  onOpen={member => (phone ? open(channel) : member.sharing ? setPreview({ channelId: channel.id, member, anchor: undefined }) : enter(channel.id))} />
+                  onOpen={member => (joined && member.personId !== chat.me.id ? setPerson(member) : phone ? open(channel) : member.sharing ? setPreview({ channelId: channel.id, member, anchor: undefined }) : enter(channel.id))} />
               )}
             </li>
           );
@@ -230,6 +232,7 @@ export function ChannelList() {
       <Sheet open={!!switchTo} onClose={() => setSwitching(undefined)} title={copy.voice.switchTitle(elsewhereName)} testId="switch-call"
         actions={switchTo && <><Button kind="primary" onClick={() => { const id = switchTo.id; setSwitching(undefined); void call.join(id); }}>{copy.voice.switchJoin(switchTo.name)}</Button>
           <Button kind="text" onClick={() => setSwitching(undefined)}>{copy.voice.stay}</Button></>} />
+      <PersonVolume member={person} onClose={() => setPerson(undefined)} />
       <StreamPreview target={preview} onClose={() => setPreview(undefined)} onOpenCall={id => { enter(id); join(id); }} />
     </div>
   );
