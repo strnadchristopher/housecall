@@ -120,6 +120,9 @@ async fn start(
         let mut db = s.db.lock().unwrap();
         let tx = db.transaction()?;
         member(&tx, &p.user.id, &source.channel_id)?;
+        if crate::identity::is_sealed(&tx, &id)? {
+            return Err(crate::bad("sealed uploads are never transcoded"));
+        }
         if tx.query_row(
             "SELECT COUNT(*) FROM media_jobs WHERE status IN ('queued','running')",
             [],

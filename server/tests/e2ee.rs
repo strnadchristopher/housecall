@@ -64,6 +64,9 @@ async fn public(app: &Router, path: &str, body: Value) -> Value {
 async fn fixture() -> (Router, AppState, Value, Value, Value) {
     let mut state = AppState::new(":memory:", SETUP).unwrap();
     state.public_auth_limit = 1000;
+    let dir = tempfile::tempdir().unwrap();
+    state.media = Some(std::sync::Arc::new(housecall_media::Store::new(dir.path(), [7; 32]).unwrap()));
+    std::mem::forget(dir);
     let api = app(state.clone(), None);
     let owner = public(
         &api,
@@ -535,4 +538,92 @@ async fn sealed_message_events_carry_ids_only() {
     };
     assert!(!payloads.is_empty());
     assert!(payloads.iter().all(|p| !p.contains("envelope") && !p.contains(&envelope(1, 1, 1))));
+}
+
+// ---- task 3: sealed uploads ----
+async fn raw(api: &Router, method: &str, path: &str, who: &Value, bytes: Vec<u8>, offset: Option<&str>) -> (StatusCode, axum::http::HeaderMap, Vec<u8>) {
+    let mut b = Request::builder().method(method).uri(path)
+        .header("authorization", format!("Bearer {}", who["token"].as_str().unwrap()))
+        .header("x-device-key", who["device_key"].as_str().unwrap())
+        .header("content-type", if method == "PATCH" { "application/octet-stream" } else { "application/json" });
+    if let Some(o) = offset { b = b.header("upload-offset", o); }
+    let r = api.clone().oneshot(b.body(Body::from(bytes)).unwrap()).await.unwrap();
+    let (status, headers) = (r.status(), r.headers().clone());
+    (status, headers, r.into_body().collect().await.unwrap().to_bytes().to_vec())
+}
+async fn sealed_upload(api: &Router, who: &Value, c: &str, data: &[u8]) -> String {
+    let r = call(api, "POST", "/api/uploads", who, json!({"channel_id":c,"filename":"sealed","length":data.len().to_string(),"class":"sealed"})).await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.json());
+    let id = r.json()["id"].as_str().unwrap().to_owned();
+    let (st, _, _) = raw(api, "PATCH", &format!("/api/uploads/{id}"), who, data.to_vec(), Some("0")).await;
+    assert_eq!(st, StatusCode::OK);
+    let r = call(api, "POST", &format!("/api/uploads/{id}/complete"), who, Value::Null).await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.json());
+    assert_eq!(r.json()["status"], "ready");
+    assert_eq!(r.json()["scan"], Value::Null);
+    id
+}
+#[tokio::test]
+async fn sealed_upload_rules() {
+    let (api, _, owner, alice, bob, c) = keyed_dm().await;
+    let mk = |filename: &str, length: &str, class: &str| json!({"channel_id":c,"filename":filename,"length":length,"class":class});
+    let r = call(&api, "POST", "/api/uploads", &alice, mk("photo.png", "10", "sealed")).await;
+    assert_eq!(r.status, StatusCode::BAD_REQUEST);
+    let r = call(&api, "POST", "/api/uploads", &alice, mk("sealed", "104883221", "sealed")).await;
+    assert_eq!(r.status, StatusCode::PAYLOAD_TOO_LARGE);
+    let r = call(&api, "POST", "/api/uploads", &alice, mk("sealed", "104883220", "sealed")).await;
+    assert_eq!(r.status, StatusCode::OK);
+    let r = call(&api, "POST", "/api/uploads", &alice, mk("sealed", "10", "other")).await;
+    assert_eq!(r.status, StatusCode::BAD_REQUEST);
+    // outside an encrypted DM
+    let ch = call(&api, "POST", "/api/channels", &owner, json!({"name":"room","kind":"channel"})).await.json()["id"].as_str().unwrap().to_owned();
+    let r = call(&api, "POST", "/api/uploads", &owner, json!({"channel_id":ch,"filename":"sealed","length":"10","class":"sealed"})).await;
+    assert_eq!((r.status, r.error()), (StatusCode::UNPROCESSABLE_ENTITY, json!("encryption is not available in this conversation")));
+    let _ = bob;
+}
+#[tokio::test]
+async fn sealed_upload_is_unscanned_untranscoded_attached_and_served_as_a_download() {
+    let (api, st, _, alice, bob, c) = keyed_dm().await;
+    let data = vec![0x42u8; 5000];
+    let id = sealed_upload(&api, &alice, &c, &data).await;
+    // a plaintext message cannot take it; an encrypted one can, once
+    let r = send(&api, &alice, &c, json!({"enc":0,"body":"x","attachment_ids":[id]})).await;
+    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY);
+    let m = send(&api, &alice, &c, json!({"enc":1,"envelope":envelope(1,1,1),"attachment_ids":[id]})).await;
+    assert_eq!(m.status, StatusCode::OK, "{:?}", m.json());
+    assert_eq!(m.json()["attachments"][0]["kind"], "sealed");
+    assert_eq!(m.json()["attachments"][0]["filename"], "sealed");
+    assert!(m.json()["attachments"][0].get("video_path").is_none());
+    assert!(m.json()["attachments"][0].get("thumbnail_path").is_none());
+    let again = send(&api, &alice, &c, json!({"enc":1,"envelope":envelope(1,1,1),"attachment_ids":[id]})).await;
+    assert_eq!(again.status, StatusCode::CONFLICT);
+    // transcoding is refused and no job exists
+    let (status, _, _) = raw(&api, "POST", &format!("/api/uploads/{id}/transcode"), &alice, vec![], None).await;
+    assert_ne!(status, StatusCode::OK);
+    let jobs: i64 = st.db.lock().unwrap().query_row("SELECT COUNT(*) FROM media_jobs", [], |r| r.get(0)).unwrap();
+    assert_eq!(jobs, 0);
+    // download
+    let (status, h, body) = raw(&api, "GET", &format!("/api/media/{id}"), &bob, vec![], None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(h["content-type"], "application/octet-stream");
+    assert_eq!(h["content-disposition"], "attachment");
+    assert_eq!(h["x-content-type-options"], "nosniff");
+    assert_eq!(body, data);
+    // deleting the message deletes the bytes
+    let mid = m.json()["id"].as_str().unwrap().to_owned();
+    assert_eq!(call(&api, "DELETE", &format!("/api/messages/{mid}"), &alice, Value::Null).await.status, StatusCode::OK);
+    let (status, _, _) = raw(&api, "GET", &format!("/api/media/{id}"), &bob, vec![], None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
+#[tokio::test]
+async fn plain_upload_cannot_be_attached_to_an_encrypted_message() {
+    let (api, _, _, alice, _, c) = keyed_dm().await;
+    let r = call(&api, "POST", "/api/uploads", &alice, json!({"channel_id":c,"filename":"a.txt","length":"1"})).await;
+    let id = r.json()["id"].as_str().unwrap().to_owned();
+    raw(&api, "PATCH", &format!("/api/uploads/{id}"), &alice, vec![1], Some("0")).await;
+    let r = call(&api, "POST", &format!("/api/uploads/{id}/complete"), &alice, Value::Null).await;
+    // the default scanner rejects everything; a non-ready upload is refused either way
+    let _ = r;
+    let m = send(&api, &alice, &c, json!({"enc":1,"envelope":envelope(1,1,1),"attachment_ids":[id]})).await;
+    assert_eq!(m.status, StatusCode::BAD_REQUEST);
 }
