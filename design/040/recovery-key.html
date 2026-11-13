@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en" data-accent="lavender">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HC-040 · 11 Recovery key</title>
+<!-- default = the 24 words, at sign-up · confirm = type two of them · wrong = one is wrong
+     enter = type the key on a new device · settings = Settings, Security · view = viewing it again, timed
+     reset = the reset warning -->
+<meta name="hc-states" content="default,confirm,wrong,enter,settings,view,reset">
+<link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/b.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/c.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/accents.css">
+<link rel="stylesheet" href="../../client/src/ui/styles/index.css">
+<link rel="stylesheet" href="hc-040.css">
+<script src="icons.js"></script>
+<script src="mock.js"></script>
+</head>
+<body>
+<template id="words">
+  <li>harbor</li><li>velvet</li><li>mosaic</li><li>ladder</li><li>orchard</li><li>ticket</li><li>blanket</li><li>marble</li>
+  <li>copper</li><li>window</li><li>pepper</li><li>island</li><li>lantern</li><li>saddle</li><li>thunder</li><li>basket</li>
+  <li>garden</li><li>pencil</li><li>meadow</li><li>anchor</li><li>ribbon</li><li>kettle</li><li>summit</li><li>walnut</li>
+</template>
+
+<div class="hc-root">
+<!-- Onboarding: after the three slides, before the shell -->
+<main class="hc-onb" data-show="default confirm wrong enter">
+  <div class="hc-onb__screen is-wide">
+    <div class="hc-onb__top"><button type="button" class="hc-ibtn" aria-label="Back" data-show="confirm wrong enter"><i data-i="back"></i></button></div>
+
+    <div class="hc-onb__form" data-show="default">
+      <div class="hc-onb__title"><h1>Your recovery key</h1><p>These 24 words get your DMs back if you lose your devices. Write them down, in order, and keep them somewhere safe.</p></div>
+      <div class="hc-recovery">
+        <ol class="hc-words" aria-label="Recovery key" data-words></ol>
+        <p class="hc-note"><i data-i="warn"></i><span>Anyone with these words can read your DMs. Keep them off screenshots and out of chats. Nobody can reset them for you, not the host and not us.</span></p>
+      </div>
+      <div class="hc-onb__actions">
+        <button type="button" class="hc-btn hc-btn--primary">I wrote them down</button>
+        <button type="button" class="hc-btn hc-btn--text"><i data-i="copy"></i>Copy the words</button>
+      </div>
+    </div>
+
+    <div class="hc-onb__form" data-show="confirm wrong">
+      <div class="hc-onb__title"><h1>Check two words</h1><p>Type word 7 and word 19 from what you wrote down.</p></div>
+      <div class="hc-recovery__pair">
+        <label class="hc-field"><span class="hc-field__label">Word 7</span><input value="blanket" autocomplete="off" autocapitalize="none" spellcheck="false"></label>
+        <label class="hc-field" data-show="confirm"><span class="hc-field__label">Word 19</span><input value="" autocomplete="off" autocapitalize="none" spellcheck="false"></label>
+        <label class="hc-field" data-show="wrong"><span class="hc-field__label">Word 19</span><input value="medow" aria-invalid="true" autocomplete="off" autocapitalize="none" spellcheck="false"><span class="hc-field__error" role="alert">That isn't word 19. Check what you wrote down.</span></label>
+      </div>
+      <div class="hc-onb__actions">
+        <button type="button" class="hc-btn hc-btn--primary" disabled data-show="confirm">Finish</button>
+        <button type="button" class="hc-btn hc-btn--primary" data-show="wrong">Finish</button>
+        <button type="button" class="hc-btn hc-btn--text">Show the words again</button>
+      </div>
+    </div>
+
+    <div class="hc-onb__form" data-show="enter">
+      <div class="hc-onb__title"><h1>Enter your recovery key</h1><p>Type or paste the 24 words, in order, with spaces between them.</p></div>
+      <label class="hc-field">
+        <span class="hc-field__row"><span class="hc-field__label">Recovery key</span><span class="hc-field__count">18 of 24 words</span></span>
+        <textarea rows="5" autocomplete="off" autocapitalize="none" spellcheck="false" style="resize:none;line-height:1.6">harbor velvet mosaic ladder orchard ticket blanket marble copper window pepper island lantern saddle thunder basket garden pencil</textarea>
+      </label>
+      <p class="hc-note"><i data-i="lock"></i><span>The words stay on this device. They are never sent to the host.</span></p>
+      <div class="hc-onb__actions">
+        <button type="button" class="hc-btn hc-btn--primary" disabled>Unlock my DMs</button>
+        <button type="button" class="hc-btn hc-btn--text">Use another device instead</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Settings, Security -->
+<div class="hc-shell" data-screen="main" data-show="settings view reset">
+  <nav class="hc-left" aria-label="Housecall" data-part="left" data-opts='{"current":"general","unread":false}'></nav>
+  <main class="hc-center">
+    <div class="hc-settings-layer"><div class="hc-settings">
+      <header class="hc-header">
+        <button type="button" class="hc-ibtn" aria-label="Close" data-show-phone="0"><i data-i="close"></i></button>
+        <button type="button" class="hc-ibtn" aria-label="Back" data-show-phone="1"><i data-i="back"></i></button>
+        <div class="hc-header__title"><h1 data-show-phone="0">Settings</h1><h1 data-show-phone="1">Security</h1></div>
+      </header>
+      <div class="hc-settings__body">
+        <nav class="hc-settings__nav" aria-label="Settings" data-show-phone="0" data-part="settingsnav" data-opts='{"current":"Security"}'></nav>
+        <section class="hc-settings__pane" aria-labelledby="s-title">
+          <h2 id="s-title" data-show-phone="0">Security</h2>
+
+          <div class="hc-stack" data-show="settings reset" style="gap:var(--hc-space-4)">
+            <div class="hc-status"><i data-i="lock"></i><span><strong>Your one-to-one DMs are end-to-end encrypted</strong><small class="hc-muted">This device holds your keys. Group chats, channels and calls are not sealed yet.</small></span></div>
+            <ul class="hc-navgroup">
+              <li><button type="button" class="hc-navrow"><span class="hc-navrow__lead"><i data-i="key"></i></span><span class="hc-navrow__label">View recovery key</span><span class="hc-navrow__chev"><i data-i="right"></i></span></button></li>
+              <li><button type="button" class="hc-navrow"><span class="hc-navrow__lead"><i data-i="retry"></i></span><span class="hc-navrow__label">Replace recovery key</span><span class="hc-navrow__chev"><i data-i="right"></i></span></button></li>
+              <li><button type="button" class="hc-navrow"><span class="hc-navrow__lead"><i data-i="info"></i></span><span class="hc-navrow__label">How security works</span><span class="hc-navrow__chev"><i data-i="right"></i></span></button></li>
+            </ul>
+            <ul class="hc-navgroup">
+              <li><button type="button" class="hc-navrow is-danger"><span class="hc-navrow__label">Reset encryption keys</span><span class="hc-navrow__chev"><i data-i="right"></i></span></button></li>
+            </ul>
+          </div>
+
+          <div class="hc-recovery" data-show="view">
+            <p class="hc-lede">Your recovery key. Write it down again if you need to, then close this.</p>
+            <ol class="hc-words" aria-label="Recovery key" data-words></ol>
+            <div class="hc-recovery__row">
+              <button type="button" class="hc-btn">Done</button>
+              <button type="button" class="hc-btn hc-btn--text"><i data-i="copy"></i>Copy the words</button>
+              <span class="hc-ring" style="--hc-ring-s:60s" role="presentation"><i></i><i></i></span><span class="hc-muted" role="timer">Hides in 52 s</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div></div>
+  </main>
+</div>
+</div>
+
+<!-- Reset warning -->
+<div data-show="reset">
+  <div class="hc-sheet-scrim"></div>
+  <form class="hc-sheet" role="alertdialog" aria-labelledby="r-title">
+    <span class="hc-sheet__grip"></span>
+    <i data-i="warn" class="hc-sheet__icon"></i>
+    <div class="hc-sheet__head" style="min-height:0"><h2 id="r-title" style="white-space:normal">Reset your encryption keys?</h2></div>
+    <ul class="hc-consequences">
+      <li><i data-i="close"></i><span>Encrypted DMs you can't open now stay unreadable for good, on every device.</span></li>
+      <li><i data-i="close"></i><span>Everyone you write to sees that your security key changed, and has to accept it.</span></li>
+      <li class="is-kept"><i data-i="check"></i><span>You get new keys and a new recovery key, and can send encrypted DMs again.</span></li>
+    </ul>
+    <label class="hc-check"><input type="checkbox"><span>I understand that the old messages can't be recovered by me, the host or anyone else.</span></label>
+    <div class="hc-sheet__actions"><button type="submit" class="hc-btn hc-btn--danger-solid" disabled>Reset keys</button><button type="button" class="hc-btn hc-btn--text">Cancel</button></div>
+  </form>
+</div>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll("[data-words]").forEach(list => { list.innerHTML = document.getElementById("words").innerHTML; });
+  });
+</script>
+</body>
+</html>

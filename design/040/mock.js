@@ -166,7 +166,7 @@
         ${kind === "dm" ? av(name, "sm") : `<span class="hc-header__glyph">${icon(kind === "voice" ? "speaker" : "hash")}</span>`}
         <h1>${name}</h1>${o.meta ? `<span class="hc-header__meta">${o.meta}</span>` : ""}
       </div>
-      ${o.buttons ?? (ibtn("search", "Search") + ibtn("pin", "Pins") + (phone || o.people ? ibtn("people", "People") : "") + ibtn("settings", "Server settings"))}
+      ${o.buttons ?? ((kind === "dm" && !o.nocall ? ibtn("phone", "Call " + name) : "") + ibtn("search", "Search") + ibtn("pin", "Pins") + ((phone && kind !== "dm") || o.people ? ibtn("people", "People") : "") + (kind === "dm" ? "" : ibtn("settings", "Server settings")))}
     </header>`;
 
   /** A stand-in QR picture: finder squares and seeded noise. Not a real code; the app draws qrcode-generator's modules the same way. */
@@ -211,7 +211,7 @@
         : p === "settingsnav" ? settingsNav(o.current) : p === "qr" ? qr(o.seed) : p === "logo" ? logo() : p === "door" ? DOOR[o.kind || "shut"] : "";
       if (p === "door" || p === "logo") el.replaceWith(...el.childNodes);
     });
-    root.querySelectorAll("[data-i]").forEach(el => { el.outerHTML = icon(el.dataset.i, el.hasAttribute("data-off")); });
+    root.querySelectorAll("[data-i]").forEach(el => { el.outerHTML = icon(el.dataset.i, el.hasAttribute("data-off")).replace('class="hc-icon"', `class="hc-icon ${el.className}"`); });
     root.querySelectorAll("[data-av]").forEach(el => { el.outerHTML = av(el.dataset.av, el.dataset.size || "md", el.className); });
   };
   document.addEventListener("DOMContentLoaded", () => {

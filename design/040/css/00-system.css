@@ -114,9 +114,17 @@ p { text-wrap: pretty; }
 .hc-header__title { flex-direction: row; align-items: center; gap: var(--hc-space-2); padding-inline: var(--hc-space-1); line-height: 1.25; }
 .hc-header__glyph { display: grid; flex: none; color: var(--hc-text-muted); }
 .hc-header h1 { font-size: var(--hc-text-lg); flex: 0 1 auto; }
-.hc-header__meta { flex: 1 1 0; min-width: 0; font-size: var(--hc-text-sm); color: var(--hc-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-top: 2px; }
-.hc-header__meta > button { display: inline-flex; align-items: center; gap: var(--hc-space-1); border-radius: var(--hc-radius-xs); color: inherit; }
-.hc-header__meta .hc-icon { width: 14px; height: 14px; }
+.hc-header__meta { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: var(--hc-space-3); font-size: var(--hc-text-sm); color: var(--hc-text-muted); white-space: nowrap; padding-top: 2px; }
+.hc-header__bio { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Phones: the detail drops under the name, so the name keeps its room beside the buttons. */
+@media (max-width: 47.5em) {
+  .hc-header { padding: var(--hc-space-1) var(--hc-space-1) var(--hc-space-1) var(--hc-space-1); }
+  .hc-header__title { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: var(--hc-space-2); row-gap: 0; }
+  .hc-header__glyph, .hc-header__title > .hc-avatar { grid-row: 1 / span 2; }
+  .hc-header h1 { grid-column: 2; line-height: 1.2; }
+  .hc-header__meta { grid-column: 2; grid-row: 2; gap: var(--hc-space-1); padding-top: 0; font-size: var(--hc-text-xs); line-height: 1.3; }
+  .hc-header__meta .hc-signal { width: 20px; height: 16px; padding: 1px 2px 2px; margin-inline-start: -2px; }
+}
 
 /* Fields: the composer and inline fields lose the hard outline at rest; the focus ring is the edge. */
 .hc-composer__row { border-color: transparent; background: var(--hc-surface-raised); box-shadow: var(--hc-lip); border-radius: calc(var(--hc-radius-md) + 2px); }
