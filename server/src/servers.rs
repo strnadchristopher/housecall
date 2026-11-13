@@ -20,6 +20,7 @@ pub fn init(db: &Connection) -> rusqlite::Result<()> {
         ("invites", "uses", "INTEGER NOT NULL DEFAULT 0"),
         ("users", "disabled", "INTEGER NOT NULL DEFAULT 0"),
         ("users", "display_name", "TEXT"),
+        ("users", "bio", "TEXT"),
         ("users", "avatar", "BLOB"),
         ("users", "avatar_type", "TEXT"),
         ("users", "avatar_rev", "INTEGER NOT NULL DEFAULT 0"),
@@ -176,7 +177,7 @@ async fn members(
 ) -> ApiResult<Value> {
     let db = s.db.lock().unwrap();
     member(&db, &p.user.id, &sid)?;
-    let mut q=db.prepare("SELECT u.id,u.username,u.is_owner,u.display_name,u.avatar_rev FROM users u JOIN server_members m ON m.user_id=u.id WHERE m.server_id=? ORDER BY u.username")?;
+    let mut q=db.prepare("SELECT u.id,u.username,u.is_owner,u.display_name,u.avatar_rev,u.bio FROM users u JOIN server_members m ON m.user_id=u.id WHERE m.server_id=? ORDER BY u.username")?;
     let rows = q
         .query_map([sid], |r| {
             Ok(json!({
@@ -185,6 +186,7 @@ async fn members(
                 "is_owner": r.get::<_, bool>(2)?,
                 "display_name": r.get::<_, Option<String>>(3)?,
                 "avatar_rev": r.get::<_, i64>(4)?,
+                "bio": r.get::<_, Option<String>>(5)?,
             }))
         })?
         .collect::<Result<Vec<_>, _>>()?;

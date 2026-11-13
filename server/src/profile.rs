@@ -74,10 +74,10 @@ fn image_response(bytes: Vec<u8>, kind: String) -> Response {
     response
 }
 fn announce_member(db: &Connection, uid: &str) -> Result<(), ApiError> {
-    let (display_name, rev): (Option<String>, i64) = db.query_row(
-        "SELECT display_name,avatar_rev FROM users WHERE id=?",
+    let (display_name, rev, bio): (Option<String>, i64, Option<String>) = db.query_row(
+        "SELECT display_name,avatar_rev,bio FROM users WHERE id=?",
         [uid],
-        |r| Ok((r.get(0)?, r.get(1)?)),
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
     )?;
     let channels = db
         .prepare("SELECT channel_id FROM members WHERE user_id=?")?
@@ -88,7 +88,7 @@ fn announce_member(db: &Connection, uid: &str) -> Result<(), ApiError> {
             db,
             &channel,
             "member.updated",
-            json!({"user_id":uid,"display_name":display_name,"avatar_rev":rev}),
+            json!({"user_id":uid,"display_name":display_name,"avatar_rev":rev,"bio":bio}),
         )?;
     }
     Ok(())
@@ -107,27 +107,54 @@ fn announce_server(db: &Connection, sid: &str) -> Result<(), ApiError> {
     )
 }
 
-#[derive(Deserialize)]
-pub struct Rename {
-    display_name: Option<String>,
+/// A bio may span lines, so newlines and tabs are allowed; every other control or invisible
+/// character is not. An empty bio clears it.
+fn clean_bio(value: &str) -> Result<Option<String>, ApiError> {
+    let value = value.trim();
+    if value.chars().count() > 190
+        || value
+            .chars()
+            .any(|c| (c.is_control() && !matches!(c, '\n' | '\t')) || invisible(c))
+    {
+        return Err(bad("invalid bio"));
+    }
+    Ok((!value.is_empty()).then(|| value.to_owned()))
 }
+/// Only the fields present in the body change. `display_name: null` still clears the name.
 pub async fn rename_me(
     State(s): State<AppState>,
     Extension(p): Extension<Principal>,
-    Json(v): Json<Rename>,
+    Json(v): Json<Value>,
 ) -> ApiResult<Value> {
-    let name = v
-        .display_name
-        .as_deref()
-        .map(|n| clean(n, 32))
-        .transpose()?;
+    let name = match v.get("display_name") {
+        None => None,
+        Some(Value::Null) => Some(None),
+        Some(Value::String(n)) => Some(Some(clean(n, 32)?)),
+        Some(_) => return Err(bad("invalid name")),
+    };
+    let bio = match v.get("bio") {
+        None => None,
+        Some(Value::Null) => Some(None),
+        Some(Value::String(b)) => Some(clean_bio(b)?),
+        Some(_) => return Err(bad("invalid bio")),
+    };
     let db = s.db.lock().unwrap();
-    db.execute(
-        "UPDATE users SET display_name=? WHERE id=?",
-        params![name, p.user.id],
-    )?;
+    if let Some(name) = &name {
+        db.execute(
+            "UPDATE users SET display_name=? WHERE id=?",
+            params![name, p.user.id],
+        )?;
+    }
+    if let Some(bio) = &bio {
+        db.execute("UPDATE users SET bio=? WHERE id=?", params![bio, p.user.id])?;
+    }
     announce_member(&db, &p.user.id)?;
-    Ok(Json(json!({"display_name":name})))
+    let (display_name, bio): (Option<String>, Option<String>) = db.query_row(
+        "SELECT display_name,bio FROM users WHERE id=?",
+        [&p.user.id],
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )?;
+    Ok(Json(json!({"display_name":display_name,"bio":bio})))
 }
 async fn set_avatar(
     State(s): State<AppState>,
