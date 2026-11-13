@@ -91,11 +91,13 @@ test("shell: picker, channel, call, composer, tabs, direct messages", async ({ p
 
   // Call bar: Join, then count, duration and avatars under the channel name.
   const bar = page.getByTestId("call-bar");
-  await bar.getByRole("button", { name: "Join", exact: true }).click();
+  // A text channel has no call bar; joining is one click on a voice channel and rings nobody.
+  await expect(bar).toHaveCount(0);
+  await page.getByRole("button", { name: "Open Lounge", exact: true }).click();
   await expect(bar).toHaveAttribute("data-phase", "live", { timeout: 30000 });
   await expect(bar.getByTestId("call-duration")).toBeVisible();
   await expect(bar).toContainText("1");
-  await expect(page.getByTestId("channel-call").locator("[title]").first()).toBeVisible();
+  await expect(page.getByTestId("voice-person").first()).toBeVisible();
   // The stage owns the center, so its call bar carries the controls and the sidebar dock steps aside.
   await expect(page.getByTestId("call-dock")).toHaveCount(0);
   await expect(bar.getByRole("button", { name: "Mute", exact: true })).toBeVisible();
@@ -123,15 +125,16 @@ test("shell: picker, channel, call, composer, tabs, direct messages", async ({ p
   // A phone keeps the conversation on screen; the menu opens the drawer, where the dock is in view.
   await page.getByRole("button", { name: "Menu", exact: true }).click();
   await expect(page.getByTestId("call-dock")).toBeVisible();
+  // A text channel has no call bar, even while you are in a call elsewhere; the dock in the drawer keeps Leave in reach.
   await page.getByRole("button", { name: "Open garden", exact: true }).click();
-  await expect(bar).toHaveAttribute("data-elsewhere", "");
-  await expect(bar).toContainText("In call in");
-  await expect(bar.getByRole("button", { name: "Mute", exact: true })).toBeVisible();
-  await bar.getByRole("button", { name: "Join", exact: true }).click();
-  await expect(bar.getByRole("button", { name: "Switch call", exact: true })).toBeVisible();
-  await bar.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(bar).toHaveCount(0);
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await expect(page.getByTestId("call-dock")).toBeVisible();
+  // Tapping the voice channel you are inside opens its stage again.
+  await page.getByTestId("voice-channel").getByRole("button", { name: "Open Lounge", exact: true }).click();
+  await expect(bar).toHaveAttribute("data-phase", "live");
   await bar.getByRole("button", { name: "Leave", exact: true }).click();
-  await expect(bar.getByRole("button", { name: "Join", exact: true })).toBeVisible();
+  await expect(page.getByTestId("call-stage")).toHaveCount(0);
 });
 
 test("profile: display name and avatar show in the user bar and on new messages; owner edits the server", async ({ page }) => {
