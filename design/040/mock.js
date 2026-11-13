@@ -169,7 +169,33 @@
       ${o.buttons ?? (ibtn("search", "Search") + ibtn("pin", "Pins") + (phone || o.people ? ibtn("people", "People") : "") + ibtn("settings", "Server settings"))}
     </header>`;
 
-  window.HC = { icon, av, ibtn, vrow, channel, callcard, signal, left, right, messages, composer, header, live, state, phone };
+  /** A stand-in QR picture: finder squares and seeded noise. Not a real code; the app draws qrcode-generator's modules the same way. */
+  const qr = (seed = 7, n = 37) => {
+    const on = new Set();
+    const set = (x, y) => on.add(x + "," + y);
+    const finder = (ox, oy) => { for (let y = 0; y < 7; y++) for (let x = 0; x < 7; x++) if (x === 0 || x === 6 || y === 0 || y === 6 || (x > 1 && x < 5 && y > 1 && y < 5)) set(ox + x, oy + y); };
+    const reserved = (x, y) => (x < 8 && y < 8) || (x >= n - 8 && y < 8) || (x < 8 && y >= n - 8);
+    finder(0, 0); finder(n - 7, 0); finder(0, n - 7);
+    for (let y = 0; y < 5; y++) for (let x = 0; x < 5; x++) if (x === 0 || x === 4 || y === 0 || y === 4 || (x === 2 && y === 2)) set(n - 9 + x, n - 9 + y);
+    let s = seed;
+    const rnd = () => (s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      if (reserved(x, y) || (x >= n - 9 && x < n - 4 && y >= n - 9 && y < n - 4)) continue;
+      if (x === 6 || y === 6) { if ((x + y) % 2 === 0) set(x, y); continue; }
+      if (rnd() < 0.47) set(x, y);
+    }
+    return `<svg class="hc-qr__svg" viewBox="0 0 ${n} ${n}" role="img" aria-label="QR code"><path d="${[...on].map(k => { const [x, y] = k.split(","); return `M${x} ${y}h1v1h-1z`; }).join("")}"/></svg>`;
+  };
+  const NAV = [["You", ["Profile", "Appearance", "Notifications", "Audio and video", "Devices", "Security"]], ["Theo's place", ["Server profile", "Invites", "Channels", "Roles", "Apps"]], ["Help", ["How security works", "Report a problem", "About"]]];
+  const settingsNav = (current = "Profile") => NAV.map(([group, rows]) => `<div><h2 class="hc-settings__grouplabel">${group}</h2><ul class="hc-navgroup">${rows.map(r =>
+    `<li><button type="button" class="hc-navrow${r === current ? " is-current" : ""}"><span class="hc-navrow__label">${r}</span></button></li>`).join("")}</ul></div>`).join("");
+  const logo = (cls = "") => `<svg class="hc-logo ${cls}" viewBox="0 0 32 32" aria-hidden="true"><path class="hc-logo__ink" d="M6 3H12V10.83A10 10 0 0 1 26 20V29H20V20A4 4 0 0 0 12 20V29H6Z"/><path class="hc-logo__lit" d="M12 29V20A4 4 0 0 1 20 20V29Z"/><path class="hc-logo__leaf" d="M12 29V20A4 4 0 0 1 12.6 17.9L15.4 19.6V29Z"/></svg>`;
+  const DOOR = {
+    shut: `<svg class="hc-empty__door" viewBox="0 0 24 30" aria-hidden="true"><path class="hc-door__frame" d="M1 30V12a11 11 0 0 1 22 0v18Z"/><path class="hc-door__shut" d="M4.5 30V12a7.5 7.5 0 0 1 15 0v18Z"/><path class="hc-door__knob" d="M15.5 19.5v1.4"/></svg>`,
+    ajar: `<svg class="hc-empty__door" viewBox="0 0 24 30" aria-hidden="true"><path class="hc-door__frame" d="M1 30V12a11 11 0 0 1 22 0v18Z"/><path class="hc-door__lit" d="M4.5 30V12a7.5 7.5 0 0 1 15 0v18Z"/><path class="hc-door__leaf" d="M4.5 30V12a7.5 7.5 0 0 1 1.2-4L11 11.2V30Z"/></svg>`,
+  };
+
+  window.HC = { icon, av, ibtn, vrow, channel, callcard, signal, left, right, messages, composer, header, live, state, phone, qr, settingsNav, logo, DOOR };
 
   const stamp = root => {
     root.querySelectorAll("[data-show]").forEach(el => { if (!el.dataset.show.split(" ").includes(state || "default")) el.remove(); });
@@ -181,7 +207,9 @@
       Object.assign(o, so ? JSON.parse(so) : {});
       const p = el.dataset.part;
       el.innerHTML = p === "left" ? left(o) : p === "right" ? right(el.dataset.tab, o) : p === "messages" ? messages(o) : p === "composer" ? composer(o.name || "general", o)
-        : p === "header" ? header(o.kind || "text", o.name || "general", o) : p === "callcard" ? callcard(o.call || "connected", o) : "";
+        : p === "header" ? header(o.kind || "text", o.name || "general", o) : p === "callcard" ? callcard(o.call || "connected", o)
+        : p === "settingsnav" ? settingsNav(o.current) : p === "qr" ? qr(o.seed) : p === "logo" ? logo() : p === "door" ? DOOR[o.kind || "shut"] : "";
+      if (p === "door" || p === "logo") el.replaceWith(...el.childNodes);
     });
     root.querySelectorAll("[data-i]").forEach(el => { el.outerHTML = icon(el.dataset.i, el.hasAttribute("data-off")); });
     root.querySelectorAll("[data-av]").forEach(el => { el.outerHTML = av(el.dataset.av, el.dataset.size || "md", el.className); });

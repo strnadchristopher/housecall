@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en" data-accent="lavender">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HC-040 · 10 QR login, the new device</title>
+<!-- default = explainer · nocamera = this device cannot scan · confirm = code read, who and where
+     number = the check number, waiting for the other device · success · expired · denied
+     (the scan step itself is snap-camera.html?s=scan) -->
+<meta name="hc-states" content="default,nocamera,confirm,number,success,expired,denied">
+<link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/b.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/c.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/accents.css">
+<link rel="stylesheet" href="../../client/src/ui/styles/index.css">
+<link rel="stylesheet" href="hc-040.css">
+<script src="icons.js"></script>
+<script src="mock.js"></script>
+</head>
+<body>
+<div class="hc-root">
+<main class="hc-onb">
+  <div class="hc-onb__screen">
+    <div class="hc-onb__top" data-hide="success"><button type="button" class="hc-ibtn" aria-label="Back"><i data-i="back"></i></button></div>
+
+    <!-- 1. explainer -->
+    <div class="hc-onb__form" data-show="default nocamera">
+      <div class="hc-onb__title">
+        <h1>Log in with QR code</h1>
+        <p data-show="default">No password to type. Your other device vouches for this one.</p>
+        <p data-show="nocamera">This device has no camera to scan with.</p>
+      </div>
+      <ol class="hc-qrsteps" data-show="default">
+        <li><span class="hc-qrsteps__n">1</span><span>On a device where you're already logged in, open <strong>Settings</strong>, then <strong>Log in with QR code</strong>.</span></li>
+        <li><span class="hc-qrsteps__n">2</span><span>Scan the code it shows.</span></li>
+        <li><span class="hc-qrsteps__n">3</span><span>Check that both devices show the same two-digit number, and say yes on the other one.</span></li>
+      </ol>
+      <p class="hc-note" data-show="nocamera"><i data-i="info"></i><span>Log in with your password here. After that this device can show a code for your phone to scan.</span></p>
+      <div class="hc-onb__actions">
+        <button type="button" class="hc-btn hc-btn--primary" data-show="default"><i data-i="scan"></i>Scan QR code</button>
+        <button type="button" class="hc-btn hc-btn--primary" data-show="nocamera">Log in with a password</button>
+        <button type="button" class="hc-btn hc-btn--text" data-show="default">Use a password instead</button>
+      </div>
+    </div>
+
+    <!-- 3. confirm -->
+    <div class="hc-onb__form" data-show="confirm">
+      <div class="hc-qrnew">
+        <div class="hc-qrnew__who">
+          <span class="hc-onb__door">T</span>
+          <span><strong>Log in as theo?</strong><br><small class="hc-muted">on housecall.theosplace.example</small></span>
+        </div>
+      </div>
+      <p class="hc-note"><i data-i="info"></i><span>Make sure this is the server you meant. The code you scanned chose it.</span></p>
+      <div class="hc-onb__actions">
+        <button type="button" class="hc-btn hc-btn--primary">Log in</button>
+        <button type="button" class="hc-btn hc-btn--text">Cancel</button>
+      </div>
+    </div>
+
+    <!-- 4. number, waiting -->
+    <div class="hc-onb__form" data-show="number">
+      <div class="hc-onb__title is-centered"><h1>Check your other device</h1><p>It should show this number. If it does, say yes there.</p></div>
+      <div class="hc-qrnew">
+        <div class="hc-plates" aria-label="42"><span class="hc-plate">4</span><span class="hc-plate">2</span></div>
+        <p class="hc-qrnew__wait" role="status"><span class="hc-wait" aria-hidden="true"><i></i><i></i><i></i></span>Waiting for your other device</p>
+      </div>
+      <p class="hc-note"><i data-i="warn"></i><span>A different number there? Deny it on that device and start again.</span></p>
+      <div class="hc-onb__actions"><button type="button" class="hc-btn hc-btn--text">Cancel</button></div>
+    </div>
+
+    <!-- 5. success: the door opens, then the shell arrives (section 13) -->
+    <div class="hc-onb__form" data-show="success" style="justify-content:center">
+      <div class="hc-qrnew" role="status">
+        <span data-part="door" data-opts='{"kind":"ajar"}'></span>
+        <div class="hc-qrnew__who"><span><strong>You're in</strong><br><small class="hc-muted">Opening Theo's place</small></span></div>
+      </div>
+    </div>
+
+    <!-- 6. expired, 7. denied -->
+    <div class="hc-onb__form" data-show="expired denied">
+      <div class="hc-qrnew" role="alert">
+        <span data-part="door" data-opts='{"kind":"shut"}'></span>
+        <div class="hc-qrnew__who" data-show="expired"><span><strong>That code ran out</strong><br><small class="hc-muted">Codes last two minutes. Show a new one on your other device and scan again.</small></span></div>
+        <div class="hc-qrnew__who" data-show="denied"><span><strong>The other device said no</strong><br><small class="hc-muted">Nothing was logged in. If that wasn't you, there is nothing else to do.</small></span></div>
+      </div>
+      <div class="hc-onb__actions">
+        <button type="button" class="hc-btn hc-btn--primary"><i data-i="scan"></i>Scan again</button>
+        <button type="button" class="hc-btn hc-btn--text">Use a password instead</button>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+</body>
+</html>

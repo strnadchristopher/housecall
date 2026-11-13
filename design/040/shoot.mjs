@@ -45,9 +45,12 @@ for (const size of sizes) {
         for (const state of states) {
           const timed = /^t\d+$/.test(state);
           if (timed !== (motion === "no-preference")) continue;
-          const url = pathToFileURL(join(here, file)).href + (state === "default" ? "" : `?s=${state}`);
+          // A standalone page (no mock.js, such as link.html) may name a #fragment for its default state.
+          const fragment = state === "default" ? html.match(/<meta name="hc-hash" content="([^"]*)"/)?.[1] : undefined;
+          const url = pathToFileURL(join(here, file)).href + (state === "default" ? "" : `?s=${state}`) + (fragment ? `#${fragment}` : "");
+          await page.goto("about:blank"); // a change of #fragment alone would not reload the page
           await page.goto(url);
-          await page.waitForSelector("html[data-ready]");
+          if (html.includes("mock.js")) await page.waitForSelector("html[data-ready]");
           await page.evaluate(() => document.fonts.ready);
           if (timed) {
             await page.evaluate(ms => { for (const animation of document.getAnimations()) { animation.pause(); animation.currentTime = ms; } }, Number(state.slice(1)));
