@@ -1,6 +1,6 @@
 [package]
 name = "housecall-client"
-version = "0.2.3"
+version = "0.3.0"
 description = "Private Housecall client"
 edition = "2021"
 publish = false
