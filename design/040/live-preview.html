@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en" data-accent="lavender">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HC-040 · 4 LIVE mark and stream preview</title>
+<!-- default = preview open with a picture · loading = first picture not here yet · none = previews off or failed
+     phone: the same three as a sheet over the drawer; "voice" = the voice channel sheet (section 3) -->
+<meta name="hc-states" content="default,loading,none,voice,voice-empty">
+<link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/accents.css">
+<link rel="stylesheet" href="../../client/src/ui/styles/index.css">
+<link rel="stylesheet" href="hc-040.css">
+<script src="icons.js"></script>
+<script src="mock.js"></script>
+<style>
+  /* mock-only: where the popover sits in this still picture. In the app it is placed from the pill's rectangle. */
+  .m-anchor { position: fixed; z-index: 20; left: 284px; top: 303px; }
+  .m-anchor > .hc-popover { position: static; }
+</style>
+</head>
+<body>
+<div class="hc-root">
+  <div class="hc-shell" data-screen="list">
+    <nav class="hc-left" aria-label="Housecall" data-part="left" data-opts='{"current":"general"}'></nav>
+    <button type="button" class="hc-drawer-scrim" aria-label="Close menu" data-show-phone="1"></button>
+    <main class="hc-center">
+      <div data-part="header" data-opts='{"kind":"text","name":"general"}' style="display:contents"></div>
+      <div data-part="messages" style="display:contents"></div>
+      <div data-part="composer" data-opts='{"name":"general"}' style="display:contents"></div>
+    </main>
+    <aside class="hc-right" aria-label="Details" data-part="right" data-tab="people"></aside>
+  </div>
+</div>
+
+<!-- Wide: popover beside the row. -->
+<div class="m-anchor" data-show-phone="0" data-show="default loading none">
+  <div class="hc-popover hc-preview-pop" role="dialog" aria-label="mara's stream">
+    <div class="hc-preview-pop__frame">
+      <img src="assets/stream.svg" alt="A recent picture of mara's stream" data-show="default">
+      <span class="hc-skel" style="position:absolute;inset:0;border-radius:0" data-show="loading"></span>
+      <span class="hc-preview-pop__none" data-show="none"><i data-i="screen"></i>No preview</span>
+      <span class="hc-livepill" aria-hidden="true">LIVE</span>
+    </div>
+    <div class="hc-preview-pop__who"><span data-av="mara" data-size="sm"></span><span><strong>mara</strong><small>Sharing in Lounge</small></span></div>
+    <button type="button" class="hc-btn hc-btn--primary">Watch stream</button>
+  </div>
+</div>
+
+<!-- Phone: the same parts in a sheet (long-press the row, or tap LIVE in the voice channel sheet). -->
+<div data-show-phone="1" data-show="default loading none">
+  <div class="hc-sheet-scrim"></div>
+  <div class="hc-sheet" role="dialog" aria-label="mara's stream">
+    <span class="hc-sheet__grip"></span>
+    <div class="hc-preview-pop__frame">
+      <img src="assets/stream.svg" alt="A recent picture of mara's stream" data-show="default">
+      <span class="hc-skel" style="position:absolute;inset:0;border-radius:0" data-show="loading"></span>
+      <span class="hc-preview-pop__none" data-show="none"><i data-i="screen"></i>No preview</span>
+      <span class="hc-livepill" aria-hidden="true">LIVE</span>
+    </div>
+    <div class="hc-preview-pop__who"><span data-av="mara"></span><span><strong>mara</strong><small>Sharing in Lounge</small></span></div>
+    <div class="hc-sheet__actions"><button type="button" class="hc-btn hc-btn--primary">Watch stream</button></div>
+  </div>
+</div>
+
+<!-- The voice channel sheet (phone; on wide screens one click joins, so this is phone-only in the app).
+     Shown at both sizes here so the dialog form of .hc-sheet is on record too. -->
+<div data-show="voice voice-empty">
+  <div class="hc-sheet-scrim"></div>
+  <div class="hc-sheet" role="dialog" aria-labelledby="vs-title">
+    <span class="hc-sheet__grip"></span>
+    <div class="hc-sheet__head">
+      <span class="hc-channel__glyph" style="color:var(--hc-live)" data-show="voice"><i data-i="speaker"></i></span>
+      <span class="hc-channel__glyph" data-show="voice-empty"><i data-i="speaker"></i></span>
+      <h2 id="vs-title">Lounge</h2>
+      <button type="button" class="hc-ibtn" aria-label="Chat in Lounge"><i data-i="chat"></i></button>
+      <button type="button" class="hc-ibtn" aria-label="Close"><i data-i="close"></i></button>
+    </div>
+    <ul class="hc-voicesheet__people" aria-label="In Lounge" data-show="voice">
+      <li class="hc-voicesheet__row"><span class="hc-face is-speaking"><span data-av="mara"></span></span><span><strong>mara</strong><small>Sharing their screen</small></span><span class="hc-vrow__state"><button type="button" class="hc-livepill" aria-label="mara is live. Preview the stream">LIVE</button></span></li>
+      <li class="hc-voicesheet__row"><span class="hc-face"><span data-av="june"></span></span><span><strong>june</strong></span><span class="hc-vrow__state"><i data-i="camera"></i></span></li>
+      <li class="hc-voicesheet__row"><span class="hc-face"><span data-av="felix"></span></span><span><strong>felix</strong></span><span class="hc-vrow__state"><i data-i="mic" data-off></i></span></li>
+    </ul>
+    <p class="hc-voicesheet__empty" data-show="voice-empty">No one is in here yet. Be the first in.</p>
+    <div class="hc-sheet__actions">
+      <button type="button" class="hc-btn hc-btn--primary">Join voice</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

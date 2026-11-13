@@ -1,0 +1,76 @@
+/*
+ * HC-040 section 5: voice stage. Replaces the "Call stage" block of index.css (keep .hc-stage.is-away,
+ * .hc-tile__video.is-hidden, .hc-tile__pin and .hc-stage__ring as they are) and adds the stage bar.
+ */
+.hc-stage.is-full { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--hc-space-3); padding: 0 var(--hc-space-4) var(--hc-space-4); }
+.hc-stage__grid { flex: 1; min-height: 0; container-type: size; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); align-content: center; gap: var(--hc-space-3); overflow-y: auto; }
+.hc-stage__grid[data-count="1"] > .hc-tile { width: min(100%, 177.78cqh, 40rem); justify-self: center; }
+.hc-stage__spot { flex: 1; min-height: 0; container-type: size; display: grid; place-items: center; }
+.hc-stage__spot > .hc-tile { width: min(100%, 177.78cqh); }
+.hc-stage__spot .hc-tile__video { object-fit: contain; }
+.hc-stage__strip { display: flex; justify-content: safe center; gap: var(--hc-space-2); height: 84px; overflow-x: auto; flex: none; }
+.hc-stage__strip > .hc-tile { height: 100%; width: auto; flex: none; border-radius: var(--hc-radius-md); }
+.hc-stage__strip .hc-tile figcaption { left: var(--hc-space-1); bottom: var(--hc-space-1); font-size: var(--hc-text-2xs); }
+
+/* Tile: one person, or one shared screen. A step lighter than the stage; no border. */
+.hc-tile { position: relative; container-type: inline-size; border-radius: var(--hc-radius-lg); overflow: hidden; background: var(--hc-shell); aspect-ratio: 16 / 9; }
+.hc-tile__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; background: var(--hc-stage); }
+.hc-tile__face { position: absolute; inset: 0; display: grid; place-items: center; --hc-face: clamp(var(--hc-space-7), 24cqw, 7rem); }
+.hc-tile__face .hc-avatar { width: var(--hc-face); height: calc(var(--hc-face) * 1.125); font-size: calc(var(--hc-face) * 0.4); border-radius: 50% 50% 14% 14% / 44.4% 44.4% 12% 12%; }
+/* Speaking: the edge of the tile lights. Opacity only. */
+.hc-tile::after { content: ""; position: absolute; inset: 0; z-index: 3; border-radius: inherit; border: 2px solid var(--hc-live); pointer-events: none; opacity: 0; transition: opacity var(--hc-dur-base) var(--hc-ease-in); }
+.hc-tile.is-speaking::after { opacity: 1; transition: opacity var(--hc-dur-fast) var(--hc-ease-out); border-color: var(--hc-live); }
+.hc-tile figcaption {
+  position: absolute; z-index: 2; left: var(--hc-space-2); bottom: var(--hc-space-2); max-width: calc(100% - var(--hc-space-4)); display: flex; align-items: center; gap: 6px;
+  padding: 2px var(--hc-space-2) 1px; border-radius: var(--hc-radius-sm); background: color-mix(in oklab, var(--hc-stage) 80%, transparent); color: var(--hc-text);
+  font-size: var(--hc-text-sm); line-height: 1.6; pointer-events: none;
+}
+.hc-tile figcaption .hc-icon { width: 16px; height: 16px; color: var(--hc-text-muted); }
+.hc-tile__state { display: grid; color: var(--hc-text-muted); }
+.hc-tile figcaption .hc-livepill { margin-inline-start: 2px; }
+/* The hint that a tile can take the stage: shown on hover and keyboard focus; a tap does it on touch. */
+.hc-tile__hint { position: absolute; z-index: 2; top: var(--hc-space-2); right: var(--hc-space-2); display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--hc-radius-sm); background: color-mix(in oklab, var(--hc-stage) 80%, transparent); color: var(--hc-text); opacity: 0; pointer-events: none; transition: opacity var(--hc-dur-fast) var(--hc-ease-out); }
+.hc-tile__hint .hc-icon { width: 16px; height: 16px; }
+.hc-tile__pin:focus-visible ~ .hc-tile__hint { opacity: 1; }
+@media (hover: hover) { .hc-tile:hover .hc-tile__hint { opacity: 1; } }
+@media (prefers-reduced-motion: no-preference) {
+  .hc-tile.is-entering { animation: hc-tile-in var(--hc-dur-slow) var(--hc-ease-spring) backwards; }
+  @keyframes hc-tile-in { from { opacity: 0; transform: scale(0.94); } }
+  .hc-stagebar { animation: hc-card-in var(--hc-dur-slow) var(--hc-ease-out) backwards; } /* keyframes: section 6 */
+}
+
+/* Stage bar: the controls, centred under the tiles. Lit means on (camera, sharing); a slash means off. */
+.hc-stagebar { align-self: center; flex: none; display: flex; align-items: center; gap: var(--hc-space-1); padding: var(--hc-space-1); border-radius: calc(var(--hc-radius-md) + var(--hc-space-1)); background: var(--hc-shell); }
+.hc-stagebar .hc-ibtn { width: var(--hc-hit); height: var(--hc-hit); border-radius: var(--hc-radius-md); }
+.hc-stagebar .hc-ibtn .hc-icon { width: 22px; height: 22px; }
+.hc-ibtn.is-lit, .hc-ibtn.is-lit:hover:not(:disabled) { color: var(--hc-on-accent); background: var(--hc-live); }
+.hc-stagebar__leave, .hc-stagebar__leave:hover:not(:disabled), .hc-stagebar__leave:active:not(:disabled) { width: 60px; margin-inline-start: var(--hc-space-2); background: var(--hc-danger); color: var(--hc-on-danger); }
+.hc-stagebar__time { padding-inline: var(--hc-space-3) var(--hc-space-2); font-size: var(--hc-text-sm); color: var(--hc-text-muted); }
+
+/* Alone: your tile, then one line about what happens next. */
+.hc-stage__alone { flex: 1; min-height: 0; container-type: size; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--hc-space-4); }
+.hc-stage__alone > .hc-tile { width: min(100%, 30rem, 110cqh); flex: none; }
+.hc-stage__alone p { max-width: 24rem; text-align: center; color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-stage__alone p strong { display: block; color: var(--hc-text); font-size: var(--hc-text-md); }
+
+/* Side chat button in the header carries the unread count. */
+.hc-header__chat { position: relative; display: grid; }
+.hc-header__chat .hc-count { position: absolute; top: -2px; right: -4px; pointer-events: none; box-shadow: 0 0 0 2px var(--hc-stage); }
+/* The right column while the stage is open: the chat fills it. */
+.hc-right .hc-messages { padding-top: 0; }
+
+@media (max-width: 47.5em) {
+  .hc-stage.is-full { padding: 0 var(--hc-space-2) calc(var(--hc-space-2)); gap: var(--hc-space-2); }
+  /* The tiles fill the screen: two columns from three people up, rows share the height. No letterboxed grid. */
+  .hc-stage__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(8.5rem, 1fr); align-content: stretch; gap: var(--hc-space-2); }
+  .hc-stage__grid[data-count="1"], .hc-stage__grid[data-count="2"] { grid-template-columns: minmax(0, 1fr); }
+  .hc-stage__grid > .hc-tile, .hc-stage__grid[data-count="1"] > .hc-tile { aspect-ratio: auto; width: auto; justify-self: stretch; }
+  /* An odd one out takes the full row. */
+  .hc-stage__grid:not([data-count="1"], [data-count="2"]) > .hc-tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .hc-tile { border-radius: var(--hc-radius-md); }
+  .hc-stage__strip { height: 72px; }
+  .hc-stagebar { align-self: stretch; justify-content: space-between; }
+  .hc-stagebar .hc-ibtn { flex: 1; height: 48px; }
+  .hc-stagebar__leave { flex: 1.3; margin-inline-start: 0; }
+  .hc-stagebar__time { display: none; }
+}

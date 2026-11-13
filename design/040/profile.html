@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en" data-accent="lavender">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HC-040 · 7 Profile and bio</title>
+<!-- default = Settings, Profile (opened from the user bar) · card = a person card open from the People tab
+     dm = a DM header carrying the bio and the lock label -->
+<meta name="hc-states" content="default,card,dm">
+<link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/accents.css">
+<link rel="stylesheet" href="../../client/src/ui/styles/index.css">
+<link rel="stylesheet" href="hc-040.css">
+<script src="icons.js"></script>
+<script src="mock.js"></script>
+<style>
+  /* mock-only: where the person card sits in this still picture. */
+  .m-anchor { position: fixed; z-index: 20; right: 300px; top: 150px; }
+  .m-anchor > .hc-popover { position: static; }
+</style>
+</head>
+<body>
+<div class="hc-root">
+  <div class="hc-shell" data-screen="main">
+    <nav class="hc-left" aria-label="Housecall" data-part="left" data-opts='{"current":"general","unread":false}' data-opts-dm='{"current":"","unread":false}'></nav>
+    <main class="hc-center">
+      <!-- Settings, Profile -->
+      <div class="hc-settings-layer" data-show="default">
+        <div class="hc-settings">
+          <header class="hc-header">
+            <button type="button" class="hc-ibtn" aria-label="Close"><i data-i="close" data-show-phone="0"></i><i data-i="back" data-show-phone="1"></i></button>
+            <div class="hc-header__title"><h1 data-show-phone="0">Settings</h1><h1 data-show-phone="1">Profile</h1></div>
+          </header>
+          <div class="hc-settings__body">
+            <nav class="hc-settings__nav" aria-label="Settings" data-show-phone="0">
+              <div><h2 class="hc-settings__grouplabel">You</h2>
+                <ul class="hc-navgroup">
+                  <li><button type="button" class="hc-navrow is-current"><span class="hc-navrow__label">Profile</span></button></li>
+                  <li><button type="button" class="hc-navrow"><span class="hc-navrow__label">Appearance</span></button></li>
+                  <li><button type="button" class="hc-navrow"><span class="hc-navrow__label">Notifications</span></button></li>
+                  <li><button type="button" class="hc-navrow"><span class="hc-navrow__label">Audio and video</span></button></li>
+                  <li><button type="button" class="hc-navrow"><span class="hc-navrow__label">Devices</span></button></li>
+                  <li><button type="button" class="hc-navrow"><span class="hc-navrow__label">Security</span></button></li>
+                </ul></div>
+              <div><h2 class="hc-settings__grouplabel">Theo's place</h2>
+                <ul class="hc-navgroup">
+                  <li><button type="button" class="hc-navrow"><span class="hc-navrow__label">Server profile</span></button></li>
+                  <li><button type="button" class="hc-navrow"><span class="hc-navrow__label">Invites</span></button></li>
+                  <li><button type="button" class="hc-navrow"><span class="hc-navrow__label">Channels</span></button></li>
+                  <li><button type="button" class="hc-navrow"><span class="hc-navrow__label">Apps</span></button></li>
+                </ul></div>
+            </nav>
+            <section class="hc-settings__pane" aria-labelledby="p-title">
+              <h2 id="p-title" data-show-phone="0">Profile</h2>
+              <div class="hc-profile">
+                <div class="hc-profile__card" aria-label="How others see you">
+                  <span data-av="theo" data-size="xl"></span>
+                  <div><h3>theo</h3><small>theo · Theo's place</small><p>Kettle's on. Knock first.</p></div>
+                </div>
+                <div class="hc-profile__fields">
+                  <label class="hc-field"><span class="hc-field__label">Display name</span><input value="theo"></label>
+                  <label class="hc-field">
+                    <span class="hc-field__row"><span class="hc-field__label">Bio</span><span class="hc-field__count" aria-live="polite">24 / 190</span></span>
+                    <textarea class="hc-bio" maxlength="190" rows="3">Kettle's on. Knock first.</textarea>
+                  </label>
+                  <div class="hc-profile__save"><button type="button" class="hc-btn hc-btn--primary">Save profile</button><span class="hc-muted" role="status">Saved</span></div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <!-- chat, for the card and dm states -->
+      <div data-show="card" data-part="header" data-opts='{"kind":"text","name":"general"}' style="display:contents"></div>
+      <div data-show="dm" data-part="header" style="display:contents"
+        data-opts='{"kind":"dm","name":"mara","meta":"Night shifts this week. Slow to reply before noon.","buttons":""}'></div>
+      <div data-hide="default" data-part="messages" style="display:contents"></div>
+      <div data-show="card" data-part="composer" data-opts='{"name":"general"}' style="display:contents"></div>
+      <div data-show="dm" data-part="composer" data-opts='{"name":"mara"}' style="display:contents"></div>
+    </main>
+    <aside class="hc-right" aria-label="Details" data-part="right" data-tab="people" data-hide="default"></aside>
+  </div>
+</div>
+
+<!-- Person card: popover beside the People row (wide) -->
+<div class="m-anchor" data-show="card" data-show-phone="0">
+  <div class="hc-popover hc-personcard" role="dialog" aria-label="june">
+    <div class="hc-personcard__top"><span data-av="june" data-size="lg"></span><span><strong>june</strong><small>Member</small></span></div>
+    <p class="hc-personcard__bio">Bringing the popcorn. Salted, obviously. Ask me about the projector.</p>
+    <div class="hc-personcard__actions"><button type="button" class="hc-btn hc-btn--primary">Message</button><button type="button" class="hc-btn">Call</button></div>
+  </div>
+</div>
+<!-- Person card: sheet (phone), here opened from a voice row, so it carries the per-person call controls -->
+<div data-show="card" data-show-phone="1">
+  <div class="hc-sheet-scrim"></div>
+  <div class="hc-sheet" role="dialog" aria-label="june">
+    <span class="hc-sheet__grip"></span>
+    <div class="hc-personcard">
+      <div class="hc-personcard__top"><span data-av="june" data-size="lg"></span><span><strong>june</strong><small>Member · in Lounge</small></span></div>
+      <p class="hc-personcard__bio">Bringing the popcorn. Salted, obviously. Ask me about the projector.</p>
+      <label class="hc-personcard__vol">Volume for you<input type="range" min="0" max="200" value="100" aria-label="Volume for you"></label>
+      <label class="hc-check hc-switchrow"><span>Mute for me</span><input type="checkbox" role="switch"></label>
+    </div>
+    <div class="hc-sheet__actions"><button type="button" class="hc-btn hc-btn--primary">Message</button><button type="button" class="hc-btn">Call</button></div>
+  </div>
+</div>
+</body>
+</html>

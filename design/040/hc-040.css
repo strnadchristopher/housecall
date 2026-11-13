@@ -1,0 +1,15 @@
+/*
+ * Housecall 0.4.0 design CSS. Every mockup loads, in this order:
+ *   client/src/ui/tokens/tokens.css, accents.css   the real tokens
+ *   client/src/ui/styles/index.css                 the real 0.3.0 styles
+ *   this file                                      what 0.4.0 adds or replaces
+ * Each import is one section of docs/design/HC-040.md and is pasted from there.
+ */
+@import "./css/00-system.css";
+@import "./css/03-sidebar.css";
+@import "./css/04-live.css";
+@import "./css/05-stage.css";
+@import "./css/06-callcard.css";
+@import "./css/07-profile.css";
+@import "./css/08-message-actions.css";
+@import "./css/mock.css";

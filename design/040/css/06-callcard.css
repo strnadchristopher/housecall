@@ -1,0 +1,60 @@
+/*
+ * HC-040 sections 6 and 7: call card and user bar. Replaces the "Call dock, user bar" block of index.css
+ * (.hc-dock*, .hc-userbar*). .hc-callctl stays for the stage bar.
+ */
+/* Signal: three bars, 0 to 3 lit. Shape carries the level; colour only agrees with it. */
+.hc-signal { display: inline-flex; align-items: flex-end; justify-content: center; gap: 2px; flex: none; width: 28px; height: 28px; padding: 7px 6px 8px; border-radius: var(--hc-radius-xs); color: var(--hc-live); }
+.hc-signal i { width: 3px; border-radius: 1px; background: currentColor; opacity: 0.28; }
+.hc-signal i:nth-child(1) { height: 5px; }
+.hc-signal i:nth-child(2) { height: 9px; }
+.hc-signal i:nth-child(3) { height: 13px; }
+.hc-signal[data-bars="1"] i:nth-child(-n+1), .hc-signal[data-bars="2"] i:nth-child(-n+2), .hc-signal[data-bars="3"] i { opacity: 1; }
+.hc-signal[data-bars="1"] { color: var(--hc-danger); }
+.hc-signal[data-bars="0"] { color: var(--hc-text-muted); }
+@media (prefers-reduced-motion: no-preference) {
+  /* Connecting and reconnecting: the bars light in turn. Opacity only. */
+  .hc-signal[data-busy] i { animation: hc-signal-seek 1.05s var(--hc-ease-out) infinite; }
+  .hc-signal[data-busy] i:nth-child(2) { animation-delay: 150ms; }
+  .hc-signal[data-busy] i:nth-child(3) { animation-delay: 300ms; }
+  @keyframes hc-signal-seek { 0%, 100% { opacity: 0.28; } 35% { opacity: 1; } }
+}
+@media (prefers-reduced-motion: reduce) { .hc-signal[data-busy] i:nth-child(1) { opacity: 1; } }
+
+/* Call card: sits directly above the user bar while you are in a call. */
+.hc-callcard { display: flex; align-items: center; gap: 2px; min-height: 52px; padding: var(--hc-space-2) var(--hc-space-1) var(--hc-space-2) var(--hc-space-1); border-radius: var(--hc-radius-md); background: var(--hc-surface-raised); box-shadow: var(--hc-lip); }
+.hc-callcard__main { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 2px var(--hc-space-1); border-radius: var(--hc-radius-sm); line-height: 1.25; }
+.hc-callcard__main strong, .hc-callcard__main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-callcard__main small { font-size: var(--hc-text-xs); color: var(--hc-live); }
+.hc-callcard[data-state="connecting"] .hc-callcard__main small, .hc-callcard[data-state="reconnecting"] .hc-callcard__main small { color: var(--hc-text-muted); }
+.hc-callcard[data-state="failed"] .hc-callcard__main small { color: var(--hc-danger); }
+.hc-callcard__ctl { display: flex; align-items: center; gap: 2px; flex: none; }
+.hc-callcard__ctl .hc-btn { min-height: var(--hc-space-6); padding-inline: var(--hc-space-3); background: var(--hc-wash-selected); }
+/* Leave is the one control that is red before you touch it. */
+.hc-callcard .hc-ibtn--danger, .hc-callstrip .hc-ibtn--danger { color: var(--hc-danger); }
+.hc-callcard[data-state="weak"] .hc-callcard__main small, .hc-callstrip[data-state="weak"] small { color: var(--hc-danger); }
+@media (prefers-reduced-motion: no-preference) {
+  .hc-callcard.hc-anim-rise { animation: hc-card-in var(--hc-dur-slow) var(--hc-ease-out); }
+  .hc-presence[data-state="exit"] > .hc-callcard { animation: hc-card-out var(--hc-dur-fast) var(--hc-ease-in) forwards; }
+  @keyframes hc-card-in { from { opacity: 0; transform: translateY(var(--hc-space-2)); } }
+  @keyframes hc-card-out { to { opacity: 0; transform: translateY(var(--hc-space-1)); } }
+}
+
+/* Phone, outside the drawer: one strip under the header on every screen that is not the stage. */
+.hc-callstrip { display: flex; align-items: center; gap: 2px; min-height: 48px; margin: 0 var(--hc-space-2) var(--hc-space-1); padding: 2px; border-radius: var(--hc-radius-md); background: var(--hc-surface-raised); box-shadow: var(--hc-lip); }
+.hc-callstrip .hc-signal { width: var(--hc-hit); height: var(--hc-hit); padding: 15px 14px 16px; }
+.hc-callstrip__main { flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: baseline; align-content: center; flex-wrap: wrap; column-gap: var(--hc-space-2); padding: var(--hc-space-1); border-radius: var(--hc-radius-sm); line-height: 1.25; }
+.hc-callstrip__main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-callstrip__main small { font-size: var(--hc-text-xs); color: var(--hc-live); white-space: nowrap; }
+.hc-callstrip[data-state="connecting"] small, .hc-callstrip[data-state="reconnecting"] small { color: var(--hc-text-muted); }
+.hc-callstrip[data-state="failed"] small { color: var(--hc-danger); }
+
+/* User bar: the avatar and name are one button to your profile. */
+.hc-userbar { display: flex; align-items: center; gap: 2px; padding: 0; min-height: 48px; }
+.hc-userbar__me { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--hc-space-2); min-height: 48px; padding: var(--hc-space-1) var(--hc-space-2); border-radius: var(--hc-radius-md); transition: background-color var(--hc-dur-fast) var(--hc-ease-out); }
+.hc-userbar__me:active { background: var(--hc-wash-press); }
+@media (hover: hover) { .hc-userbar__me:hover { background: var(--hc-wash-hover); } }
+.hc-userbar__name { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.hc-userbar__name strong, .hc-userbar__name small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-userbar__name small[data-state="off"] { color: var(--hc-danger); }
+.hc-userbar__mail { position: relative; display: grid; }
+.hc-userbar__mail .hc-dot { position: absolute; top: var(--hc-space-1); right: var(--hc-space-1); pointer-events: none; box-shadow: 0 0 0 2px var(--hc-shell); }

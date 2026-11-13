@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" preserveAspectRatio="xMidYMid slice">
+  <!-- Stand-in for a camera picture: someone at a desk by a lamp. Mock content only, not UI. -->
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2b3145"/><stop offset="1" stop-color="#171b29"/></linearGradient>
+    <radialGradient id="lamp" cx="0.78" cy="0.3" r="0.6"><stop offset="0" stop-color="#f6c98a" stop-opacity=".6"/><stop offset=".5" stop-color="#f6c98a" stop-opacity=".14"/><stop offset="1" stop-color="#f6c98a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7a5a4a"/><stop offset="1" stop-color="#c79673"/></linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="3"/></filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" seed="3"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .06 0"/></filter>
+  </defs>
+  <rect width="960" height="540" fill="url(#wall)"/>
+  <rect x="90" y="70" width="210" height="150" rx="6" fill="#20263a"/><rect x="104" y="84" width="182" height="122" rx="3" fill="#39415c"/>
+  <rect width="960" height="540" fill="url(#lamp)"/>
+  <path d="M770 150l-40 86h110Z" fill="#f2d3a2"/><rect x="782" y="236" width="6" height="150" fill="#10131d"/>
+  <g filter="url(#soft)">
+    <path d="M300 540c8-110 78-170 180-170s172 60 180 170Z" fill="#3c4a72"/>
+    <rect x="452" y="318" width="56" height="70" rx="22" fill="url(#skin)"/>
+    <ellipse cx="480" cy="262" rx="74" ry="88" fill="url(#skin)"/>
+    <path d="M404 250c-4-70 40-106 82-106s80 30 76 96c-22-36-62-52-96-50s-52 22-62 60Z" fill="#221a1c"/>
+  </g>
+  <rect width="960" height="540" filter="url(#grain)"/>
+</svg>
