@@ -2,6 +2,18 @@ import { test, expect, type BrowserContext } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { fillSignIn, logInButton, openMenu } from "./helpers";
 const password = "correct horse battery staple";
+
+/** Joining is one click on the Lounge voice channel (a phone asks in a sheet first). */
+async function joinLounge(page: import("@playwright/test").Page) {
+  await page.getByTestId("voice-channel").getByRole("button", { name: "Open Lounge", exact: true }).click();
+  const sheet = page.getByRole("button", { name: "Join voice", exact: true });
+  if (await sheet.isVisible().catch(() => false)) await sheet.click();
+}
+
+async function loungeId(request: import("@playwright/test").APIRequestContext, headers: Record<string, string>): Promise<string> {
+  const list = await (await request.get("/api/channels", { headers })).json();
+  return list.channels.find((channel: { name: string; kind: string }) => channel.kind === "voice" && channel.name === "Lounge").id;
+}
 test("three browsers exchange real fake-device audio/video through the Rust SFU", async ({
   browser,
   request,
@@ -95,7 +107,7 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
     for (const context of contexts) {
       const page = context.pages()[0];
       const bar = page.getByTestId("call-bar");
-      await bar.getByRole("button", { name: "Join", exact: true }).click();
+      await joinLounge(page);
       await expect(bar).toHaveAttribute("data-phase", "live", {
         timeout: 30000,
       });
@@ -106,8 +118,7 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
       if (context === contexts[0] && contexts.length > 1) {
         // Finding 2: someone who has not joined sees the running call, in the bar and in the list.
         const other = contexts[1].pages()[0];
-        await expect(other.getByTestId("call-bar")).toHaveAttribute("data-running", "", { timeout: 15000 });
-        await expect(other.getByTestId("channel-call")).toBeVisible({ timeout: 15000 });
+        await expect(other.getByRole("list", { name: "In Lounge" })).toBeVisible({ timeout: 15000 });
       }
     }
     const evidence = [];
@@ -344,7 +355,7 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
         );
     }
     const server = await (
-      await request.get("/api/channels/general/voice/stats", {
+      await request.get(`/api/channels/${await loungeId(request, voiceHeaders ?? headers)}/voice/stats`, {
         headers: voiceHeaders ?? headers,
       })
     ).json();
@@ -383,7 +394,7 @@ test("call stage owns center", async ({ browser, request }) => {
     const [host, guest] = contexts.map(context => context.pages()[0]);
     for (const page of [host, guest]) {
       const bar = page.getByTestId("call-bar");
-      await bar.getByRole("button", { name: "Join", exact: true }).click();
+      await joinLounge(page);
       await expect(bar).toHaveAttribute("data-phase", "live", { timeout: 30000 });
     }
     // The stage is the center; the composer and the message list moved to the right column's Chat tab.
@@ -433,9 +444,8 @@ test("call stage on a phone: stage is the screen, chat opens as the sheet", asyn
     await logInButton(page).click();
     await expect(page.getByTestId("screen-composer")).toBeVisible();
     await openMenu(page);
-    await page.getByRole("button", { name: /^Open / }).first().click();
     const bar = page.getByTestId("call-bar");
-    await bar.getByRole("button", { name: "Join", exact: true }).click();
+    await joinLounge(page);
     await expect(bar).toHaveAttribute("data-phase", "live", { timeout: 30000 });
     await expect(page.locator(".hc-center [data-testid=call-stage]")).toBeVisible();
     await expect(page.locator(".hc-center [data-testid=screen-composer]")).toHaveCount(0);
@@ -476,7 +486,7 @@ test("joins and shows a warning when a saved device is missing",async ({ browser
     await settings.getByLabel("Microphone").selectOption("does-not-exist");
     await settings.getByRole("button", { name: "Close", exact: true }).click();
     const bar = page.getByTestId("call-bar");
-    await bar.getByRole("button", { name: "Join", exact: true }).click();
+    await joinLounge(page);
     await expect(bar).toHaveAttribute("data-phase", "live", { timeout: 30000 });
     await expect(page.getByText("Call failed")).toHaveCount(0);
     await expect(bar.getByRole("status")).toContainText("Using the default device");
