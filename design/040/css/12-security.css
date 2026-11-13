@@ -46,10 +46,10 @@
 
 @media (prefers-reduced-motion: no-preference) {
   /* A slide comes in from the side you are going to (--hc-slide-dir: 1 forward, -1 back). */
-  .hc-slide { animation: hc-slide-in var(--hc-dur-slow) var(--hc-ease-out) backwards; }
-  .hc-slide[data-state="exit"] { animation: hc-slide-out var(--hc-dur-fast) var(--hc-ease-in) forwards; }
-  @keyframes hc-slide-in { from { opacity: 0; transform: translateX(calc(var(--hc-space-5) * var(--hc-slide-dir, 1))); } }
-  @keyframes hc-slide-out { to { opacity: 0; transform: translateX(calc(var(--hc-space-4) * var(--hc-slide-dir, 1) * -1)); } }
+  .hc-slide { animation: hc-slides-in var(--hc-dur-slow) var(--hc-ease-out) backwards; }
+  .hc-slide[data-state="exit"] { animation: hc-slides-out var(--hc-dur-fast) var(--hc-ease-in) forwards; }
+  @keyframes hc-slides-in { from { opacity: 0; transform: translateX(calc(var(--hc-space-5) * var(--hc-slide-dir, 1))); } }
+  @keyframes hc-slides-out { to { opacity: 0; transform: translateX(calc(var(--hc-space-4) * var(--hc-slide-dir, 1) * -1)); } }
 
   /* Each picture moves once. The drawn state is the end of the motion. */
   .hc-slide .hc-ill--house .hc-ill__leaf { animation: hc-ill-door var(--hc-dur-slower) var(--hc-ease-spring) var(--hc-dur-base) backwards; }

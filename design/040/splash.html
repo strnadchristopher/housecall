@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en" data-accent="lavender">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HC-040 · 13 Splash and shell entrance</title>
+<!-- default = still waiting (also what reduced motion shows) · t<ms> = the cold start, frozen at that time after mount:
+     t200 grace, nothing yet · t460 the mark rising · t620 risen, door opening, exit may begin · t800 in flight, shell rising
+     t1000 landing · t1180 done -->
+<meta name="hc-states" content="default,t200,t460,t620,t800,t1000,t1180">
+<link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/b.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/c.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/accents.css">
+<link rel="stylesheet" href="../../client/src/ui/styles/index.css">
+<link rel="stylesheet" href="hc-040.css">
+<style>
+  /* Mock-only. In the app the script sets [data-intro] 300 ms after mount and [data-out] when the app is ready and
+     the rise has ended. A still picture cannot wait, so here both are set from the start and delayed by hand:
+     intro at 300 ms, exit at 620 ms. */
+  .hc-splash[data-intro] .hc-splash__rise, .hc-splash[data-intro] .hc-logo { animation-delay: 300ms; }
+  .hc-splash[data-intro] .hc-logo__lit { animation-delay: 410ms; }
+  .hc-splash[data-intro] .hc-logo__leaf { animation-delay: 490ms; }
+  .hc-splash[data-intro][data-out] .hc-splash__spill { animation: hc-fade-in var(--hc-dur-slow) var(--hc-ease-out) 490ms backwards, hc-fade-out var(--hc-dur-fast) var(--hc-ease-in) 620ms forwards; }
+  .hc-splash[data-out="fly"] .hc-splash__mark { animation-delay: 620ms; }
+  .hc-shell[data-enter] > .hc-left { animation-delay: 620ms; }
+  .hc-shell[data-enter] > .hc-center, .hc-shell[data-enter] > .hc-right { animation-delay: 680ms; }
+  html[data-s="t200"] .hc-splash__mark { visibility: hidden; }
+  @media (max-width: 47.5em) { .hc-shell[data-enter] { animation-delay: 620ms; } }
+</style>
+<script src="icons.js"></script>
+<script src="mock.js"></script>
+</head>
+<body>
+<div class="hc-root">
+  <div class="hc-shell" data-screen="list" data-enter data-hide="default">
+    <nav class="hc-left" aria-label="Housecall" data-part="left" data-opts='{"current":"general"}'></nav>
+    <main class="hc-center">
+      <div data-part="header" data-opts='{"kind":"text","name":"general"}' style="display:contents"></div>
+      <div data-part="messages" style="display:contents"></div>
+      <div data-part="composer" data-opts='{"name":"general"}' style="display:contents"></div>
+    </main>
+    <aside class="hc-right" aria-label="Details" data-part="right" data-tab="people" data-show-phone="0"></aside>
+  </div>
+</div>
+
+<!-- The splash: this markup ships (spec 13.1). -->
+<div class="hc-splash" data-intro role="status" aria-label="Opening Housecall">
+  <span class="hc-splash__mark">
+    <span class="hc-splash__rise">
+      <svg class="hc-logo" viewBox="0 0 32 32" aria-hidden="true">
+        <path class="hc-logo__ink" d="M6 3H12V10.83A10 10 0 0 1 26 20V29H20V20A4 4 0 0 0 12 20V29H6Z"/>
+        <path class="hc-logo__lit" d="M12 29V20A4 4 0 0 1 20 20V29Z"/>
+        <path class="hc-logo__leaf" d="M12 29V20A4 4 0 0 1 12.6 17.9L15.4 19.6V29Z"/>
+      </svg>
+    </span>
+    <svg class="hc-splash__spill" viewBox="0 29 32 14" aria-hidden="true">
+      <defs><linearGradient id="hc-splash-spill" x1="0" y1="29" x2="0" y2="43" gradientUnits="userSpaceOnUse"><stop offset="0" class="hc-splash__stop" stop-opacity="0.34"/><stop offset="0.45" class="hc-splash__stop" stop-opacity="0.1"/><stop offset="1" class="hc-splash__stop" stop-opacity="0"/></linearGradient></defs>
+      <path fill="url(#hc-splash-spill)" d="M12 29H20L27 43H5Z"/>
+    </svg>
+  </span>
+  <p class="hc-splash__status" data-show="default">Opening Theo's place</p>
+</div>
+
+<script>
+  // The same measurement the app makes in a layout effect, before the entrance starts: where is the picker's logo?
+  document.addEventListener("DOMContentLoaded", () => {
+    const splash = document.querySelector(".hc-splash");
+    const shell = document.querySelector(".hc-shell");
+    if (!shell) return;
+    shell.removeAttribute("data-enter");
+    const a = splash.querySelector(".hc-splash__mark").getBoundingClientRect();
+    const b = document.querySelector(".hc-picker .hc-logo").getBoundingClientRect();
+    splash.style.setProperty("--hc-splash-dx", `${b.left + b.width / 2 - (a.left + a.width / 2)}px`);
+    splash.style.setProperty("--hc-splash-dy", `${b.top + b.height / 2 - (a.top + a.height / 2)}px`);
+    splash.style.setProperty("--hc-splash-s", String(b.width / a.width));
+    shell.setAttribute("data-enter", "");
+    splash.setAttribute("data-out", "fly");
+  });
+</script>
+</body>
+</html>

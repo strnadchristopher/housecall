@@ -1,0 +1,61 @@
+/*
+ * HC-040 section 13: the splash and the shell entrance. Transform and opacity only.
+ * PASTE: at the end of client/src/ui/styles/index.css. Remove the two .hc-launch rules and the
+ * hc-door-mark line they use (index.css 586 to 590); Splash replaces the Launch screen.
+ */
+
+/* The splash is the mark alone on the page colour. It has no background of its own: until the app
+   is ready nothing else is drawn, and when it is ready the shell rises in underneath. */
+.hc-splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; pointer-events: none; }
+.hc-splash__mark { position: relative; width: 88px; height: 88px; visibility: hidden; }
+.hc-splash[data-intro] .hc-splash__mark { visibility: visible; }
+/* The window the mark rises through. It and the logo move by equal and opposite amounts, so the
+   logo stays where it is and is uncovered from the ground up. */
+.hc-splash__rise { display: block; width: 100%; height: 100%; overflow: hidden; overflow: clip; }
+.hc-splash .hc-logo { width: 100%; height: 100%; }
+.hc-splash .hc-logo__leaf { transition: none; }
+/* Light from the doorway on the floor. The same 32-unit grid as the logo, continued downward. */
+.hc-splash__spill { position: absolute; left: 0; top: 90.625%; width: 100%; height: 43.75%; overflow: visible; }
+.hc-splash__stop { stop-color: var(--hc-live); }
+.hc-splash__status { position: absolute; top: calc(50% + 88px); left: 0; right: 0; text-align: center; font-size: var(--hc-text-sm); color: var(--hc-text-muted); padding-inline: var(--hc-space-5); }
+
+/* While the mark flies to its place in the picker, the real one waits out of sight. */
+.hc-shell[data-enter] .hc-picker .hc-logo { visibility: hidden; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Intro, from the moment [data-intro] is set (300 ms after mount, if the app is not ready by then). */
+  .hc-splash[data-intro] .hc-splash__rise { animation: hc-splash-rise var(--hc-dur-slow) var(--hc-ease-out) backwards; }
+  .hc-splash[data-intro] .hc-logo { animation: hc-splash-hold var(--hc-dur-slow) var(--hc-ease-out) backwards; }
+  .hc-splash[data-intro] .hc-logo__lit { animation: hc-fade-in var(--hc-dur-base) var(--hc-ease-out) var(--hc-dur-fast) backwards; }
+  .hc-splash[data-intro] .hc-logo__leaf { animation: hc-splash-door var(--hc-dur-slow) var(--hc-ease-spring) var(--hc-dur-base) backwards; }
+  .hc-splash[data-intro] .hc-splash__spill { animation: hc-fade-in var(--hc-dur-slow) var(--hc-ease-out) var(--hc-dur-base) backwards; }
+  @keyframes hc-splash-rise { from { transform: translateY(100%); } }
+  @keyframes hc-splash-hold { from { transform: translateY(-100%); } }
+  @keyframes hc-splash-door { from { transform: scaleX(2.35); } }
+  /* Still waiting after the intro: the door breathes. After four seconds the status line says what for. */
+  .hc-splash[data-intro]:not([data-out]) .hc-logo__leaf { animation: hc-splash-door var(--hc-dur-slow) var(--hc-ease-spring) var(--hc-dur-base) backwards, hc-splash-wait 1.4s var(--hc-ease-out) 1.4s infinite alternate; }
+  @keyframes hc-splash-wait { to { transform: scaleX(0.3); } }
+  .hc-splash__status { animation: hc-fade-in var(--hc-dur-slow) var(--hc-ease-out) 4s backwards; }
+
+  /* Exit. fly: the mark travels to the picker's logo and becomes it. fade: no logo on screen to land on. */
+  .hc-splash[data-out="fly"] .hc-splash__mark { animation: hc-splash-fly var(--hc-dur-slower) var(--hc-ease-out) forwards; }
+  .hc-splash[data-out="fade"] .hc-splash__mark { animation: hc-splash-fade var(--hc-dur-base) var(--hc-ease-in) forwards; }
+  .hc-splash[data-out] .hc-splash__spill, .hc-splash[data-out] .hc-splash__status { animation: hc-fade-out var(--hc-dur-fast) var(--hc-ease-in) forwards; }
+  @keyframes hc-splash-fly { to { transform: translate(var(--hc-splash-dx, 0px), var(--hc-splash-dy, 0px)) scale(var(--hc-splash-s, 1)); } }
+  @keyframes hc-splash-fade { to { opacity: 0; transform: scale(0.92); } }
+
+  /* Shell entrance: the sidebar, then the room, one stagger apart. Also used on its own when the splash was skipped. */
+  .hc-shell[data-enter] > .hc-left, .hc-shell[data-enter] > .hc-center, .hc-shell[data-enter] > .hc-right { animation: hc-shell-in var(--hc-dur-slow) var(--hc-ease-out) backwards; }
+  .hc-shell[data-enter] > .hc-center, .hc-shell[data-enter] > .hc-right { animation-delay: var(--hc-stagger); }
+  @keyframes hc-shell-in { from { opacity: 0; transform: translateY(var(--hc-space-3)); } }
+}
+/* Phones: one column fills the screen and the other is parked behind it, so the shell rises as one piece. */
+@media (prefers-reduced-motion: no-preference) and (max-width: 47.5em) {
+  .hc-shell[data-enter] { animation: hc-shell-in var(--hc-dur-slow) var(--hc-ease-out) backwards; }
+  .hc-shell[data-enter] > .hc-left, .hc-shell[data-enter] > .hc-center, .hc-shell[data-enter] > .hc-right { animation: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Nothing moves: the mark is simply there, then fades as the shell appears in place. */
+  .hc-splash[data-out] { animation: hc-splash-gone var(--hc-dur-base) linear forwards; }
+  @keyframes hc-splash-gone { to { opacity: 0; } }
+}
