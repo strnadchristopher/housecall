@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { test, expect } from "@playwright/test";
-import { setup, signIn } from "./helpers";
+import { send, setup, signIn } from "./helpers";
 
 // Fictional fixture only. The GIF provider is not reachable from tests, so its
 // routes are answered locally and the capability flag is set on /api/me.
@@ -212,4 +212,30 @@ test("motion: settings and pickers slide out and are gone at once under reduced 
   await expect(emoji).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(emoji).toHaveCount(0, { timeout: 250 });
+});
+
+test("phone: one message toolbar is open at a time; tapping elsewhere or Escape closes it", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await context.newPage();
+  await page.goto("/");
+  await signIn(page, "owner");
+  await send(page, "First tap target");
+  await send(page, "Second tap target");
+  const open = page.locator(".hc-msg.is-open");
+  const first = page.locator(".hc-msg", { has: page.locator(".hc-md", { hasText: "First tap target" }) });
+  const second = page.locator(".hc-msg", { has: page.locator(".hc-md", { hasText: "Second tap target" }) });
+  await first.locator(".hc-md").tap();
+  await expect(open).toHaveCount(1);
+  await expect(first).toHaveClass(/is-open/);
+  await second.locator(".hc-md").tap();
+  await expect(open).toHaveCount(1);
+  await expect(second).toHaveClass(/is-open/);
+  await expect(first).not.toHaveClass(/is-open/);
+  await page.getByTestId("screen-composer").getByLabel("Message", { exact: true }).tap();
+  await expect(open).toHaveCount(0);
+  await second.locator(".hc-md").tap();
+  await expect(open).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(open).toHaveCount(0);
+  await context.close();
 });

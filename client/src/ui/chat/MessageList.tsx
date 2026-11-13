@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
+import { useDismiss } from "../useDismiss";
 import { useChat } from "../../core/context";
 import { copy } from "../copy";
 import { day } from "../format";
@@ -15,6 +16,11 @@ export function MessageList({ compact }: { compact?: boolean }) {
   const list = useRef<HTMLOListElement>(null);
   const stick = useRef(true);
   const last = chat.messages.at(-1)?.id;
+  // One message at a time shows its action bar; a press elsewhere, Escape or a conversation change closes it.
+  const [openId, setOpenId] = useState<string>();
+  const toggleOpen = useCallback((id: string) => setOpenId(current => (current === id ? undefined : id)), []);
+  useDismiss(!!openId, () => setOpenId(undefined), target => !!openId && !!target.closest(`[data-message-id="${CSS.escape(openId)}"]`));
+  useEffect(() => setOpenId(undefined), [chat.current?.id]);
   // Roving tabindex: one message row is the tab stop (the newest until another is focused); arrows move between rows.
   const [focused, setFocused] = useState<string>();
   const stopId = chat.messages.some(message => message.id === focused) ? focused : last;
@@ -61,7 +67,7 @@ export function MessageList({ compact }: { compact?: boolean }) {
           const before = chat.messages[index - 1];
           const newDay = !before || new Date(before.createdAt).toDateString() !== new Date(message.createdAt).toDateString();
           const grouped = !newDay && !message.replyTo && before.authorId === message.authorId && message.createdAt - before.createdAt < GROUP_WINDOW_MS;
-          return <Message key={message.id} message={message} grouped={grouped} me={chat.me.name} day={newDay ? day(message.createdAt) : undefined} stop={message.id === stopId} />;
+          return <Message key={message.id} message={message} grouped={grouped} me={chat.me.name} day={newDay ? day(message.createdAt) : undefined} stop={message.id === stopId} open={openId === message.id} onToggle={toggleOpen} />;
         })}
         {chat.requests.map(request => <GimmeCard key={request.id} request={request} />)}
       </ol>

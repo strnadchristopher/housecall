@@ -1,4 +1,4 @@
-import { memo, useRef, useState, type KeyboardEvent } from "react";
+import { memo, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { ChatMessage, LinkPreview } from "../../core/chat";
 import { useChat } from "../../core/context";
 import { copy } from "../copy";
@@ -10,9 +10,8 @@ import { GifClip } from "./GifPicker";
 import { MessageBody } from "./Markdown";
 
 /** One message. Actions show on hover or focus (desktop) and on tap (touch). */
-export const Message = memo(function Message({ message, grouped, me, day, stop }: { message: ChatMessage; grouped: boolean; me: string; day?: string; stop: boolean }) {
+export const Message = memo(function Message({ message, grouped, me, day, stop, open, onToggle }: { message: ChatMessage; grouped: boolean; me: string; day?: string; stop: boolean; open: boolean; onToggle: (id: string) => void }) {
   const chat = useChat();
-  const [open, setOpen] = useState(false);
   // The row is one tab stop (roving, arrow keys in MessageList); Enter enters its toolbar, Escape leaves it.
   const [entered, setEntered] = useState(false);
   const row = useRef<HTMLLIElement>(null);
@@ -30,13 +29,14 @@ export const Message = memo(function Message({ message, grouped, me, day, stop }
     }
   };
   const [panel, setPanel] = useState<"" | "react" | "unsend">("");
+  useEffect(() => { if (!open) setPanel(""); }, [open]);
   const [preview, setPreview] = useState<LinkPreview>();
   const onlyGif = message.gifs.length === 1 && /^https:\/\/giphy\.com\/gifs\/\w+$/.test(message.body.trim());
   return (
     <li ref={row} className={cx("hc-msg", grouped && "is-grouped", message.mentionsMe && "is-mention", open && "is-open")} data-message-id={message.id}
       tabIndex={stop ? 0 : -1} onKeyDown={onRowKey}
       onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setEntered(false); }}
-      onClick={event => { if (!(event.target as HTMLElement).closest("button, a, video, img, input, .hc-media")) setOpen(value => !value); }}>
+      onClick={event => { if (!(event.target as HTMLElement).closest("button, a, video, img, input, .hc-media")) onToggle(message.id); }}>
       {day && <p className="hc-day">{day}</p>}
       <div className="hc-msg__gutter">{!grouped && <Avatar name={message.authorName} src={message.authorAvatarUrl} />}</div>
       <div className="hc-msg__main">
