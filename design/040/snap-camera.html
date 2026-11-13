@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en" data-accent="lavender">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HC-040 · 9 Snap camera and QR scan</title>
+<!-- default = rear camera, flash off · front = front camera, flash on · review = photo taken · scan = QR mode
+     found = QR mode, a code was read · wrong = QR mode, not a Housecall code · blocked = the camera could not start -->
+<meta name="hc-states" content="default,front,review,scan,found,wrong,blocked">
+<link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/accents.css">
+<link rel="stylesheet" href="../../client/src/ui/styles/index.css">
+<link rel="stylesheet" href="hc-040.css">
+<script src="icons.js"></script>
+<script src="mock.js"></script>
+</head>
+<body>
+<!-- Snap camera: live preview -->
+<div class="hc-cam" role="dialog" aria-label="Camera" data-show="default front">
+  <img class="hc-cam__view" src="assets/room.svg" alt="" data-show="default">
+  <img class="hc-cam__view is-front" src="assets/camera.svg" alt="" data-show="front">
+  <span class="hc-cam__shade hc-cam__shade--top"></span><span class="hc-cam__shade hc-cam__shade--bottom"></span>
+  <span class="hc-cam__blink"></span><span class="hc-cam__fill"></span>
+  <div class="hc-cam__top">
+    <button type="button" class="hc-cam__btn" aria-label="Close camera"><i data-i="close"></i></button>
+    <button type="button" class="hc-cam__btn" aria-label="Flash on" aria-pressed="false" data-show="default"><i data-i="flash" data-off></i></button>
+    <button type="button" class="hc-cam__btn is-lit" aria-label="Flash off" aria-pressed="true" data-show="front"><i data-i="flash"></i></button>
+  </div>
+  <div class="hc-cam__bottom">
+    <button type="button" class="hc-cam__btn" aria-label="Choose a photo"><i data-i="image"></i></button>
+    <button type="button" class="hc-cam__shutter" aria-label="Take photo"></button>
+    <button type="button" class="hc-cam__btn" aria-label="Switch camera"><i data-i="flip"></i></button>
+  </div>
+</div>
+
+<!-- Snap camera: review -->
+<div class="hc-cam is-review" role="dialog" aria-label="Snap preview" data-show="review">
+  <img class="hc-cam__view" src="assets/room.svg" alt="Your photo">
+  <span class="hc-cam__shade hc-cam__shade--top"></span><span class="hc-cam__shade hc-cam__shade--bottom"></span>
+  <div class="hc-cam__top">
+    <button type="button" class="hc-cam__btn" aria-label="Close camera"><i data-i="close"></i></button>
+  </div>
+  <div class="hc-cam__bottom">
+    <span class="hc-cam__once"><i data-i="eye"></i>Each person can open it once</span>
+    <button type="button" class="hc-cam__btn"><i data-i="retry"></i>Retake</button>
+    <button type="button" class="hc-btn hc-btn--primary hc-cam__send">Send<i data-i="send"></i></button>
+  </div>
+</div>
+
+<!-- QR scan mode -->
+<div class="hc-cam hc-cam--scan" role="dialog" aria-label="Scan QR code" data-show="scan found wrong">
+  <img class="hc-cam__view" src="assets/room.svg" alt="">
+  <div class="hc-cam__finder" data-show="scan wrong"><svg class="hc-cam__corners" viewBox="0 0 100 100" aria-hidden="true"><path d="M2 24V13A11 11 0 0 1 13 2H24M76 2H87A11 11 0 0 1 98 13V24M98 76V87A11 11 0 0 1 87 98H76M24 98H13A11 11 0 0 1 2 87V76" vector-effect="non-scaling-stroke"/></svg></div>
+  <div class="hc-cam__finder is-found" data-show="found"><svg class="hc-cam__corners" viewBox="0 0 100 100" aria-hidden="true"><path d="M2 24V13A11 11 0 0 1 13 2H24M76 2H87A11 11 0 0 1 98 13V24M98 76V87A11 11 0 0 1 87 98H76M24 98H13A11 11 0 0 1 2 87V76" vector-effect="non-scaling-stroke"/></svg></div>
+  <span class="hc-cam__shade hc-cam__shade--top"></span>
+  <div class="hc-cam__top">
+    <button type="button" class="hc-cam__btn" aria-label="Close"><i data-i="close"></i></button>
+    <span class="hc-cam__title">Scan QR code</span>
+    <button type="button" class="hc-cam__btn" aria-label="Light on" aria-pressed="false"><i data-i="flash" data-off></i></button>
+  </div>
+  <p class="hc-cam__hint" role="status">
+    <span data-show="scan wrong">Point at the code on your other device</span>
+    <span data-show="found">Got it</span>
+    <small data-show="scan">Settings, then Log in with QR code</small>
+    <small class="is-error" data-show="wrong">That isn't a Housecall login code</small>
+  </p>
+</div>
+
+<!-- The camera could not start -->
+<div class="hc-cam" role="dialog" aria-label="Camera" data-show="blocked">
+  <div class="hc-cam__top"><button type="button" class="hc-cam__btn" aria-label="Close camera"><i data-i="close"></i></button></div>
+  <div class="hc-cam__blocked" role="alert">
+    <i data-i="snap" data-off></i>
+    <strong>Housecall can't use the camera</strong>
+    <p>Allow the camera for Housecall in your system settings, then try again.</p>
+    <button type="button" class="hc-btn hc-btn--primary">Try again</button>
+    <button type="button" class="hc-btn hc-btn--text">Choose a photo instead</button>
+  </div>
+</div>
+</body>
+</html>

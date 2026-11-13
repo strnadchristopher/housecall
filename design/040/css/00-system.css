@@ -36,6 +36,7 @@
   --hc-night: #080b11;
   --hc-night-text: #e8edf6;
   --hc-night-muted: #c0c8d6;
+  --hc-night-danger: #f39191;
 
   /* Type. Two more steps: 11 px for counts and the LIVE mark, 36 px for one headline per screen. */
   --hc-text-2xs: 0.6875rem;
