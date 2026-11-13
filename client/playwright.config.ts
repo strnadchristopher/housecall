@@ -2,7 +2,9 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch:
-    process.env.HOUSECALL_TEST_VOICECHANNELS === "1"
+    process.env.HOUSECALL_TEST_VOICESHOTS === "1"
+      ? "**/voice-shots.spec.ts" // writes design/040/shots/after-voice-*; run on purpose
+      : process.env.HOUSECALL_TEST_VOICECHANNELS === "1"
       ? "**/voice-channels.spec.ts"
       : process.env.HOUSECALL_TEST_DM_CALLS === "1"
       ? "**/dm-calls.spec.ts"

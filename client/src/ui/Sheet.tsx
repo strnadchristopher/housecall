@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { copy } from "./copy";
 import { IconButton, Presence } from "./kit";
 
@@ -22,7 +23,7 @@ export function Sheet({ open, onClose, title, children, actions, testId }: {
     return () => { document.removeEventListener("keydown", onKey, true); (opener.current as HTMLElement | null)?.focus?.({ preventScroll: true }); };
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <Presence show={open} ms={110}>
+    createPortal(<Presence show={open} ms={110}>
       <div className="hc-sheet-scrim hc-anim-fade" onClick={onClose} />
       <div ref={ref} className="hc-sheet hc-anim-rise" role="dialog" aria-modal="true" aria-labelledby={heading} data-testid={testId}>
         <span className="hc-sheet__grip" aria-hidden="true" />
@@ -30,6 +31,6 @@ export function Sheet({ open, onClose, title, children, actions, testId }: {
         {children}
         {actions && <div className="hc-sheet__actions">{actions}</div>}
       </div>
-    </Presence>
+    </Presence>, document.body)
   );
 }

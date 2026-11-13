@@ -1,6 +1,6 @@
 import { useCall, useChat, useIdentity } from "../../core/context";
 import { copy } from "../copy";
-import { IconButton } from "../kit";
+import { Icon, IconButton } from "../kit";
 import { useNav } from "../shell/nav";
 import { usePhone, useSheet } from "../tokens/motion";
 
@@ -12,6 +12,7 @@ export function ChannelHeader() {
   const peer = chat.current?.kind === "dm" ? chat.people.find(person => person.id === chat.current?.peerId) : undefined;
   const calling = call.phase !== "idle" && call.conversationId === chat.current?.id;
   const nav = useNav();
+  const inside = chat.current ? call.rooms[chat.current.id]?.length ?? 0 : 0;
   const phone = usePhone();
   const sheet = useSheet();
   const side = (kind: "search" | "pins") => nav.set({ side: nav.side.kind === kind && !sheet ? { kind: "tabs", tab: "people" } : { kind }, sheet: true });
@@ -26,8 +27,10 @@ export function ChannelHeader() {
         </span>
       )}
       <div className="hc-header__title">
+        {(chat.current?.kind === "channel" || chat.current?.kind === "voice") && <span className="hc-header__glyph"><Icon name={chat.current.kind === "voice" ? "speaker" : "hash"} /></span>}
         <h1>{chat.current?.name}</h1>
-        {(chat.current?.kind === "channel" || chat.current?.kind === "voice") && <small>{copy.header.in(identity.serverName)}</small>}
+        {chat.current?.kind === "channel" && <small>{copy.header.in(identity.serverName)}</small>}
+        {chat.current?.kind === "voice" && <small>{inside > 0 ? copy.channels.inside(inside) : copy.header.in(identity.serverName)}</small>}
         {peer?.bio && <small className="hc-header__bio">{peer.bio}</small>}
       </div>
       {call.available && peer && !calling && <IconButton icon="phone" label={copy.call.callPerson(peer.name)} onClick={() => void call.callPerson(peer.id)} />}

@@ -1179,3 +1179,4 @@ p { text-wrap: pretty; }
   .hc-profile__card { padding: var(--hc-space-4); gap: var(--hc-space-3); }
   .hc-profile__save .hc-btn { flex: 1; min-height: 52px; font-size: var(--hc-text-md); }
 }
+.hc-sheet .hc-preview-pop { position: static; width: auto; padding: 0; background: none; box-shadow: none; }
