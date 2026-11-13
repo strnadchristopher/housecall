@@ -207,6 +207,9 @@ a { color: var(--hc-accent); }
 .hc-dock__name strong { color: var(--hc-live); }
 .hc-callctl { display: flex; align-items: center; gap: var(--hc-space-1); }
 .hc-userbar { display: flex; align-items: center; gap: var(--hc-space-2); padding: var(--hc-space-1) var(--hc-space-1) var(--hc-space-1) var(--hc-space-3); }
+.hc-userbar__me { flex: 1; min-width: 0; min-height: 44px; display: flex; align-items: center; gap: var(--hc-space-2); padding: 0 var(--hc-space-1); border: 0; border-radius: var(--hc-radius-md); background: none; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.hc-userbar__me:active { background: var(--hc-surface-raised); }
+@media (hover: hover) { .hc-userbar__me:hover { background: var(--hc-surface-raised); } }
 .hc-userbar__name { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
 .hc-userbar__name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hc-userbar__mail, .hc-header__menu { position: relative; display: grid; }

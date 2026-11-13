@@ -38,7 +38,7 @@ export const copy = {
   join: { confirm: (host: string) => `Join a server on ${host}?`, body: "Someone sent you an invite link.", join: "Join", notNow: "Not now" },
   picker: { label: "Servers", add: "Add server", create: "Create server", mentions: (n: number) => `${n} mentions` },
   channels: { label: "Conversations", open: (name: string) => `Open ${name}`, mentions: (n: number) => `${n} mentions`, inCall: "In call" },
-  userBar: { messages: "Direct messages", settings: "Settings" },
+  userBar: { messages: "Direct messages", settings: "Settings", profile: "Your profile" },
   header: {
     search: "Search", pins: "Pins", people: "People", settings: "Server settings", in: (server: string) => `in ${server}`,
     menu: "Menu",

@@ -240,6 +240,21 @@ test("phone: one message toolbar is open at a time; tapping elsewhere or Escape 
   await context.close();
 });
 
+test("user bar: your name and avatar open your profile (wide and phone)", async ({ browser }) => {
+  for (const options of [{ viewport: { width: 1280, height: 800 } }, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }]) {
+    const context = await browser.newContext(options);
+    const page = await context.newPage();
+    await page.goto("/");
+    await signIn(page, "owner");
+    if (options.isMobile) await page.getByRole("button", { name: "Menu" }).click();
+    const profile = page.getByRole("button", { name: "Your profile", exact: true });
+    expect((await profile.boundingBox())!.height).toBeGreaterThanOrEqual(options.isMobile ? 44 : 32);
+    await profile.click();
+    await expect(page.getByTestId("screen-account")).toBeVisible();
+    await context.close();
+  }
+});
+
 test("pickers: the emoji panel and a message's reaction panel close on an outside press or Escape", async ({ page }) => {
   page.setDefaultTimeout(15000);
   await page.goto("/");
