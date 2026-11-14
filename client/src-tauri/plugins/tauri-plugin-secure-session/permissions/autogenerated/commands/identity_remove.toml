@@ -1,0 +1,10 @@
+# Generated command permission; kept in source for platform builds.
+[[permission]]
+identifier = "allow-identity-remove"
+description = "Enables identity_remove in the local webview."
+commands.allow = ["identity_remove"]
+
+[[permission]]
+identifier = "deny-identity-remove"
+description = "Denies identity_remove."
+commands.deny = ["identity_remove"]

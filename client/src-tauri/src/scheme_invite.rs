@@ -12,7 +12,7 @@ const TTL: Duration = Duration::from_secs(120);
 
 /// Shape check only (the web layer decodes the code): exact prefix, a bounded code alphabet, nothing after it.
 fn accepted(url: &str) -> bool {
-    url.len() <= 2048
+    url == "housecall://link-scan" || url.len() <= 2048
         && url.strip_prefix("housecall://invite?code=").is_some_and(|code| {
             code.starts_with("hc1.")
                 && code.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'))

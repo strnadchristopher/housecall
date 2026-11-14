@@ -168,7 +168,7 @@ export function useLegacyIdentity(
     serverName: c.servers.find(candidate => candidate.id === server.id)?.name ?? hostLabel(host),
     serverId: server.id,
     serverIconUrl: (() => { const current = c.servers.find(candidate => candidate.id === server.id); return current ? iconPath(current) : undefined; })(),
-    devices: c.devices.map(device => ({ id: device.id, name: device.device_name, createdAt: device.created_at, current: device.current })),
+    devices: c.devices.map(device => ({ id: device.id, name: device.device_name, createdAt: device.created_at, current: device.current, addedVia: device.added_via ?? undefined })),
     notices: c.noticeList.map(notice => ({ id: notice.id, conversation: c.channels.find(channel => channel.id === notice.channel_id)?.name ?? "", at: notice.created_at ?? 0 })),
     roles: server.roles.map(role => ({ id: role.id, name: role.name, memberIds: role.member_ids })),
     reports: c.reports.map(report => ({ id: report.id, kind: report.kind, body: report.body, status: report.status, logs: report.logs ?? undefined, hasScreenshot: !!report.screenshot_id })),

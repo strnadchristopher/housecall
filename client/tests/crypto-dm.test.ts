@@ -50,8 +50,7 @@ describe('DM-V1 vectors', () => {
     const opened = unwrap(openMessage({ ...context, envelope: h(v.envelope_hex) }));
     const nonces = new NonceSet(); expect(nonces.accept(opened.nonce)).toBe(true); expect(nonces.accept(opened.nonce)).toBe(false); nonces.clear(); expect(nonces.accept(opened.nonce)).toBe(true);
   });
-  // These vectors exercise core state / presentation, explicitly outside this phase's owned files.
-  for (const v of d.negative.filter((n: any) => ['pin_state', 'reply_binding', 'plaintext_in_encrypted_dm'].includes(n.kind))) it.todo(`identity integration: ${v.name}`);
+  // All nine core pin/reply/plaintext vectors run in identity-core.test.ts.
 });
 describe('DM boundary checks', () => {
   it('uses a fresh nonce for every message/edit', () => {

@@ -3,6 +3,7 @@ export interface User {
   id: string;
   username: string;
   is_owner: boolean;
+  key_rev?: number;
   display_name?: string | null;
   avatar_rev?: number;
   bio?: string | null;
@@ -19,12 +20,14 @@ export interface Channel {
   /** The other person in a two-person direct conversation. */
   peer_id?: string | null;
 }
+export type DeviceAddedVia = 'setup' | 'password' | 'invite' | 'passkey' | 'qr';
 export interface Device {
   id: string;
   device_name: string;
   created_at: number;
   expires_at: number;
   current: boolean;
+  added_via?: DeviceAddedVia | null;
 }
 export interface ServerEvent {
   id: number;

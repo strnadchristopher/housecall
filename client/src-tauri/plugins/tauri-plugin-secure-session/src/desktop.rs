@@ -59,3 +59,17 @@ pub fn forget(origin: &str) -> Result<(), String> {
 pub fn origins() -> Result<Vec<String>, String> {
     read_index()
 }
+
+pub fn record(action: &str, account: &str, value: Option<Value>) -> Result<Value, String> {
+    let entry = keyring::Entry::new("com.mapleavenuelabs.housecall.identity", account).map_err(|_| UNAVAILABLE.to_string())?;
+    match action {
+        "recordGet" => match entry.get_password() {
+            Ok(raw) => { let value: Value = serde_json::from_str(&raw).map_err(|_| UNAVAILABLE.to_string())?; Ok(serde_json::json!({"value":value})) },
+            Err(keyring::Error::NoEntry) => Ok(serde_json::json!({"value":null})),
+            Err(_) => Err(UNAVAILABLE.into()),
+        },
+        "recordSet" => { entry.set_password(&value.ok_or(UNAVAILABLE)?.to_string()).map_err(|_| UNAVAILABLE.to_string())?; Ok(serde_json::json!({"ok":true})) },
+        "recordRemove" => { match entry.delete_credential() { Ok(()) | Err(keyring::Error::NoEntry) => {}, Err(_) => return Err(UNAVAILABLE.into()) }; Ok(serde_json::json!({"ok":true})) },
+        _ => Err(UNAVAILABLE.into()),
+    }
+}

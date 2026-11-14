@@ -33,6 +33,7 @@ export function parseInviteLink(value: string, expectedOrigin: string): InviteLi
 export function subscribeInviteLinks(
   onInvite: (invite: InviteLink) => void,
   onError?: (error: Error) => void,
+  onLinkScan?: () => void,
 ): () => void {
   let stopped = false;
   let busy = false;
@@ -54,6 +55,11 @@ export function subscribeInviteLinks(
       const result = await call<{ id?: string; invite?: InviteLink; url?: string }>("native_auth", { action: "takeInvite", payload: {} });
       if (!stopped && typeof result.url === "string") {
         // Android: a housecall:// link captured by InviteLinkInbox.
+        if (result.url === 'housecall://link-scan') {
+          onLinkScan?.();
+          await call("native_auth", { action: "acknowledgeInvite", payload: { id: result.id } });
+          return;
+        }
         const parsed = parseSchemeInvite(result.url);
         if (!parsed || typeof result.id !== "string" || !/^[a-f0-9-]{36}$/.test(result.id)) throw new Error("Invalid invitation link");
         onInvite(parsed);
@@ -85,6 +91,7 @@ export function subscribeInviteLinks(
     try {
       const result = await call<{ url?: string | null }>("scheme_invite_take", {});
       if (!stopped && typeof result?.url === "string") {
+        if (result.url === 'housecall://link-scan') { onLinkScan?.(); return; }
         const parsed = parseSchemeInvite(result.url);
         if (parsed) onInvite(parsed);
         else onError?.(new Error("Invalid invitation link"));
@@ -105,4 +112,13 @@ export function subscribeInviteLinks(
     if (schemeTimer) clearTimeout(schemeTimer);
     window.removeEventListener("hashchange", browserLink);
   };
+}
+
+/** Web handoff: strip the fragment synchronously before parsing/rendering/network calls.
+ * Native callers must scan with their own camera; never use this code as a native handoff. */
+export function takeBrowserLinkFragment(): string | undefined {
+  if (typeof window === 'undefined' || !location.hash.startsWith('#link=')) return;
+  const fragment = location.hash.slice(6);
+  history.replaceState(history.state, '', location.pathname + location.search);
+  return `${location.origin}/link#${fragment}`;
 }

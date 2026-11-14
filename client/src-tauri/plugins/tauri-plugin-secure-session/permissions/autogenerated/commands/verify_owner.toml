@@ -1,0 +1,9 @@
+[[permission]]
+identifier = "allow-verify-owner"
+description = "Enables immediate OS device owner verification."
+commands.allow = ["verify_owner"]
+
+[[permission]]
+identifier = "deny-verify-owner"
+description = "Denies device owner verification."
+commands.deny = ["verify_owner"]

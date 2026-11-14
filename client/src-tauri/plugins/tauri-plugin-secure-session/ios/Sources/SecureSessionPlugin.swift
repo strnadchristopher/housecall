@@ -1,17 +1,24 @@
 import Foundation
 import Security
+import LocalAuthentication
 import Tauri
 
 private struct Args: Decodable {
   let origin: String?
   /// `set` only: the session as a JSON string. Rust has already reduced it to the four known fields.
   let session: String?
+  let account: String?
+  let value: String?
+  let reason: String?
 }
 
 private struct Reply: Encodable {
   var session: String?
+  var value: String?
   var origins: [String]?
   var ok: Bool?
+  var supported: Bool?
+  var verified: Bool?
 }
 
 /// The Housecall session in the iOS Keychain: one generic password per server origin.
@@ -81,6 +88,66 @@ class SecureSessionPlugin: Plugin {
         return invoke.reject("secure storage unavailable")
       }
       invoke.resolve(Reply(ok: true))
+    }
+  }
+
+  // Separate service keeps identity records out of session enumeration/removal.
+  private func recordQuery(_ account: String) -> [String: Any] {
+    var q = query(account)
+    q[kSecAttrService as String] = "com.mapleavenuelabs.housecall.identity"
+    return q
+  }
+  @objc(recordGet:)
+  func recordGet(_ invoke: Invoke) {
+    guard let args = try? invoke.parseArgs(Args.self), let account = args.account else { return invoke.reject("invalid record") }
+    queue.async {
+      var q = self.recordQuery(account)
+      q[kSecReturnData as String] = true
+      q[kSecMatchLimit as String] = kSecMatchLimitOne
+      var item: CFTypeRef?
+      let status = SecItemCopyMatching(q as CFDictionary, &item)
+      if status == errSecItemNotFound { return invoke.resolve(Reply()) }
+      guard status == errSecSuccess, let data = item as? Data, let text = String(data: data, encoding: .utf8) else { return invoke.reject("secure storage unavailable") }
+      invoke.resolve(Reply(value: text))
+    }
+  }
+  @objc(recordSet:)
+  func recordSet(_ invoke: Invoke) {
+    guard let args = try? invoke.parseArgs(Args.self), let account = args.account, let value = args.value,
+      let data = value.data(using: .utf8) else { return invoke.reject("invalid record") }
+    queue.async {
+      let q = self.recordQuery(account)
+      let status = SecItemUpdate(q as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+      if status == errSecSuccess { return invoke.resolve(Reply(ok: true)) }
+      guard status == errSecItemNotFound else { return invoke.reject("secure storage unavailable") }
+      var add = q
+      add[kSecValueData as String] = data
+      add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+      guard SecItemAdd(add as CFDictionary, nil) == errSecSuccess else { return invoke.reject("secure storage unavailable") }
+      invoke.resolve(Reply(ok: true))
+    }
+  }
+  @objc(recordRemove:)
+  func recordRemove(_ invoke: Invoke) {
+    guard let args = try? invoke.parseArgs(Args.self), let account = args.account else { return invoke.reject("invalid record") }
+    queue.async {
+      let status = SecItemDelete(self.recordQuery(account) as CFDictionary)
+      guard status == errSecSuccess || status == errSecItemNotFound else { return invoke.reject("secure storage unavailable") }
+      invoke.resolve(Reply(ok: true))
+    }
+  }
+
+  @objc(verifyOwner:)
+  func verifyOwner(_ invoke: Invoke) {
+    guard let args = try? invoke.parseArgs(Args.self), let reason = args.reason else { return invoke.reject("invalid verification reason") }
+    let context = LAContext()
+    var error: NSError?
+    guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {
+      if error?.code == LAError.passcodeNotSet.rawValue { return invoke.resolve(Reply(supported: false, verified: false)) }
+      return invoke.reject("device verification unavailable")
+    }
+    context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason) { success, _ in
+      invoke.resolve(Reply(supported: true, verified: success))
     }
   }
 

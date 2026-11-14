@@ -1,0 +1,10 @@
+# Generated command permission; kept in source for platform builds.
+[[permission]]
+identifier = "allow-identity-get"
+description = "Enables identity_get in the local webview."
+commands.allow = ["identity_get"]
+
+[[permission]]
+identifier = "deny-identity-get"
+description = "Denies identity_get."
+commands.deny = ["identity_get"]

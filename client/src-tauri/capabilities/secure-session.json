@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "secure-session",
-  "description": "Keep and restore the signed-in session in OS secure storage. Local webview only; no remote URLs are listed.",
+  "description": "Keep sessions, the install identity and full pin histories in OS secure storage, and verify the device owner before linking. Local webview only; no remote URLs are listed.",
   "windows": ["main"],
   "permissions": ["secure-session:default"]
 }

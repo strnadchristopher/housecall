@@ -10,6 +10,7 @@ export interface DeviceSession {
   name: string;
   createdAt: number;
   current: boolean;
+  addedVia?: import("../data/types").DeviceAddedVia;
 }
 
 export interface Notice {

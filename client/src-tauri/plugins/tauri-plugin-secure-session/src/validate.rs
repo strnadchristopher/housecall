@@ -79,3 +79,13 @@ mod tests {
         assert!(session(&json!({"token":"t","device_key":"d","username":"kim","expires_at":-1})).is_err());
     }
 }
+
+/// Only the install seed/recovery revision and durable word-confirmation gate.
+pub fn identity(value: &Value) -> Result<Value, &'static str> {
+    let seed = value.get("seed").and_then(Value::as_str).ok_or("invalid identity")?;
+    if seed.len() != 43 || !seed.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-') || !b"AEIMQUYcgkosw048".contains(&seed.as_bytes()[42]) { return Err("invalid identity"); }
+    let rev = value.get("recovery_rev").and_then(Value::as_u64).filter(|r| *r > 0 && *r <= u32::MAX as u64).ok_or("invalid identity")?;
+    let confirmed = value.get("confirmed").and_then(Value::as_bool).ok_or("invalid identity")?;
+    let words_require_password = value.get("words_require_password").and_then(Value::as_bool).unwrap_or(false);
+    Ok(json!({"seed":seed,"recovery_rev":rev,"confirmed":confirmed,"words_require_password":words_require_password}))
+}

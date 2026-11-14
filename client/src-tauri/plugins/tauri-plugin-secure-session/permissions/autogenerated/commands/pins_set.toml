@@ -1,0 +1,10 @@
+# Generated command permission; kept in source for platform builds.
+[[permission]]
+identifier = "allow-pins-set"
+description = "Enables pins_set in the local webview."
+commands.allow = ["pins_set"]
+
+[[permission]]
+identifier = "deny-pins-set"
+description = "Denies pins_set."
+commands.deny = ["pins_set"]

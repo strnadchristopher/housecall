@@ -1,10 +1,6 @@
-import { createRequire } from 'node:module';
 import { expect, it } from 'vitest';
 import vector from './vectors/link-v1.json';
-const require = createRequire(import.meta.url);
-let codecsAvailable = true;
-try { require.resolve('qrcode-generator'); require.resolve('jsqr'); } catch { codecsAvailable = false; }
-it.skipIf(!codecsAvailable)('QR codec round trip, quiet zone and hostile frames (blocked until codec dependencies installed)', async () => {
+it('QR codec round trip, quiet zone and hostile frames', async () => {
   const { decodeQr, renderQr } = await import('../src/data/qr');
   const rendered = renderQr(vector.qr_text); expect(rendered.ok).toBe(true); if (!rendered.ok) throw rendered.error;
   const { modules, quietZone } = rendered.value; expect(quietZone).toBe(4);

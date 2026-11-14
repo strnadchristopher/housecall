@@ -134,6 +134,11 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
     return response.blob();
   };
   const view = (message: Message, visible: readonly Message[]): ChatMessage => {
+    // Until the security UI adopts DmService, encrypted rows are locked placeholders.
+    // Never feed host-provided ciphertext/body, sealed attachments or reply quotes into legacy renderers.
+    const encrypted = (row: Message) => (row as Message & { enc?: number }).enc === 1;
+    if (encrypted(message)) message = { ...message, body: "This encrypted message is locked. Set up your security key to read it.", attachments: [], reply_to: null };
+    visible = visible.map(row => encrypted(row) ? { ...row, body: "Encrypted message", attachments: [], reply_to: null } : row);
     const details = messageDetails(message, me?.id ?? "", nameOf, visible);
     let nodes: ChatMessage["nodes"] = [];
     try { nodes = markdownTokens(message.body); } catch { nodes = [{ kind: "text", text: message.body }]; }
@@ -143,7 +148,7 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
       createdAt: message.created_at, editedAt: details.editedAt, pinned: details.pinned,
       replyTo: details.replyTo ?? null, reactions: details.reactions, mentionsMe: details.mentionsMe && !mine,
       attachments: details.attachments.map(a => ({ id: a.id, filename: a.filename, size: a.length, kind: a.kind as Attachment["kind"], video: !!a.videoPath, thumbnail: a.thumbnailPath, snap: a.snap })),
-      mine, canEdit: mine, canUnsend: mine || !!me?.is_owner,
+      mine, canEdit: mine && !encrypted(message), canUnsend: mine || !!me?.is_owner,
       link: c.capabilities.embeds === true ? firstPreviewLink(message.body) : undefined,
       gifs: c.capabilities.giphy === true ? [...message.body.matchAll(GIF_LINK)].map(match => match[1]) : [],
     };

@@ -93,3 +93,58 @@ mod unsupported {
 }
 #[cfg(all(desktop, not(any(target_os = "linux", target_os = "macos", target_os = "windows"))))]
 use unsupported::{forget, origins, store, stored};
+
+// Identity and pins use a separate namespace from origin-keyed sessions. No session
+// removal command can touch these records. Mobile payload strings stay inside OS storage.
+#[cfg(desktop)]
+async fn record(app: &AppHandle<impl Runtime>, action: &str, account: String, value: Option<Value>) -> Result<Value, String> {
+    let _ = app;
+    let action = action.to_owned();
+    blocking(move || crate::desktop::record(&action, &account, value)).await
+}
+#[cfg(mobile)]
+async fn record<R: Runtime>(app: &AppHandle<R>, action: &str, account: String, value: Option<Value>) -> Result<Value, String> {
+    native(app, action, json!({"account":account,"value":value.map(|v| v.to_string())})).await
+}
+#[tauri::command]
+pub async fn identity_get<R: Runtime>(app: AppHandle<R>) -> Result<Value, String> {
+    let result = record(&app, "recordGet", "install-v1".into(), None).await?;
+    Ok(json!({"identity":result.get("value")}))
+}
+#[tauri::command]
+pub async fn identity_set<R: Runtime>(app: AppHandle<R>, identity: Value) -> Result<Value, String> {
+    let value = validate::identity(&identity)?;
+    record(&app, "recordSet", "install-v1".into(), Some(value)).await
+}
+#[tauri::command]
+pub async fn identity_remove<R: Runtime>(app: AppHandle<R>) -> Result<Value, String> {
+    record(&app, "recordRemove", "install-v1".into(), None).await
+}
+fn pin_account(origin: &str, user_id: &str) -> Result<String, String> {
+    validate::origin(origin)?;
+    if user_id.is_empty() || user_id.len() > 128 || user_id.chars().any(char::is_control) { return Err("invalid pin namespace".into()); }
+    Ok(format!("pins-v1:{}:{}:{}", origin.len(), origin, user_id))
+}
+#[tauri::command]
+pub async fn pins_get<R: Runtime>(app: AppHandle<R>, origin: String, user_id: String) -> Result<Value, String> {
+    let result = record(&app, "recordGet", pin_account(&origin, &user_id)?, None).await?;
+    Ok(json!({"pins":result.get("value")}))
+}
+#[tauri::command]
+pub async fn pins_set<R: Runtime>(app: AppHandle<R>, origin: String, user_id: String, pins: Value) -> Result<Value, String> {
+    let account = pin_account(&origin, &user_id)?;
+    if !pins.is_array() || pins.to_string().len() > 4_000_000 { return Err("invalid pins".into()); }
+    for pin in pins.as_array().unwrap() {
+        if pin.get("origin").and_then(Value::as_str) != Some(origin.as_str()) || !pin.get("history").is_some_and(Value::is_array) { return Err("invalid pins".into()); }
+    }
+    record(&app, "recordSet", account, Some(pins)).await
+}
+
+#[tauri::command]
+pub async fn verify_owner<R: Runtime>(app: AppHandle<R>, reason: String) -> Result<Value, String> {
+    if reason.is_empty() || reason.len() > 200 || reason.chars().any(char::is_control) { return Err("invalid verification reason".into()); }
+    #[cfg(mobile)]
+    return native(&app, "verifyOwner", json!({"reason":reason})).await.map_err(|_| "device verification unavailable".to_owned());
+    #[cfg(desktop)]
+    { let _ = (app, reason); Ok(json!({"supported":false,"verified":false})) }
+}
