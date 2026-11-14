@@ -1,0 +1,66 @@
+/*
+ * HC-040 section 16: empty, loading and error states that no single surface owns.
+ * PASTE: at the end of client/src/ui/styles/index.css. The keyframes go inside the existing
+ * "@media (prefers-reduced-motion: no-preference)" block.
+ */
+
+/* ---- Sidebar: the channel list before it has loaded. Rows keep the real row height, so nothing
+   moves when the names arrive. Widths come from --w so the column does not look ruled. */
+.hc-skelrow { display: flex; align-items: center; gap: var(--hc-space-2); height: var(--hc-row); padding-inline: var(--hc-space-2); }
+.hc-skelrow::before { content: ""; flex: none; width: 18px; height: 18px; border-radius: var(--hc-radius-xs); background: var(--hc-wash-hover); }
+.hc-skelrow > .hc-skel { width: var(--w, 50%); height: 10px; border-radius: 5px; }
+/* People column: the same row with the avatar's arch. */
+.hc-skelpeople { display: flex; flex-direction: column; gap: 2px; }
+.hc-skelrow--person { height: var(--hc-space-7); gap: var(--hc-space-3); }
+.hc-skelrow--person::before { width: var(--hc-space-6); height: calc(var(--hc-space-6) * 1.125); border-radius: var(--hc-arch); }
+.hc-skel--label { display: block; width: 5.5rem; height: 8px; border-radius: 4px; }
+/* Second and later rows breathe a beat behind the first: one slow wave down the list, not a blink. */
+.hc-skelrow:nth-child(2n) > .hc-skel, .hc-msgskel:nth-child(2n) .hc-skel { animation-delay: 240ms; }
+.hc-skelrow:nth-child(3n) > .hc-skel, .hc-msgskel:nth-child(3n) .hc-skel { animation-delay: 480ms; }
+
+/* ---- Sidebar: a group with nothing in it, or one that failed to load. */
+.hc-group__none { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--hc-space-2); min-height: var(--hc-row); padding-inline: var(--hc-space-2); font-size: var(--hc-text-sm); color: var(--hc-text-muted); }
+.hc-group__none .hc-btn--text { min-height: var(--hc-row); padding-inline: 0; color: var(--hc-accent); font-size: inherit; }
+/* The owner's empty group is a row that makes the first channel: same shape as a channel, drawn quieter. */
+.hc-channel--add { color: var(--hc-text-muted); }
+.hc-channel--add .hc-channel__glyph .hc-icon { stroke-width: 1.9; }
+@media (hover: hover) { .hc-channel--add:hover { background: var(--hc-wash-hover); color: var(--hc-text); } }
+
+/* ---- Timeline: before the first page of messages. Anchored to the bottom like the real list. */
+.hc-msgskels { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: var(--hc-space-4); padding: var(--hc-space-4) var(--hc-space-5); }
+.hc-msgskel { display: grid; grid-template-columns: var(--hc-space-6) minmax(0, 1fr); column-gap: var(--hc-space-3); row-gap: var(--hc-space-2); align-items: start; }
+.hc-msgskel > .hc-skel:first-child { grid-row: 1 / span 3; width: var(--hc-space-6); height: calc(var(--hc-space-6) * 1.125); border-radius: var(--hc-arch); }
+.hc-msgskel > .hc-skel { height: 10px; border-radius: 5px; width: var(--w, 40%); }
+.hc-msgskel > .hc-skel:nth-child(2) { width: 4.5rem; margin-top: 3px; }
+@media (max-width: 47.5em) { .hc-msgskels { padding-inline: var(--hc-space-3); } }
+
+/* ---- Empty, small: inside a column or a sheet, where the doorway would be too loud. */
+.hc-empty--quiet { gap: var(--hc-space-1); padding: var(--hc-space-4); }
+.hc-empty--quiet strong { font-size: var(--hc-text-md); }
+/* The start of a conversation sits at the bottom, just above the composer, where the first message will land. */
+.hc-empty--start { flex: 1; justify-content: flex-end; align-items: flex-start; text-align: start; padding: var(--hc-space-5); gap: var(--hc-space-1); }
+.hc-empty--start .hc-empty__door { margin-bottom: var(--hc-space-3); }
+.hc-empty--start strong { font-size: var(--hc-text-xl); line-height: 1.2; }
+.hc-empty--start p { max-width: 30rem; font-size: var(--hc-text-md); }
+@media (max-width: 47.5em) { .hc-empty--start { padding: var(--hc-space-4) var(--hc-space-3); } }
+
+/* ---- Toast: one line that something finished or failed, when the thing itself is no longer on
+   screen to say so. One at a time; it sits above the composer and never covers a control. */
+@media (min-width: 47.51em) { .hc-center { position: relative; } } /* phones: already positioned */
+.hc-toasts { position: absolute; z-index: 25; inset: auto 0 calc(var(--hc-space-8) + var(--hc-space-5) + var(--hc-safe-bottom)) 0; display: grid; justify-items: center; padding-inline: var(--hc-space-3); pointer-events: none; }
+.hc-toast {
+  pointer-events: auto; display: flex; align-items: center; gap: var(--hc-space-2); max-width: min(28rem, 100%); min-height: 40px;
+  padding: var(--hc-space-1) var(--hc-space-3); border-radius: var(--hc-radius-md); background: var(--hc-pop); box-shadow: var(--hc-float);
+  color: var(--hc-text); font-size: var(--hc-text-sm); line-height: 1.35;
+}
+.hc-toast > .hc-icon { flex: none; width: 16px; height: 16px; color: var(--hc-text-muted); }
+.hc-toast[data-kind="error"] > .hc-icon { color: var(--hc-danger); }
+.hc-toast > span { flex: 1; min-width: 0; padding-top: 1px; }
+.hc-toast:has(.hc-btn) { padding-inline-end: var(--hc-space-1); }
+.hc-toast .hc-btn--text { flex: none; min-height: 32px; padding-inline: var(--hc-space-2); color: var(--hc-accent); font-weight: var(--hc-weight-bold); }
+@media (max-width: 47.5em) { .hc-toast { min-height: var(--hc-hit); } .hc-toast .hc-btn--text { min-height: var(--hc-hit); } }
+@media (prefers-reduced-motion: no-preference) {
+  .hc-toast { animation: hc-toast-in var(--hc-dur-base) var(--hc-ease-out); }
+  .hc-toast[data-state="exit"] { animation: hc-fade-out var(--hc-dur-fast) var(--hc-ease-in) forwards; }
+  @keyframes hc-toast-in { from { opacity: 0; transform: translateY(var(--hc-space-2)); } }
+}

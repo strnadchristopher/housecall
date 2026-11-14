@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>HC-040 · 10 QR login, the device that shows the code</title>
 <!-- default = code hidden (a blurred decoy) · shown = code visible, counting down · t24000 = the ring 24 s in
-     approve = a device scanned it · approved · failed = could not make a code -->
-<meta name="hc-states" content="default,shown,t24000,approve,approved,failed">
+     approve = a device scanned it: TYPE its number here (LINK-V1 5; the number is never shown on this device)
+     verify = the number matched: account password (desktop) or the phone's own unlock (LINK-V1 9.1, R-6)
+     approved · mismatch = one wrong entry, link denied · failed = could not make a code -->
+<meta name="hc-states" content="default,shown,t24000,approve,verify,approved,mismatch,failed">
 <link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
 <link rel="stylesheet" href="../../client/src/ui/tokens/directions/b.css">
 <link rel="stylesheet" href="../../client/src/ui/tokens/directions/c.css">
@@ -33,7 +35,7 @@
             <section class="hc-settings__pane" aria-labelledby="q-title">
               <h2 id="q-title" data-show-phone="0">Log in with QR code</h2>
               <div class="hc-qrlogin">
-                <p class="hc-lede" data-hide="approve approved">Scan this with the device you want to log in. You confirm it here before anything happens.</p>
+                <p class="hc-lede" data-show="default shown t24000 failed">Scan this with the device you want to log in.</p>
 
                 <div class="hc-qrlogin__card">
                   <!-- hidden: a decoy pattern under a veil. The real code does not exist yet. -->
@@ -50,29 +52,51 @@
                   </div>
                   <p class="hc-error" role="alert" data-show="failed" style="padding:0"><span>Couldn't make a code. Check your connection and try again.</span></p>
 
-                  <!-- a device scanned the code -->
-                  <div class="hc-qrlogin__ask" data-show="approve" role="alertdialog" aria-labelledby="q-ask">
+                  <!-- approve: a device scanned the code. The number is typed here, never shown here (LINK-V1 5, R-5). -->
+                  <div class="hc-qrlogin__ask" data-show="approve verify" role="alertdialog" aria-labelledby="q-ask">
                     <i data-i="device"></i>
-                    <strong id="q-ask">iPhone wants to log in</strong>
-                    <p>Does it show this number?</p>
+                    <strong id="q-ask">Pixel 9 wants to log in</strong>
                   </div>
-                  <div class="hc-plates" aria-label="42" data-show="approve"><span class="hc-plate">4</span><span class="hc-plate">2</span></div>
-                  <div class="hc-qrlogin__actions" data-show="approve">
-                    <button type="button" class="hc-btn hc-btn--primary">Yes, log it in</button>
-                    <button type="button" class="hc-btn hc-btn--text hc-btn--danger-text">No, deny</button>
+                  <label class="hc-qrlogin__label" for="q-code" data-show="approve">Type the number shown on Pixel 9</label>
+                  <span class="hc-codefield" data-show="approve">
+                    <input id="q-code" inputmode="numeric" pattern="[0-9]*" maxlength="2" autocomplete="off" value="9">
+                    <span class="hc-plate" aria-hidden="true">9</span><span class="hc-plate is-next" aria-hidden="true"></span>
+                  </span>
+                  <div class="hc-qrlogin__timer" data-show="approve">
+                    <span class="hc-ring" style="--hc-ring-s:120s" role="presentation"><i></i><i></i></span><span role="timer">74 s left</span>
+                  </div>
+
+                  <!-- verify, desktop: the account password. Phones: the OS unlock prompt sits over this card. -->
+                  <form class="hc-qrlogin__verify" data-show="verify" data-show-phone="0">
+                    <label class="hc-field"><span class="hc-field__label">Your password</span><input type="password" value="hunter2hunter" autocomplete="current-password"></label>
+                    <button type="submit" class="hc-btn hc-btn--primary">Log in Pixel 9</button>
+                  </form>
+                  <div class="hc-qrlogin__verify" data-show="verify" data-show-phone="1">
+                    <button type="button" class="hc-btn hc-btn--primary">Unlock to log in Pixel 9</button>
+                  </div>
+                  <div class="hc-qrlogin__actions" data-show="approve verify">
+                    <button type="button" class="hc-btn hc-btn--text hc-btn--danger-text">Deny</button>
                   </div>
 
                   <!-- approved -->
                   <div class="hc-qrlogin__ask" data-show="approved" role="status">
                     <span class="hc-qrlogin__done"><i data-i="check"></i></span>
-                    <strong>iPhone is logged in</strong>
-                    <p>It is in your Devices list. You can log it out there at any time.</p>
+                    <strong>Pixel 9 is now logged in</strong>
+                    <p>It is in your Devices list.</p>
                   </div>
                   <div class="hc-qrlogin__actions" data-show="approved"><button type="button" class="hc-btn">Done</button></div>
+
+                  <!-- one wrong entry: the link is denied at once, no second try -->
+                  <div class="hc-qrlogin__ask" data-show="mismatch" role="alert">
+                    <span class="hc-qrlogin__warn"><i data-i="warn"></i></span>
+                    <strong>The numbers didn't match</strong>
+                    <p>The login was cancelled. If you typed the number correctly, someone else may have used this code or your server may be interfering with logins.</p>
+                  </div>
+                  <div class="hc-qrlogin__actions" data-show="mismatch"><button type="button" class="hc-btn hc-btn--primary">Make a new code</button></div>
                 </div>
 
-                <p class="hc-note" data-show="default shown t24000 failed"><i data-i="lock"></i><span>A photo of this code is not enough to get in. Every login needs your yes on this device, and each code works once.</span></p>
-                <p class="hc-note" data-show="approve"><i data-i="warn"></i><span>Only say yes if you are holding that device and the numbers match. A different number means someone else scanned your code: deny it.</span></p>
+                <p class="hc-note" data-show="default shown t24000 failed"><i data-i="warn"></i><span>Anyone who sees this code could try to log in as you. Never show it to someone who asks for it: Housecall and your host never will.</span></p>
+                <p class="hc-note" data-show="approve verify"><i data-i="key"></i><span>Approving gives that device your security key. If it's a web browser, whoever runs the server could keep a copy.</span></p>
               </div>
             </section>
           </div>

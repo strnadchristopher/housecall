@@ -1,0 +1,164 @@
+/*
+ * HC-040 section 17: create-server dialog, the first-run page, Apps cards and the Apps tab.
+ * PASTE: at the end of client/src/ui/styles/index.css. It replaces ".hc-picker__add",
+ * ".hc-picker__form", every ".hc-card-int*" rule, ".hc-cards-int" and the three ".hc-chord" rules.
+ * The keyframes go inside the existing "@media (prefers-reduced-motion: no-preference)" block.
+ */
+
+/* ---- 17.1 Picker: the list of servers, and the row that makes one ---------------------------- */
+.hc-picker__list { z-index: 20; padding: var(--hc-space-1); border-radius: calc(var(--hc-radius-md) + var(--hc-space-1)); }
+.hc-picker__row { min-height: var(--hc-row-touch); padding: var(--hc-space-1) var(--hc-space-2); gap: var(--hc-space-3); border-radius: var(--hc-radius-md); text-align: start; }
+.hc-picker__row:hover, .hc-picker__row:focus-visible { background: none; } /* mock-only: cancels the 0.3.0 hover rule this block replaces */
+.hc-picker__row:active { background: var(--hc-wash-press); }
+@media (hover: hover) { .hc-picker__row:hover { background: var(--hc-wash-hover); } }
+.hc-picker__row.is-current { background: var(--hc-wash-selected); }
+.hc-picker__row.is-current strong { color: var(--hc-text); }
+.hc-picker__row small { color: var(--hc-text-muted); font-size: var(--hc-text-xs); }
+.hc-picker__row > .hc-icon:last-child { flex: none; width: 16px; height: 16px; color: var(--hc-accent); }
+/* "Create server" is the last row, set off by space, not by a rule. Its plus sits in the avatar's slot. */
+.hc-picker__add { margin-top: var(--hc-space-1); color: var(--hc-text-muted); }
+.hc-picker__add > span:first-child { display: grid; place-items: center; flex: none; width: var(--hc-space-6); height: calc(var(--hc-space-6) * 1.125); border-radius: var(--hc-arch); background: var(--hc-wash-hover); }
+@media (hover: hover) { .hc-picker__add:hover { color: var(--hc-text); } }
+
+/* ---- 17.1 The dialog. It is a .hc-sheet: a bottom sheet on phones, a centred dialog on wide screens. */
+.hc-newserver { gap: var(--hc-space-4); }
+.hc-newserver__row { display: flex; align-items: flex-end; gap: var(--hc-space-4); }
+.hc-newserver__row > .hc-field { flex: 1; }
+.hc-newserver .hc-field input { min-height: var(--hc-hit); }
+.hc-newserver__help { margin-top: calc(var(--hc-space-2) * -1); color: var(--hc-text-muted); font-size: var(--hc-text-sm); line-height: 1.45; }
+.hc-newserver .hc-field__error { margin-top: calc(var(--hc-space-2) * -1); }
+/* The icon well: the server's doorway. Shows the first letter of the name as you type, or the picture. */
+.hc-iconwell { position: relative; flex: none; display: grid; border-radius: var(--hc-arch); }
+.hc-iconwell > .hc-avatar { width: 52px; height: 58.5px; font-size: var(--hc-text-xl); background-size: cover; background-position: center; }
+.hc-iconwell > .hc-avatar:empty { background: var(--hc-wash-selected); }
+.hc-iconwell__badge {
+  position: absolute; right: -6px; bottom: -6px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--hc-pop); box-shadow: var(--hc-float); color: var(--hc-text);
+}
+.hc-iconwell__badge .hc-icon { width: 14px; height: 14px; }
+/* A 44 px target around a 52 px picture needs no help; the badge is only a sign that it can be changed. */
+.hc-iconwell:active > .hc-avatar { transform: scale(0.96); }
+.hc-iconwell > .hc-avatar { transition: transform var(--hc-dur-fast) var(--hc-ease-out); }
+
+/* Made: the same dialog turns into the welcome. The app has already switched to the new server behind it. */
+.hc-newserver__done { display: flex; flex-direction: column; align-items: flex-start; gap: var(--hc-space-1); padding-top: var(--hc-space-2); }
+.hc-newserver__done .hc-empty__door { margin-bottom: var(--hc-space-3); }
+.hc-newserver__done strong { font-size: var(--hc-text-xl); line-height: 1.2; letter-spacing: var(--hc-tracking-tight); overflow-wrap: anywhere; }
+.hc-newserver__done p { color: var(--hc-text-muted); line-height: 1.5; }
+
+/* ---- 17.2 First-run page ---------------------------------------------------------------------- */
+.hc-firstrun { position: fixed; inset: 0; z-index: 40; overflow-y: auto; display: grid; background: var(--hc-stage); color: var(--hc-text); }
+.hc-firstrun__in {
+  align-self: center; justify-self: center; width: min(100%, 58rem); display: grid; grid-template-columns: minmax(0, 1fr) 24rem; gap: var(--hc-space-8); align-items: start;
+  padding: calc(var(--hc-space-6) + var(--hc-safe-top)) calc(var(--hc-space-5) + var(--hc-safe-right)) calc(var(--hc-space-6) + var(--hc-safe-bottom)) calc(var(--hc-space-5) + var(--hc-safe-left));
+}
+.hc-firstrun__claim { display: flex; flex-direction: column; gap: var(--hc-space-4); min-width: 0; }
+.hc-firstrun__claim > .hc-logo { width: 44px; height: 44px; margin-bottom: var(--hc-space-2); }
+.hc-firstrun h1 { font-size: var(--hc-text-2xl); line-height: 1.1; letter-spacing: -0.02em; }
+.hc-firstrun__claim > p { color: var(--hc-text-muted); font-size: var(--hc-text-md); line-height: 1.5; max-width: 30rem; margin-top: calc(var(--hc-space-2) * -1); }
+.hc-firstrun__form { display: flex; flex-direction: column; gap: var(--hc-space-3); max-width: 24rem; padding-top: var(--hc-space-2); }
+.hc-firstrun__form .hc-field input { min-height: var(--hc-hit); }
+.hc-firstrun__form .hc-field small { color: var(--hc-text-muted); font-size: var(--hc-text-xs); line-height: 1.4; }
+.hc-firstrun__form .hc-field small code, .hc-check__fix code { font: 0.92em / 1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: var(--hc-text); }
+.hc-firstrun__form .hc-btn { margin-top: var(--hc-space-2); }
+
+/* The host check: a panel in the shell tone. It reads as part of the house, not as a warning box. */
+.hc-checks { display: flex; flex-direction: column; gap: var(--hc-space-1); padding: var(--hc-space-4); border-radius: var(--hc-radius-lg); background: var(--hc-shell); box-shadow: var(--hc-lip); }
+.hc-checks__head { display: flex; align-items: center; gap: var(--hc-space-2); min-height: 32px; padding-inline: var(--hc-space-1); }
+.hc-checks__head h2 { flex: 1; font-size: var(--hc-text-md); }
+.hc-checks__head .hc-btn--text { min-height: 32px; padding-inline: var(--hc-space-1); font-size: var(--hc-text-sm); color: var(--hc-accent); }
+.hc-checks__sum { padding: var(--hc-space-2) var(--hc-space-1) 0; color: var(--hc-text-muted); font-size: var(--hc-text-sm); line-height: 1.45; }
+.hc-checks[data-state="blocked"] .hc-checks__sum { color: var(--hc-danger); }
+.hc-check { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; column-gap: var(--hc-space-3); align-items: start; padding: var(--hc-space-2) var(--hc-space-1); }
+.hc-check__mark { display: grid; place-items: center; width: 20px; height: 20px; margin-top: 1px; color: var(--hc-text-muted); }
+.hc-check__mark i { width: 8px; height: 8px; border-radius: 50%; background: var(--hc-wash-press); }
+.hc-check[data-state="ok"] .hc-check__mark { color: var(--hc-live); }
+.hc-check[data-state="fail"] .hc-check__mark { color: var(--hc-danger); }
+.hc-check__text { display: flex; flex-direction: column; min-width: 0; line-height: 1.35; }
+.hc-check__text small { color: var(--hc-text-muted); font-size: var(--hc-text-sm); overflow-wrap: anywhere; }
+.hc-check[data-state="wait"] .hc-check__text strong { color: var(--hc-text-muted); font-weight: var(--hc-weight-regular); }
+.hc-check__state { padding-top: 2px; font-size: var(--hc-text-sm); color: var(--hc-text-muted); white-space: nowrap; }
+.hc-check[data-state="fail"] .hc-check__state { color: var(--hc-danger); font-weight: var(--hc-weight-bold); }
+/* What to do about it: under the row it belongs to, indented to the text. */
+.hc-check__fix { grid-column: 2 / -1; display: flex; flex-direction: column; gap: var(--hc-space-2); padding-top: var(--hc-space-2); font-size: var(--hc-text-sm); line-height: 1.45; }
+.hc-check__fix .hc-snippet { align-items: center; margin: 0; background: var(--hc-stage); }
+.hc-check__fix .hc-btn { align-self: flex-start; }
+@media (prefers-reduced-motion: no-preference) {
+  .hc-check[data-state="busy"] .hc-check__mark i { background: var(--hc-text-muted); animation: hc-breathe 0.7s var(--hc-ease-out) infinite alternate; }
+  .hc-check[data-state="ok"] .hc-check__mark .hc-icon, .hc-check[data-state="fail"] .hc-check__mark .hc-icon { animation: hc-check-in var(--hc-dur-base) var(--hc-ease-spring); }
+  @keyframes hc-check-in { from { opacity: 0; transform: scale(0.6); } }
+}
+@media (max-width: 53em) {
+  .hc-firstrun__in { grid-template-columns: minmax(0, 1fr); gap: var(--hc-space-5); align-self: start; width: min(100%, 30rem); padding-inline: calc(var(--hc-space-4) + var(--hc-safe-left)) calc(var(--hc-space-4) + var(--hc-safe-right)); padding-top: calc(var(--hc-space-5) + var(--hc-safe-top)); }
+  .hc-firstrun h1 { font-size: var(--hc-text-xl); line-height: 1.15; }
+  .hc-firstrun__claim > .hc-logo { width: 36px; height: 36px; margin-bottom: 0; }
+  .hc-firstrun__form { max-width: none; }
+  .hc-checks { margin-inline: calc(var(--hc-space-1) * -1); }
+  .hc-checks__head .hc-btn--text, .hc-check__fix .hc-btn { min-height: var(--hc-hit); }
+}
+
+/* ---- 17.3 Apps cards (Settings, Apps; and the wizard's two steps) ----------------------------- */
+.hc-apps { display: flex; flex-direction: column; gap: var(--hc-space-4); }
+.hc-apps__head { display: flex; align-items: baseline; gap: var(--hc-space-3); min-height: 32px; }
+.hc-apps__head h3 { flex: 1; font-size: var(--hc-text-sm); font-weight: var(--hc-weight-regular); color: var(--hc-text-muted); letter-spacing: 0; }
+.hc-apps__head .hc-btn--text { min-height: 32px; padding-inline: var(--hc-space-1); font-size: var(--hc-text-sm); color: var(--hc-accent); }
+.hc-apps__list { display: flex; flex-direction: column; gap: var(--hc-space-2); }
+.hc-app { border-radius: calc(var(--hc-radius-md) + 2px); background: var(--hc-shell); box-shadow: var(--hc-lip); }
+.hc-app__head {
+  display: grid; grid-template-columns: 20px minmax(0, 1fr) auto 20px; align-items: center; column-gap: var(--hc-space-3);
+  width: 100%; min-height: 72px; padding: var(--hc-space-3) var(--hc-space-4); text-align: start; border-radius: inherit; color: var(--hc-text);
+}
+.hc-app__head > .hc-icon:first-child { color: var(--hc-text-muted); }
+.hc-app[data-state="ready"] .hc-app__head > .hc-icon:first-child { color: var(--hc-text); }
+.hc-app__text { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.hc-app__text small { color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-app__state { display: inline-flex; align-items: center; gap: var(--hc-space-1); font-size: var(--hc-text-sm); color: var(--hc-text-muted); white-space: nowrap; }
+.hc-app__state .hc-icon { width: 16px; height: 16px; }
+.hc-app[data-state="ready"] .hc-app__state { color: var(--hc-text); }
+.hc-app[data-state="ready"] .hc-app__state .hc-icon { color: var(--hc-live); }
+.hc-app[data-state="todo"] .hc-app__state { color: var(--hc-accent); font-weight: var(--hc-weight-bold); }
+.hc-app__chev { display: grid; place-items: center; color: var(--hc-text-muted); transition: transform var(--hc-dur-base) var(--hc-ease-out); }
+.hc-app[data-open] .hc-app__chev { transform: rotate(180deg); }
+.hc-app__head:active { background: var(--hc-wash-press); }
+@media (hover: hover) { .hc-app__head:hover { background: var(--hc-wash-hover); } }
+.hc-app[data-open] .hc-app__head { border-end-start-radius: 0; border-end-end-radius: 0; }
+/* The body lines up under the title, not under the icon. */
+.hc-app__body { display: flex; flex-direction: column; gap: var(--hc-space-3); padding: var(--hc-space-1) var(--hc-space-4) var(--hc-space-4) calc(var(--hc-space-4) + 20px + var(--hc-space-3)); }
+.hc-app__body .hc-steps { list-style: decimal; padding-inline-start: var(--hc-space-4); line-height: 1.45; }
+.hc-app__body .hc-steps li::marker { color: var(--hc-text-muted); font-variant-numeric: tabular-nums; }
+.hc-app__body .hc-snippet { align-items: center; background: var(--hc-stage); }
+/* A command never runs under "Copy" or off the card: it wraps, at any character if it must. */
+.hc-app__body .hc-snippet pre, .hc-check__fix .hc-snippet pre { flex: 1 1 auto; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.hc-app__foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--hc-space-2) var(--hc-space-4); }
+.hc-app__guide { display: inline-flex; align-items: center; gap: var(--hc-space-1); min-height: 32px; color: var(--hc-accent); font-size: var(--hc-text-sm); text-decoration: none; }
+.hc-app__guide .hc-icon { width: 16px; height: 16px; }
+@media (hover: hover) { .hc-app__guide:hover { text-decoration: underline; text-underline-offset: 3px; } }
+.hc-app--skel { height: 72px; box-shadow: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .hc-app__body { animation: hc-fade-in var(--hc-dur-base) var(--hc-ease-out); }
+}
+@media (max-width: 47.5em) {
+  .hc-app__head { grid-template-columns: 20px minmax(0, 1fr) 20px; row-gap: 2px; padding-inline: var(--hc-space-3); }
+  .hc-app__head > .hc-icon:first-child { grid-row: 1 / span 2; }
+  .hc-app__text { grid-column: 2; }
+  .hc-app__state { grid-column: 2; grid-row: 2; }
+  .hc-app__chev { grid-column: 3; grid-row: 1 / span 2; }
+  .hc-app__body { padding-inline: var(--hc-space-3); }
+  .hc-app__guide, .hc-apps__head .hc-btn--text { min-height: var(--hc-hit); }
+}
+
+/* ---- 17.4 The Apps tab in the right column ---------------------------------------------------- */
+.hc-chords { display: flex; flex-direction: column; gap: 2px; }
+.hc-chord { display: grid; grid-template-columns: 20px minmax(0, 1fr) 16px; align-items: center; column-gap: var(--hc-space-3); width: 100%; min-height: var(--hc-row-touch); padding: var(--hc-space-1) var(--hc-space-2); border-radius: var(--hc-radius-md); text-align: start; }
+.hc-chord > .hc-icon:first-child { color: var(--hc-text-muted); }
+.hc-chord > span { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.hc-chord small { color: var(--hc-text-muted); font-size: var(--hc-text-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-chord > .hc-icon:last-child { width: 16px; height: 16px; color: var(--hc-text-muted); }
+.hc-chord:active { background: var(--hc-wash-press); }
+/* Running now: the icon and the second line light up. No dot, no pill. */
+.hc-chord.is-on > .hc-icon:first-child, .hc-chord.is-on small { color: var(--hc-live); }
+/* Needs a call you are not in: readable, quiet, still pressable (it says what to do). */
+.hc-chord.is-idle strong { color: var(--hc-text-muted); font-weight: var(--hc-weight-regular); }
+.hc-chords__more { margin-top: var(--hc-space-3); padding-inline: var(--hc-space-2); }
+.hc-chords__more .hc-btn--text { min-height: var(--hc-row); padding-inline: 0; color: var(--hc-text-muted); font-size: var(--hc-text-sm); gap: var(--hc-space-2); }
+.hc-chords__more .hc-icon { width: 16px; height: 16px; }

@@ -76,3 +76,6 @@
 .hc-sheet .hc-check { align-items: flex-start; gap: var(--hc-space-3); padding: var(--hc-space-3); border-radius: var(--hc-radius-md); background: var(--hc-wash-hover); line-height: 1.4; }
 .hc-sheet .hc-check input { margin-top: 2px; flex: none; }
 .hc-sheet__icon { width: 28px; height: 28px; color: var(--hc-danger); }
+
+/* A plaintext row inside a DM that has the lock (DM-V1 10.7, R-2): two quiet words beside the time. Never the lock, never the accent. */
+.hc-msg__plain { font-size: var(--hc-text-xs); color: var(--hc-text-muted); }

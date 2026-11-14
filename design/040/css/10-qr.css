@@ -80,3 +80,24 @@
 .hc-qrsteps { display: flex; flex-direction: column; gap: var(--hc-space-3); }
 .hc-qrsteps li { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); column-gap: var(--hc-space-2); line-height: 1.45; }
 .hc-qrsteps__n { font-weight: var(--hc-weight-bold); color: var(--hc-text-muted); }
+
+/*
+ * The typed check number on the device that shows the code (LINK-V1 section 5, R-5). The number is never
+ * displayed here: the person reads it off the new device and types it. One real input lies over two empty
+ * doorways, so the keyboard, paste and screen readers get a normal field and the eye gets the same two
+ * plates the new device shows. Dark doorways here, lit ones there.
+ */
+.hc-codefield { position: relative; display: inline-flex; gap: var(--hc-space-2); border-radius: var(--hc-radius-md); }
+.hc-codefield input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; font-size: 1rem; cursor: text; }
+.hc-codefield .hc-plate { background: var(--hc-wash-selected); color: var(--hc-text); animation: none; }
+.hc-codefield .hc-plate.is-next { box-shadow: inset 0 0 0 2px var(--hc-line-soft); }
+.hc-codefield:focus-within .hc-plate.is-next { box-shadow: inset 0 0 0 2px var(--hc-focus); }
+.hc-qrlogin__label { font-size: var(--hc-text-md); line-height: 1.4; overflow-wrap: anywhere; }
+/* Password (desktop) or the wait for the phone's own unlock: same card, same width as the actions. */
+.hc-qrlogin__verify { align-self: stretch; display: flex; flex-direction: column; gap: var(--hc-space-3); text-align: start; }
+.hc-qrlogin__verify .hc-field input, .hc-qrlogin__verify .hc-btn { min-height: var(--hc-hit); }
+.hc-qrlogin__verify .hc-btn { font-size: var(--hc-text-md); }
+/* The host takes its own line, one step smaller, so a long name never strands the question mark. */
+.hc-qrnew__host { display: block; font-size: var(--hc-text-lg); overflow-wrap: anywhere; }
+.hc-qrlogin__warn { color: var(--hc-danger); }
+.hc-qrlogin__warn .hc-icon { width: 28px; height: 28px; }
