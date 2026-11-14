@@ -565,7 +565,7 @@ mod tests {
                 [],
             )
             .unwrap();
-            db.execute("INSERT INTO sessions VALUES('host-session','host','synthetic','synthetic','fixture',0,?1)", [now()+60000]).unwrap();
+            db.execute("INSERT INTO sessions(id,user_id,token_hash,device_hash,device_name,created_at,expires_at) VALUES('host-session','host','synthetic','synthetic','fixture',0,?1)", [now()+60000]).unwrap();
             db.execute(
                 "INSERT INTO channels(id,name,kind) VALUES('vm-channel','fixture','channel')",
                 [],

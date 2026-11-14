@@ -12,6 +12,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 pub fn init(db: &Connection) -> rusqlite::Result<()> {
     db.execute_batch("CREATE TABLE IF NOT EXISTS servers(id TEXT PRIMARY KEY,name TEXT NOT NULL,general_channel_id TEXT NOT NULL); INSERT OR IGNORE INTO servers(id,name,general_channel_id) VALUES('home','Housecall','general'); CREATE TABLE IF NOT EXISTS server_members(server_id TEXT NOT NULL REFERENCES servers(id),user_id TEXT NOT NULL REFERENCES users(id),PRIMARY KEY(server_id,user_id)); CREATE TABLE IF NOT EXISTS roles(id TEXT PRIMARY KEY,server_id TEXT NOT NULL REFERENCES servers(id),name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS role_members(role_id TEXT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,user_id TEXT NOT NULL REFERENCES users(id),PRIMARY KEY(role_id,user_id)); CREATE TABLE IF NOT EXISTS message_roles(message_id TEXT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,role_id TEXT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,PRIMARY KEY(message_id,role_id));")?;
+    db.execute_batch("CREATE TABLE IF NOT EXISTS user_keys(user_id TEXT NOT NULL REFERENCES users(id),key_rev INTEGER NOT NULL,agree_pub BLOB NOT NULL,sign_pub BLOB NOT NULL,created_at INTEGER NOT NULL,PRIMARY KEY(user_id,key_rev)); CREATE TABLE IF NOT EXISTS sealed_uploads(upload_id TEXT PRIMARY KEY); CREATE TABLE IF NOT EXISTS key_exposures(user_id TEXT NOT NULL REFERENCES users(id),kind TEXT NOT NULL,session_id TEXT,device_name TEXT,created_at INTEGER NOT NULL);")?;
     for (table, column, definition) in [
         ("channels", "server_id", "TEXT REFERENCES servers(id)"),
         ("invites", "server_id", "TEXT NOT NULL DEFAULT 'home'"),
@@ -27,6 +28,13 @@ pub fn init(db: &Connection) -> rusqlite::Result<()> {
         ("servers", "icon", "BLOB"),
         ("servers", "icon_type", "TEXT"),
         ("servers", "icon_rev", "INTEGER NOT NULL DEFAULT 0"),
+        ("users", "agree_pub", "BLOB"),
+        ("users", "sign_pub", "BLOB"),
+        ("users", "key_rev", "INTEGER NOT NULL DEFAULT 0"),
+        ("users", "key_backup", "BLOB"),
+        ("messages", "enc", "INTEGER NOT NULL DEFAULT 0"),
+        ("messages", "envelope", "TEXT"),
+        ("sessions", "added_via", "TEXT"),
     ] {
         let mut q = db.prepare(&format!("PRAGMA table_info({table})"))?;
         let columns = q

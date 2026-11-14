@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en" data-accent="lavender">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HC-040 · 12 How security works</title>
+<!-- default = slide 1 · slide2 · slide3 · settings = the page in Settings · t400 = slide 1 part way through its motion -->
+<meta name="hc-states" content="default,slide2,slide3,settings,t400">
+<link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/b.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/c.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/accents.css">
+<link rel="stylesheet" href="../../client/src/ui/styles/index.css">
+<link rel="stylesheet" href="hc-040.css">
+<script src="icons.js"></script>
+<script src="mock.js"></script>
+</head>
+<body>
+<!-- The three illustrations. This markup is the markup that ships (spec 12.2). -->
+<template id="ill-house">
+<svg class="hc-ill hc-ill--house" viewBox="0 0 240 180" aria-hidden="true">
+  <defs><linearGradient id="hc-ill-spill" x1="0" y1="160" x2="0" y2="180" gradientUnits="userSpaceOnUse"><stop offset="0" class="hc-ill__stop" stop-opacity="0.36"/><stop offset="1" class="hc-ill__stop" stop-opacity="0"/></linearGradient></defs>
+  <path class="hc-ill__rule" d="M24 160H216"/>
+  <path class="hc-ill__spill" fill="url(#hc-ill-spill)" d="M104 160H136L164 180H76Z"/>
+  <path class="hc-ill__wall" d="M150 44h16v34h-16zM120 32L198 92H184V160H56V92H42Z"/>
+  <path class="hc-ill__pane" style="--i:0" d="M70 138V118A10 10 0 0 1 90 118V138Z"/>
+  <path class="hc-ill__pane" style="--i:1" d="M150 138V118A10 10 0 0 1 170 118V138Z"/>
+  <path class="hc-ill__pane" style="--i:2" d="M113 78V69A7 7 0 0 1 127 69V78Z"/>
+  <path class="hc-ill__lit" d="M104 160V124A16 16 0 0 1 136 124V160Z"/>
+  <path class="hc-ill__leaf" d="M104 160V124A16 16 0 0 1 106.4 115.6L117.6 122.4V160Z"/>
+</svg>
+</template>
+<template id="ill-letter">
+<svg class="hc-ill hc-ill--letter" viewBox="0 0 240 180" aria-hidden="true">
+  <path class="hc-ill__rule is-dotted" d="M56 152H184"/>
+  <path class="hc-ill__ink" d="M24 162V146A10 10 0 0 1 44 146V162Z"/>
+  <path class="hc-ill__ink" d="M196 162V146A10 10 0 0 1 216 146V162Z"/>
+  <path class="hc-ill__wall" d="M120 130L140 146V162H100V146Z"/>
+  <path class="hc-ill__cut" d="M115 162V154A5 5 0 0 1 125 154V162Z"/>
+  <path class="hc-ill__rule hc-ill__speed" d="M26 46H46M34 60H50M26 74H42"/>
+  <g class="hc-ill__env"><g transform="rotate(-5 120 62)">
+    <rect class="hc-ill__paper" x="64" y="22" width="112" height="80" rx="10"/>
+    <path class="hc-ill__crease" d="M70 30L120 68L170 30"/>
+    <g class="hc-ill__seal"><path class="hc-ill__lit" d="M108 86V68A12 12 0 0 1 132 68V86Z"/><path class="hc-ill__hole" d="M120 70v7"/></g>
+  </g></g>
+</svg>
+</template>
+<template id="ill-key">
+<svg class="hc-ill hc-ill--key" viewBox="0 0 240 180" aria-hidden="true">
+  <g class="hc-ill__key">
+    <path class="hc-ill__ink" d="M40 118V78A30 30 0 0 1 100 78V86H200V112H186V100H176V116H162V100H100V118Z"/>
+    <path class="hc-ill__lit" d="M58 118V80A12 12 0 0 1 82 80V118Z"/>
+    <path class="hc-ill__leaf" d="M58 118V80A12 12 0 0 1 59.8 73.7L68.2 78.8V118Z"/>
+  </g>
+  <g data-words></g>
+</svg>
+</template>
+
+<div class="hc-root">
+<main class="hc-onb hc-slides" data-show="default slide2 slide3 t400" aria-roledescription="carousel" aria-label="How security works">
+  <div class="hc-onb__screen">
+    <div class="hc-onb__top">
+      <button type="button" class="hc-ibtn" aria-label="Back" data-show="slide2 slide3"><i data-i="back"></i></button>
+      <ol class="hc-slides__steps" role="img" aria-label="Slide 1 of 3" data-show="default t400"><li class="is-current"></li><li></li><li></li></ol>
+      <ol class="hc-slides__steps" role="img" aria-label="Slide 2 of 3" data-show="slide2"><li class="is-done"></li><li class="is-current"></li><li></li></ol>
+      <ol class="hc-slides__steps" role="img" aria-label="Slide 3 of 3" data-show="slide3"><li class="is-done"></li><li class="is-done"></li><li class="is-current"></li></ol>
+    </div>
+
+    <section class="hc-slide" data-show="default t400" aria-labelledby="s1">
+      <span data-ill="house"></span>
+      <div class="hc-onb__title"><h1 id="s1">A server is someone's house</h1>
+        <p class="hc-slide__lede">No company sits in the middle. A person runs each Housecall server: the host.</p>
+        <p>You're a guest. The host decides who comes in, and can see what's said in the shared rooms.</p></div>
+    </section>
+    <section class="hc-slide" data-show="slide2" aria-labelledby="s2">
+      <span data-ill="letter"></span>
+      <div class="hc-onb__title"><h1 id="s2">Your DMs are sealed letters</h1>
+        <p class="hc-slide__lede">A one-to-one DM is locked on your device and opened only on your friend's. The host carries the envelope and can't open it.</p>
+        <p>They can still see who you write to and when. Group chats and calls aren't sealed yet.</p></div>
+    </section>
+    <section class="hc-slide" data-show="slide3" aria-labelledby="s3">
+      <span data-ill="key"></span>
+      <div class="hc-onb__title"><h1 id="s3">You hold the only spare key</h1>
+        <p class="hc-slide__lede">Your recovery key gets your DMs back if you lose your devices.</p>
+        <p>Nobody can reset it for you, not the host and not us. Only join servers run by people you trust.</p></div>
+    </section>
+
+    <div class="hc-onb__actions">
+      <button type="button" class="hc-btn hc-btn--primary" data-show="default slide2 t400">Next</button>
+      <button type="button" class="hc-btn hc-btn--primary" data-show="slide3">Show my recovery key</button>
+    </div>
+  </div>
+</main>
+
+<div class="hc-shell" data-screen="main" data-show="settings">
+  <nav class="hc-left" aria-label="Housecall" data-part="left" data-opts='{"current":"general","unread":false}'></nav>
+  <main class="hc-center">
+    <div class="hc-settings-layer"><div class="hc-settings">
+      <header class="hc-header">
+        <button type="button" class="hc-ibtn" aria-label="Close" data-show-phone="0"><i data-i="close"></i></button>
+        <button type="button" class="hc-ibtn" aria-label="Back" data-show-phone="1"><i data-i="back"></i></button>
+        <div class="hc-header__title"><h1 data-show-phone="0">Settings</h1><h1 data-show-phone="1">How security works</h1></div>
+      </header>
+      <div class="hc-settings__body">
+        <nav class="hc-settings__nav" aria-label="Settings" data-show-phone="0" data-part="settingsnav" data-opts='{"current":"How security works"}'></nav>
+        <section class="hc-settings__pane" aria-labelledby="x-title">
+          <h2 id="x-title" data-show-phone="0">How security works</h2>
+          <div class="hc-explain">
+            <ul class="hc-points">
+              <li class="hc-point"><span data-ill="house"></span><span><strong>A server is someone's house</strong><small class="hc-muted">A person runs it: the host. You're a guest. The host decides who comes in, and can see what's said in the shared rooms.</small></span></li>
+              <li class="hc-point"><span data-ill="letter"></span><span><strong>Your DMs are sealed letters</strong><small class="hc-muted">A one-to-one DM is locked on your device and opened only on your friend's. The host carries it and can't open it.</small></span></li>
+              <li class="hc-point"><span data-ill="key"></span><span><strong>You hold the only spare key</strong><small class="hc-muted">Your recovery key gets your DMs back if you lose your devices. Nobody can reset it for you.</small></span></li>
+            </ul>
+
+            <table class="hc-hostsees">
+              <caption>What the host can see</caption>
+              <thead><tr><th scope="col">Where</th><th scope="col">What the host can see</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Channels, text and voice</th><td data-sees="all"><i data-i="eye"></i><strong>Everything</strong><small class="hc-muted">Messages, files and who is there</small></td></tr>
+                <tr><th scope="row">One-to-one DMs</th><td data-sees="sealed"><i data-i="lock"></i><strong>Who and when, not what</strong><small class="hc-muted">The words are sealed</small></td></tr>
+                <tr><th scope="row">Files in one-to-one DMs</th><td data-sees="sealed"><i data-i="lock"></i><strong>Size only</strong><small class="hc-muted">Sealed like the message, so not virus-scanned</small></td></tr>
+                <tr><th scope="row">Group DMs</th><td data-sees="all"><i data-i="eye"></i><strong>Everything</strong><small class="hc-muted">Not sealed yet</small></td></tr>
+                <tr><th scope="row">Calls and streams</th><td data-sees="all"><i data-i="eye"></i><strong>Could listen</strong><small class="hc-muted">Relayed by the host, not sealed</small></td></tr>
+                <tr><th scope="row">Your recovery key</th><td data-sees="sealed"><i data-i="lock"></i><strong>Nothing</strong><small class="hc-muted">It never leaves your devices</small></td></tr>
+              </tbody>
+            </table>
+
+            <div class="hc-explain__part">
+              <h3>Joining another server</h3>
+              <p>Every server has its own host and its own rules. Your keys are the same on all of them, so one recovery key covers every server you join. Two hosts who compare notes can tell it is the same person.</p>
+            </div>
+
+            <p class="hc-note"><i data-i="info"></i><span>We attack-tested this encryption ourselves. No outside firm has audited it yet.</span></p>
+            <div><button type="button" class="hc-btn">Show the introduction again</button></div>
+          </div>
+        </section>
+      </div>
+    </div></div>
+  </main>
+</div>
+</div>
+<script>
+  // Mock-only stamping: the app writes the twelve word pills out (two rows of six, --i 0 to 11).
+  const NS = "http://www.w3.org/2000/svg";
+  document.querySelectorAll("template").forEach(t => t.content.querySelectorAll("[data-words]").forEach(g => {
+    for (let i = 0; i < 12; i++) {
+      const r = document.createElementNS(NS, "rect");
+      r.setAttribute("class", "hc-ill__word"); r.setAttribute("style", "--i:" + i);
+      r.setAttribute("x", 46 + (i % 6) * 26); r.setAttribute("y", 140 + Math.floor(i / 6) * 13);
+      r.setAttribute("width", 20); r.setAttribute("height", 6); r.setAttribute("rx", 3);
+      g.appendChild(r);
+    }
+  }));
+  document.querySelectorAll("[data-ill]").forEach(slot => slot.replaceWith(document.getElementById("ill-" + slot.dataset.ill).content.cloneNode(true)));
+</script>
+</body>
+</html>

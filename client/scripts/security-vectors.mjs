@@ -109,7 +109,18 @@ function parseIdentityKey(bytes) {
   if (ed25519.Point.fromBytes(signPub).isSmallOrder()) throw new Error("small-order signing key");
   // Small-order X25519 keys are caught by dh() at use; reject the all-zero key here too.
   if (agreePub.every((b) => b === 0)) throw new Error("zero agreement key");
+  // Canonical encoding only (REVIEW-0.4.0 R-13): bit 255 clear and u < p = 2^255 - 19.
+  // X25519 masks bit 255 and reduces mod p, so without this two different byte strings
+  // would be the same key and pins, safety numbers and conversation keys would disagree.
+  if (agreePub[31] & 0x80) throw new Error("non-canonical agreement key (bit 255 set)");
+  if (leU256(agreePub) >= X25519_P) throw new Error("non-canonical agreement key (u >= p)");
   return { agreePub, signPub };
+}
+const X25519_P = (1n << 255n) - 19n;
+function leU256(b) {
+  let n = 0n;
+  for (let i = b.length - 1; i >= 0; i--) n = (n << 8n) | BigInt(b[i]);
+  return n;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -224,10 +235,36 @@ function openMessage({ key, channelId, senderId, recipientId, envelope }) {
   const e = parseEnvelope(envelope);
   const p = aeadOpen(key, e.nonce, e.ct, messageAd(e.header, channelId, senderId, recipientId));
   const payload = JSON.parse(dec.decode(unpad(p)));
-  if (typeof payload !== "object" || payload === null || payload.v !== 1 || typeof payload.text !== "string") {
-    throw new Error("bad payload");
-  }
+  validatePayload(payload);
   return { ...e, payload };
+}
+
+/** DM-V1 section 6.1 and 7.3. Throws on anything a reader must refuse (REVIEW-0.4.0 R-17). */
+const MAX_FILE = 104857600;
+function validatePayload(payload) {
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) throw new Error("bad payload");
+  if (payload.v !== 1) throw new Error("unknown payload version");
+  if (typeof payload.text !== "string") throw new Error("bad payload: text");
+  const files = payload.files;
+  if (files !== undefined) {
+    if (!Array.isArray(files) || files.length > 20) throw new Error("bad payload: files");
+    for (const f of files) validateFileRef(f);
+  }
+  if (payload.text === "" && !(files && files.length > 0)) throw new Error("bad payload: empty");
+  if (payload.re !== undefined) {
+    if (typeof payload.re !== "string" || unb64u(payload.re).length !== 24) throw new Error("bad payload: re");
+  }
+}
+function validateFileRef(f) {
+  if (typeof f !== "object" || f === null || Array.isArray(f)) throw new Error("bad file");
+  if (typeof f.id !== "string" || !/^[0-9a-f-]{1,64}$/.test(f.id)) throw new Error("bad file: id");
+  if (typeof f.key !== "string" || unb64u(f.key).length !== 32) throw new Error("bad file: key");
+  if (typeof f.name !== "string" || utf8(f.name).length < 1 || utf8(f.name).length > 255) throw new Error("bad file: name");
+  if (typeof f.mime !== "string" || f.mime.length > 127 || !/^[a-z0-9][a-z0-9.+-]*\/[a-z0-9][a-z0-9.+-]*$/.test(f.mime)) throw new Error("bad file: mime");
+  if (!Number.isInteger(f.size) || f.size < 0 || f.size > MAX_FILE) throw new Error("bad file: size");
+  for (const k of ["w", "h"]) {
+    if (f[k] !== undefined && (!Number.isInteger(f[k]) || f[k] < 1 || f[k] > 16384)) throw new Error(`bad file: ${k}`);
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -297,7 +334,15 @@ const WRAP_VERSION = 0x01;
 function qrUrl(origin, linkId, secret, showingPub) {
   return `${origin}/link#hcl1.${hex(linkId)}.${b64u(secret)}.${b64u(showingPub)}`;
 }
-function deepLink(origin, linkId, secret, showingPub) {
+/**
+ * The deep link carries no code (REVIEW-0.4.0 R-0). The /link page is served by the host, so anything
+ * it passes to the app could have been rewritten: a host that swaps A in a code-carrying deep link
+ * knows both shared secrets and can grind its claiming key until both devices show the same number.
+ * "Open in Housecall" therefore only opens the app's scanner, and the code is scanned again in the app.
+ */
+const SCAN_DEEP_LINK = "housecall://link-scan";
+/** The pre-review form, kept only to build the negative vectors. Clients must refuse it. */
+function legacyDeepLink(origin, linkId, secret, showingPub) {
   return `housecall://link?c=hcl1.${b64u(utf8(origin))}.${hex(linkId)}.${b64u(secret)}.${b64u(showingPub)}`;
 }
 
@@ -333,15 +378,44 @@ function parseQr(text) {
   return { origin, ...parseLinkFields(parts) };
 }
 
-/** Parses housecall://link?c=… */
+/** Accepts exactly housecall://link-scan, which opens the in-app scanner. Anything else throws. */
 function parseDeepLink(text) {
-  const prefix = "housecall://link?c=";
-  if (!text.startsWith(prefix) || text.length > 600) throw new Error("not a link deep link");
-  const parts = text.slice(prefix.length).split(".");
-  if (parts.length !== 5) throw new Error("bad link code");
-  const origin = dec.decode(unb64u(parts[1]));
-  if (!validOrigin(origin)) throw new Error("bad origin");
-  return { origin, ...parseLinkFields([parts[0], parts[2], parts[3], parts[4]]) };
+  if (text.startsWith("housecall://link?")) throw new Error("deep links never carry a login code");
+  if (text !== SCAN_DEEP_LINK) throw new Error("not a link deep link");
+  return { action: "scan" };
+}
+
+/**
+ * What a host gains from a code-carrying deep link (R-0), computed so the vector shows real numbers.
+ * The host replaces A with its own A2 in the deep link, so it knows X25519(a2, B) and the honest new
+ * device's number. It then tries claiming keys B3 until the showing device's number is the same.
+ */
+function groundMitm({ linkId, secret, showingPub, claimingPub, claimingPriv, showingPriv }) {
+  const hostShowPriv = fixed("mitm host showing ephemeral");
+  const hostShowPub = x25519.getPublicKey(hostShowPriv);
+  const newDevice = linkKeys({ linkId, secret, showingPub: hostShowPub, claimingPub, sharedSecret: dh(claimingPriv, hostShowPub) });
+  const hostView = linkKeys({ linkId, secret, showingPub: hostShowPub, claimingPub, sharedSecret: dh(hostShowPriv, claimingPub) });
+  if (hostView.code !== newDevice.code) throw new Error("host should know the new device's number");
+  for (let i = 0; i < 10000; i++) {
+    const p = fixed(`mitm host claiming ephemeral ${i}`);
+    const P = x25519.getPublicKey(p);
+    const hostClaim = linkKeys({ linkId, secret, showingPub, claimingPub: P, sharedSecret: dh(p, showingPub) });
+    if (hostClaim.code !== newDevice.code) continue;
+    const showing = linkKeys({ linkId, secret, showingPub, claimingPub: P, sharedSecret: dh(showingPriv, P) });
+    if (!equalBytes(showing.claimTag, hostClaim.claimTag) || showing.code !== newDevice.code) throw new Error("mitm demo broken");
+    return { tries: i + 1, hostShowPub, hostClaimPub: P, newDeviceCode: newDevice.code, showingCode: showing.code, tagValid: true };
+  }
+  throw new Error("mitm demo found no match");
+}
+
+/**
+ * LINK-V1 section 5: the person types the number the new device shows (REVIEW-0.4.0 R-5).
+ * Exactly two ASCII digits after trimming spaces; anything else, or a different number, denies.
+ */
+function typedCodeMatches(typed, code) {
+  const t = typed.trim();
+  if (!/^[0-9]{2}$/.test(t)) return false;
+  return equalBytes(utf8(t), utf8(code));
 }
 
 function linkKeys({ linkId, secret, showingPub, claimingPub, sharedSecret }) {
@@ -371,8 +445,37 @@ function openWrappedKeys(wrapKey, linkId, blob) {
   const recoveryRev = readU32(p, 32);
   if (recoveryRev === 0) throw new Error("recovery_rev 0 is invalid");
   const pins = JSON.parse(dec.decode(p.slice(36)));
-  if (!Array.isArray(pins)) throw new Error("pins must be an array");
+  validatePins(pins);
   return { identitySeed: p.slice(0, 32), recoveryRev, pins };
+}
+
+/**
+ * LINK-V1 section 7. Each pin carries its full key history (REVIEW-0.4.0 R-11): revisions strictly
+ * ascending, each a valid identity key, no key used at two revisions, and the last entry is the
+ * pin's current key. The whole list is refused if any pin is malformed.
+ */
+function validatePins(pins) {
+  if (!Array.isArray(pins)) throw new Error("pins must be an array");
+  for (const pin of pins) {
+    if (typeof pin !== "object" || pin === null || Array.isArray(pin)) throw new Error("bad pin");
+    if (typeof pin.origin !== "string" || !validOrigin(pin.origin)) throw new Error("bad pin: origin");
+    if (typeof pin.user_id !== "string" || utf8(pin.user_id).length < 1 || utf8(pin.user_id).length > 128) throw new Error("bad pin: user_id");
+    if (!Number.isInteger(pin.key_rev) || pin.key_rev < 1 || pin.key_rev > 0xffffffff) throw new Error("bad pin: key_rev");
+    if (typeof pin.verified !== "boolean") throw new Error("bad pin: verified");
+    parseIdentityKey(unb64u(pin.identity_key));
+    if (!Array.isArray(pin.history) || pin.history.length < 1) throw new Error("bad pin: history");
+    let prev = 0;
+    const seen = new Set();
+    for (const h of pin.history) {
+      if (!Number.isInteger(h.key_rev) || h.key_rev <= prev) throw new Error("bad pin: history not ascending");
+      parseIdentityKey(unb64u(h.identity_key));
+      if (seen.has(h.identity_key)) throw new Error("bad pin: key reused at two revisions");
+      seen.add(h.identity_key);
+      prev = h.key_rev;
+    }
+    const last = pin.history[pin.history.length - 1];
+    if (last.key_rev !== pin.key_rev || last.identity_key !== pin.identity_key) throw new Error("bad pin: history does not end at the current key");
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -454,7 +557,7 @@ function buildDm() {
     {
       name: "reply from bob, alice on key_rev 2, unicode",
       sender: "bob",
-      payload: { v: 1, text: "Yes. Ça marche 👍" },
+      payload: { v: 1, text: "Yes. Ça marche 👍", re: b64u(fixed("message nonce 1", 24)) },
       nonce: fixed("message nonce 2", 24),
       sender_key_rev: 1,
       recipient_key_rev: 2,
@@ -525,6 +628,52 @@ function buildDm() {
   const badPadEnvelope = concat(header, unhex(msgs[0].nonce), aeadSeal(kAB, unhex(msgs[0].nonce), noMarker, messageAd(header, channelId, ids.alice, ids.bob)));
   const notJson = pad(utf8("not json"));
   const notJsonEnvelope = concat(header, unhex(msgs[0].nonce), aeadSeal(kAB, unhex(msgs[0].nonce), notJson, messageAd(header, channelId, ids.alice, ids.bob)));
+  // Correctly sealed envelopes whose payload a reader must still refuse (a hostile peer can send these).
+  const sealedPayload = (payload, n) => {
+    const nonce = fixed(`malformed payload nonce ${n}`, 24);
+    return concat(header, nonce, aeadSeal(kAB, nonce, pad(utf8(JSON.stringify(payload))), messageAd(header, channelId, ids.alice, ids.bob)));
+  };
+  const goodFile = msgs[2].payload.files[0];
+  const malformed = [
+    ["payload v 2", { v: 2, text: "hi" }],
+    ["payload text missing", { v: 1 }],
+    ["payload empty text and no files", { v: 1, text: "" }],
+    ["payload files is not an array", { v: 1, text: "hi", files: {} }],
+    ["payload with 21 files", { v: 1, text: "", files: Array.from({ length: 21 }, () => goodFile) }],
+    ["FileRef size above 100 MiB", { v: 1, text: "", files: [{ ...goodFile, size: MAX_FILE + 1 }] }],
+    ["FileRef key not 32 bytes", { v: 1, text: "", files: [{ ...goodFile, key: b64u(new Uint8Array(16)) }] }],
+    ["FileRef width 0", { v: 1, text: "", files: [{ ...goodFile, w: 0 }] }],
+    ["FileRef MIME with parameters or spaces", { v: 1, text: "", files: [{ ...goodFile, mime: "text/html; charset=utf-8" }] }],
+    ["FileRef name of 256 bytes", { v: 1, text: "", files: [{ ...goodFile, name: "a".repeat(256) }] }],
+    ["re is not a 24-byte b64u value", { v: 1, text: "hi", re: b64u(new Uint8Array(23)) }],
+  ].map(([name, payload], n) => {
+    const env = sealedPayload(payload, n);
+    return { name: `malformed payload: ${name}`, kind: "message", envelope_hex: hex(env), payload, expect: "reject", error: mustFail(name, () => open({ envelope: env })) };
+  });
+
+  // Canonical-encoding negatives for the agreement key (R-13).
+  const highBit = bob.agreePub.slice(); highBit[31] |= 0x80;
+  const pPlus2 = new Uint8Array(32).fill(0xff); pPlus2[0] = 0xef; pPlus2[31] = 0x7f; // 2^255 - 17 = p + 2
+  const idHighBit = concat(new Uint8Array([1]), highBit, bob.signPub);
+  const idPPlus2 = concat(new Uint8Array([1]), pPlus2, bob.signPub);
+  // Without the check, X25519 treats the high-bit key as bob's key: same shared secret, different bytes.
+  if (!equalBytes(x25519.getSharedSecret(alice.agreePriv, highBit), sharedSecret)) throw new Error("expected X25519 to mask bit 255");
+
+  // Pin-state rules (DM-V1 section 10, REVIEW-0.4.0 R-1, R-3, R-12). These are inputs for the
+  // state-machine tests in client/src/core, not byte formats. "pin" is alice's pin of bob, made at
+  // first contact when the server already listed revisions 1 and 2.
+  const hostKey = deriveIdentity(fixed("host substitute identity seed"));
+  const bobOld = deriveIdentity(fixed("bob old identity seed"));
+  const pinBob = { key_rev: 2, identity_key: b64u(bob.identityKey), verified: true, history: [{ key_rev: 1, identity_key: b64u(bobOld.identityKey) }, { key_rev: 2, identity_key: b64u(bob.identityKey) }] };
+  const pinCases = [
+    { name: "server inserts a forged older revision that the pin never saw", pin: { ...pinBob, history: [{ key_rev: 2, identity_key: b64u(bob.identityKey) }] }, server: { key_rev: 2, history: [{ key_rev: 1, identity_key: b64u(hostKey.identityKey) }, { key_rev: 2, identity_key: b64u(bob.identityKey) }] }, envelope_peer_rev: 1, expect: "do not decrypt; show \"This message was sealed with a security key this device never checked.\"; never add rev 1 to the pin" },
+    { name: "server rolls the peer back to a lower key_rev", pin: pinBob, server: { key_rev: 1, history: [{ key_rev: 1, identity_key: b64u(bobOld.identityKey) }] }, expect: "state KEY_ROLLBACK: composer disabled, no \"I understand\"" },
+    { name: "server reissues a superseded key under a new key_rev", pin: pinBob, server: { key_rev: 3, history: [{ key_rev: 1, identity_key: b64u(bobOld.identityKey) }, { key_rev: 2, identity_key: b64u(bob.identityKey) }, { key_rev: 3, identity_key: b64u(bobOld.identityKey) }] }, expect: "state KEY_ROLLBACK: composer disabled, no \"I understand\"" },
+    { name: "server rewrites a pinned historical revision", pin: pinBob, server: { key_rev: 2, history: [{ key_rev: 1, identity_key: b64u(hostKey.identityKey) }, { key_rev: 2, identity_key: b64u(bob.identityKey) }] }, expect: "state KEY_ROLLBACK: composer disabled, no \"I understand\"" },
+    { name: "envelope names a peer revision above the pin that the server does not list", pin: pinBob, server: { key_rev: 2, history: pinBob.history }, envelope_peer_rev: 9, expect: "stay PINNED; show \"This message couldn't be decrypted.\" for that message only" },
+    { name: "genuine reset: server lists a new revision with a new key", pin: pinBob, server: { key_rev: 3, history: [...pinBob.history, { key_rev: 3, identity_key: b64u(hostKey.identityKey) }] }, expect: "accept as CHANGED_UNACKNOWLEDGED (this is also what a key swap looks like; only the safety number tells them apart)" },
+  ];
+
 
   const negatives = [
     { name: "wrong key (recipient is not bob)", kind: "message", envelope_hex: hex(good), key_hex: hex(kMallory), expect: "reject", error: mustFail("wrong key", () => open({ key: kMallory })) },
@@ -560,6 +709,13 @@ function buildDm() {
     { name: "file chunks reordered (chunk 0 and 1 swapped)", kind: "file", file_key_hex: hex(fileKey), swap_chunks: [0, 1], expect: "reject", error: mustFail("file swap", () => { const c = FILE_CHUNK + 16; return openFile(fileKey, concat(fileBlob.slice(0, 20), fileBlob.slice(20 + c, 20 + 2 * c), fileBlob.slice(20, 20 + c), fileBlob.slice(20 + 2 * c))); }) },
     { name: "file wrong key", kind: "file", file_key_hex: hex(fixed("other file key")), expect: "reject", error: mustFail("file key", () => openFile(fixed("other file key"), fileBlob)) },
     { name: "file wrong version byte", kind: "file", file_key_hex: hex(fileKey), set_byte: [0, 2], expect: "reject", error: mustFail("file ver", () => { const b = fileBlob.slice(); b[0] = 2; return openFile(fileKey, b); }) },
+    ...malformed,
+    { name: "identity key with agreement key bit 255 set (same X25519 key as bob's, different bytes)", kind: "identity_key", identity_key_hex: hex(idHighBit), expect: "reject", server_expect: 400, error: mustFail("high bit", () => parseIdentityKey(idHighBit)) },
+    { name: "identity key with agreement key u >= p (p + 2)", kind: "identity_key", identity_key_hex: hex(idPPlus2), expect: "reject", server_expect: 400, error: mustFail("u>=p", () => parseIdentityKey(idPPlus2)) },
+    { name: "host re-attaches a genuine reply to a different message", kind: "reply_binding", reply_envelope_hex: msgs[1].envelope_hex, payload_re_hex: hex(unhex(msgs[0].nonce)), server_reply_to_nonce_hex: msgs[2].nonce, expect: "show the reply without the quoted message and with \"The message this replies to couldn't be checked.\"" },
+    { name: "host strips the reply link from a reply", kind: "reply_binding", reply_envelope_hex: msgs[1].envelope_hex, payload_re_hex: hex(unhex(msgs[0].nonce)), server_reply_to_nonce_hex: null, expect: "show the reply with \"The message this replies to couldn't be checked.\"" },
+    { name: "plaintext message in a DM whose peer is pinned", kind: "plaintext_in_encrypted_dm", message: { enc: 0, author_id: ids.bob, body: "Send the money to this account" }, peer_state: "PINNED", expect: "show with the \"Not encrypted\" marker and without the lock; never as an encrypted message" },
+    ...pinCases.map((c) => ({ kind: "pin_state", ...c })),
   ];
 
   return {
@@ -641,10 +797,11 @@ function buildLink() {
   const attackerPub = x25519.getPublicKey(attackerPriv);
 
   const url = qrUrl(origin, linkId, secret, showingPub);
-  const deep = deepLink(origin, linkId, secret, showingPub);
+  const legacyDeep = legacyDeepLink(origin, linkId, secret, showingPub);
   const parsed = parseQr(url);
-  const parsedDeep = parseDeepLink(deep);
-  if (!equalBytes(parsed.showingPub, showingPub) || !equalBytes(parsedDeep.secret, secret) || parsedDeep.origin !== origin) throw new Error("qr parse failed");
+  if (!equalBytes(parsed.showingPub, showingPub) || !equalBytes(parsed.secret, secret) || parsed.origin !== origin) throw new Error("qr parse failed");
+  if (parseDeepLink(SCAN_DEEP_LINK).action !== "scan") throw new Error("scan deep link parse failed");
+  const mitm = groundMitm({ linkId, secret, showingPub, claimingPub, claimingPriv, showingPriv });
 
   // Claiming device side (knows A from the QR, holds b).
   const claimSide = linkKeys({ linkId, secret, showingPub, claimingPub, sharedSecret: dh(claimingPriv, showingPub) });
@@ -659,8 +816,11 @@ function buildLink() {
   const attackerSide = linkKeys({ linkId, secret, showingPub, claimingPub: attackerPub, sharedSecret: dh(attackerPriv, showingPub) });
   if (!equalBytes(attackerSide.claimTag, showWithSwapped.claimTag)) throw new Error("attacker tag mismatch");
 
+  const bobOldKey = b64u(deriveIdentity(fixed("bob old identity seed")).identityKey);
+  const bobKey = b64u(deriveIdentity(fixed("bob identity seed")).identityKey);
   const pins = [
-    { origin, user_id: "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0", identity_key: b64u(deriveIdentity(fixed("bob identity seed")).identityKey), key_rev: 1, verified: true },
+    { origin, user_id: "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0", identity_key: bobKey, key_rev: 2, verified: true,
+      history: [{ key_rev: 1, identity_key: bobOldKey }, { key_rev: 2, identity_key: bobKey }] },
   ];
   const wrapNonce = fixed("wrapped keys nonce", 24);
   const wrapRecoveryRev = 2;
@@ -676,9 +836,36 @@ function buildLink() {
   ].map((b) => ({ bytes_hex: hex(new Uint8Array(b)), u32be: readU32(new Uint8Array(b), 0), code: codeFor(new Uint8Array(b)) }));
 
   const badVer = wrapped.slice(); badVer[0] = 2;
+  // Correctly sealed wrapped_keys whose pin list the new device must refuse as a whole.
+  const badPins = [
+    ["pin without history", [{ ...pins[0], history: undefined }]],
+    ["pin history does not end at the current key", [{ ...pins[0], history: [pins[0].history[0]] }]],
+    ["pin history not ascending", [{ ...pins[0], history: [pins[0].history[1], pins[0].history[0]] }]],
+    ["pin history uses one key at two revisions", [{ ...pins[0], history: [{ key_rev: 1, identity_key: bobKey }, { key_rev: 2, identity_key: bobKey }] }]],
+    ["pin with an origin that has a path", [{ ...pins[0], origin: origin + "/x" }]],
+  ].map(([name, list], n) => {
+    const blob = sealWrappedKeys(showSide.wrapKey, linkId, fixed(`bad pins nonce ${n}`, 24), alice.seed, 1, list);
+    return { name: `wrapped_keys: ${name}`, kind: "wrapped_keys", wrapped_keys_hex: hex(blob), wrap_key_hex: hex(claimSide.wrapKey), expect: "reject the whole blob: store nothing, show \"The key from your other device couldn't be read. Make a new code and try again.\"", error: mustFail(name, () => openWrappedKeys(claimSide.wrapKey, linkId, blob)) };
+  });
+  const typed = [
+    { typed: claimSide.code, expect: "approve" },
+    { typed: ` ${claimSide.code} `, expect: "approve" },
+    { typed: showWithSwapped.code, expect: "deny" },
+    { typed: claimSide.code[0], expect: "deny" },
+    { typed: claimSide.code + "0", expect: "deny" },
+    { typed: "٩٤", expect: "deny (non-ASCII digits)" },
+    { typed: "", expect: "deny" },
+  ].map((t) => ({ ...t, showing_device_code: claimSide.code, result: typedCodeMatches(t.typed, claimSide.code) ? "approve" : "deny" }));
+  for (const t of typed) if (!t.expect.startsWith(t.result)) throw new Error(`typed code vector "${t.typed}" gave ${t.result}`);
   const negatives = [
+    ...badPins,
+    { name: "server swapped the claiming key and knows A (browser path): person types the number from the device in their hand", kind: "code_entry", showing_device_code: showWithSwapped.code, typed: claimSide.code, expect: "deny: the showing device calls deny and shows the mismatch text", result: typedCodeMatches(claimSide.code, showWithSwapped.code) ? "approve" : "deny" },
     { name: "claim tag from a server that swapped the claiming key and does not know A", kind: "claim_tag", claiming_pub_seen_by_showing_device: hex(attackerPub), presented_tag: hex(claimSide.claimTag), recomputed_tag: hex(showWithSwapped.claimTag), expect: "reject: tags differ, showing device denies the link" },
-    { name: "mismatched confirmation number: server swapped the claiming key and knows A", kind: "code", claiming_device_code: claimSide.code, showing_device_code: showWithSwapped.code, expect: claimSide.code === showWithSwapped.code ? "codes collide (1 in 100); vector generator must pick other fixed keys" : "codes differ, the person taps Deny" },
+    { name: "mismatched confirmation number: server swapped the claiming key and knows A", kind: "code", claiming_device_code: claimSide.code, showing_device_code: showWithSwapped.code, expect: claimSide.code === showWithSwapped.code ? "codes collide (1 in 100); vector generator must pick other fixed keys" : "codes differ, so the number the person types does not match and the link is denied" },
+    { name: "host rewrites A in a code-carrying deep link and grinds its claiming key (why the deep link carries no code)", kind: "deep_link_mitm",
+      legacy_deep_link_with_host_key: legacyDeepLink(origin, linkId, secret, mitm.hostShowPub), host_showing_pub: hex(mitm.hostShowPub), host_claiming_pub: hex(mitm.hostClaimPub),
+      tries: mitm.tries, new_device_code: mitm.newDeviceCode, showing_device_code: mitm.showingCode, claim_tag_valid: mitm.tagValid,
+      expect: "reject: the app refuses every housecall://link?… deep link", error: mustFail("legacy deep", () => parseDeepLink(legacyDeepLink(origin, linkId, secret, mitm.hostShowPub))) },
     { name: "wrapped_keys opened with the key a swapped claim would produce", kind: "wrapped_keys", wrapped_keys_hex: hex(wrapped), wrap_key_hex: hex(showWithSwapped.wrapKey), expect: "reject", error: mustFail("wk wrong key", () => openWrappedKeys(showWithSwapped.wrapKey, linkId, wrapped)) },
     { name: "wrapped_keys bound to another link id", kind: "wrapped_keys", wrapped_keys_hex: hex(wrapped), link_id_hex: hex(fixed("other link id", 16)), expect: "reject", error: mustFail("wk link", () => openWrappedKeys(claimSide.wrapKey, fixed("other link id", 16), wrapped)) },
     { name: "wrapped_keys wrong version byte", kind: "wrapped_keys", wrapped_keys_hex: hex(badVer), expect: "reject", server_expect: 400, error: mustFail("wk ver", () => openWrappedKeys(claimSide.wrapKey, linkId, badVer)) },
@@ -692,7 +879,8 @@ function buildLink() {
     { name: "QR with a fifth field", kind: "qr", text: url + ".extra", expect: "reject", error: mustFail("qr extra", () => parseQr(url + ".extra")) },
     { name: "QR with credentials in the origin", kind: "qr", text: url.replace("https://", "https://user@"), expect: "reject", error: mustFail("qr creds", () => parseQr(url.replace("https://", "https://user@"))) },
     { name: "QR with a path before /link", kind: "qr", text: url.replace("/link#", "/x/link#"), expect: "reject", error: mustFail("qr path", () => parseQr(url.replace("/link#", "/x/link#"))) },
-    { name: "deep link with an extra parameter", kind: "deep_link", text: deep + "&y=2", expect: "reject", error: mustFail("deep extra", () => parseDeepLink(deep + "&y=2")) },
+    { name: "pre-review deep link carrying the real code", kind: "deep_link", text: legacyDeep, expect: "reject", error: mustFail("deep legacy", () => parseDeepLink(legacyDeep)) },
+    { name: "scan deep link with a query", kind: "deep_link", text: SCAN_DEEP_LINK + "?c=x", expect: "reject", error: mustFail("deep query", () => parseDeepLink(SCAN_DEEP_LINK + "?c=x")) },
     { name: "small-order claiming key (all zero)", kind: "ephemeral", claiming_pub: hex(new Uint8Array(32)), expect: "reject", error: mustFail("eph zero", () => dh(showingPriv, new Uint8Array(32))) },
   ];
   if (claimSide.code === showWithSwapped.code) throw new Error("fixed keys produce a code collision; change the attacker seed");
@@ -717,7 +905,8 @@ function buildLink() {
     claiming: { ephemeral_priv: hex(claimingPriv), ephemeral_pub: hex(claimingPub), ephemeral_pub_b64u: b64u(claimingPub) },
     attacker: { ephemeral_priv: hex(attackerPriv), ephemeral_pub: hex(attackerPub) },
     qr_text: url,
-    deep_link: deep,
+    deep_link: SCAN_DEEP_LINK,
+    typed_code_examples: typed,
     shared_secret: hex(dh(claimingPriv, showingPub)),
     transcript_hex: hex(concat(utf8("housecall link v1"), linkId, secret, showingPub, claimingPub)),
     salt: hex(claimSide.salt),

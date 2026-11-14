@@ -161,3 +161,36 @@ Set both `PLEX_URL` and `PLEX_TOKEN` to enable the provider; `capabilities.plex`
 - `GET /api/channels/:id/plex/resources/:opaque_id` streams authorized HLS manifests/segments and subtitle resources. Every rewritten URI stays on the authenticated Housecall origin; HLS requests must include the bearer and device-key headers. Segment streaming rechecks the device session and voice/activity access every second. Provider URLs/tokens never appear in client manifests.
 
 Play/pause/seek remain revision-checked activity commands. Playback descriptors emit `plex.playback`; clients use the activity clock for synchronization. The gateway does not by itself establish playback quality or synchronization measurements; those require the three-client fixture/live-provider evidence.
+
+## Identity keys, encrypted DMs and QR linking (0.4.0)
+
+All paths are under `/api`. Contracts: `docs/security/DM-V1.md`, `docs/security/LINK-V1.md`. The server stores only public keys and one opaque backup blob; it never receives a private key or the recovery words. All binary fields are unpadded base64url.
+
+### Keys
+- `PUT /api/me/keys`: authenticated `{identity_key, password?}` → `{key_rev}`. `identity_key` = base64url of `0x01 || agree_pub(32) || sign_pub(32)` (65 bytes); a zero, non-canonical or ≥ p agreement key → 400 `invalid identity key`. First publish needs no password. Replacing a key needs `password` (403 `password required` if missing or wrong); a key replaced earlier → 409. Same key again → current `key_rev`, no change. Rate limit 3 per window (429). Emits `keys.changed` `{user_id,key_rev,device_name}` to the caller and to everyone sharing a DM with them.
+- `GET /api/users/{id}/keys`: authenticated → `{user_id, identity_key: string|null, key_rev, history:[{key_rev,identity_key,created_at}]}` (`identity_key` null and `key_rev` 0 when none published).
+- `PUT /api/me/key-backup`: authenticated `{key_backup}` (base64url of 77 bytes, version 1, 4-byte big-endian `recovery_rev` ≥ 1) → `{recovery_rev}`. 409 `publish keys first`, 409 `a newer recovery key exists`. Rate limit 6.
+- `GET /api/me/key-backup` → `{key_backup: string|null}`.
+- `POST /api/me/password-check`: `{password}` → `{ok:true}`.
+- `POST /api/me/key-exposure`: `{kind}` → `{}`; `GET /api/me/key-exposure` → `{exposures:[{kind,device_name,created_at}]}`.
+
+### Encrypted messages
+`POST /api/channels/{id}/messages` (and edits) accept `{enc:1, envelope, body:"" , mention_ids?}`. `envelope` is base64url of `0x01 || sender_key_rev(u32 BE) || recipient_key_rev(u32 BE) || … ` with ciphertext in 256-byte padded blocks (1–65 blocks) plus a 16-byte tag; at most 65 blocks. Responses and events (`message.created`, `message.updated`, history) carry `enc` (0|1) and `envelope` (string|null); an encrypted message has an empty `body`.
+- 422 `invalid encrypted message`: bad envelope, non-empty body, `view_once`, role mentions, or a mention of anyone but the peer.
+- 422 `encryption is not available in this conversation`: `enc:1` outside a DM whose two members both have keys.
+- 422 `this conversation is end-to-end encrypted; update Housecall to send`: plaintext in such a DM.
+- 409 `security key changed; reload keys`: sender or recipient `key_rev` in the envelope is stale.
+Encrypted bodies are never search-indexed, previewed or scanned. Push and ring notifications use a generic body and never carry the envelope.
+
+### Sealed uploads
+`POST /api/uploads` with `class:"sealed"` (encrypted DM only, `filename` must be `"sealed"`, `length` ≤ 100 MiB plus 16 bytes per 4 MiB chunk, else 413) returns the usual upload object plus `"class":"sealed"`. Sealed uploads are never scanned, transcoded or thumbnailed, are served with `X-Content-Type-Options: nosniff` as a download, and attach only to `enc:1` messages (and the reverse). Attachments on the message read `{id,filename:"sealed",kind:"sealed",length}`.
+
+### QR linking
+- `POST /api/link/start`: authenticated (the existing device) → `{link_id, secret, expires_at}`; lifetime 120 s. `secret` is 32 random bytes; the server keeps only its SHA-256.
+- `POST /api/link/claim`: public `{link_id, secret, device_name, device_key, ephemeral_pub, claim_tag}` (`ephemeral_pub` 32 bytes, `claim_tag` 16 bytes) → `{username, display_name}`. A second claim burns the link (409 `link already used`); expired → 410; malformed or unknown id → 400 `invalid link request` (constant-time compare, dummy compare for unknown ids); rate limited 429.
+- `GET /api/link/{id}`: authenticated owner → `{state, expires_at, burn_reason, claim:{device_name,ephemeral_pub,claim_tag,claimed_at}|null}`. `state` is one of `started claimed approved denied expired burnt`.
+- `POST /api/link/{id}/approve`: owner `{wrapped_keys: string|null}` (base64url, 79–65536 bytes, version 1) → `{state:"approved"}`; 409 if not waiting for approval; 410 expired.
+- `POST /api/link/{id}/deny` → `{state:"denied"}`.
+- `POST /api/link/result`: public `{link_id, secret, device_key}` → the normal login response `{token,user,expires_at,device_key?,wrapped_keys: string|null}`, once; the link then burns (`burn_reason:"used"`). 404 not started, 409 `waiting for approval`, 403 `link denied`, 410 expired, 409 used. The session is bound to the claimed device key.
+- `device.added` event to the account's other devices: `{session_id, device_name, added_via}`. `GET /api/devices` rows gain `added_via` (`"qr"`, `"password"`, … or null).
+- `GET /link`, `/link.js`, `/link.css`: static page (strict CSP, `Referrer-Policy: no-referrer`); offers "Open in Housecall" and "Continue in browser" only.

@@ -45,7 +45,7 @@ fn fixture(timeout: Duration) -> (tempfile::TempDir, AppState, Router) {
             )
             .unwrap();
             db.execute(
-                "INSERT INTO sessions VALUES(?,?,?,?,?,?,?)",
+                "INSERT INTO sessions(id,user_id,token_hash,device_hash,device_name,created_at,expires_at) VALUES(?,?,?,?,?,?,?)",
                 params![
                     name,
                     name,

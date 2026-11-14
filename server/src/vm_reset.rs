@@ -396,7 +396,7 @@ mod tests {
                 )
                 .unwrap();
                 db.execute(
-                    "INSERT INTO sessions VALUES(?1,?1,?2,?3,'fixture',0,?4)",
+                    "INSERT INTO sessions(id,user_id,token_hash,device_hash,device_name,created_at,expires_at) VALUES(?1,?1,?2,?3,'fixture',0,?4)",
                     params![
                         name,
                         crate::hash(&token.to_string().repeat(64)),

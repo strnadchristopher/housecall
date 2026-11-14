@@ -3,6 +3,7 @@ pub mod activities;
 pub mod attach_kind;
 pub mod dj;
 pub mod embeds;
+pub mod identity;
 pub mod gimme;
 pub mod giphy;
 pub mod image_blob;
@@ -14,6 +15,7 @@ pub mod preflight;
 pub mod profile;
 pub mod push;
 /// 1:1 calls: ring and decline in a direct conversation.
+pub mod link;
 pub mod ring;
 pub mod servers;
 pub mod setup;
@@ -87,7 +89,7 @@ fn secret() -> String {
     OsRng.fill_bytes(&mut bytes);
     hex::encode(bytes)
 }
-fn hash(v: &str) -> String {
+pub(crate) fn hash(v: &str) -> String {
     hex::encode(Sha256::digest(v.as_bytes()))
 }
 #[derive(Clone)]
@@ -115,6 +117,8 @@ pub struct AppState {
     pub rings: Arc<Mutex<HashMap<String, i64>>>,
     /// Who is in which call and in what state, and screen-share previews. Memory only.
     pub live: Arc<voice::Live>,
+    /// QR login links (LINK-V1). Memory only.
+    pub links: link::Links,
 }
 #[derive(Clone)]
 pub struct InviteMailConfig {
@@ -265,6 +269,7 @@ impl AppState {
             }),
             rings: Default::default(),
             live: Default::default(),
+            links: Default::default(),
         })
     }
     fn limited(&self, key: String, max: u32) -> bool {
@@ -308,6 +313,8 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .merge(vm_media::routes())
         .merge(vm_reset::routes())
         .merge(servers::routes())
+        .merge(identity::routes())
+        .merge(link::routes())
         .merge(access::routes())
         .merge(setup::routes())
         .merge(profile::routes())
@@ -345,6 +352,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .merge(passkeys::public_routes())
         .merge(access::public_routes())
         .merge(preflight::routes())
+        .merge(link::public_routes())
         .route("/setup", post(setup))
         .route("/login", post(login))
         .route("/invites/accept", post(accept))
@@ -365,7 +373,24 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
     router
         .layer(cors)
         .layer(DefaultBodyLimit::max(128 * 1024))
+        .layer(middleware::from_fn(link_page))
         .layer(middleware::from_fn(headers))
+}
+/// The static page a scanned QR code opens (LINK-V1 section 3). It is answered before routing so the
+/// standard security headers still apply: script and style only from this origin, no referrer.
+async fn link_page(request: axum::extract::Request, next: Next) -> Response {
+    use axum::{http::Method, response::IntoResponse};
+    let (kind, body) = match request.uri().path() {
+        "/link" => ("text/html; charset=utf-8", include_str!("link_page/index.html")),
+        "/link.js" => ("text/javascript; charset=utf-8", include_str!("link_page/link.js")),
+        "/link.css" => ("text/css; charset=utf-8", include_str!("link_page/link.css")),
+        _ => return next.run(request).await,
+    };
+    match *request.method() {
+        Method::GET => ([(axum::http::header::CONTENT_TYPE, kind)], body).into_response(),
+        Method::HEAD => ([(axum::http::header::CONTENT_TYPE, kind)], ()).into_response(),
+        _ => StatusCode::METHOD_NOT_ALLOWED.into_response(),
+    }
 }
 async fn headers(request: axum::extract::Request, next: Next) -> Response {
     let mut r = next.run(request).await;
@@ -380,12 +405,20 @@ async fn public_limit(
     req: axum::extract::Request,
     next: Next,
 ) -> Result<Response, ApiError> {
-    let route = match req.uri().path().rsplit('/').next().unwrap_or_default() {
-        "login" => "login",
-        "accept" => "invite-accept",
-        _ => "public",
+    let path = req.uri().path();
+    let route = if path.ends_with("/link/claim") {
+        "link-claim"
+    } else if path.ends_with("/link/result") {
+        "link-result"
+    } else {
+        match path.rsplit('/').next().unwrap_or_default() {
+            "login" => "login",
+            "accept" => "invite-accept",
+            _ => "public",
+        }
     };
-    if s.limited(format!("public:{route}"), s.public_auth_limit) {
+    let max = if route == "link-result" { 600 } else { s.public_auth_limit };
+    if s.limited(format!("public:{route}"), max) {
         return Err(ApiError(StatusCode::TOO_MANY_REQUESTS, "try again later"));
     }
     Ok(next.run(req).await)
@@ -497,22 +530,42 @@ async fn password_hash(s: &AppState, password: String) -> Result<String, ApiErro
     .map_err(|_| bad("credential processing failed"))?
     .map_err(|_| bad("credential processing failed"))
 }
-fn session(db: &Connection, user: User, device_name: &str) -> Result<Value, ApiError> {
-    let (token, device_key, id) = (secret(), secret(), secret());
+fn session(db: &Connection, user: User, device_name: &str, via: &str) -> Result<Value, ApiError> {
+    let mut out = session_with(db, user, device_name, via, None)?;
+    out.as_object_mut().map(|o| o.remove("session_id"));
+    Ok(out)
+}
+/// Creates a session and raises "new device" (LINK-V1 11.4). With a `device_hash` the device key is
+/// the caller's (QR login), so none is generated or returned. The result carries the session id.
+pub(crate) fn session_with(
+    db: &Connection,
+    user: User,
+    device_name: &str,
+    via: &str,
+    device_hash: Option<String>,
+) -> Result<Value, ApiError> {
+    let (token, id) = (secret(), secret());
+    let device_key = if device_hash.is_some() { None } else { Some(secret()) };
+    let device_hash = device_hash.unwrap_or_else(|| hash(device_key.as_deref().unwrap()));
     let expires = now() + 30 * 24 * 3600 * 1000;
     db.execute(
-        "INSERT INTO sessions VALUES(?,?,?,?,?,?,?)",
+        "INSERT INTO sessions(id,user_id,token_hash,device_hash,device_name,created_at,expires_at,added_via) VALUES(?,?,?,?,?,?,?,?)",
+        params![id, user.id, hash(&token), device_hash, device_name, now(), expires, via],
+    )?;
+    db.execute(
+        "INSERT INTO events(user_id,kind,channel_id,payload,created_at) VALUES(?,?,NULL,?,?)",
         params![
-            id,
             user.id,
-            hash(&token),
-            hash(&device_key),
-            device_name,
-            now(),
-            expires
+            "device.added",
+            json!({"session_id":id,"device_name":device_name,"added_via":via}).to_string(),
+            now()
         ],
     )?;
-    Ok(json!({"token":token,"device_key":device_key,"user":user,"expires_at":expires}))
+    let mut out = json!({"token":token,"user":user,"expires_at":expires,"session_id":id});
+    if let Some(k) = device_key {
+        out["device_key"] = json!(k);
+    }
+    Ok(out)
 }
 #[derive(Deserialize)]
 struct Setup {
@@ -554,7 +607,7 @@ async fn setup(State(s): State<AppState>, Json(v): Json<Setup>) -> ApiResult<Val
         [],
     )?;
     servers::join(&tx, &u.id, "home")?;
-    let result = session(&tx, u, &v.device_name)?;
+    let result = session(&tx, u, &v.device_name, "setup")?;
     tx.commit()?;
     Ok(Json(result))
 }
@@ -622,7 +675,7 @@ async fn login(State(s): State<AppState>, Json(v): Json<Login>) -> ApiResult<Val
             None => unauthorized(),
         });
     }
-    Ok(Json(session(&db, u, &v.device_name)?))
+    Ok(Json(session(&db, u, &v.device_name, "password")?))
 }
 #[derive(Deserialize)]
 struct Invite {
@@ -827,7 +880,7 @@ async fn accept(State(s): State<AppState>, Json(v): Json<Accept>) -> ApiResult<V
         |r| r.get(0),
     )?;
     servers::join(&tx, &u.id, &server_id)?;
-    let result = session(&tx, u, &v.device_name)?;
+    let result = session(&tx, u, &v.device_name, "invite")?;
     tx.commit()?;
     Ok(Json(result))
 }
@@ -877,25 +930,27 @@ async fn redeem_invite(
     Ok(Json(json!({"server_id":server_id,"joined":!member})))
 }
 async fn me(State(s): State<AppState>, Extension(p): Extension<Principal>) -> Json<Value> {
-    let (display_name, avatar_rev, bio) =
+    let (display_name, avatar_rev, bio, key_rev) =
         s.db.lock()
             .unwrap()
             .query_row(
-                "SELECT display_name,avatar_rev,bio FROM users WHERE id=?",
+                "SELECT display_name,avatar_rev,bio,key_rev FROM users WHERE id=?",
                 [&p.user.id],
                 |r| {
                     Ok((
                         r.get::<_, Option<String>>(0)?,
                         r.get::<_, i64>(1)?,
                         r.get::<_, Option<String>>(2)?,
+                        r.get::<_, i64>(3)?,
                     ))
                 },
             )
-            .unwrap_or((None, 0, None));
+            .unwrap_or((None, 0, None, 0));
     let mut user = json!(p.user);
     user["display_name"] = json!(display_name);
     user["avatar_rev"] = json!(avatar_rev);
     user["bio"] = json!(bio);
+    user["key_rev"] = json!(key_rev);
     Json(
         json!({"user":user,"session_id":p.session_id,"capabilities":{"password":true,"passkeys":s.passkeys.is_some(),"chat":true,"embeds":true,"uploads":s.media.is_some(),"transcode":s.transcoder.is_some(),"plex":s.plex.is_some() && s.voice.is_some(),"voice":s.voice.is_some(),"activities":false,"activity_sync":true,"activity_playback":false,"vm_input":s.vm.is_some() && s.voice.is_some(),"vm_reset":s.vm.as_ref().is_some_and(|vm| vm.reset_socket.is_some()) && s.voice.is_some(),"vm_media":s.vm_media.configured() && s.voice.is_some(),"giphy":giphy::configured(),"gimme_dry_run":s.gimme.is_dry_run(),"dj":s.dj.is_some() && s.voice.is_some(),"push":false}}),
     )
@@ -905,8 +960,8 @@ async fn devices(
     Extension(p): Extension<Principal>,
 ) -> ApiResult<Value> {
     let db = s.db.lock().unwrap();
-    let mut q=db.prepare("SELECT id,device_name,created_at,expires_at FROM sessions WHERE user_id=? AND expires_at>?")?;
-    let rows=q.query_map(params![p.user.id,now()],|r|{let id:String=r.get(0)?;Ok(json!({"current":id==p.session_id,"id":id,"device_name":r.get::<_,String>(1)?,"created_at":r.get::<_,i64>(2)?,"expires_at":r.get::<_,i64>(3)?}))})?.collect::<Result<Vec<_>,_>>()?;
+    let mut q=db.prepare("SELECT id,device_name,created_at,expires_at,added_via FROM sessions WHERE user_id=? AND expires_at>?")?;
+    let rows=q.query_map(params![p.user.id,now()],|r|{let id:String=r.get(0)?;Ok(json!({"current":id==p.session_id,"id":id,"device_name":r.get::<_,String>(1)?,"created_at":r.get::<_,i64>(2)?,"expires_at":r.get::<_,i64>(3)?,"added_via":r.get::<_,Option<String>>(4)?}))})?.collect::<Result<Vec<_>,_>>()?;
     Ok(Json(json!({"devices":rows})))
 }
 async fn revoke(
@@ -1013,7 +1068,7 @@ async fn create_channel(
 async fn members(State(s): State<AppState>) -> ApiResult<Value> {
     let db = s.db.lock().unwrap();
     let mut q = db.prepare(
-        "SELECT id,username,is_owner,display_name,avatar_rev,bio FROM users WHERE disabled=0 ORDER BY username",
+        "SELECT id,username,is_owner,display_name,avatar_rev,bio,key_rev FROM users WHERE disabled=0 ORDER BY username",
     )?;
     let rows = q
         .query_map([], |r| {
@@ -1024,6 +1079,7 @@ async fn members(State(s): State<AppState>) -> ApiResult<Value> {
                 "display_name": r.get::<_, Option<String>>(3)?,
                 "avatar_rev": r.get::<_, i64>(4)?,
                 "bio": r.get::<_, Option<String>>(5)?,
+                "key_rev": r.get::<_, i64>(6)?,
             }))
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -1038,7 +1094,10 @@ struct MessageQuery {
 }
 /// `viewer` decides what a snap shows: whether this user already opened it.
 fn message(db: &Connection, id: &str, viewer: &str) -> Result<Value, ApiError> {
-    let mut msg=db.query_row("SELECT id,channel_id,author_id,body,reply_to,created_at,edited_at,revision,pinned,mention_ids FROM messages WHERE id=?",[id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"channel_id":r.get::<_,String>(1)?,"author_id":r.get::<_,String>(2)?,"body":r.get::<_,String>(3)?,"reply_to":r.get::<_,Option<String>>(4)?,"created_at":r.get::<_,i64>(5)?,"edited_at":r.get::<_,Option<i64>>(6)?,"revision":r.get::<_,i64>(7)?,"pinned":r.get::<_,bool>(8)?,"mention_ids":serde_json::from_str::<Value>(&r.get::<_,String>(9)?).unwrap_or(json!([]))}))).optional()?.ok_or_else(missing)?;
+    let mut msg=db.query_row("SELECT id,channel_id,author_id,body,reply_to,created_at,edited_at,revision,pinned,mention_ids,enc,envelope FROM messages WHERE id=?",[id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"channel_id":r.get::<_,String>(1)?,"author_id":r.get::<_,String>(2)?,"body":r.get::<_,String>(3)?,"reply_to":r.get::<_,Option<String>>(4)?,"created_at":r.get::<_,i64>(5)?,"edited_at":r.get::<_,Option<i64>>(6)?,"revision":r.get::<_,i64>(7)?,"pinned":r.get::<_,bool>(8)?,"mention_ids":serde_json::from_str::<Value>(&r.get::<_,String>(9)?).unwrap_or(json!([])),"enc":r.get::<_,i64>(10)?,"envelope":r.get::<_,Option<String>>(11)?}))).optional()?.ok_or_else(missing)?;
+    if msg["enc"] == 1 {
+        msg["body"] = json!(identity::ENC_PLACEHOLDER);
+    }
     let mut q = db.prepare("SELECT emoji,user_id FROM reactions WHERE message_id=?")?;
     let reactions = q
         .query_map([id], |r| {
@@ -1053,7 +1112,7 @@ fn message(db: &Connection, id: &str, viewer: &str) -> Result<Value, ApiError> {
     msg["role_mention_ids"] = json!(roles);
     let mut q =
         db.prepare("SELECT upload_id,filename,length,(SELECT id FROM media_jobs WHERE source_id=attachments.upload_id AND status='ready' ORDER BY created_at DESC LIMIT 1),view_once FROM attachments WHERE message_id=?")?;
-    let attachments=q.query_map([id],|r|{if r.get::<_,i64>(4)?!=snaps::NONE{return snaps::describe(db,&r.get::<_,String>(0)?,r.get::<_,i64>(4)?,viewer)}let job=r.get::<_,Option<String>>(3)?;let filename=r.get::<_,String>(1)?;let kind=attach_kind::kind(&filename,job.is_some());Ok(json!({"id":r.get::<_,String>(0)?,"filename":filename,"kind":kind,"length":r.get::<_,String>(2)?,"video_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/video")),"thumbnail_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/thumbnail"))}))})?.collect::<Result<Vec<_>,_>>()?;
+    let attachments=q.query_map([id],|r|{if r.get::<_,i64>(4)?!=snaps::NONE{return snaps::describe(db,&r.get::<_,String>(0)?,r.get::<_,i64>(4)?,viewer)}let job=r.get::<_,Option<String>>(3)?;let filename=r.get::<_,String>(1)?;if db.query_row("SELECT EXISTS(SELECT 1 FROM sealed_uploads WHERE upload_id=?)",[r.get::<_,String>(0)?],|x|x.get::<_,bool>(0))?{return Ok(json!({"id":r.get::<_,String>(0)?,"filename":"sealed","kind":"sealed","length":r.get::<_,String>(2)?}))}let kind=attach_kind::kind(&filename,job.is_some());Ok(json!({"id":r.get::<_,String>(0)?,"filename":filename,"kind":kind,"length":r.get::<_,String>(2)?,"video_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/video")),"thumbnail_path":job.as_ref().map(|id|format!("/api/media-jobs/{id}/thumbnail"))}))})?.collect::<Result<Vec<_>,_>>()?;
     msg["attachments"] = json!(attachments);
     Ok(msg)
 }
@@ -1113,7 +1172,11 @@ async fn messages(
 }
 #[derive(Deserialize)]
 struct SendMessage {
+    #[serde(default)]
     body: String,
+    #[serde(default)]
+    enc: i64,
+    envelope: Option<String>,
     reply_to: Option<String>,
     #[serde(default)]
     mention_ids: Vec<String>,
@@ -1136,10 +1199,21 @@ async fn send_message(
     Path(cid): Path<String>,
     Json(mut v): Json<SendMessage>,
 ) -> ApiResult<Value> {
-    if v.view_once && v.attachment_ids.len() != 1 {
+    if v.enc != 0 && v.enc != 1 {
+        return Err(bad("invalid enc"));
+    }
+    if v.enc == 0 && v.envelope.is_some() {
+        return Err(bad("envelope requires enc"));
+    }
+    if v.enc == 1 {
+        if v.attachment_ids.len() > 20 || v.mention_ids.len() > 30 {
+            return Err(identity::invalid_envelope());
+        }
+    } else if v.view_once && v.attachment_ids.len() != 1 {
         return Err(bad("a snap carries exactly one photo"));
     }
-    if v.attachment_ids.is_empty() {
+    if v.enc == 1 {
+    } else if v.attachment_ids.is_empty() {
         body_valid(&v.body)?;
     } else if v.body.len() > 16384 || v.attachment_ids.len() > 20 {
         return Err(bad("invalid attachment message"));
@@ -1150,13 +1224,15 @@ async fn send_message(
     let mut db = s.db.lock().unwrap();
     let tx = db.transaction()?;
     member(&tx, &p.user.id, &cid)?;
+    let sealed_dm = identity::is_encrypted_dm(&tx, &cid)?;
+    identity::check_send(&tx, &p.user.id, &cid, sealed_dm, v.enc, v.envelope.as_deref(), &v.body, v.view_once, &v.role_mention_ids, &v.mention_ids)?;
     if let Some(reply) = &v.reply_to {
         let (rc, _, _) = message_access(&tx, &p, reply)?;
         if rc != cid {
             return Err(bad("reply must be in this conversation"));
         }
     }
-    if v.body.contains("@everyone") {
+    if v.enc == 0 && v.body.contains("@everyone") {
         owner(&p)?;
         let mut q = tx.prepare("SELECT user_id FROM members WHERE channel_id=?")?;
         v.mention_ids = q
@@ -1176,7 +1252,8 @@ async fn send_message(
     for upload_id in &v.attachment_ids {
         let store = s.media.as_ref().ok_or_else(|| bad("media unavailable"))?;
         let upload = store.inspect(*upload_id, &p.user.id)?;
-        if upload.channel_id != cid || upload.status != housecall_media::Status::Ready {
+        let sealed = identity::is_sealed(&tx, upload_id)?;
+        if upload.channel_id != cid || upload.status != housecall_media::Status::Ready || sealed != (v.enc == 1) {
             return Err(bad("attachment must be clean and in this conversation"));
         }
         if v.view_once && attach_kind::kind(&upload.filename, false) != "image" {
@@ -1205,7 +1282,7 @@ async fn send_message(
         attachments.push(upload);
     }
     let id = secret();
-    tx.execute("INSERT INTO messages(id,channel_id,author_id,body,reply_to,created_at,mention_ids) VALUES(?,?,?,?,?,?,?)",params![id,cid,p.user.id,v.body,v.reply_to,now(),json!(v.mention_ids).to_string()])?;
+    tx.execute("INSERT INTO messages(id,channel_id,author_id,body,reply_to,created_at,mention_ids,enc,envelope) VALUES(?,?,?,?,?,?,?,?,?)",params![id,cid,p.user.id,if v.enc==1{""}else{v.body.as_str()},v.reply_to,now(),json!(v.mention_ids).to_string(),v.enc,v.envelope])?;
     for role in &v.role_mention_ids {
         tx.execute("INSERT INTO message_roles VALUES(?,?)", params![id, role])?;
     }
@@ -1237,7 +1314,11 @@ async fn send_message(
 }
 #[derive(Deserialize)]
 struct EditMessage {
+    #[serde(default)]
     body: String,
+    #[serde(default)]
+    enc: i64,
+    envelope: Option<String>,
     revision: i64,
 }
 async fn edit_message(
@@ -1246,19 +1327,33 @@ async fn edit_message(
     Path(id): Path<String>,
     Json(v): Json<EditMessage>,
 ) -> ApiResult<Value> {
-    body_valid(&v.body)?;
+    if v.enc != 0 && v.enc != 1 {
+        return Err(bad("invalid enc"));
+    }
+    if v.enc == 0 {
+        if v.envelope.is_some() {
+            return Err(bad("envelope requires enc"));
+        }
+        body_valid(&v.body)?;
+    }
     let mut db = s.db.lock().unwrap();
     let tx = db.transaction()?;
     let (cid, author, revision) = message_access(&tx, &p, &id)?;
     if author != p.user.id {
         return Err(forbidden());
     }
+    let stored_enc: i64 = tx.query_row("SELECT enc FROM messages WHERE id=?", [&id], |r| r.get(0))?;
+    let sealed_dm = identity::is_encrypted_dm(&tx, &cid)?;
+    if stored_enc != v.enc {
+        return Err(identity::invalid_envelope());
+    }
+    identity::check_send(&tx, &p.user.id, &cid, sealed_dm, v.enc, v.envelope.as_deref(), &v.body, false, &[], &[])?;
     if revision != v.revision {
         return Err(conflict("message changed; reload before editing"));
     }
     tx.execute(
-        "UPDATE messages SET body=?,edited_at=?,revision=revision+1 WHERE id=?",
-        params![v.body, now(), id],
+        "UPDATE messages SET body=?,envelope=?,edited_at=?,revision=revision+1 WHERE id=?",
+        params![if v.enc == 1 { "" } else { v.body.as_str() }, v.envelope, now(), id],
     )?;
     emit(&tx, &cid, "message.edited", json!({"message_id":id}))?;
     let result = message(&tx, &id, &p.user.id)?;

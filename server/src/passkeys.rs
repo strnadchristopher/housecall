@@ -293,7 +293,7 @@ async fn login_finish(State(s): State<AppState>, Json(v): Json<LoginFinish>) -> 
             )?;
         }
     }
-    let auth = session(&tx, pending.user, &v.device_name)?;
+    let auth = session(&tx, pending.user, &v.device_name, "passkey")?;
     tx.commit()?;
     Ok(Json(auth))
 }

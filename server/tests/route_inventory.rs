@@ -143,6 +143,8 @@ async fn every_declared_private_route_rejects_missing_stolen_and_revoked_credent
         ("HEAD".into(), "/api/health".into()),
         ("POST".into(), "/api/passkeys/login/start".into()),
         ("POST".into(), "/api/passkeys/login/finish".into()),
+        ("POST".into(), "/api/link/claim".into()),
+        ("POST".into(), "/api/link/result".into()),
     ]);
     assert!(public.is_subset(&all));
     let private = all.difference(&public).cloned().collect::<Vec<_>>();

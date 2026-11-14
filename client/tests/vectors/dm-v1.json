@@ -141,13 +141,14 @@
       "nonce": "80e4d09d2eedc77282d5b705b066bbf3b0d2250856d8702d",
       "payload": {
         "v": 1,
-        "text": "Yes. Ça marche 👍"
+        "text": "Yes. Ça marche 👍",
+        "re": "tH0Jm7BG4HTKlwvag8Hbfc-2xqJZiT08"
       },
-      "plaintext_json_utf8_hex": "7b2276223a312c2274657874223a225965732e20c38761206d617263686520f09f918d227d",
-      "padded_hex": "7b2276223a312c2274657874223a225965732e20c38761206d617263686520f09f918d227d800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "plaintext_json_utf8_hex": "7b2276223a312c2274657874223a225965732e20c38761206d617263686520f09f918d222c227265223a227448304a6d3742473448544b6c7776616738486266632d3278714a5a69543038227d",
+      "padded_hex": "7b2276223a312c2274657874223a225965732e20c38761206d617263686520f09f918d222c227265223a227448304a6d3742473448544b6c7776616738486266632d3278714a5a69543038227d8000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
       "associated_data_hex": "010000000100000002004035653565356535653565356535653565356535653565356535653565356535653565356535653565356535653565356535653565356535653565356535653565004030663165326433633462356136393738383739366135623463336432653166303066316532643363346235613639373838373936613562346333643265316630004061316232633364346535663630373138323933613462356336643765386639306131623263336434653566363037313832393361346235633664376538663930",
-      "envelope_hex": "01000000010000000280e4d09d2eedc77282d5b705b066bbf3b0d2250856d8702ddc7480b980862ae5deebdbb3a47d7cc8d6ff23fe885abff3fdb28cf82f83d49968a26d17b1b6cd90c1b8e8e515871684a48cdb7364735656fb8c75d101ddf4cfdc2e11439cbfc5123aec4b5f09eaaf74304415708e7ec7be77c002a521db4e0903f6a25a81f36dcd9b0268a7d396227906dc709c3079b1612b845d231a7dd7a35d3dd02a798fa3c3f18e646c3183bd645a073ea7be175f1298d9820a94001d7318c3219942646ee1fd83ea0b498431e9be11db9f50cec4ba73c1a2cfce202cefb3befedbcc63e5d1d0c9c55ee8ac7f4608304778f79152c17da5a82ef05b8e99b22e7a2e18f0a4c09fcca48a78c0928a76591d21a4f80e79e458026327786e1a08dce3cbe053a1989d4b5b3da712187b",
-      "envelope_b64u": "AQAAAAEAAAACgOTQnS7tx3KC1bcFsGa787DSJQhW2HAt3HSAuYCGKuXe69uzpH18yNb_I_6IWr_z_bKM-C-D1Jloom0XsbbNkMG46OUVhxaEpIzbc2RzVlb7jHXRAd30z9wuEUOcv8USOuxLXwnqr3QwRBVwjn7HvnfAAqUh204JA_aiWoHzbc2bAmin05YieQbccJwwebFhK4RdIxp916NdPdAqeY-jw_GOZGwxg71kWgc-p74XXxKY2YIKlAAdcxjDIZlCZG7h_YPqC0mEMem-EdufUM7EunPBos_OICzvs77-28xj5dHQycVe6Kx_RggwR3j3kVLBfaWoLvBbjpmyLnouGPCkwJ_MpIp4wJKKdlkdIaT4DnnkWAJjJ3huGgjc48vgU6GYnUtbPacSGHs"
+      "envelope_hex": "01000000010000000280e4d09d2eedc77282d5b705b066bbf3b0d2250856d8702ddc7480b980862ae5deebdbb3a47d7cc8d6ff23fe885abff3fdb28cf82f83d49968a26d17e014bff5e382ca915db75ce993ce9c472c271d3a8cfa14b6399596a9bf03233bedf59f7b6edc737d746aaf74304415708e7ec7be77c002a521db4e0903f6a25a81f36dcd9b0268a7d396227906dc709c3079b1612b845d231a7dd7a35d3dd02a798fa3c3f18e646c3183bd645a073ea7be175f1298d9820a94001d7318c3219942646ee1fd83ea0b498431e9be11db9f50cec4ba73c1a2cfce202cefb3befedbcc63e5d1d0c9c55ee8ac7f4608304778f79152c17da5a82ef05b8e99b22e7a2e18f0a4c09fcca48a78c0928a76591d21a4f80e79e458026327786e1affaf420bf0c739a28e798485ae784e4c",
+      "envelope_b64u": "AQAAAAEAAAACgOTQnS7tx3KC1bcFsGa787DSJQhW2HAt3HSAuYCGKuXe69uzpH18yNb_I_6IWr_z_bKM-C-D1Jloom0X4BS_9eOCypFdt1zpk86cRywnHTqM-hS2OZWWqb8DIzvt9Z97btxzfXRqr3QwRBVwjn7HvnfAAqUh204JA_aiWoHzbc2bAmin05YieQbccJwwebFhK4RdIxp916NdPdAqeY-jw_GOZGwxg71kWgc-p74XXxKY2YIKlAAdcxjDIZlCZG7h_YPqC0mEMem-EdufUM7EunPBos_OICzvs77-28xj5dHQycVe6Kx_RggwR3j3kVLBfaWoLvBbjpmyLnouGPCkwJ_MpIp4wJKKdlkdIaT4DnnkWAJjJ3huGv-vQgvwxzmijnmEha54Tkw"
     },
     {
       "name": "photo from alice",
@@ -493,6 +494,617 @@
       ],
       "expect": "reject",
       "error": "unknown file version"
+    },
+    {
+      "name": "malformed payload: payload v 2",
+      "kind": "message",
+      "envelope_hex": "01000000010000000176fae9a30afbe372735b9611a5962e3d0a0425f919868863cca87b8bc922e01235ffea0e6b7545b54d7aba80feed9b9c9875a3dd402b740f69e29e250c95f3ca148a607bc0b2648e896ce6d177c7b92dc146eed65074fdc78f60380a72a81cb2d3a4448d0e91ac20c5027fefd4798956cac0066af4f6482a6f50ae6b57a0f63266d042d68cb8d051a587c3320df05afa1db0c3ba7273240d6353f994ff00c1cb4787c5b6f36e81e9613194c0f985dbc044e66ff3e5c87ae1b9752ea212e2b26d870ba4bd97465d1f1d1f42013664320e6328128c737b2dccdc60179561a464138cc50360a2c387a788bee75e25c3f42eabf54e120ad4602b158cfe3ee8a3078f57e3bac4e5451f35b09f28edc4d41df6a1581b3b27128560cf5c686ae113f4d8948387c64b8b2ef7",
+      "payload": {
+        "v": 2,
+        "text": "hi"
+      },
+      "expect": "reject",
+      "error": "unknown payload version"
+    },
+    {
+      "name": "malformed payload: payload text missing",
+      "kind": "message",
+      "envelope_hex": "010000000100000001896de985421554d29045c607e6c8472ddcab0ba9b1f9151511a4163e65ad605c5b6984de979c0649117cdb5f66552416300bd0a1d55fdd7ef05a8ce5e2cc285839b676bfd1464d9a9eaef13db56864e0b77cd412e6aafde8f0e4ba47fcc5ebaf8f55d1229d2d0543ac1b6cc69ab6d03742b1c4ca1eceeef7f82b02fbb9a8057c24468e0dfe2dc9f145c1888a54fc69f0ccbb70dd7a61c721f0198178e5a40a8991b679a47864ea2221847a3a1755de1359ab9050616601abc7f4480d416b9bca7b00807711dc6888a99668ce292df33a380844706a792c5ad5c65c8c779d14f0ffc31632a69041173304af5507df9146960f3762defa616e80a5c8075be53ba352a1fbaa7f0e595e5c3ce7f443caf294a394086556b4699158938f1bfb04ddc9987b56b8615517e2",
+      "payload": {
+        "v": 1
+      },
+      "expect": "reject",
+      "error": "bad payload: text"
+    },
+    {
+      "name": "malformed payload: payload empty text and no files",
+      "kind": "message",
+      "envelope_hex": "010000000100000001835522b33f4372ac4426501c46987b70c849259f3b5f602f38a60156d99aeb9c4cc567fcde6241f8a0660f5237293e7dbe798ab0ec265a19cf0e94a798cdcc275f6a5f8362a5daa9c140680df1496ff6a32aa33b2d6912efcead9c53163bd732cb60450b87572adfa2a0d1a7dc88d72cf45e4e7d6e7b126ae750d15bc22b48adb6764bee2940a93a0da055e12ea84bea4d54b9d6a1088d4abcb3cf06ce8d96dffc81fa335add7b3d467c2db62297f12949faeb0117dde40dab792563d2afc7f34edffdf21ab6bd64ac065220becbbe5d78bb6cbc8e341cbd44214303d53619287cb3ad1ebc6fe0dc0908c2ca76a91e5b03e929b32a2033b7c6bda4ec195bebb61c34eff13edef6be62ee30a8564988475c0a84f3d30f3d7d21cb0683fb719415e7c96ceb8be0c5d8",
+      "payload": {
+        "v": 1,
+        "text": ""
+      },
+      "expect": "reject",
+      "error": "bad payload: empty"
+    },
+    {
+      "name": "malformed payload: payload files is not an array",
+      "kind": "message",
+      "envelope_hex": "010000000100000001233034164ba8e16fd9075333a4945885ba8700626c60057fa3fe79f3d7d0c1c4ea6dce711cfa4fc9f0e7feeaa2a9721c2958613ea0d1dd059dcc18d5134e79eeaf6afc8ee7f689e77d414f845a09e48a3d6df173344bd0cd5b32ab8fd0a2430fcc19d91d47d95d3c2aba3993c7ff60bc15bad962713bdf86b2ca3e2a8fcb8e1e9a3713bea2eee995c37d487065638d8fa00b8fd1f1a43ef7d0bc09f8bcd9b7c51589e7a4539b7febeba0967929d5c2a69986295cb492a4ce9a2947a6334a010aaf524b697d7f37a8a654eb915afc7eaa9700ef5cb96fbdcc27baa1922684c797df459cf797fb944cc9afb5831ec6baba29e2bd6956a9af1876ba34ad604b01b1f0a8d3a74090edf0e6b5cfcaa77c32a59024bd8f37b14273ee788c61888e586dd81d69d57498dec2",
+      "payload": {
+        "v": 1,
+        "text": "hi",
+        "files": {}
+      },
+      "expect": "reject",
+      "error": "bad payload: files"
+    },
+    {
+      "name": "malformed payload: payload with 21 files",
+      "kind": "message",
+      "envelope_hex": "010000000100000001ae950ed39df09a48528e02e133d3a9b6f6945e711a5fb6a79c488b8824c35ef326cefb6514fd9a3acf500ae658850cd107eaf9f47447c4b7e2ba0bcd691e9d62bcc38e59ba4bcf5c901603fb8803cf2272434b001f686bc657fcc9cb72c60638c7c49c0e8ee1c69fff049616fe81a118a1ea51e56f4d24a853f0e682a4c63e2945dec6dcd45212a9b84b5df6632348913bdfd4e4d7d3087c15fd0d547b1697cc874b988f237bef1197158553320d303ed8058fa64403fa02857692e790f5c2e7c681c6e4e6b2d5727e3f47e9bac9779fe9aeec6524367889410af2ce3fa1feeb6151893beb17d73f077f7653203433eb4f3f4599d08bd908b0a4d8f8314a87fa8ec339e3dd9d1cea0594cc0d65b7e7f2002f9b91931fad10378a2398c484e738b58204bc3f46139c7fd8e55a200fc882c049d05638f54aa7b39bc6fd29b2fac5562cd6d790537b1a81ab1096292b367e786d5e8fbc094ca7de3107a87665534f96fe8e31368a8d09e4cb6425fb2f5aee43d601faf2afc51de48122b06367869d9c0293b3c8b951f3ef3c0b633bae5109ee56849118dcc17d41354ac03a1379382027d1ca48b92d6a1dd20b55bf00af366f89b50c6797416160757fe7c117e8b8220b7b378c891b61a95d45a9574d674d1a785dbf8479b5b6ebc362f7e3d22444445b49b2da5ce34745b936f95f7e862038c437406a1b0a8e28f3db6735600d8785076631a636cee33a3cb8c887de46a9a404db51574324c8d3e6b38d120aa3bf5ee8da6ceba82cf2b38dea5f516d8480b9c22038fe5e78aeae40502ad229180858087c78427c624bcfddf19904bd2501bbf0c705eea66755dfa724ac0b51fd8b7768bb6693269132ce1db49dacec745a53585deb25a2eded9c3970bbfc752cbe853818225d9180ae1a1ca77fe7262351336fa260f19bb834ce98ac8dc8d51d4a3d4529f575dddc4589eca8de6348a71ff754356547f681ff2a6b73ed72804eb8e1e04562137befa9f84d2efcab3f856ae6f885c33c7b0c0c02cf228ca66aaaefe4ae98b0a9be99e8667521f972c402384378bfa03a0870882b179ab22a99b816bda9563ae0c8aa0135b5ceb8224dd8e390822f416e23ad41ec7f65aee22b61efa277c3aa75402f1b5870a701d40378d890a8ac0ca3837b4a3756ae5f9a3ecce6b3e28510171bce3ab3c0f8e3a3c866f444eb0be8c59807fb7b0bb523675d6b12c403b415405e7f6c0d9d3bbfb51fbce85be5c1479b3323f2be95d720a5b5bed7a515480448eee78f4f68fddecb295df1d8278b9df9c202eb80199fba6b0fabb746b61d808ec7da095085a7744ccb23a0880b4835ac5d03e3570128059e0006e689e1b012e8dbdb776fc3fd7ec6dc964dcae287a99912ebf7a972dc5dc8ce0826c17b8a0601210b671dba734fdd4213ed559cee584fb6e7d7c55460482027ff408a2dfcf7ffeec9853a08c1063190cc0b286a86e982cc21845e78594ecf15af15880aafe5ee9dbfc6781028b63dda954001d04ace8897177adfe93395025dcc78bef51596d22feb5d244907486cf8f0866f9fdf151c50eb2beb4eecddc672f886aa2f0ebc089140b8c5020fe87010fd206478fce5a67063f3764df1f31cae174e89d26fd8a8de1fe47e4ae3ff1712c74e5cfcc71494c3b4e255de69ce8beed656427005c15c06225f4f94afc0f04e96ef6c08e7e10bf7f93d0d55c09badd2dcbc89c5d92229c43ea9b78a46f0f6fc2cb8b66231e2f6fd2f2c2f6151b6c7e9f2572eebf4b712c33a364dfa14dbe2167d8fbcbc71814d7b954e09989be86bd114183fb6ddf485e7e414a0d413b2e4758f5f3651d3e02aa58f7116e8245d0f8e13529d844926f908738921cf367be7755198a7ae88ed91ed4588337a8dc970ee85b89eadd8662cef5818d2d8c1f7489c251f3b388b12ed441b210e985d0f04969f19495d23ff5cd422531f733e1fbf198dabf82fe0b4edee50b104814569acf133ae1bc073e45c23e20bf0a07ad772f22fe5512f32e517576b96b08e5f425b4f39787b0b70e0bc6894322eb679eadecf72925d5c7b3980f3c5db7ac86dd74e9d7e719b0069946d6fb3f42f96849bd3f162e56db52fd3980fc2a3bbef4e1195b5c8fb9108ae432917df0063aeceac2cd3211964248410afcc0b6f55024483da86814228ec9e0f0401f5626fe1c85adb3eca384a5b70e7f955d970db4547994c6c7a6d4d944e0b33c0a632652be72ad4dc671782c79d88e6b4aeac90e52defc35c9b0a76166c8d10b20a284f0acccb63510a94099ab4cc73b25efa8d97711f7be85b1ddd369d6d2988b11eb332619a9b7c2193632baa113e28497f647429ab8faa4dedd96f86e408f5b17caed739dc5c40895f08b80fac0e29837f790d80b64c6c23388ebd9306445e22c27555fe512af67379c88ee737d705b1d937773085ceb2a6b19b563230c9f33374764f6c2014612ff9f1b6adf282579865511fce5632e7028eb0aca4839d051a89df6b53b762e0188c718f790add26297a51958039aaac2ea52ffa78b13620716aa5df5cbab2086a22fa4217f843aafbb1825bacac3e470bc2a6c08291a6c5e2be06ed87c1c28769500c435289a4c9eb4586cd3a7c7db52db01aae69ae87d45614e810215583a4fffa8889574899800a22a1745c2d3862ccf791f15cd86c7a8df897d11f49135f53597b772737b2ad6c446bc59f08d8216d4f68cea11acc379c1830fcb99b3ebb0152d61cfc4d87c97476c4c2fec883d01ee3e4c9d421a6784200d1c6c32efb8eec8db9c0381998f3e897e7740e0389c0ceb0f0dc5e0cca24a015eedc3ad37381b7e5f9c1cef13509d6dcc040e7441b6c972effac353bc296be326be47d3049879e668b88580b3e9f5c4aabdf48eed136869badfda8f2a273ac04d9bddf042a0c419315997f445215035db36b93ebc834f5becf794c8f7ed106298f8490d687b5d62008a95f619ad7f6e073fcd038e8cd5a2c6a4bdd1dab6a60087433bfe7c32889b0093557c45c869f295bd1c4312d8f11d77a59270ded14c6ae17e98e93ad39db9e51eb4cd58c007b22af0b62bfe7bd5c8489080309d010b787b1ed4cc36f11142ac470db7533f0cd75c3662be156a1ce7000b64619a4c6fa021b58dc7a35554cc766735e6a6575f6420873b5ba5bf16e4f67f80965a5ac1384f73f97aeb1f872ba7037248d69588879141bfb50bedfa3307dcdf03abb9937a63993a4ec7892f6e18a1f764507323b9e45c4198414bb9d8b56b90f767e9d9e8f2a0a217239beb67eba2cc2b8066a0d7ea99132540ebd3418b10c96d4306fc01eb4a106904de32a03f5336f6a91b19932be18b019ea3642fc213cb9e378583b45145a0632920eaf0a6c638fa9de6d7ed07cb68d9917305ccc3b144c92e3c199d2b393d107aa83365cb0695a6c605d03a10cd1bec301a89acbe128c8c778f265041ab5e17c248c287b5387d13577d78ed3efe0ed18bf1e00bf8f8c79c097e68123a119fd853d8a5dfb7b51f664b9d16c40a849644fd46fba4557010453df882ac3cfb801647374d30b47ae2eeb63d37f5afcfca0317a4d7ab59dbdb94c57f8b7983ca6271915343bbdb0fcd4b9b5afd707e7d8139b2b3d00e019ab089fa78500b26854dc4d39a033842ea6c5de770cf81e73b59e4ebbecd68c2be16c4cf33d43b451a3f545036c54923edf860d2c0977ed4d7dcce93332e0c7bb24a66b67e0486d027ef9e267a57c5ac175780f9afe6f5a5a8c73b3747faf70ffc45fcc7b43ed132c834005056674a2ad17608927bc552b933ef8fedce2f5d2304da735d04a550e371299ddbe6fc0c138c7177fbda48c6e8f1bca5eff1f8783c878c724655d37328c452c61e57c396d31bd8966629976a161d14745a878eaca242ee8f88c125d3b3592d91beca31b3fd858ec6ad931dfbbc943dffaed6ff2ba3845e95353672849106bcdb756ecd2ec9a779807e592549e5c47efff159d3e81531a6c00b20949974de98360171bc3b967f57d1385f5e281b396c3acbb2c2365f60298f6c6a2c2d565acd6fb556c1ff49053e8e6aba75bdea5384b7f0030a9f611ff117fe803659b3b268a8747523178b6df78caa9b0834e0d4f51d2d553114f3e6b6d1f16fc837792bf5e413dc683b03a91960b99c964366d93b8aee6e3379569b641d7a87ab0161524417cf6abc8d1385390b891eab9b017a7aa2096c3edc57600bdedaff123158a476959da44d5809d4acab2e2790f2e65c39d281142308545cae1ce5deaed61d5c71bed3e635c9558550dc1fa3b7e94430f2e2908b4ad02ccde140b5617c1d01a697e071b35611613d5d8370b875619f92cd77c7fd9ba6319a91649db322d3e27557b1369fb96e7ec696574df6ed836d7beaf7d22834a43bce0f93bccb9393784b15171e2e6895157178de847e6037653964df9b9d879c4e603c33a79f14c574a358d68f7ca6866878fd81f8e2eba0c06234e50ead2286af6151c673d059a7214125c7b91e51931b6c24684f44e47838b4e06a628ea5cd426010ae2d4c94ff971d50ded7f9d96730771fa854f8f0dfbe6b695ad507bb82d99828e3b5d74d7961641dcda36699824b6d8e0fbad52e61211950fcfaa0860a62e0f8466003c6d7c340997ce91056db7e6af505803e3dac4695188c60cbce88c05da0ccdfaf639b115b4c09204ec92b3c5558d296cbc5aabb1dc3d6ddd75eda234e3133e60d35595639f48b16b012cc430e76bf176a4c0e084fcd1f936c1be64583ba72f52aa75bd1834e7c51e1410698f948c0dee91779562e4d327d203c0f1c922a3c9602c47fd2f621ae511d5ce13f9520db41c86c8adf91319b7139505bc56a01cbe8c38895f7731eafcf40b2e04dbbe6d60458845fb6b3ef9b602b2bfe6b0b0eaef63274e622e2e3c7d4e7d8b2fb97c5820233c66df5204ce487806db284ecf2fe7bbfd5882ab1dbbe94d281d0ac13d02b24afefa4a34bfdb238640c6712daa84ff210ca00fc288a50ca13c53c7ff62615c4e3672260462571ac28e0ce7e29d16f573f60b8a502751b729fc89f9e76504d39a2264716a0b5d4bfcc6ca731fb2a5a0e1cc635ab997d3affa5471dab9a2fcb9bcc29ef589e2fb674c270a976917703b6798bde0",
+      "payload": {
+        "v": 1,
+        "text": "",
+        "files": [
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          },
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          }
+        ]
+      },
+      "expect": "reject",
+      "error": "bad payload: files"
+    },
+    {
+      "name": "malformed payload: FileRef size above 100 MiB",
+      "kind": "message",
+      "envelope_hex": "010000000100000001bbed5c0652b6e84a07dfb0704087e7797b27483cfa128bbfafd0aef888712c404790c2d63977b8158127a3a64bb58c634e40e2a955828eb56d35cc7156316027b107e6e48f9e10f0a2336a0c2584e6fcb71a2842b240f076b789569236a684f7074f043188e341b68e704a08af45b7bfab6ce8b9a8041f6e779faa61f9efac2cac8e67c21886c8cee1b2643f9e7f326dad20473f1d2320391b222ab9543bf789593b264f9ade8bb094009a4e7b5f677146dd4ff1451e5f83f34d86c5b7c29005039c3509fc8366ffbb8e56998ffe3e49b54b954b0b7ba5691c0ec0d2468339c9982211cca668a897702cd23f29a20ee3a638b09a22c612c6bf59cee962ecfec69ebb5c32754b0af304409f7f61eee4d79708c073bc0a97e06ebd9a943677a4a48b0b266fb0568565",
+      "payload": {
+        "v": 1,
+        "text": "",
+        "files": [
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 104857601,
+            "w": 1200,
+            "h": 900
+          }
+        ]
+      },
+      "expect": "reject",
+      "error": "bad file: size"
+    },
+    {
+      "name": "malformed payload: FileRef key not 32 bytes",
+      "kind": "message",
+      "envelope_hex": "010000000100000001a0c3ab2cd1c16e05e2cfc7c867dc994e7fc70364d447d06b1bc98a8c5b460d3d5cbc9115b4170029cdf55501a7be4ef84e77778a9d5d70f68fe5ee8dc8f368ea15249f966110d61fc64222077ab441ea6a5d5b5c854d500043f206dbd48a57f0955e2e3a6de7a2911f21f7e62fbb0f78abe9d1393e06c83c0ac099f37bb082f7facecd941604b37ffa2f5fe758e86d34e0ace4ea3b262d256b9579aaea64797e5fec9a67ae7df683a28b82a667b6f0a5858ff809259e941cedec083c1b54d420dac7add602fd6d41138d2777e9adcfb5b2cfe1cbf77147b743132f45737fee51401d8650d1d272803002b2341f8f6b58878d2f97c04b751bebc896ec814970f3b7c1258c6cba8528378660ac5ac88e560926425afc250193e005bf5f14e7276e00b3967b1b19e4fd",
+      "payload": {
+        "v": 1,
+        "text": "",
+        "files": [
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "AAAAAAAAAAAAAAAAAAAAAA",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          }
+        ]
+      },
+      "expect": "reject",
+      "error": "bad file: key"
+    },
+    {
+      "name": "malformed payload: FileRef width 0",
+      "kind": "message",
+      "envelope_hex": "010000000100000001af47a1920674e23d53b40b6a88f6d1ad62e75bd98d257c981d3130c7f6d4a5111f007183e3e61079f7153cb70a802ef793c05f181c4df2ba7471c12b8485ccd0f0bbc9ae3e7bff3877543a94dabc20bb4bb6017fe04f51ce5eaccc6abc149cbc49aa17e2f9608943257307f96b1a01c3f3ff982d975ca7e70959f232ec65d6d87ba2f1d5cc3eeeacc434159e4704a9d824accbc9b77a645890fbe1208173a76548d79212f370629268581a10c9f9e3dd1350ee9ac1b221031b01237d4047cfed7293bacd8831a86a5b19ec2fa6ab07fa8eebbdd2bd92cac6cb766a3ec7d48a5806c09e0b2f8d83d3211af23c3855761717e1a2e8e1103fe545a459d63e1ee67c833ca370ccd4366881f730b750ce74cafe2cf005899bb7963c2d4bbda475ea83795308f5406e1580",
+      "payload": {
+        "v": 1,
+        "text": "",
+        "files": [
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 0,
+            "h": 900
+          }
+        ]
+      },
+      "expect": "reject",
+      "error": "bad file: w"
+    },
+    {
+      "name": "malformed payload: FileRef MIME with parameters or spaces",
+      "kind": "message",
+      "envelope_hex": "010000000100000001b7b2646b4320a52815f49b220d969a5cbf8dd986be1b5a63d48476ad9370c6a52fa36989e1befe5d2570ddf411764c40c97963964fd9ebd30a54a8937733d11faaa17990d92fd66c980977d24e929de94a8fbb3f76729ba4bc326faa41af9b700f03c9781eff7e59d4be91c8790509c4365668b2d902f25631d47bde2cb93bb45684bb15cf3b9904006a3e7ab2cc1a9fa34002ccc09115e5edc08919045b862d20785df2f9a3145e6189afc8ed38e967ed12ba254ebba2e88eb88efa41ed729cfe28558fec0097c0c1f7fe2567ecbe6ffd264ec26984899413e12875a749f9ee91456760f67f5c6faec5c17f8d223386f1c1c8684f5755a0941f7efebb21b2fe26d11e2327c6b8ebc4fe27151874d40f1780ac64ed62e874c63d90b70f45427126120ef53e8aeee4",
+      "payload": {
+        "v": 1,
+        "text": "",
+        "files": [
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "lunch.jpg",
+            "mime": "text/html; charset=utf-8",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          }
+        ]
+      },
+      "expect": "reject",
+      "error": "bad file: mime"
+    },
+    {
+      "name": "malformed payload: FileRef name of 256 bytes",
+      "kind": "message",
+      "envelope_hex": "0100000001000000016b33ab4cf74d33650043a18137d0f670955e67b3eb64bba0da554f304edadb28558024686c91bfdb96df002e60636e245c381fdff8aaa87dae7536ceb1b92b4120ae8fcf52529092e02903d23df3e126246746f246a39c5c757d79aea97c69664550338dfc2d3e4c12c20f6bedf65e8db3ca7f0057a9b163b038c3c0942be107745c96142648e65718203fc0c1cd77eca8813ebb11a399ad479a7d0402a54b64d84cdafe61b8bef240cbb51e9122484e609bc8e9806558b69d0f36e9b4e6a2a07404a68c171c74dd22a6522d48eb8d3e205d5f4349309e672ac5dcfc21899c07bbdff2f095a48ffff95a332a03a4f1161469193abd6126fda7729123f16b31ea30363424eb4da536675e99a9b0e1bc8481860c562ca1e67c856263a33d7c85104865a67685d215b2b260e4e09fe5b365d820662113ef80e6303923bd3f763ab686e8f1db636e570e4db5361b3da67baaa637d82f425c737b96e6f3b38f99ab16af8a6f41bf969e97bd2c9d4c294cccee8d9efd71cfe9789c958a7abfb6535433c5574ef3a5ccf9d936220ed4337a879e582c261e7394116063fb20c1010d55b3a584f698c1171be0fd1b9d62b23f8703677efda28fd0c877d7f2cc92f43ce6373bbc06a58db900335609f9ae0b651086d89f745735bae613ac142dc8dfbfc3e7f0146633ad19f9f84392bc293b1d3119618a2fe79074cfec2779d6be5474b4341347d6d42c6d239e5161a6c2f5759807b8be67d1ca087e273c797617581a99f4bf0449c7b244d292",
+      "payload": {
+        "v": 1,
+        "text": "",
+        "files": [
+          {
+            "id": "7d0c3a8e-5b1f-4c2a-9e6d-1f2a3b4c5d6e",
+            "key": "fhz53dbA-uoiemj7c0W13BX_6UYJmtSL7mngbJ2rR9I",
+            "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "mime": "image/jpeg",
+            "size": 131172,
+            "w": 1200,
+            "h": 900
+          }
+        ]
+      },
+      "expect": "reject",
+      "error": "bad file: name"
+    },
+    {
+      "name": "malformed payload: re is not a 24-byte b64u value",
+      "kind": "message",
+      "envelope_hex": "010000000100000001a6f7e63f505dd35417f0301ca7e0a466b16c2e2612149205d24df5678da1831fe1fe8db3a4b9b5f715a4263bc04b8db9abd42cec4595b80539006d5d79371f8777b9681970ad75639f3a0b787e8cde4142deeb6c760720673aa6f0c6c40712cc88b3c5d192dd1d643342229dfad4b25b73503e1aab763c8e1a09705e6ff6a4634cd35082a44cb2d6ec5966204b26083a0ec323e0e2bb215c5283d2f35a4431bd9e4f85321036880598b6fe50e7d9d24b734f5d2cc04837c078b8b69b228981e44ea9eb1df4ba2780fdce912ac430c111fdf0f70558136f8a150cdfd10ca8b4820e8c79cb9fd8be64c5b906e4342c9c062f4ab9c84cf0aa706995f533a1605f8a31325711074f04cdb9786e0dd3d50cc5f6479b381cc6f4c7e5778c1e19e9b0c3b5835e335cace3cc",
+      "payload": {
+        "v": 1,
+        "text": "hi",
+        "re": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "expect": "reject",
+      "error": "bad payload: re"
+    },
+    {
+      "name": "identity key with agreement key bit 255 set (same X25519 key as bob's, different bytes)",
+      "kind": "identity_key",
+      "identity_key_hex": "016b17ab182dc7b1c725397fe4faaec4815d66e0590a623478cdfe34f8c9f3ad880c0ac832ed1c92ae3a80dc3d18bab8a8b3e3e266d5649b55793e486f5caec652",
+      "expect": "reject",
+      "server_expect": 400,
+      "error": "non-canonical agreement key (bit 255 set)"
+    },
+    {
+      "name": "identity key with agreement key u >= p (p + 2)",
+      "kind": "identity_key",
+      "identity_key_hex": "01efffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0c0ac832ed1c92ae3a80dc3d18bab8a8b3e3e266d5649b55793e486f5caec652",
+      "expect": "reject",
+      "server_expect": 400,
+      "error": "non-canonical agreement key (u >= p)"
+    },
+    {
+      "name": "host re-attaches a genuine reply to a different message",
+      "kind": "reply_binding",
+      "reply_envelope_hex": "01000000010000000280e4d09d2eedc77282d5b705b066bbf3b0d2250856d8702ddc7480b980862ae5deebdbb3a47d7cc8d6ff23fe885abff3fdb28cf82f83d49968a26d17e014bff5e382ca915db75ce993ce9c472c271d3a8cfa14b6399596a9bf03233bedf59f7b6edc737d746aaf74304415708e7ec7be77c002a521db4e0903f6a25a81f36dcd9b0268a7d396227906dc709c3079b1612b845d231a7dd7a35d3dd02a798fa3c3f18e646c3183bd645a073ea7be175f1298d9820a94001d7318c3219942646ee1fd83ea0b498431e9be11db9f50cec4ba73c1a2cfce202cefb3befedbcc63e5d1d0c9c55ee8ac7f4608304778f79152c17da5a82ef05b8e99b22e7a2e18f0a4c09fcca48a78c0928a76591d21a4f80e79e458026327786e1affaf420bf0c739a28e798485ae784e4c",
+      "payload_re_hex": "b47d099bb046e074ca970bda83c1db7dcfb6c6a259893d3c",
+      "server_reply_to_nonce_hex": "d03ac420ea1fc54c60ebeb675207acbf0f7786cfee74361d",
+      "expect": "show the reply without the quoted message and with \"The message this replies to couldn't be checked.\""
+    },
+    {
+      "name": "host strips the reply link from a reply",
+      "kind": "reply_binding",
+      "reply_envelope_hex": "01000000010000000280e4d09d2eedc77282d5b705b066bbf3b0d2250856d8702ddc7480b980862ae5deebdbb3a47d7cc8d6ff23fe885abff3fdb28cf82f83d49968a26d17e014bff5e382ca915db75ce993ce9c472c271d3a8cfa14b6399596a9bf03233bedf59f7b6edc737d746aaf74304415708e7ec7be77c002a521db4e0903f6a25a81f36dcd9b0268a7d396227906dc709c3079b1612b845d231a7dd7a35d3dd02a798fa3c3f18e646c3183bd645a073ea7be175f1298d9820a94001d7318c3219942646ee1fd83ea0b498431e9be11db9f50cec4ba73c1a2cfce202cefb3befedbcc63e5d1d0c9c55ee8ac7f4608304778f79152c17da5a82ef05b8e99b22e7a2e18f0a4c09fcca48a78c0928a76591d21a4f80e79e458026327786e1affaf420bf0c739a28e798485ae784e4c",
+      "payload_re_hex": "b47d099bb046e074ca970bda83c1db7dcfb6c6a259893d3c",
+      "server_reply_to_nonce_hex": null,
+      "expect": "show the reply with \"The message this replies to couldn't be checked.\""
+    },
+    {
+      "name": "plaintext message in a DM whose peer is pinned",
+      "kind": "plaintext_in_encrypted_dm",
+      "message": {
+        "enc": 0,
+        "author_id": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0",
+        "body": "Send the money to this account"
+      },
+      "peer_state": "PINNED",
+      "expect": "show with the \"Not encrypted\" marker and without the lock; never as an encrypted message"
+    },
+    {
+      "kind": "pin_state",
+      "name": "server inserts a forged older revision that the pin never saw",
+      "pin": {
+        "key_rev": 2,
+        "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI",
+        "verified": true,
+        "history": [
+          {
+            "key_rev": 2,
+            "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI"
+          }
+        ]
+      },
+      "server": {
+        "key_rev": 2,
+        "history": [
+          {
+            "key_rev": 1,
+            "identity_key": "ASn9wQczTxsASuDFYQux8MN0C7hGnnh82r1IheRt5SMPjssZay-_FZ853tWd62DdwZpJ_wKE6sxN1zrzpt9EQ14"
+          },
+          {
+            "key_rev": 2,
+            "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI"
+          }
+        ]
+      },
+      "envelope_peer_rev": 1,
+      "expect": "do not decrypt; show \"This message was sealed with a security key this device never checked.\"; never add rev 1 to the pin"
+    },
+    {
+      "kind": "pin_state",
+      "name": "server rolls the peer back to a lower key_rev",
+      "pin": {
+        "key_rev": 2,
+        "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI",
+        "verified": true,
+        "history": [
+          {
+            "key_rev": 1,
+            "identity_key": "Ab0TlwKYWZuqmH4s32K0wXuN7hMBdZ_VkJSTlQWxO892q8GW9XD3XNnjFrmgTXap8ZJv3HmLPyXWMj3gqB2kMkw"
+          },
+          {
+            "key_rev": 2,
+            "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI"
+          }
+        ]
+      },
+      "server": {
+        "key_rev": 1,
+        "history": [
+          {
+            "key_rev": 1,
+            "identity_key": "Ab0TlwKYWZuqmH4s32K0wXuN7hMBdZ_VkJSTlQWxO892q8GW9XD3XNnjFrmgTXap8ZJv3HmLPyXWMj3gqB2kMkw"
+          }
+        ]
+      },
+      "expect": "state KEY_ROLLBACK: composer disabled, no \"I understand\""
+    },
+    {
+      "kind": "pin_state",
+      "name": "server reissues a superseded key under a new key_rev",
+      "pin": {
+        "key_rev": 2,
+        "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI",
+        "verified": true,
+        "history": [
+          {
+            "key_rev": 1,
+            "identity_key": "Ab0TlwKYWZuqmH4s32K0wXuN7hMBdZ_VkJSTlQWxO892q8GW9XD3XNnjFrmgTXap8ZJv3HmLPyXWMj3gqB2kMkw"
+          },
+          {
+            "key_rev": 2,
+            "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI"
+          }
+        ]
+      },
+      "server": {
+        "key_rev": 3,
+        "history": [
+          {
+            "key_rev": 1,
+            "identity_key": "Ab0TlwKYWZuqmH4s32K0wXuN7hMBdZ_VkJSTlQWxO892q8GW9XD3XNnjFrmgTXap8ZJv3HmLPyXWMj3gqB2kMkw"
+          },
+          {
+            "key_rev": 2,
+            "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI"
+          },
+          {
+            "key_rev": 3,
+            "identity_key": "Ab0TlwKYWZuqmH4s32K0wXuN7hMBdZ_VkJSTlQWxO892q8GW9XD3XNnjFrmgTXap8ZJv3HmLPyXWMj3gqB2kMkw"
+          }
+        ]
+      },
+      "expect": "state KEY_ROLLBACK: composer disabled, no \"I understand\""
+    },
+    {
+      "kind": "pin_state",
+      "name": "server rewrites a pinned historical revision",
+      "pin": {
+        "key_rev": 2,
+        "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI",
+        "verified": true,
+        "history": [
+          {
+            "key_rev": 1,
+            "identity_key": "Ab0TlwKYWZuqmH4s32K0wXuN7hMBdZ_VkJSTlQWxO892q8GW9XD3XNnjFrmgTXap8ZJv3HmLPyXWMj3gqB2kMkw"
+          },
+          {
+            "key_rev": 2,
+            "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI"
+          }
+        ]
+      },
+      "server": {
+        "key_rev": 2,
+        "history": [
+          {
+            "key_rev": 1,
+            "identity_key": "ASn9wQczTxsASuDFYQux8MN0C7hGnnh82r1IheRt5SMPjssZay-_FZ853tWd62DdwZpJ_wKE6sxN1zrzpt9EQ14"
+          },
+          {
+            "key_rev": 2,
+            "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI"
+          }
+        ]
+      },
+      "expect": "state KEY_ROLLBACK: composer disabled, no \"I understand\""
+    },
+    {
+      "kind": "pin_state",
+      "name": "envelope names a peer revision above the pin that the server does not list",
+      "pin": {
+        "key_rev": 2,
+        "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI",
+        "verified": true,
+        "history": [
+          {
+            "key_rev": 1,
+            "identity_key": "Ab0TlwKYWZuqmH4s32K0wXuN7hMBdZ_VkJSTlQWxO892q8GW9XD3XNnjFrmgTXap8ZJv3HmLPyXWMj3gqB2kMkw"
+          },
+          {
+            "key_rev": 2,
+            "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI"
+          }
+        ]
+      },
+      "server": {
+        "key_rev": 2,
+        "history": [
+          {
+            "key_rev": 1,
+            "identity_key": "Ab0TlwKYWZuqmH4s32K0wXuN7hMBdZ_VkJSTlQWxO892q8GW9XD3XNnjFrmgTXap8ZJv3HmLPyXWMj3gqB2kMkw"
+          },
+          {
+            "key_rev": 2,
+            "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI"
+          }
+        ]
+      },
+      "envelope_peer_rev": 9,
+      "expect": "stay PINNED; show \"This message couldn't be decrypted.\" for that message only"
+    },
+    {
+      "kind": "pin_state",
+      "name": "genuine reset: server lists a new revision with a new key",
+      "pin": {
+        "key_rev": 2,
+        "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI",
+        "verified": true,
+        "history": [
+          {
+            "key_rev": 1,
+            "identity_key": "Ab0TlwKYWZuqmH4s32K0wXuN7hMBdZ_VkJSTlQWxO892q8GW9XD3XNnjFrmgTXap8ZJv3HmLPyXWMj3gqB2kMkw"
+          },
+          {
+            "key_rev": 2,
+            "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI"
+          }
+        ]
+      },
+      "server": {
+        "key_rev": 3,
+        "history": [
+          {
+            "key_rev": 1,
+            "identity_key": "Ab0TlwKYWZuqmH4s32K0wXuN7hMBdZ_VkJSTlQWxO892q8GW9XD3XNnjFrmgTXap8ZJv3HmLPyXWMj3gqB2kMkw"
+          },
+          {
+            "key_rev": 2,
+            "identity_key": "AWsXqxgtx7HHJTl_5PquxIFdZuBZCmI0eM3-NPjJ860IDArIMu0ckq46gNw9GLq4qLPj4mbVZJtVeT5Ib1yuxlI"
+          },
+          {
+            "key_rev": 3,
+            "identity_key": "ASn9wQczTxsASuDFYQux8MN0C7hGnnh82r1IheRt5SMPjssZay-_FZ853tWd62DdwZpJ_wKE6sxN1zrzpt9EQ14"
+          }
+        ]
+      },
+      "expect": "accept as CHANGED_UNACKNOWLEDGED (this is also what a key swap looks like; only the safety number tells them apart)"
     }
   ]
 }

@@ -63,6 +63,18 @@ struct Create {
     channel_id: String,
     filename: String,
     length: String,
+    class: Option<String>,
+}
+/// Largest sealed upload: 100 MiB of plaintext plus 16 bytes of tag per 4 MiB chunk and the
+/// 16-byte stream header allowance (DM-V1 7.2).
+const SEALED_MAX: u64 = 104_883_220;
+/// Sealed uploads are opaque ciphertext: nothing to scan. The stream is read to its end so the
+/// store still checks its own chunk integrity, but no verdict about the content is made.
+struct Opaque;
+impl housecall_media::Scanner for Opaque {
+    fn scan(&self, source: &mut dyn std::io::Read) -> std::io::Result<()> {
+        std::io::copy(source, &mut std::io::sink()).map(|_| ())
+    }
 }
 async fn create(
     State(s): State<AppState>,
@@ -73,10 +85,36 @@ async fn create(
         .length
         .parse::<u64>()
         .map_err(|_| bad("length must be a decimal string"))?;
-    member(&s.db.lock().unwrap(), &p.user.id, &v.channel_id)?;
+    let sealed = match v.class.as_deref() {
+        None => false,
+        Some("sealed") => true,
+        Some(_) => return Err(bad("invalid class")),
+    };
+    {
+        let db = s.db.lock().unwrap();
+        member(&db, &p.user.id, &v.channel_id)?;
+        if sealed {
+            if !crate::identity::is_encrypted_dm(&db, &v.channel_id)? {
+                return Err(crate::identity::not_available());
+            }
+            if v.filename != "sealed" {
+                return Err(bad("sealed uploads are named sealed"));
+            }
+            if length > SEALED_MAX {
+                return Err(ApiError(StatusCode::PAYLOAD_TOO_LARGE, "sealed upload too large"));
+            }
+        }
+    }
     let store = store(&s)?;
     let m = blocking(move || store.create(&p.user.id, &v.channel_id, &v.filename, length)).await?;
-    Ok(Json(dto(m)))
+    if sealed {
+        s.db.lock().unwrap().execute("INSERT INTO sealed_uploads(upload_id) VALUES(?)", [m.id.to_string()])?;
+    }
+    let mut out = dto(m);
+    if sealed {
+        out["class"] = json!("sealed");
+    }
+    Ok(Json(out))
 }
 async fn inspect(
     State(s): State<AppState>,
@@ -109,9 +147,22 @@ async fn complete(
     Path(id): Path<Uuid>,
 ) -> ApiResult<Value> {
     let store = store(&s)?;
+    let sealed = crate::identity::is_sealed(&s.db.lock().unwrap(), &id)?;
     let scanner = s.scanner.clone();
-    let m = blocking(move || store.finalize(id, &p.user.id, scanner.as_ref())).await?;
-    Ok(Json(dto(m)))
+    let m = blocking(move || {
+        if sealed {
+            store.finalize(id, &p.user.id, &Opaque)
+        } else {
+            store.finalize(id, &p.user.id, scanner.as_ref())
+        }
+    })
+    .await?;
+    let mut out = dto(m);
+    if sealed {
+        out["scan"] = Value::Null;
+        out["class"] = json!("sealed");
+    }
+    Ok(Json(out))
 }
 async fn remove(
     State(s): State<AppState>,

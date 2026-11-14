@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en" data-accent="lavender">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HC-040 · 14 Sound palette</title>
+<!-- A reference sheet, not a product screen: every sound drawn as a score (time across, pitch up). Open the file
+     in a browser and press a row to hear it. -->
+<link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/b.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/directions/c.css">
+<link rel="stylesheet" href="../../client/src/ui/tokens/accents.css">
+<link rel="stylesheet" href="../../client/src/ui/styles/index.css">
+<link rel="stylesheet" href="hc-040.css">
+<style>
+  /* Mock-only: nothing on this page ships. */
+  .m-sounds { height: 100dvh; overflow: auto; background: var(--hc-stage); padding: var(--hc-space-5); display: flex; flex-direction: column; gap: var(--hc-space-4); }
+  .m-sounds h1 { font-size: var(--hc-text-xl); }
+  .m-sounds > p { color: var(--hc-text-muted); max-width: 44rem; font-size: var(--hc-text-sm); }
+  .m-sounds ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(18.5rem, 1fr)); gap: var(--hc-space-2); }
+  .m-sound { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 132px 20px; align-items: center; column-gap: var(--hc-space-3); min-height: 60px; padding: var(--hc-space-2) var(--hc-space-3) var(--hc-space-2) var(--hc-space-4); border-radius: var(--hc-radius-md); background: var(--hc-surface-raised); box-shadow: var(--hc-lip); text-align: start; }
+  .m-sound > span { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
+  .m-sound small { font-size: var(--hc-text-xs); color: var(--hc-text-muted); }
+  .m-sound svg.m-roll { width: 132px; height: 40px; overflow: visible; }
+  .m-roll path { fill: none; stroke: var(--hc-live); stroke-width: 4; stroke-linecap: round; }
+  .m-roll line { stroke: var(--hc-line-soft); stroke-width: 1; }
+  .m-sound > .hc-icon { color: var(--hc-text-muted); }
+  @media (hover: hover) { .m-sound:hover { background: color-mix(in oklab, var(--hc-text) 6%, var(--hc-surface-raised)); } .m-sound:hover > .hc-icon { color: var(--hc-text); } }
+  @media (max-width: 47.5em) { .m-sounds { padding: var(--hc-space-3); } .m-sounds ul { grid-template-columns: minmax(0, 1fr); } }
+</style>
+<script src="icons.js"></script>
+<script src="mock.js"></script>
+<script src="sounds.js"></script>
+</head>
+<body>
+<div class="hc-root">
+  <main class="m-sounds">
+    <h1>Sound palette</h1>
+    <p>Twelve sounds, all in E major, all quieter than a notification. Up means something began, down means it ended. The ring is a doorbell. Each score is one second wide and three octaves tall.</p>
+    <ul id="list"></ul>
+  </main>
+</div>
+<script>
+  const WHEN = {
+    join: "Someone enters your voice channel", leave: "Someone leaves it", mute: "You mute", unmute: "You unmute",
+    deafen: "You deafen", undeafen: "You undeafen", streamStart: "A stream starts", streamStop: "A stream stops",
+    callFailed: "The call dropped for good", linked: "Device approved, key accepted",
+    ringIncoming: "Incoming call, every 2.4 s", ringOutgoing: "Outgoing call, every 3 s",
+  };
+  const y = f => 37 - Math.log2(f / 165) / 3 * 34;
+  const x = ms => 2 + ms / 1000 * 128;
+  let ctx;
+  document.addEventListener("DOMContentLoaded", () => {
+    const list = document.getElementById("list");
+    for (const [name, sound] of Object.entries(HC_SOUNDS)) {
+      const bars = sound.notes.map(n => `M${x(n.at).toFixed(1)} ${y(n.f).toFixed(1)}L${x(n.at + n.dur * (sound.soft ? 1 : 0.6)).toFixed(1)} ${y(n.to || n.f).toFixed(1)}`).join("");
+      const li = document.createElement("li");
+      li.innerHTML = `<button type="button" class="m-sound"><span><strong>${name}</strong><small>${WHEN[name]}</small></span>
+        <svg class="m-roll" viewBox="0 0 132 40" aria-hidden="true"><line x1="0" y1="39.5" x2="132" y2="39.5"/><path d="${bars}"/></svg>${HC.icon("play")}</button>`;
+      li.firstChild.addEventListener("click", () => { ctx ??= new AudioContext(); hcPlay(ctx, name); });
+      list.appendChild(li);
+    }
+  });
+</script>
+</body>
+</html>
