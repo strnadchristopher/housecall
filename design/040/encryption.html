@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>HC-040 · 11 Encryption surfaces in a DM</title>
 <!-- default = encrypted DM, with the mark where encryption starts · notyet = the other person has not updated
-     changed = their key changed, sending paused · locked = this device has no keys yet
+     changed = their key changed, sending paused (DM-V1 10.2 wording) · rollback = the server shows an older key; it cannot be accepted
+     locked = this device has no keys yet
      safety = the details sheet with the safety number · call = a DM call, "Relayed by the host" -->
-<meta name="hc-states" content="default,notyet,changed,locked,safety,call">
+<meta name="hc-states" content="default,notyet,changed,rollback,locked,safety,call">
 <link rel="stylesheet" href="../../client/src/ui/tokens/tokens.css">
 <link rel="stylesheet" href="../../client/src/ui/tokens/directions/b.css">
 <link rel="stylesheet" href="../../client/src/ui/tokens/directions/c.css">
@@ -25,30 +26,39 @@
       <!-- header, one per state -->
       <div data-show="default safety" data-part="header" style="display:contents" data-opts='{"kind":"dm","name":"mara","meta":"<button type=\"button\" class=\"hc-lockline\"><i data-i=\"lock\"></i><span>End-to-end encrypted</span></button><span class=\"hc-header__bio\">Night shifts this week. Slow to reply before noon.</span>"}'></div>
       <div data-show="notyet" data-part="header" style="display:contents" data-opts='{"kind":"dm","name":"mara","meta":"<button type=\"button\" class=\"hc-lockline\"><i data-i=\"lockOpen\"></i><span>Not encrypted yet</span></button><span class=\"hc-header__bio\">Night shifts this week. Slow to reply before noon.</span>"}'></div>
-      <div data-show="changed" data-part="header" style="display:contents" data-opts='{"kind":"dm","name":"mara","meta":"<button type=\"button\" class=\"hc-lockline is-alert\"><i data-i=\"warn\"></i><span>Security key changed</span></button>"}'></div>
+      <div data-show="changed" data-part="header" style="display:contents" data-opts='{"kind":"dm","name":"mara","meta":"<button type=\"button\" class=\"hc-lockline is-alert\"><i data-i=\"warn\"></i><span>Key changed</span></button>"}'></div>
+      <div data-show="rollback" data-part="header" style="display:contents" data-opts='{"kind":"dm","name":"mara","meta":"<button type=\"button\" class=\"hc-lockline is-alert\"><i data-i=\"warn\"></i><span>Key problem</span></button>"}'></div>
       <div data-show="locked" data-part="header" style="display:contents" data-opts='{"kind":"dm","name":"mara","meta":"<button type=\"button\" class=\"hc-lockline\"><i data-i=\"lock\"></i><span>Locked on this device</span></button>"}'></div>
-      <div data-show="call" data-part="header" style="display:contents" data-opts='{"kind":"dm","name":"mara","nocall":true,"buttons":"<span class=\"hc-header__chat\"><button type=\"button\" class=\"hc-ibtn\" aria-label=\"Chat\"><i data-i=\"chat\"></i></button></span>","meta":"<button type=\"button\" class=\"hc-lockline hc-tipped\" data-tip-open><i data-i=\"house\"></i><span>Relayed by the host</span><span class=\"hc-tip hc-tip--wrap\" role=\"tooltip\" data-below data-side=\"start\">Calls pass through the host&apos;s server and aren&apos;t end-to-end encrypted yet. The host could listen.</span></button>"}'></div>
+      <div data-show="call" data-part="header" style="display:contents" data-opts='{"kind":"dm","name":"mara","nocall":true,"buttons":"<span class=\"hc-header__chat\"><button type=\"button\" class=\"hc-ibtn\" aria-label=\"Chat\"><i data-i=\"chat\"></i></button></span>","meta":"<button type=\"button\" class=\"hc-lockline hc-tipped\" data-tip-open><i data-i=\"house\"></i><span>Relayed by the host</span><span class=\"hc-tip hc-tip--wrap\" role=\"tooltip\" data-below data-side=\"start\">Calls go through the host&apos;s server, which could listen. Only messages and files in this DM are end-to-end encrypted.</span></button>"}'></div>
 
       <!-- timeline -->
       <div class="hc-messages" data-hide="call"><ol>
-        <li class="hc-msg"><p class="hc-day">Yesterday</p></li>
-        <li class="hc-msg"><div class="hc-msg__gutter"><span data-av="mara"></span></div><div class="hc-msg__main"><p class="hc-msg__head"><strong>mara</strong><time>6:12 PM</time></p><div class="hc-md"><p>did you get the spare key back from june</p></div></div></li>
-        <li class="hc-msg"><div class="hc-msg__gutter"><span data-av="theo"></span></div><div class="hc-msg__main"><p class="hc-msg__head"><strong>theo</strong><time>6:15 PM</time></p><div class="hc-md"><p>Not yet. Friday.</p></div></div></li>
-        <li class="hc-mark" role="note" data-show="default safety changed locked"><i data-i="lock"></i>Messages from here on are end-to-end encrypted</li>
+        <li class="hc-msg" data-hide="changed"><p class="hc-day">Yesterday</p></li>
+        <li class="hc-msg" data-hide="changed"><div class="hc-msg__gutter"><span data-av="mara"></span></div><div class="hc-msg__main"><p class="hc-msg__head"><strong>mara</strong><time>6:12 PM</time><span class="hc-msg__plain" data-hide="notyet">Not encrypted</span></p><div class="hc-md"><p>did you get the spare key back from june</p></div></div></li>
+        <li class="hc-msg" data-hide="changed"><div class="hc-msg__gutter"><span data-av="theo"></span></div><div class="hc-msg__main"><p class="hc-msg__head"><strong>theo</strong><time>6:15 PM</time><span class="hc-msg__plain" data-hide="notyet">Not encrypted</span></p><div class="hc-md"><p>Not yet. Friday.</p></div></div></li>
+        <li class="hc-mark" role="note" data-show="default safety changed locked rollback"><i data-i="lock"></i>Messages below are end-to-end encrypted.</li>
         <li class="hc-msg"><p class="hc-day">Today</p></li>
         <li class="hc-msg" data-hide="locked"><div class="hc-msg__gutter"><span data-av="mara"></span></div><div class="hc-msg__main"><p class="hc-msg__head"><strong>mara</strong><time>8:41 PM</time></p><div class="hc-md"><p>ok the door code is the year we moved in, then a 4</p></div></div></li>
         <li class="hc-msg" data-hide="locked"><div class="hc-msg__gutter"><span data-av="theo"></span></div><div class="hc-msg__main"><p class="hc-msg__head"><strong>theo</strong><time>8:42 PM</time></p><div class="hc-md"><p>Got it. Deleting this after Friday.</p></div></div></li>
         <li class="hc-msg" data-show="locked"><div class="hc-msg__gutter"><span data-av="mara"></span></div><div class="hc-msg__main"><p class="hc-msg__head"><strong>mara</strong><time>8:41 PM</time></p><p class="hc-sealed"><i data-i="lock"></i>Encrypted message</p></div></li>
         <li class="hc-msg" data-show="locked"><div class="hc-msg__gutter"><span data-av="theo"></span></div><div class="hc-msg__main"><p class="hc-msg__head"><strong>theo</strong><time>8:42 PM</time></p><p class="hc-sealed"><i data-i="lock"></i>Encrypted message</p></div></li>
         <li class="hc-mark is-alert" role="note" data-show="changed"><i data-i="warn"></i>mara's security key changed · 8:52 PM</li>
+        <li class="hc-mark" role="note" data-show="changed">3 messages are waiting until you check mara's new security key.</li>
       </ol></div>
 
       <!-- above the composer -->
       <section class="hc-keybanner is-alert" role="alert" data-show="changed">
         <i data-i="warn"></i>
         <strong>mara's security key changed</strong>
-        <p>This happens when someone resets their keys or sets up again. It can also mean someone is in the middle. If you weren't expecting it, ask mara another way before you carry on.</p>
-        <div class="hc-keybanner__actions"><button type="button" class="hc-btn">Compare safety number</button><button type="button" class="hc-btn hc-btn--text">Accept new key</button></div>
+        <p>This can happen if they reset their key or got a new device without their recovery key. It can also mean someone is trying to read your messages. Compare safety numbers with them before you continue.</p>
+        <div class="hc-keybanner__actions"><button type="button" class="hc-btn">Compare safety numbers</button><button type="button" class="hc-btn hc-btn--text">I understand</button></div>
+      </section>
+      <!-- KEY_ROLLBACK (DM-V1 10.2, R-3): the person cannot accept it. One action only. -->
+      <section class="hc-keybanner is-alert" role="alert" data-show="rollback">
+        <i data-i="warn"></i>
+        <strong>The server is showing an older security key for mara</strong>
+        <p>You can't send messages until this is fixed. This can mean the server is broken, or that someone is trying to read your messages.</p>
+        <div class="hc-keybanner__actions"><button type="button" class="hc-btn">Compare safety numbers</button></div>
       </section>
       <section class="hc-keybanner" data-show="locked">
         <i data-i="key"></i>
@@ -59,13 +69,13 @@
 
       <form class="hc-composer" data-hide="call">
         <p class="hc-composer__note" data-show="notyet"><i data-i="lockOpen"></i>Not encrypted yet. mara hasn't updated Housecall.</p>
-        <p class="hc-composer__note" data-show="changed"><i data-i="info"></i>Sending is paused until you accept the new key.</p>
+        <p class="hc-composer__note" data-show="changed"><i data-i="info"></i>Sending is paused until you check the new key.</p>
         <p class="hc-composer__note" data-show="locked"><i data-i="info"></i>Sending is paused until this device has your keys.</p>
         <div class="hc-composer__row">
-          <button type="button" class="hc-ibtn" aria-label="Attach file" data-hide="changed locked"><i data-i="plus"></i></button>
-          <button type="button" class="hc-ibtn" aria-label="Attach file" disabled data-show="changed locked"><i data-i="plus"></i></button>
-          <textarea rows="1" placeholder="Message mara" aria-label="Message" data-hide="changed locked"></textarea>
-          <textarea rows="1" placeholder="Message mara" aria-label="Message" disabled data-show="changed locked"></textarea>
+          <button type="button" class="hc-ibtn" aria-label="Attach file" data-hide="changed locked rollback"><i data-i="plus"></i></button>
+          <button type="button" class="hc-ibtn" aria-label="Attach file" disabled data-show="changed locked rollback"><i data-i="plus"></i></button>
+          <textarea rows="1" placeholder="Message mara" aria-label="Message" data-hide="changed locked rollback"></textarea>
+          <textarea rows="1" placeholder="Message mara" aria-label="Message" disabled data-show="changed locked rollback"></textarea>
           <button type="button" class="hc-ibtn" aria-label="Emoji"><i data-i="emoji"></i></button>
           <button type="button" class="hc-ibtn hc-composer__send" aria-label="Send" disabled><i data-i="send"></i></button>
         </div>
@@ -96,7 +106,7 @@
   <div class="hc-sheet" role="dialog" aria-labelledby="sn-title">
     <span class="hc-sheet__grip"></span>
     <div class="hc-sheet__head"><h2 id="sn-title">End-to-end encrypted</h2><button type="button" class="hc-ibtn" aria-label="Close"><i data-i="close"></i></button></div>
-    <p class="hc-sheet__text">Only you and mara can read these messages. The host carries them sealed, and can still see that you two write to each other and when.</p>
+    <p class="hc-sheet__text">Only you and mara can read messages and files here. The host can see that you talk, when, and how much. This encryption has been attack-tested by us and not audited by an outside firm.</p>
     <div class="hc-safety__who"><span data-av="theo" data-size="xs"></span><span data-av="mara" data-size="xs"></span>Safety number for you and mara</div>
     <div class="hc-safety__grid" role="img" aria-label="Safety number">
       <span>30418</span><span>77205</span><span>19643</span><span>50872</span>
@@ -104,7 +114,6 @@
       <span>75539</span><span>21084</span><span>60972</span><span>13458</span>
     </div>
     <p class="hc-sheet__text">Compare it with mara in person or on a call. If both screens show the same numbers, nobody is in the middle.</p>
-    <p class="hc-note"><i data-i="info"></i><span>We attack-tested this encryption ourselves. No outside firm has audited it yet.</span></p>
     <div class="hc-sheet__actions"><button type="button" class="hc-btn hc-btn--primary">Done</button><button type="button" class="hc-btn">Copy number</button></div>
   </div>
 </div>

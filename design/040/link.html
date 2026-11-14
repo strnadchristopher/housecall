@@ -6,12 +6,13 @@
 <meta name="robots" content="noindex">
 <meta name="referrer" content="no-referrer">
 <title>Finish logging in · Housecall</title>
-<!-- HC-040 section 10.6. This file IS the page the server serves at /link: plain HTML and CSS, one small
-     script, no framework, no external request. The colours are the Doorway tokens copied by value, because
-     the page is served without the client bundle. mockup states: default = opened from a scanned code,
-     missing = opened with no code after the # -->
+<!-- HC-040 section 10.6, LINK-V1 section 3. This file IS the static page shipped as link/index.html, with the
+     external link.js beside it (the CSP forbids inline script). No framework, no request. The colours are the
+     Doorway tokens copied by value, because the page loads without the client bundle. "Open in Housecall" is
+     the fixed text housecall://link-scan: the code is never passed to the app (R-0).
+     mockup states: default = opened from a scanned code, missing = no code or a malformed one after the # -->
 <meta name="hc-states" content="default,missing">
-<meta name="hc-hash" content="hcl1.9f2c41d07a.Zk3vQ8mT1xYb.MCowBQYDK2VuAyEA">
+<meta name="hc-hash" content="hcl1.8225e96943baf1a9fa848d610f40fac5.Md1wbrNp3R2nuCeW2AKVb9CvszgTqK50gmnqdJ86Eg0.q0Jx3mT1xYbZk3vQ8mPp7sLd2HcN5uVw9aEeRt6yKi0">
 <style>
   :root {
     color-scheme: dark light;
@@ -30,7 +31,7 @@
   }
   main { width: min(100%, 22.5rem); display: flex; flex-direction: column; gap: 12px; }
   svg { width: 56px; height: 56px; margin-bottom: 12px; }
-  h1 { margin: 0; font-size: 1.625rem; line-height: 1.15; letter-spacing: -0.012em; }
+  h1 { margin: 0; font-size: 1.625rem; line-height: 1.15; letter-spacing: -0.012em; text-wrap: balance; }
   p { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
   p strong { color: var(--text); }
   .actions { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; }
@@ -40,7 +41,10 @@
   }
   a.button.primary { background: var(--accent); color: var(--on-accent); }
   a.button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-  small { display: block; padding-top: 12px; font-size: 0.875rem; color: var(--muted); }
+  .lead { padding-top: 8px; }
+  /* Each caption belongs to the button above it: close under it, then a wider step before the next button. */
+  small { display: block; padding: 0 2px 12px; font-size: 0.875rem; color: var(--muted); }
+  small:last-child { padding-bottom: 0; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -54,33 +58,22 @@
 
   <div id="ok">
     <h1>Finish logging in</h1>
-    <p style="padding-top:8px">You scanned a login code for <strong id="host">this server</strong>. Open it in Housecall to carry on.</p>
+    <p class="lead">You scanned a login code for <strong id="host">this server</strong>.</p>
     <div class="actions">
-      <a class="button primary" id="app" href="housecall://link">Open in Housecall</a>
-      <a class="button" id="web" href="/">Continue in this browser</a>
+      <a class="button primary" id="app" href="housecall://link-scan">Open in Housecall</a>
+      <small>Then scan this code again from inside the app.</small>
+      <a class="button" id="web" href="/">Continue in browser</a>
+      <small>A browser loads Housecall from this server, so whoever runs it could keep a copy of your security key. The app doesn't have this risk.</small>
     </div>
-    <small>Nothing is logged in until you say yes on the device that showed the code. Didn't scan one yourself? Close this page.</small>
   </div>
 
   <div id="missing" hidden>
-    <h1>This link is missing its code</h1>
-    <p style="padding-top:8px">Scan the QR code again from Housecall, or point your phone's camera at it.</p>
+    <h1>This isn't a Housecall login code</h1>
+    <p class="lead">Open Housecall, choose Log in with QR code, and scan the code from there.</p>
   </div>
 
-  <noscript><p>This page needs JavaScript to pass the code on. Open Housecall and choose Log in with QR code instead.</p></noscript>
+  <noscript><p>Open Housecall, choose Log in with QR code, and scan the code from there.</p></noscript>
 </main>
-<script>
-  // The code lives after the # and never reaches the server. It is handed to the app or the web client as is.
-  (function () {
-    var code = location.hash.slice(1);
-    var ok = /^hcl1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(code);
-    document.getElementById("ok").hidden = !ok;
-    document.getElementById("missing").hidden = ok;
-    if (!ok) return;
-    document.getElementById("host").textContent = location.host || "this server";
-    document.getElementById("app").href = "housecall://link?c=" + encodeURIComponent(code) + "&h=" + encodeURIComponent(location.origin);
-    document.getElementById("web").href = "/#link=" + code;
-  })();
-</script>
+<script src="link.js"></script>
 </body>
 </html>
