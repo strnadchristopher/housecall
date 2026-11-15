@@ -146,14 +146,16 @@ impl Player {
         let asset = Uuid::new_v4().to_string();
         {
             let db = self.db.lock().unwrap();
-            if let Err(error) = db.execute("INSERT INTO dj_assets(id,channel_id,media_id,state,title,source,intro_ms,duration_ms,bytes,created_at) VALUES(?1,?2,?3,'preparing',?4,?5,?6,?7,67108864,?8)", params![asset, channel, metadata.id.to_string(), track.title, track.source, intro_ms, song_ms + intro_ms, now()]) { let _ = self.store.delete(metadata.id, OWNER); return Err(error.into()); }
+            // The duration limits above keep both values within SQLite's signed integer range.
+            if let Err(error) = db.execute("INSERT INTO dj_assets(id,channel_id,media_id,state,title,source,intro_ms,duration_ms,bytes,created_at) VALUES(?1,?2,?3,'preparing',?4,?5,?6,?7,67108864,?8)", params![asset, channel, metadata.id.to_string(), track.title, track.source, intro_ms as i64, (song_ms + intro_ms) as i64, now()]) { let _ = self.store.delete(metadata.id, OWNER); return Err(error.into()); }
         }
         let encoded = self.encode(metadata.id, &intro, &song).await;
         match encoded {
             Ok(bytes) => {
+                // encode caps output at MAX_OUTPUT, well within SQLite's signed range.
                 self.db.lock().unwrap().execute(
                     "UPDATE dj_assets SET state='ready',bytes=?1 WHERE id=?2",
-                    params![bytes, asset],
+                    params![bytes as i64, asset],
                 )?;
                 Ok(Prepared {
                     id: asset,
@@ -472,7 +474,7 @@ async fn enqueue(
         let (count, bytes): (i64, u64) = db.query_row(
             "SELECT COUNT(*),COALESCE(SUM(bytes),0) FROM dj_assets",
             [],
-            |r| Ok((r.get(0)?, r.get(1)?)),
+            |r| Ok((r.get(0)?, nonnegative_integer(r, 1)?)),
         )?;
         if count >= MAX_ASSETS || bytes + MAX_OUTPUT > CACHE_BYTES {
             return Err(ApiError(
@@ -581,11 +583,15 @@ fn discard(player: &Player, asset: &str) {
         let _ = player.store.delete(id, OWNER);
     }
 }
+fn nonnegative_integer(row: &rusqlite::Row<'_>, index: usize) -> rusqlite::Result<u64> {
+    let value: i64 = row.get(index)?;
+    u64::try_from(value).map_err(|_| rusqlite::Error::IntegralValueOutOfRange(index, value))
+}
 fn descriptor(db: &Connection, channel: &str, snapshot: &Snapshot) -> Result<Value, ApiError> {
     let Some(id) = snapshot.playback.media_id.as_ref() else {
         return Ok(json!({"track":null,"activity":snapshot}));
     };
-    let (intro,duration):(u64,u64)=db.query_row("SELECT intro_ms,duration_ms FROM dj_assets WHERE id=?1 AND channel_id=?2 AND state='ready'",params![id,channel],|r|Ok((r.get(0)?,r.get(1)?))).optional()?.ok_or(ApiError(StatusCode::CONFLICT,"current DJ track has no prepared audio"))?;
+    let (intro,duration):(u64,u64)=db.query_row("SELECT intro_ms,duration_ms FROM dj_assets WHERE id=?1 AND channel_id=?2 AND state='ready'",params![id,channel],|r|Ok((nonnegative_integer(r,0)?,nonnegative_integer(r,1)?))).optional()?.ok_or(ApiError(StatusCode::CONFLICT,"current DJ track has no prepared audio"))?;
     Ok(
         json!({"track":{"id":id,"intro_ms":intro,"duration_ms":duration,"audio_url":format!("/api/channels/{channel}/dj/audio/{id}")},"activity":snapshot}),
     )
@@ -867,6 +873,25 @@ mod tests {
         sync::atomic::{AtomicBool, Ordering},
     };
     use tower::ServiceExt;
+    #[test]
+    fn sqlite_unsigned_values_preserve_range_checks() {
+        let db = Connection::open_in_memory().unwrap();
+        for value in [0, 60_000, 960_000, i64::MAX] {
+            assert_eq!(
+                db.query_row("SELECT ?1", [value], |row| nonnegative_integer(row, 0))
+                    .unwrap(),
+                value as u64
+            );
+        }
+        assert!(matches!(
+            db.query_row("SELECT -1", [], |row| nonnegative_integer(row, 0)),
+            Err(rusqlite::Error::IntegralValueOutOfRange(0, -1))
+        ));
+        assert!(matches!(
+            db.query_row("SELECT 'invalid'", [], |row| nonnegative_integer(row, 0)),
+            Err(rusqlite::Error::InvalidColumnType(..))
+        ));
+    }
     struct CleanFixture;
     impl Scanner for CleanFixture {
         fn scan(&self, input: &mut dyn Read) -> std::io::Result<()> {
@@ -1461,7 +1486,7 @@ mod tests {
             .query_row(
                 "SELECT SUM(bytes) FROM dj_assets WHERE state='ready'",
                 [],
-                |r| r.get(0),
+                |r| nonnegative_integer(r, 0),
             )
             .unwrap();
         assert!(bytes > 1000);
