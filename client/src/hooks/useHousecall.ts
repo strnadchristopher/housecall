@@ -71,7 +71,7 @@ export function useHousecall() {
     if (account.current) await endSecuritySession(api.serverOrigin(), account.current.user.id);
     const stored = storedOrigin.current;
     storedOrigin.current = undefined;
-    if (stored) await secureSession.remove(stored);
+    if (stored !== undefined) await secureSession.remove(stored);
     api.responseObserver = undefined; api.requestGuard = undefined; api.authenticate(); account.current = undefined;
     setAuth(undefined); setSessionId('');
     setMessages([]);
@@ -190,8 +190,8 @@ export function useHousecall() {
       device_name: deviceName(),
     });
     await establish(result);
-    // Native builds keep the session in OS secure storage (web: no-op).
-    if (origin && (await secureSession.set(origin, { token: result.token, device_key: result.device_key, username: result.user.username, expires_at: result.expires_at })))
+    // Native: OS secure storage. Web: sealed in IndexedDB ("" = this page's origin).
+    if (await secureSession.set(origin, { token: result.token, device_key: result.device_key, username: result.user.username, expires_at: result.expires_at }))
       storedOrigin.current = origin;
   };
   /**
@@ -343,7 +343,7 @@ export function useHousecall() {
     acceptLinked: async (origin: string, result: Auth) => {
       await clearNativePush();
       api.configure(origin); await establish(result);
-      if ("__TAURI_INTERNALS__" in window) storedOrigin.current = origin;
+      if (await secureSession.set(origin, { token: result.token, device_key: result.device_key, username: result.user.username, expires_at: result.expires_at })) storedOrigin.current = origin;
     },
     authenticate,
     restore,

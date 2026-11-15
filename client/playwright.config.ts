@@ -2,7 +2,9 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch:
-    process.env.HOUSECALL_TEST_PHASE4 === "1"
+    process.env.HOUSECALL_TEST_UIFIX === "1"
+      ? "**/uifix.spec.ts"
+      : process.env.HOUSECALL_TEST_PHASE4 === "1"
       ? "**/phase4.spec.ts"
       : process.env.HOUSECALL_TEST_SECURITY === "1"
       ? "**/security.spec.ts"

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CallTransport, IncomingCall } from "../../core/call";
+import { initialConversation } from '../../state/initialConversation';
 import { ApiError } from "../../transport/api";
 import { shareStreamId } from "../../transport/shareQuality";
 import { RING_FRESH_MS } from "../../state/callEvents";
@@ -43,6 +44,23 @@ export function useLegacyCall(c: Housecall) {
   const [rooms, setRooms] = useState<VoiceRooms>({});
   const [incoming, setIncoming] = useState<IncomingCall>();
   const [ringing, setRinging] = useState<{ channelId: string; declined: boolean; since: number }>();
+  const lastChat = useRef<string | undefined>(undefined);
+  const returnFromVoice = useRef<{ room: string; chat?: string; started: boolean } | undefined>(undefined);
+  const currentConversation = c.channels.find(channel => channel.id === c.channel);
+  if (currentConversation && currentConversation.kind !== 'voice') lastChat.current = currentConversation.id;
+  // A voice room replaces the selected conversation. Ending media used to only reset
+  // the call, stranding the user in Lounge. Handle transport-ended calls as well as Leave.
+  useEffect(() => {
+    const previous = returnFromVoice.current;
+    if (!previous) return;
+    if (status.phase === 'connecting' || status.phase === 'live') { previous.started = true; return; }
+    if (status.reconnecting || status.phase === 'idle' && !previous.started) return;
+    returnFromVoice.current = undefined;
+    if (!c.auth || c.channel !== previous.room) return; // Don't steal navigation done during the call.
+    const chats = c.channels.filter(channel => channel.kind !== 'voice');
+    const target = initialConversation(chats, c.servers, previous.chat);
+    if (target) void c.select(target).catch(() => {});
+  }, [status.phase, status.reconnecting, c.channel, c.auth, c.channels, c.servers]);
 
   const reset = () => { setMuted(false); setDeafened(false); setCamera(false); setChannelId(undefined); setJoinedAt(undefined); setPeers([]); setRinging(undefined); };
   useEffect(() => () => voice.close(), [voice]);
@@ -256,10 +274,15 @@ export function useLegacyCall(c: Housecall) {
 
   /** Joins the conversation's call; resolves to whether the join worked. */
   const joinCall = async (conversationId: string): Promise<boolean> => {
+    const previousChat = returnFromVoice.current?.chat ?? lastChat.current;
+    returnFromVoice.current = undefined; // A room switch is not a hang-up.
     // Leave the current call properly (server DELETE) before joining another.
     if (status.phase !== "idle" && channelId && (channelId !== conversationId || status.phase === "failed")) {
       try { await voice.leave(); } catch { /* the join below closes any remainder */ }
     }
+    if (c.channels.find(channel => channel.id === conversationId)?.kind === 'voice')
+      returnFromVoice.current = { room: conversationId, chat: previousChat, started: false };
+    else returnFromVoice.current = undefined;
     setError(""); setMuted(false); setDeafened(false); setCamera(false); setPeers([]); setRinging(undefined);
     setChannelId(conversationId);
     try {

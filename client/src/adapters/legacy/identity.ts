@@ -87,11 +87,14 @@ export function useLegacyIdentity(
   // Native cold start: reopen the session kept in secure storage, then open the last chat.
   const restoreStarted = useRef("");
   useEffect(() => {
-    if (!isNative() || !host.restoring || !host.origin || restoreStarted.current === host.origin) return;
-    restoreStarted.current = host.origin;
+    // Web: host-0 is this page's own origin (""), so an empty origin is valid there.
+    if (!host.restoring || (isNative() && !host.origin) || restoreStarted.current === (host.origin || "web")) return;
+    restoreStarted.current = host.origin || "web";
     const origin = host.origin;
-    void c.restore(origin, name => lastConversation(origin, name)).then(result => {
-      if (result === "ok") { if (c.auth) remember({ origin, username: c.auth.user.username }); hosts.finishRestore(host.id); }
+    // The API accepts "" for same-origin web, but remembered account hints use
+    // the canonical page origin, just like sign-in and the conversation writer.
+    void c.restore(origin, name => lastConversation(hostOrigin, name)).then(result => {
+      if (result === "ok") { if (c.auth) remember({ origin: hostOrigin, username: c.auth.user.username }); hosts.finishRestore(host.id); }
       else if (host.added) hosts.remove(host.id);
       else hosts.finishRestore(host.id);
     });

@@ -12,7 +12,9 @@ export function DmSecurityLabel() {
   useEffect(() => { request.current++; setOpen(false); setNumber(undefined); }, [chat.current?.id, identity.me?.id]);
   const [number, setNumber] = useState<{ number: string; verified: boolean; state: string }>();
   const dm = chat.dmSecurity;
-  if (!chat.current) return null;
+  // Channels and group DMs aren't end-to-end encrypted by design; Settings → Security explains
+  // that once. Repeating it under every group name crowded the title, so only DMs get a line.
+  if (!chat.current || !dm) return null;
   const name = chat.current.name;
   const label = !dm ? C.label.group : dm.label === 'key-problem' ? C.label.problem : dm.label === 'key-changed' ? C.label.changed : dm.label === 'end-to-end-encrypted' ? C.label.encrypted : dm.label === 'encrypted-in-browser' ? C.label.browser : dm.label === 'not-encrypted-yet' ? C.label.notYet : security?.status?.keyRev ? identity.native ? C.label.locked : C.label.lockedBrowser : C.label.none;
   const show = () => { const generation = ++request.current; setOpen(true); setNumber(undefined); void security?.act(async () => { const result = await chat.safetyNumber?.(); if (generation === request.current) setNumber(result); }); };

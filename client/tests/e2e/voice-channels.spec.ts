@@ -1,5 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 import { signIn } from "./helpers";
+import { mkdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+const evidence = join(homedir(), '.local/state/housecall-takeover-20261113/uifix-evidence');
 
 const password = "synthetic channel password 123";
 const setupToken = "test-setup-token-at-least-32-characters";
@@ -13,9 +17,17 @@ test("voice channels are their own group; one click joins, everyone sees who is 
   const invitation = await (await request.post("/api/invites", { headers: headers(owner), data: { expires_in_seconds: 300 } })).json();
   expect((await request.post("/api/invites/accept", { data: { token: invitation.token, username: "vc_bob", password, device_name: "vc fixture" } })).ok()).toBeTruthy();
 
+  const returning = await (await request.post('/api/channels', { headers: headers(owner), data: { name: 'Before Lounge', kind: 'channel' } })).json();
   const open = async (name: string): Promise<Page> => {
     const context = await browser.newContext({ permissions: ["camera", "microphone"] });
     const page = await context.newPage();
+    await page.addInitScript(() => {
+      const Native = window.RTCPeerConnection, connections: RTCPeerConnection[] = [];
+      Object.assign(window, { fixtureConnections: connections });
+      window.RTCPeerConnection = class extends Native {
+        constructor(configuration?: RTCConfiguration) { super(configuration); connections.push(this); }
+      };
+    });
     page.setDefaultTimeout(20000);
     await page.goto("/");
     await signIn(page, name, password);
@@ -34,7 +46,11 @@ test("voice channels are their own group; one click joins, everyone sees who is 
   await expect(ownerPage.getByRole("button", { name: "Create voice channel" })).toBeVisible();
   await expect(bob.getByRole("button", { name: "Create voice channel" })).toHaveCount(0);
 
-  // One click joins and rings nobody.
+  // One click joins and rings nobody. Remember a non-default conversation.
+  await ownerPage.getByRole('button', { name: 'Open Before Lounge', exact: true }).click();
+  await expect(ownerPage.locator('.hc-header h1')).toHaveText('Before Lounge');
+  const previous = await ownerPage.locator('.hc-header h1').innerText();
+  const bobPrevious = await bob.locator('.hc-header h1').innerText();
   await ownerPage.getByRole("button", { name: "Open Lounge", exact: true }).click();
   await expect(ownerPage.getByTestId("call-stage")).toHaveAttribute("data-phase", "live", { timeout: 30000 });
   await expect(bob.getByTestId("incoming-call")).toHaveCount(0);
@@ -68,6 +84,17 @@ test("voice channels are their own group; one click joins, everyone sees who is 
   // Leaving empties the row for everyone.
   await ownerPage.getByTestId("call-bar").getByRole("button", { name: "Leave", exact: true }).first().click();
   await expect(bob.getByLabel("1 inside")).toBeVisible({ timeout: 15000 });
+  await mkdir(evidence, { recursive: true });
+  await ownerPage.setViewportSize({ width: 390, height: 844 });
+  await expect(ownerPage.locator('.hc-header h1')).toHaveText(previous);
+  await expect(ownerPage.getByTestId('screen-composer')).toBeVisible();
+  await ownerPage.screenshot({ path: `${evidence}/${process.env.HOUSECALL_UIFIX_BEFORE === '1' ? 'before' : 'after'}-voice-leave.png` });
+  await ownerPage.setViewportSize({ width: 1280, height: 800 });
+  // Last participant leaving on a phone returns to its previous conversation too.
+  await bob.setViewportSize({ width: 390, height: 844 });
+  await bob.getByTestId('call-bar').getByRole('button', { name: 'Leave', exact: true }).first().click();
+  await expect(bob.locator('.hc-header h1')).toHaveText(bobPrevious);
+  await expect(bob.getByTestId('screen-composer')).toBeVisible();
 
   // The owner creates a voice channel from the plus button; it arrives for everyone.
   await ownerPage.getByRole("button", { name: "Create voice channel" }).click();
@@ -83,4 +110,17 @@ test("voice channels are their own group; one click joins, everyone sees who is 
   await ownerPage.getByTestId("screen-settings").getByRole("button", { name: "About", exact: true }).click();
   await expect(ownerPage.getByTestId("client-version")).toHaveText(/^\d+\.\d+\.\d+/);
   await expect(ownerPage.getByTestId("server-version")).toHaveText(/^\d+\.\d+\.\d+/);
+  await ownerPage.getByTestId('screen-settings').getByRole('button', { name: 'Close', exact: true }).click();
+  // A closed real peer connection exercises the transport-ended path, without clicking Leave.
+  await ownerPage.getByRole('button', { name: 'Open Lounge', exact: true }).click();
+  await expect(ownerPage.locator('.hc-stage.is-full')).toHaveAttribute('data-phase', 'live', { timeout: 30000 });
+  await ownerPage.evaluate(() => {
+    const connections = (window as any).fixtureConnections as RTCPeerConnection[];
+    const connection = connections.find(pc => pc.connectionState === 'connected')!;
+    connection.close(); connection.dispatchEvent(new Event('connectionstatechange'));
+  });
+  await expect(ownerPage.locator('.hc-header h1')).toHaveText(previous);
+  await ownerPage.getByTestId('call-dock').getByRole('button', { name: 'Leave', exact: true }).click();
+  await expect(ownerPage.locator('.hc-header h1')).toHaveText(previous);
+  for (const page of [ownerPage, bob]) await page.context().close();
 });

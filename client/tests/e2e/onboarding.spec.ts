@@ -64,23 +64,30 @@ test("onboarding: welcome, code sign-up into general, return to last chat, signe
   await bob.getByRole("button", { name: "Join", exact: true }).click();
   await expect(title(bob)).toHaveText("general");
 
-  // A second channel, opened, then a cold reload: Log in is prefilled and reopens that channel.
+  // Web cold reload restores the sealed session. Explicit sign-out still offers the remembered account.
   await owner.request.post(`${api}/api/channels`, { headers, data: { name: "random", kind: "channel", member_ids: [] } });
   await owner.reload();
+  await expect(title(owner)).toHaveText('general');
+  await expect(owner.locator('input[type="password"]')).toHaveCount(0);
+  await owner.getByRole('button', { name: 'Server settings', exact: true }).click();
+  await owner.getByTestId('screen-settings').getByRole('button', { name: 'Profile', exact: true }).click();
+  await owner.getByRole('button', { name: 'Sign out', exact: true }).click();
   const signInScreen = owner.getByTestId("screen-sign-in");
   await expect(signInScreen).toBeVisible();
   await expect(signInScreen.getByTestId("sign-in-account")).toHaveText("owner");
   await expect(signInScreen.getByLabel("Username", { exact: true })).toHaveCount(0);
   await owner.getByLabel("Password", { exact: true }).fill(password);
+  const loginResponse = owner.waitForResponse(r => r.url().endsWith('/api/login') && r.request().method() === 'POST');
   await signInScreen.getByRole("button", { name: "Log in", exact: true }).click();
+  const renewed = await (await loginResponse).json();
+  headers = { authorization: `Bearer ${renewed.token}`, 'x-device-key': renewed.device_key };
   await expect(title(owner)).toHaveText("general");
   await owner.getByRole("button", { name: "Menu" }).click();
   await owner.getByRole("button", { name: "Open random" }).click();
   await expect(title(owner)).toHaveText("random");
   await owner.reload();
-  await owner.getByLabel("Password", { exact: true }).fill(password);
-  await owner.getByTestId("screen-sign-in").getByRole("button", { name: "Log in", exact: true }).click();
   await expect(title(owner)).toHaveText("random");
+  await expect(owner.locator('input[type="password"]')).toHaveCount(0);
 
   // Signed-in redeem: bob pastes a code for another server on the same host and is let straight in.
   const club = await (await owner.request.post(`${api}/api/servers`, { headers, data: { name: "Book club" } })).json();

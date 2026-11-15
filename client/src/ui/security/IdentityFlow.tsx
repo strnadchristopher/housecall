@@ -116,10 +116,13 @@ export function IdentityFlow() {
     else setStep(s?.canEnterRecovery() ? 'import' : 'browser-warning');
   };
   const nativeOnly = !identity.native;
+  // First-run creation is a guided flow, not a dismissible settings sheet. Previously
+  // Back and Cancel both called security.close(), silently dropping a new install into chat.
+  const creating = security.bootstrap && identity.native && (status?.phase === 'needs-identity' || status?.phase === 'pending-confirmation' || ['slides', 'words', 'check', 'publish'].includes(step));
   const slides = [C.security.slide1, C.security.slide2, C.security.slide3];
   const count = typed.trim() ? typed.trim().split(/\s+/).length : 0;
   const title = step === 'slides' ? slides[slide].title : step === 'words' || step === 'view' ? C.recovery.title : step === 'check' ? C.recovery.checkTitle : step === 'import' ? C.recovery.enterTitle : step === 'browser-warning' ? C.link.new.browserTitle : step === 'reset' || step === 'reset-password' ? C.security.resetTitle : step === 'replace' ? C.security.replaceTitle : step === 'view-password' ? C.security.viewAsk : status?.phase === 'collision' ? C.keys.collide(new URL(security.origin).host) : status?.phase === 'ready' || status?.phase === 'recovery-ahead' ? C.security.title : status?.phase === 'pending-confirmation' ? C.recovery.title : status?.phase === 'needs-identity' && identity.native ? C.recovery.newThing : C.keys.getTitle;
-  return <Sheet open={open} onClose={security.close} title={title} sensitive testId="security-flow" fullScreen={security.bootstrap} dismissible={!(security.bootstrap && ['slides', 'words', 'check', 'publish'].includes(step))}>
+  return <Sheet open={open} onClose={security.close} title={title} sensitive testId="security-flow" fullScreen={security.bootstrap} dismissible={!creating}>
     <ErrorLine text={security.error === 'Current recovery key required' ? C.security.viewReplaced : security.error} />
     {identity.native && security.error === 'Secure storage unavailable' && <><p>{C.security.storageFailed}</p><Button onClick={security.memoryOnly}>{C.security.memoryChoice}</Button></>}
     {!status && <><p role="status">{security.error ? C.security.failed : C.common.loading}</p><Button onClick={() => run(security.refresh)}>{C.common.retry}</Button></>}
@@ -168,12 +171,12 @@ export function IdentityFlow() {
     </>}
     {step === 'check' && positions && <form className="hc-stack" onSubmit={e => { e.preventDefault(); run(async () => {
       if (!await s!.confirmWords(answers)) { setWordErrors(s!.confirmationFailures()); return; }
-      setStep('publish'); await s!.publish(password || undefined); await security.synchronize(password || undefined); setPassword(''); setAnswers(['', '']); setStep('home');
+      setStep('publish'); await s!.publish(password || undefined); await security.synchronize(password || undefined); setPassword(''); setAnswers(['', '']); setStep('home'); if (security.bootstrap) security.close();
     }); }}>
       <p>{C.recovery.checkBody(...positions)}</p><div className="hc-recovery__pair">{positions.map((position, i) => <div key={position}><Field label={C.recovery.word(position)} autoComplete="off" autoCapitalize="none" spellCheck={false} value={answers[i]} onChange={e => setAnswers(i === 0 ? [e.target.value, answers[1]] : [answers[0], e.target.value])} />{wordErrors.includes(position) && <ErrorLine text={C.recovery.wrongWord(position)} />}</div>)}</div>
       <Button kind="primary" type="submit" busy={security.busy} disabled={!answers.every(Boolean)}>{C.recovery.finish}</Button><Button kind="text" onClick={() => run(() => show())}>{C.recovery.again}</Button>
     </form>}
-    {step === 'publish' && <Button kind="primary" busy={security.busy} onClick={() => run(async () => { await s!.publish(password || undefined); await security.synchronize(password || undefined); setPassword(''); setStep('home'); })}>{C.keys.publish}</Button>}
+    {step === 'publish' && <Button kind="primary" busy={security.busy} onClick={() => run(async () => { await s!.publish(password || undefined); await security.synchronize(password || undefined); setPassword(''); setStep('home'); if (security.bootstrap) security.close(); })}>{C.keys.publish}</Button>}
     {step === 'reset' && <><ul className="hc-consequences">{[C.security.resetLose, C.security.resetPeers, C.security.resetWhen].map(t => <li key={t}><Icon name="warn" /><span>{t}</span></li>)}</ul><Button kind="text" autoFocus onClick={() => setStep('home')}>{C.common.cancel}</Button><Button className="hc-btn--danger-solid" onClick={() => { s!.acknowledgeNotice('reset-loses-history'); setResetAcknowledged(true); setStep('reset-password'); }}>{C.security.resetGo}</Button></>}
     {['reset-password', 'replace', 'view-password', 'use-existing'].includes(step) && !nativeOnly && <form className="hc-stack" onSubmit={e => { e.preventDefault(); run(async () => {
       const epoch = displayEpoch.current;
@@ -187,6 +190,6 @@ export function IdentityFlow() {
       <Button kind="primary" type="submit" disabled={!password} busy={security.busy}>{step === 'view-password' ? C.security.showKey : step === 'replace' ? C.security.replaceGo : C.security.resetGo}</Button>
     </form>}
     {step === 'remove' && <><p>{C.security.removeWarning}</p><Button kind="text" autoFocus onClick={() => setStep('home')}>{C.common.cancel}</Button><Button kind="danger" onClick={() => run(async () => { await s!.removeDeviceKey(); await security.refresh(); setStep('home'); })}>{C.security.remove}</Button></>}
-    {step !== 'reset' && step !== 'words' && step !== 'check' && <Button kind="text" onClick={security.close}>{C.common.cancel}</Button>}
+    {!creating && step !== 'reset' && step !== 'words' && step !== 'check' && <Button kind="text" onClick={security.close}>{C.common.cancel}</Button>}
   </Sheet>;
 }

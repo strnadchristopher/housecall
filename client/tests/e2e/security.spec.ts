@@ -79,7 +79,12 @@ async function readShowingQr(page: Page): Promise<string> {
 }
 
 async function noticeLayout(page: Page) {
+  // Notices now expire after six seconds. Trigger a fresh real device login at
+  // this assertion, rather than relying on a notice from the start of the test.
+  const response = await page.request.post('/api/login', { data: { username: 'security_owner', password, device_name: 'notice layout fixture' } });
+  expect(response.ok()).toBe(true);
   const notice = page.locator('.hc-security-notice');
+  await expect(notice).toContainText('notice layout fixture');
   await expect(notice).toBeVisible();
   for (const [width, height] of [[1280, 800], [390, 844], [390, 420]]) {
     await page.setViewportSize({ width, height });

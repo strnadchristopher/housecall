@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import type { ServerEntry } from "../../core/chat";
 import { parseServerInput } from "../../data/serverInput";
 import { secureSession } from "../../transport/secureSession";
+import { webSession } from "../../transport/webSession";
 
 export { parseServerInput };
 
@@ -58,7 +59,7 @@ class Directory {
 export function useHosts() {
   const directory = useMemo(() => new Directory(), []);
   const [hosts, setHosts] = useState<HostEntry[]>(() => [
-    { id: "host-0", origin: import.meta.env.VITE_API_ORIGIN ?? "", token: "", added: false, restoring: isNative() },
+    { id: "host-0", origin: import.meta.env.VITE_API_ORIGIN ?? "", token: "", added: false, restoring: isNative() || webSession.available() },
   ]);
   const [active, setActive] = useState("host-0");
   const [previous, setPrevious] = useState("host-0");
