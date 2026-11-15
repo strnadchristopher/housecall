@@ -653,9 +653,16 @@ mod diagnostic_tests {
         change.add_media(MediaKind::Video, Direction::SendOnly, None, None, None);
         let (offer, _pending) = change.apply().unwrap();
         let offer_text = offer.to_sdp_string();
-        assert!(offer_text.contains("urn:3gpp:video-orientation"), "fixture offer must carry it: {offer_text}");
+        assert!(
+            offer_text.contains("urn:3gpp:video-orientation"),
+            "fixture offer must carry it: {offer_text}"
+        );
         let mut server = publish_builder().build(now);
-        let answer = server.sdp_api().accept_offer(offer).unwrap().to_sdp_string();
+        let answer = server
+            .sdp_api()
+            .accept_offer(offer)
+            .unwrap()
+            .to_sdp_string();
         assert!(answer.contains("m=video"));
         assert!(!answer.contains("urn:3gpp:video-orientation"), "{answer}");
         assert!(answer.contains("urn:ietf:params:rtp-hdrext:sdes:mid"));

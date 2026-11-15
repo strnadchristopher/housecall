@@ -139,15 +139,14 @@ async fn request(State(s): State<AppState>, Json(v): Json<NewRequest>) -> ApiRes
 }
 
 async fn status(State(s): State<AppState>, Path(id): Path<String>) -> ApiResult<Value> {
-    let status: String = s
-        .db
-        .lock()
-        .unwrap()
-        .query_row("SELECT status FROM access_requests WHERE id=?", [id], |r| {
-            r.get(0)
-        })
-        .optional()?
-        .ok_or_else(missing)?;
+    let status: String =
+        s.db.lock()
+            .unwrap()
+            .query_row("SELECT status FROM access_requests WHERE id=?", [id], |r| {
+                r.get(0)
+            })
+            .optional()?
+            .ok_or_else(missing)?;
     Ok(Json(json!({"status":status})))
 }
 

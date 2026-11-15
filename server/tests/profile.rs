@@ -501,8 +501,7 @@ async fn bio_round_trips_through_me_and_members_and_emits_member_updated() {
         .as_array()
         .unwrap()
         .iter()
-        .filter(|e| e.to_string().contains("member.updated"))
-        .last()
+        .rfind(|e| e.to_string().contains("member.updated"))
         .unwrap()
         .to_string();
     assert!(updated.contains(&bio), "{updated}");

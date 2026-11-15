@@ -114,7 +114,9 @@ async fn user_id(api: &Router, who: &Value) -> String {
         .to_owned()
 }
 async fn channels_of(api: &Router, who: &Value) -> Vec<Value> {
-    call(api, "GET", "/api/channels", who, Value::Null).await.json()["channels"]
+    call(api, "GET", "/api/channels", who, Value::Null)
+        .await
+        .json()["channels"]
         .as_array()
         .unwrap()
         .clone()
@@ -320,7 +322,9 @@ async fn a_voice_channel_has_a_text_chat_that_works_like_any_channel() {
 // ---- B2: live voice state and events ----------------------------------------------------
 
 async fn events_of(w: &World, who: &Value, kind: &str) -> Vec<Value> {
-    call(&w.api, "GET", "/api/events", who, Value::Null).await.json()["events"]
+    call(&w.api, "GET", "/api/events", who, Value::Null)
+        .await
+        .json()["events"]
         .as_array()
         .unwrap()
         .iter()
@@ -421,8 +425,22 @@ async fn joining_announces_defaults_and_state_changes_reach_members_only() {
 async fn a_partial_update_keeps_the_other_flags() {
     let w = world().await;
     enter(&w, &w.alice_id);
-    call(&w.api, "PUT", &state_path(&w), &w.alice, json!({"muted":true})).await;
-    let r = call(&w.api, "PUT", &state_path(&w), &w.alice, json!({"camera":true})).await;
+    call(
+        &w.api,
+        "PUT",
+        &state_path(&w),
+        &w.alice,
+        json!({"muted":true}),
+    )
+    .await;
+    let r = call(
+        &w.api,
+        "PUT",
+        &state_path(&w),
+        &w.alice,
+        json!({"camera":true}),
+    )
+    .await;
     assert_eq!(r.json()["muted"], true);
     assert_eq!(r.json()["camera"], true);
     assert_eq!(r.json()["sharing"], false);
@@ -440,7 +458,14 @@ async fn leaving_and_timing_out_clear_state_and_announce_it() {
     let left = events_of(&w, &w.owner, "voice.left").await;
     assert_eq!(left.len(), 1);
     assert_eq!(left[0]["payload"]["user_id"], w.alice_id.as_str());
-    let r = call(&w.api, "PUT", &state_path(&w), &w.alice, json!({"muted":true})).await;
+    let r = call(
+        &w.api,
+        "PUT",
+        &state_path(&w),
+        &w.alice,
+        json!({"muted":true}),
+    )
+    .await;
     assert_eq!(r.status, StatusCode::CONFLICT, "state is gone after leave");
     // The owner's peer times out: the SFU no longer lists them.
     let later = housecall_server::now() + 60_000;
@@ -473,7 +498,14 @@ async fn a_peer_that_only_just_joined_is_not_reaped_by_a_stale_snapshot() {
 async fn rooms_keeps_its_old_shape_and_adds_states() {
     let w = world().await;
     enter(&w, &w.alice_id);
-    call(&w.api, "PUT", &state_path(&w), &w.alice, json!({"muted":true})).await;
+    call(
+        &w.api,
+        "PUT",
+        &state_path(&w),
+        &w.alice,
+        json!({"muted":true}),
+    )
+    .await;
     // Without an SFU the call list is empty; the new key is still there.
     let r = call(&w.api, "GET", "/api/voice/rooms", &w.owner, Value::Null)
         .await
@@ -520,7 +552,14 @@ async fn a_0_3_0_client_reading_only_rooms_sees_the_same_shape_as_before() {
         k.sort();
         assert_eq!(
             k,
-            ["camera", "deafened", "joined_at", "muted", "sharing", "user_id"]
+            [
+                "camera",
+                "deafened",
+                "joined_at",
+                "muted",
+                "sharing",
+                "user_id"
+            ]
         );
     }
 }
@@ -551,7 +590,14 @@ async fn get_preview(w: &World, who: &Value, of: &str) -> Reply {
 /// Alice is in the call and sharing her screen.
 async fn sharing(w: &World) {
     enter(w, &w.alice_id);
-    let r = call(&w.api, "PUT", &state_path(w), &w.alice, json!({"sharing":true})).await;
+    let r = call(
+        &w.api,
+        "PUT",
+        &state_path(w),
+        &w.alice,
+        json!({"sharing":true}),
+    )
+    .await;
     assert_eq!(r.status, StatusCode::OK);
 }
 /// Pretend the last preview was stored long ago, so the rate limit has passed.
@@ -615,19 +661,33 @@ async fn previews_are_limited_to_one_per_ten_seconds() {
         StatusCode::TOO_MANY_REQUESTS
     );
     // The refused one did not replace the stored image.
-    assert_eq!(get_preview(&w, &w.owner, &w.alice_id).await.bytes.len(), 500);
+    assert_eq!(
+        get_preview(&w, &w.owner, &w.alice_id).await.bytes.len(),
+        500
+    );
     age_preview(&w);
     assert_eq!(
         put_preview(&w, &w.alice, jpeg(600)).await.status,
         StatusCode::OK
     );
-    assert_eq!(get_preview(&w, &w.owner, &w.alice_id).await.bytes.len(), 600);
+    assert_eq!(
+        get_preview(&w, &w.owner, &w.alice_id).await.bytes.len(),
+        600
+    );
 }
 #[tokio::test]
 async fn only_jpeg_is_accepted() {
     let w = world().await;
     sharing(&w).await;
-    let wrong_type = raw(&w.api, "PUT", &preview_path(&w), &w.alice, "image/svg+xml", jpeg(500)).await;
+    let wrong_type = raw(
+        &w.api,
+        "PUT",
+        &preview_path(&w),
+        &w.alice,
+        "image/svg+xml",
+        jpeg(500),
+    )
+    .await;
     assert_eq!(wrong_type.status, StatusCode::UNSUPPORTED_MEDIA_TYPE);
     let not_jpeg = raw(
         &w.api,
@@ -669,7 +729,14 @@ async fn stopping_the_share_clears_the_preview() {
     let w = world().await;
     sharing(&w).await;
     put_preview(&w, &w.alice, jpeg(500)).await;
-    call(&w.api, "PUT", &state_path(&w), &w.alice, json!({"sharing":false})).await;
+    call(
+        &w.api,
+        "PUT",
+        &state_path(&w),
+        &w.alice,
+        json!({"sharing":false}),
+    )
+    .await;
     assert_eq!(
         get_preview(&w, &w.owner, &w.alice_id).await.status,
         StatusCode::NOT_FOUND

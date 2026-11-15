@@ -77,15 +77,14 @@ fn identity_key(agree: &[u8], sign: &[u8]) -> String {
 }
 /// Argon2 check of the account password, through the same slots as login.
 pub async fn verify_password(s: &AppState, user: &str, password: String) -> Result<bool, ApiError> {
-    let encoded: String = s
-        .db
-        .lock()
-        .unwrap()
-        .query_row("SELECT password FROM users WHERE id=?", [user], |r| {
-            r.get(0)
-        })
-        .optional()?
-        .ok_or_else(missing)?;
+    let encoded: String =
+        s.db.lock()
+            .unwrap()
+            .query_row("SELECT password FROM users WHERE id=?", [user], |r| {
+                r.get(0)
+            })
+            .optional()?
+            .ok_or_else(missing)?;
     let permit = s.auth_slots.clone().try_acquire_owned().map_err(|_| {
         ApiError(
             StatusCode::TOO_MANY_REQUESTS,
@@ -115,7 +114,9 @@ struct PutKeys {
     #[serde(default)]
     password: Option<String>,
 }
-fn current(db: &Connection, uid: &str) -> Result<(i64, Option<Vec<u8>>, Option<Vec<u8>>), ApiError> {
+type CurrentKeys = (i64, Option<Vec<u8>>, Option<Vec<u8>>);
+
+fn current(db: &Connection, uid: &str) -> Result<CurrentKeys, ApiError> {
     Ok(db.query_row(
         "SELECT key_rev,agree_pub,sign_pub FROM users WHERE id=?",
         [uid],
@@ -259,10 +260,11 @@ async fn put_backup(
     if rev == 0 {
         return Err(conflict("publish keys first"));
     }
-    let stored: Option<Vec<u8>> =
-        tx.query_row("SELECT key_backup FROM users WHERE id=?", [&p.user.id], |r| {
-            r.get(0)
-        })?;
+    let stored: Option<Vec<u8>> = tx.query_row(
+        "SELECT key_backup FROM users WHERE id=?",
+        [&p.user.id],
+        |r| r.get(0),
+    )?;
     if let Some(old) = stored.filter(|o| o.len() == 77) {
         if u32::from_be_bytes(old[1..5].try_into().unwrap()) > recovery_rev {
             return Err(conflict("a newer recovery key exists"));
@@ -367,20 +369,44 @@ pub fn is_encrypted_dm(db: &Connection, cid: &str) -> Result<bool, ApiError> {
 pub const ENC_PLACEHOLDER: &str = "Encrypted message. Update Housecall to read it.";
 const ENVELOPE_MAX_CHARS: usize = 22252;
 pub fn invalid_envelope() -> ApiError {
-    ApiError(StatusCode::UNPROCESSABLE_ENTITY, "invalid encrypted message")
+    ApiError(
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "invalid encrypted message",
+    )
 }
 pub fn not_available() -> ApiError {
-    ApiError(StatusCode::UNPROCESSABLE_ENTITY, "encryption is not available in this conversation")
+    ApiError(
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "encryption is not available in this conversation",
+    )
 }
 pub fn plaintext_refused() -> ApiError {
-    ApiError(StatusCode::UNPROCESSABLE_ENTITY, "this conversation is end-to-end encrypted; update Housecall to send")
+    ApiError(
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "this conversation is end-to-end encrypted; update Housecall to send",
+    )
 }
 pub fn is_sealed(db: &Connection, upload: &uuid::Uuid) -> Result<bool, ApiError> {
-    Ok(db.query_row("SELECT EXISTS(SELECT 1 FROM sealed_uploads WHERE upload_id=?)", [upload.to_string()], |r| r.get(0))?)
+    Ok(db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sealed_uploads WHERE upload_id=?)",
+        [upload.to_string()],
+        |r| r.get(0),
+    )?)
 }
 /// DM-V1 15.2. Header-only envelope checks; the envelope is never parsed further or logged.
 #[allow(clippy::too_many_arguments)]
-pub fn check_send(db: &Connection, author: &str, cid: &str, sealed_dm: bool, enc: i64, envelope: Option<&str>, body: &str, view_once: bool, roles: &[String], mentions: &[String]) -> Result<(), ApiError> {
+pub fn check_send(
+    db: &Connection,
+    author: &str,
+    cid: &str,
+    sealed_dm: bool,
+    enc: i64,
+    envelope: Option<&str>,
+    body: &str,
+    view_once: bool,
+    roles: &[String],
+    mentions: &[String],
+) -> Result<(), ApiError> {
     if enc == 0 {
         if sealed_dm {
             tracing::info!(user=%author, channel=%cid, "plaintext refused in encrypted dm");
@@ -396,9 +422,15 @@ pub fn check_send(db: &Connection, author: &str, cid: &str, sealed_dm: bool, enc
         tracing::info!(user=%author, channel=%cid, "invalid encrypted message");
         invalid_envelope()
     };
-    let envelope = envelope.filter(|e| e.len() <= ENVELOPE_MAX_CHARS).ok_or_else(refuse)?;
+    let envelope = envelope
+        .filter(|e| e.len() <= ENVELOPE_MAX_CHARS)
+        .ok_or_else(refuse)?;
     let bytes = unb64u(envelope).ok_or_else(refuse)?;
-    let n = bytes.len().checked_sub(33 + 16).filter(|r| r % 256 == 0).map(|r| r / 256);
+    let n = bytes
+        .len()
+        .checked_sub(33 + 16)
+        .filter(|r| r % 256 == 0)
+        .map(|r| r / 256);
     if !n.is_some_and(|n| (1..=65).contains(&n)) || bytes[0] != 1 {
         return Err(refuse());
     }
@@ -407,11 +439,17 @@ pub fn check_send(db: &Connection, author: &str, cid: &str, sealed_dm: bool, enc
     if sender == 0 || recipient == 0 || !body.is_empty() || view_once || !roles.is_empty() {
         return Err(refuse());
     }
-    let peer: String = db.query_row("SELECT user_id FROM members WHERE channel_id=? AND user_id<>?", params![cid, author], |r| r.get(0))?;
+    let peer: String = db.query_row(
+        "SELECT user_id FROM members WHERE channel_id=? AND user_id<>?",
+        params![cid, author],
+        |r| r.get(0),
+    )?;
     if mentions.iter().any(|m| *m != peer) {
         return Err(refuse());
     }
-    let rev = |u: &str| -> Result<i64, ApiError> { Ok(db.query_row("SELECT key_rev FROM users WHERE id=?", [u], |r| r.get(0))?) };
+    let rev = |u: &str| -> Result<i64, ApiError> {
+        Ok(db.query_row("SELECT key_rev FROM users WHERE id=?", [u], |r| r.get(0))?)
+    };
     if i64::from(sender) != rev(author)? || i64::from(recipient) != rev(&peer)? {
         return Err(conflict("security key changed; reload keys"));
     }

@@ -818,7 +818,10 @@ mod tests {
         assert_eq!(sharer.tracks_in.len(), 3);
         let origin = sharer.id.0.to_string();
         let ids: Vec<String> = sharer.tracks_in.iter().map(|t| stream_id(&t.id)).collect();
-        assert_eq!(ids, vec![origin.clone(), origin.clone(), format!("{origin}-share")]);
+        assert_eq!(
+            ids,
+            vec![origin.clone(), origin.clone(), format!("{origin}-share")]
+        );
         let viewer = Client::new(Rtc::new(now), "room".into(), "viewer".into(), "v1".into());
         let mut clients = [sharer, viewer];
         for event in &events {
@@ -834,14 +837,27 @@ mod tests {
             .collect();
         assert_eq!(
             kinds,
-            vec![(MediaKind::Audio, false), (MediaKind::Video, false), (MediaKind::Audio, true)]
+            vec![
+                (MediaKind::Audio, false),
+                (MediaKind::Video, false),
+                (MediaKind::Audio, true)
+            ]
         );
     }
     #[test]
     fn a_fourth_incoming_track_is_refused() {
         str0m::crypto::from_feature_flags().install_process_default();
-        let mut peer = Client::new(Rtc::new(Instant::now()), "room".into(), "p".into(), "s".into());
-        for (mid, kind) in [("0", MediaKind::Audio), ("1", MediaKind::Video), ("2", MediaKind::Audio)] {
+        let mut peer = Client::new(
+            Rtc::new(Instant::now()),
+            "room".into(),
+            "p".into(),
+            "s".into(),
+        );
+        for (mid, kind) in [
+            ("0", MediaKind::Audio),
+            ("1", MediaKind::Video),
+            ("2", MediaKind::Audio),
+        ] {
             peer.handle_media_added(mid.into(), kind);
         }
         assert!(peer.tracks_in.len() == 3 && peer.disconnect_reason.is_none());

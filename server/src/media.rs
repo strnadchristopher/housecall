@@ -101,14 +101,20 @@ async fn create(
                 return Err(bad("sealed uploads are named sealed"));
             }
             if length > SEALED_MAX {
-                return Err(ApiError(StatusCode::PAYLOAD_TOO_LARGE, "sealed upload too large"));
+                return Err(ApiError(
+                    StatusCode::PAYLOAD_TOO_LARGE,
+                    "sealed upload too large",
+                ));
             }
         }
     }
     let store = store(&s)?;
     let m = blocking(move || store.create(&p.user.id, &v.channel_id, &v.filename, length)).await?;
     if sealed {
-        s.db.lock().unwrap().execute("INSERT INTO sealed_uploads(upload_id) VALUES(?)", [m.id.to_string()])?;
+        s.db.lock().unwrap().execute(
+            "INSERT INTO sealed_uploads(upload_id) VALUES(?)",
+            [m.id.to_string()],
+        )?;
     }
     let mut out = dto(m);
     if sealed {

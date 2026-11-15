@@ -3,10 +3,12 @@ pub mod activities;
 pub mod attach_kind;
 pub mod dj;
 pub mod embeds;
-pub mod identity;
 pub mod gimme;
 pub mod giphy;
+pub mod identity;
 pub mod image_blob;
+/// 1:1 calls: ring and decline in a direct conversation.
+pub mod link;
 pub mod media;
 pub(crate) mod media_index;
 pub mod passkeys;
@@ -14,8 +16,6 @@ pub mod plex;
 pub mod preflight;
 pub mod profile;
 pub mod push;
-/// 1:1 calls: ring and decline in a direct conversation.
-pub mod link;
 pub mod ring;
 pub mod servers;
 pub mod setup;
@@ -361,9 +361,10 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
     let mut router = Router::new()
         .nest(
             "/api",
-            private
-                .merge(public)
-                .route("/health", get(|| async { Json(json!({"ok":true,"version":env!("CARGO_PKG_VERSION")})) })),
+            private.merge(public).route(
+                "/health",
+                get(|| async { Json(json!({"ok":true,"version":env!("CARGO_PKG_VERSION")})) }),
+            ),
         )
         .with_state(state);
     if let Some(path) = static_dir {
@@ -382,9 +383,18 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
 async fn link_page(request: axum::extract::Request, next: Next) -> Response {
     use axum::{http::Method, response::IntoResponse};
     let (kind, body) = match request.uri().path() {
-        "/link" => ("text/html; charset=utf-8", include_str!("link_page/index.html")),
-        "/link.js" | "/link/link.js" => ("text/javascript; charset=utf-8", include_str!("link_page/link.js")),
-        "/link.css" | "/link/link.css" => ("text/css; charset=utf-8", include_str!("link_page/link.css")),
+        "/link" => (
+            "text/html; charset=utf-8",
+            include_str!("link_page/index.html"),
+        ),
+        "/link.js" | "/link/link.js" => (
+            "text/javascript; charset=utf-8",
+            include_str!("link_page/link.js"),
+        ),
+        "/link.css" | "/link/link.css" => (
+            "text/css; charset=utf-8",
+            include_str!("link_page/link.css"),
+        ),
         _ => return next.run(request).await,
     };
     match *request.method() {
@@ -418,7 +428,11 @@ async fn public_limit(
             _ => "public",
         }
     };
-    let max = if route == "link-result" { 600 } else { s.public_auth_limit };
+    let max = if route == "link-result" {
+        600
+    } else {
+        s.public_auth_limit
+    };
     if s.limited(format!("public:{route}"), max) {
         return Err(ApiError(StatusCode::TOO_MANY_REQUESTS, "try again later"));
     }
@@ -546,7 +560,11 @@ pub(crate) fn session_with(
     device_hash: Option<String>,
 ) -> Result<Value, ApiError> {
     let (token, id) = (secret(), secret());
-    let device_key = if device_hash.is_some() { None } else { Some(secret()) };
+    let device_key = if device_hash.is_some() {
+        None
+    } else {
+        Some(secret())
+    };
     let device_hash = device_hash.unwrap_or_else(|| hash(device_key.as_deref().unwrap()));
     let expires = now() + 30 * 24 * 3600 * 1000;
     db.execute(
@@ -728,7 +746,11 @@ async fn invite(
     if !email.is_empty() && v.expires_in_seconds.is_none() {
         return Err(bad("email invitations need an expiry"));
     }
-    let max_uses = if email.is_empty() { v.max_uses } else { Some(1) };
+    let max_uses = if email.is_empty() {
+        v.max_uses
+    } else {
+        Some(1)
+    };
     let token = secret();
     let link = s.invite_mail.invite_link(&token);
     let expires = v
@@ -1226,7 +1248,18 @@ async fn send_message(
     let tx = db.transaction()?;
     member(&tx, &p.user.id, &cid)?;
     let sealed_dm = identity::is_encrypted_dm(&tx, &cid)?;
-    identity::check_send(&tx, &p.user.id, &cid, sealed_dm, v.enc, v.envelope.as_deref(), &v.body, v.view_once, &v.role_mention_ids, &v.mention_ids)?;
+    identity::check_send(
+        &tx,
+        &p.user.id,
+        &cid,
+        sealed_dm,
+        v.enc,
+        v.envelope.as_deref(),
+        &v.body,
+        v.view_once,
+        &v.role_mention_ids,
+        &v.mention_ids,
+    )?;
     if let Some(reply) = &v.reply_to {
         let (rc, _, _) = message_access(&tx, &p, reply)?;
         if rc != cid {
@@ -1254,7 +1287,10 @@ async fn send_message(
         let store = s.media.as_ref().ok_or_else(|| bad("media unavailable"))?;
         let upload = store.inspect(*upload_id, &p.user.id)?;
         let sealed = identity::is_sealed(&tx, upload_id)?;
-        if upload.channel_id != cid || upload.status != housecall_media::Status::Ready || sealed != (v.enc == 1) {
+        if upload.channel_id != cid
+            || upload.status != housecall_media::Status::Ready
+            || sealed != (v.enc == 1)
+        {
             return Err(bad("attachment must be clean and in this conversation"));
         }
         if v.view_once && attach_kind::kind(&upload.filename, false) != "image" {
@@ -1343,18 +1379,35 @@ async fn edit_message(
     if author != p.user.id {
         return Err(forbidden());
     }
-    let stored_enc: i64 = tx.query_row("SELECT enc FROM messages WHERE id=?", [&id], |r| r.get(0))?;
+    let stored_enc: i64 =
+        tx.query_row("SELECT enc FROM messages WHERE id=?", [&id], |r| r.get(0))?;
     let sealed_dm = identity::is_encrypted_dm(&tx, &cid)?;
     if stored_enc != v.enc {
         return Err(identity::invalid_envelope());
     }
-    identity::check_send(&tx, &p.user.id, &cid, sealed_dm, v.enc, v.envelope.as_deref(), &v.body, false, &[], &[])?;
+    identity::check_send(
+        &tx,
+        &p.user.id,
+        &cid,
+        sealed_dm,
+        v.enc,
+        v.envelope.as_deref(),
+        &v.body,
+        false,
+        &[],
+        &[],
+    )?;
     if revision != v.revision {
         return Err(conflict("message changed; reload before editing"));
     }
     tx.execute(
         "UPDATE messages SET body=?,envelope=?,edited_at=?,revision=revision+1 WHERE id=?",
-        params![if v.enc == 1 { "" } else { v.body.as_str() }, v.envelope, now(), id],
+        params![
+            if v.enc == 1 { "" } else { v.body.as_str() },
+            v.envelope,
+            now(),
+            id
+        ],
     )?;
     emit(&tx, &cid, "message.edited", json!({"message_id":id}))?;
     let result = message(&tx, &id, &p.user.id)?;

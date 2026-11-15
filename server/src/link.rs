@@ -1,6 +1,8 @@
 //! LINK-V1 server side: QR login links. State lives in memory only (LINK-V1 11.1). Raw secrets and
 //! raw device keys are never stored, and nothing secret is logged.
-use crate::{bad, conflict, forbidden, missing, now, ApiError, ApiResult, AppState, Principal, User};
+use crate::{
+    bad, conflict, forbidden, missing, now, ApiError, ApiResult, AppState, Principal, User,
+};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -150,17 +152,25 @@ fn expired() -> ApiError {
     ApiError(StatusCode::GONE, "link expired")
 }
 fn valid_id(v: &str) -> bool {
-    v.len() == 32 && v.bytes().all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
+    v.len() == 32
+        && v.bytes()
+            .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
 }
 fn valid_device_key(v: &str) -> bool {
-    v.len() == 64 && v.bytes().all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
+    v.len() == 64
+        && v.bytes()
+            .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
 }
 fn b64_exact(v: &str, len: usize) -> Option<Vec<u8>> {
     crate::identity::unb64u(v).filter(|b| b.len() == len)
 }
 fn valid_name(v: &str) -> Option<String> {
     let v = v.trim();
-    if v.is_empty() || v.len() > 80 || v.chars().any(|c| c.is_control() || crate::profile::invisible(c)) {
+    if v.is_empty()
+        || v.len() > 80
+        || v.chars()
+            .any(|c| c.is_control() || crate::profile::invisible(c))
+    {
         return None;
     }
     Some(v.to_owned())
@@ -266,7 +276,10 @@ async fn claim(State(s): State<AppState>, Json(v): Json<Claim_>) -> ApiResult<Va
     let ephemeral = b64_exact(&v.ephemeral_pub, 32).ok_or_else(invalid)?;
     b64_exact(&v.claim_tag, 16).ok_or_else(invalid)?;
     let name = valid_name(&v.device_name).ok_or_else(invalid)?;
-    if !valid_id(&v.link_id) || !valid_device_key(&v.device_key) || ephemeral.iter().all(|b| *b == 0) {
+    if !valid_id(&v.link_id)
+        || !valid_device_key(&v.device_key)
+        || ephemeral.iter().all(|b| *b == 0)
+    {
         return Err(invalid());
     }
     let at = now();
@@ -430,14 +443,25 @@ async fn result(State(s): State<AppState>, Json(v): Json<ResultReq>) -> ApiResul
         }
         let wrapped = l.wrapped_keys.take();
         l.burn("used", &v.link_id);
-        (l.user_id.clone(), claimed.device_hash, claimed.device_name, wrapped)
+        (
+            l.user_id.clone(),
+            claimed.device_hash,
+            claimed.device_name,
+            wrapped,
+        )
     };
     let db = s.db.lock().unwrap();
     let user: User = db
         .query_row(
             "SELECT id,username,is_owner FROM users WHERE id=? AND disabled=0",
             [&user_id],
-            |r| Ok(User { id: r.get(0)?, username: r.get(1)?, is_owner: r.get(2)? }),
+            |r| {
+                Ok(User {
+                    id: r.get(0)?,
+                    username: r.get(1)?,
+                    is_owner: r.get(2)?,
+                })
+            },
         )
         .optional()?
         .ok_or_else(missing)?;
@@ -445,7 +469,11 @@ async fn result(State(s): State<AppState>, Json(v): Json<ResultReq>) -> ApiResul
     if let Some(o) = out.as_object_mut() {
         o.insert("wrapped_keys".into(), json!(wrapped));
     }
-    tracing::info!("qr session created user={} session={}", user_id, out["session_id"].as_str().unwrap_or(""));
+    tracing::info!(
+        "qr session created user={} session={}",
+        user_id,
+        out["session_id"].as_str().unwrap_or("")
+    );
     out.as_object_mut().map(|o| o.remove("session_id"));
     Ok(Json(out))
 }

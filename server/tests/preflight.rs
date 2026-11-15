@@ -1,13 +1,31 @@
-use axum::{body::Body, http::{Request, StatusCode}};
+use axum::{
+    body::Body,
+    http::{Request, StatusCode},
+};
 use housecall_server::{app, AppState};
 use http_body_util::BodyExt;
 use serde_json::{json, Value};
 use tower::ServiceExt;
 
-async fn call(api: &axum::Router, method: &str, path: &str, headers: &[(&str, &str)], body: Value) -> (StatusCode, String) {
-    let mut req = Request::builder().method(method).uri(path).header("content-type", "application/json");
-    for (k, v) in headers { req = req.header(*k, *v); }
-    let r = api.clone().oneshot(req.body(Body::from(body.to_string())).unwrap()).await.unwrap();
+async fn call(
+    api: &axum::Router,
+    method: &str,
+    path: &str,
+    headers: &[(&str, &str)],
+    body: Value,
+) -> (StatusCode, String) {
+    let mut req = Request::builder()
+        .method(method)
+        .uri(path)
+        .header("content-type", "application/json");
+    for (k, v) in headers {
+        req = req.header(*k, *v);
+    }
+    let r = api
+        .clone()
+        .oneshot(req.body(Body::from(body.to_string())).unwrap())
+        .await
+        .unwrap();
     let status = r.status();
     let bytes = r.into_body().collect().await.unwrap().to_bytes();
     (status, String::from_utf8_lossy(&bytes).into_owned())
@@ -17,7 +35,14 @@ async fn call(api: &axum::Router, method: &str, path: &str, headers: &[(&str, &s
 async fn preflight_reports_booleans_before_an_owner_exists_then_404s() {
     let secret = "preflight-bootstrap-secret-at-least-32-chars";
     let api = app(AppState::new(":memory:", secret).unwrap(), None);
-    let (status, body) = call(&api, "GET", "/api/preflight", &[("x-forwarded-proto", "https")], Value::Null).await;
+    let (status, body) = call(
+        &api,
+        "GET",
+        "/api/preflight",
+        &[("x-forwarded-proto", "https")],
+        Value::Null,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     let v: Value = serde_json::from_str(&body).unwrap();
     assert_eq!(v["https"]["ok"], true);

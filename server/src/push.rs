@@ -1717,33 +1717,53 @@ mod tests {
     #[ignore = "requires prepared client/node_modules; explicitly run in the client CI job"]
     async fn encrypted_client_service_routes_notification_and_id_only_push() {
         let client = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent().unwrap().join("client");
+            .parent()
+            .unwrap()
+            .join("client");
         for kind in [Kind::Apns, Kind::Fcm] {
             let provider = Fixture::new(vec![200], false);
-            let mut state = AppState::new(":memory:", "test-setup-token-at-least-32-characters").unwrap();
+            let mut state =
+                AppState::new(":memory:", "test-setup-token-at-least-32-characters").unwrap();
             state.push = worker(kind, &provider.origin);
             let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
             let origin = format!("http://{}", listener.local_addr().unwrap());
             let app = crate::app(state.clone(), None);
             let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
             let mut command = tokio::process::Command::new("node");
-            command.current_dir(&client)
-                .arg("node_modules/vitest/vitest.mjs").arg("run")
-                .arg("tests/identity-push-live.test.ts").arg("--maxWorkers=1")
+            command
+                .current_dir(&client)
+                .arg("node_modules/vitest/vitest.mjs")
+                .arg("run")
+                .arg("tests/identity-push-live.test.ts")
+                .arg("--maxWorkers=1")
                 .env("HOUSECALL_PUSH_SERVICE_TEST_ORIGIN", &origin)
                 .env("HOUSECALL_PUSH_SERVICE_TEST_PROVIDER", kind.name())
                 .kill_on_drop(true);
             let result = tokio::time::timeout(Duration::from_secs(75), command.output()).await;
             server.abort();
-            let output = result.expect("client service integration timed out").expect("run prepared local Node/Vitest");
-            assert!(output.status.success(), "client service integration failed: {} {}",
-                String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
-            let message: String = state.db.lock().unwrap().query_row(
-                "SELECT id FROM messages WHERE enc=1", [], |row| row.get(0)).unwrap();
+            let output = result
+                .expect("client service integration timed out")
+                .expect("run prepared local Node/Vitest");
+            assert!(
+                output.status.success(),
+                "client service integration failed: {} {}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            let message: String = state
+                .db
+                .lock()
+                .unwrap()
+                .query_row("SELECT id FROM messages WHERE enc=1", [], |row| row.get(0))
+                .unwrap();
             state.push.tick(&state.db).await.unwrap();
             let payloads = provider.payloads();
             assert_eq!(payloads.len(), 1);
-            let data = if kind == Kind::Fcm { &payloads[0]["message"]["data"] } else { &payloads[0] };
+            let data = if kind == Kind::Fcm {
+                &payloads[0]["message"]["data"]
+            } else {
+                &payloads[0]
+            };
             assert_eq!(data["message_id"], message);
             assert_eq!(data["operation"], "alert");
             let wire = payloads[0].to_string();
@@ -1828,15 +1848,31 @@ mod tests {
         s.push = worker(Kind::Apns, &fixture.origin);
         {
             let db = s.db.lock().unwrap();
-            db.execute("UPDATE users SET key_rev=1 WHERE id IN ('alice','bob')", []).unwrap();
-            db.execute("INSERT INTO channels(id,name,kind) VALUES('dm','','dm')", []).unwrap();
-            db.execute("INSERT INTO members(channel_id,user_id) VALUES('dm','alice'),('dm','bob')", []).unwrap();
+            db.execute("UPDATE users SET key_rev=1 WHERE id IN ('alice','bob')", [])
+                .unwrap();
+            db.execute(
+                "INSERT INTO channels(id,name,kind) VALUES('dm','','dm')",
+                [],
+            )
+            .unwrap();
+            db.execute(
+                "INSERT INTO members(channel_id,user_id) VALUES('dm','alice'),('dm','bob')",
+                [],
+            )
+            .unwrap();
         }
         register_bob(&s, Kind::Apns).await;
         let mut raw = vec![1u8, 0, 0, 0, 1, 0, 0, 0, 1];
         raw.extend(vec![0xABu8; 24 + 256 + 16]);
         let envelope = crate::identity::b64u(&raw);
-        let (status, body) = call(&s, Some('a'), "POST", "/api/channels/dm/messages", json!({"enc":1,"envelope":envelope,"mention_ids":["bob"]})).await;
+        let (status, body) = call(
+            &s,
+            Some('a'),
+            "POST",
+            "/api/channels/dm/messages",
+            json!({"enc":1,"envelope":envelope,"mention_ids":["bob"]}),
+        )
+        .await;
         assert_eq!(status, StatusCode::OK, "{body}");
         let id = body["id"].as_str().unwrap().to_owned();
         let events = states(&s).await;
@@ -1848,11 +1884,23 @@ mod tests {
         assert_eq!(payloads[0]["operation"], "alert");
         assert!(payloads[0].get("alert").is_none() && payloads[0]["aps"].get("alert").is_none());
         let text = payloads[0].to_string();
-        assert!(!text.contains(&envelope) && !text.contains("envelope") && !text.contains("Encrypted message"));
+        assert!(
+            !text.contains(&envelope)
+                && !text.contains("envelope")
+                && !text.contains("Encrypted message")
+        );
         // CallKit for the same DM carries no message content either.
         let (status, _) = call(&s, Some('a'), "POST", "/api/channels/dm/ring", json!({})).await;
         assert_eq!(status, StatusCode::OK);
-        let ring: String = s.db.lock().unwrap().query_row("SELECT payload FROM events WHERE kind='call.ring'", [], |r| r.get(0)).unwrap();
+        let ring: String =
+            s.db.lock()
+                .unwrap()
+                .query_row(
+                    "SELECT payload FROM events WHERE kind='call.ring'",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap();
         assert!(!ring.contains(&envelope) && !ring.contains("envelope"));
     }
     #[tokio::test]

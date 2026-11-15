@@ -68,9 +68,7 @@ pub fn peer_joined(s: &AppState, room: &str, user: &str) {
     let fresh = {
         let mut states = s.live.states.lock().unwrap();
         let key = (room.to_owned(), user.to_owned());
-        if states.contains_key(&key) {
-            None
-        } else {
+        if let std::collections::btree_map::Entry::Vacant(entry) = states.entry(key) {
             let st = VoiceState {
                 muted: false,
                 deafened: false,
@@ -78,8 +76,10 @@ pub fn peer_joined(s: &AppState, room: &str, user: &str) {
                 sharing: false,
                 joined_at: now(),
             };
-            states.insert(key, st);
+            entry.insert(st);
             Some(st)
+        } else {
+            None
         }
     };
     if let Some(st) = fresh {

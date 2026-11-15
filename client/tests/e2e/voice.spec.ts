@@ -4,7 +4,7 @@ async function openShareQuality(page: import("@playwright/test").Page) {
   await page.getByTestId("screen-settings").getByRole("button", { name: "Audio and video", exact: true }).click();
   await page.getByTestId("screen-settings").getByRole("button", { name: "Share quality", exact: true }).click();
 }
-import { test, expect, type BrowserContext } from "@playwright/test";
+import { test, expect, type BrowserContext, type Page } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { fillSignIn, logInButton, openMenu } from "./helpers";
 const password = "correct horse battery staple";
@@ -14,6 +14,47 @@ async function joinLounge(page: import("@playwright/test").Page) {
   await page.getByTestId("voice-channel").getByRole("button", { name: "Open Lounge", exact: true }).click();
   const sheet = page.getByRole("button", { name: "Join voice", exact: true });
   if (await sheet.isVisible().catch(() => false)) await sheet.click();
+}
+
+/** Wait for the server to remove the peer, not just for the local bar to become idle. */
+async function leaveVoice(page: Page) {
+  const [response] = await Promise.all([
+    page.waitForResponse(response => response.request().method() === "DELETE" && /\/voice\/\d+$/.test(new URL(response.url()).pathname)),
+    page.getByTestId("call-bar").getByRole("button", { name: "Leave", exact: true }).click(),
+  ]);
+  // close() can remove the SFU peer before DELETE arrives, so its status is not
+  // proof of cleanup. Check the authenticated server roster after it settles.
+  await response.finished();
+  const sent = await response.request().allHeaders();
+  const headers = { Authorization: sent.authorization, "X-Device-Key": sent["x-device-key"] };
+  const origin = new URL(response.url()).origin;
+  const channel = new URL(response.url()).pathname.split("/")[3];
+  const me = await page.request.get(`${origin}/api/me`, { headers });
+  expect(me.ok()).toBeTruthy();
+  const { user } = await me.json();
+  await expect.poll(async () => {
+    const roster = await page.request.get(`${origin}/api/voice/rooms`, { headers });
+    expect(roster.ok()).toBeTruthy();
+    const { rooms } = await roster.json();
+    return rooms[channel] ?? [];
+  }, { message: "Leaving user must disappear from the server voice roster", timeout: 15000 }).not.toContain(user.id);
+}
+
+/** Closing a browser waits for ICE expiry; explicitly leave so the next test gets an empty room. */
+async function closeVoiceContexts(contexts: BrowserContext[]) {
+  await Promise.all(contexts.map(async context => {
+    try {
+      for (const page of context.pages()) {
+        // A failed phone assertion can leave Chat over the call controls.
+        if (await page.locator(".hc-shell[data-sheet]").count()) await page.keyboard.press("Escape");
+        if (await page.getByTestId("call-bar").getByRole("button", { name: "Leave", exact: true }).isVisible()) {
+          await leaveVoice(page);
+        }
+      }
+    } finally {
+      await context.close();
+    }
+  }));
 }
 
 async function loungeId(request: import("@playwright/test").APIRequestContext, headers: Record<string, string>): Promise<string> {
@@ -234,6 +275,8 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
       () =>
         new Promise<number[]>((resolve) => {
           const samples: number[] = [];
+          const watched = new WeakSet<HTMLVideoElement>();
+          let lastTimestamp: number | undefined;
           let finished = false;
           const canvas = document.createElement("canvas");
           canvas.width = 320;
@@ -244,38 +287,51 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
           const finish = () => {
             if (!finished) {
               finished = true;
+              clearTimeout(deadline);
+              clearInterval(discovery);
               resolve(samples);
             }
           };
-          setTimeout(finish, 6000);
-          for (const video of document.querySelectorAll<HTMLVideoElement>(
-            '[data-testid="remote-media"]',
-          )) {
-            const frame = () => {
-              if (finished) return;
-              if (video.videoWidth) {
-                context.drawImage(video, 0, 0, 320, 180);
-                const marker = context.getImageData(160, 130, 1, 1).data;
-                if (marker[0] > 180 && marker[1] < 70 && marker[2] > 180) {
-                  let value = 0;
-                  for (let bit = 0; bit < 32; bit++) {
-                    const pixel = context.getImageData(
-                      bit * 10 + 5,
-                      40,
-                      1,
-                      1,
-                    ).data;
-                    value = (value * 2 + (pixel[0] > 128 ? 1 : 0)) >>> 0;
+          // Sharing moves the receiver from the person tile to a new stream tile in 0.4.0.
+          // Follow the current element instead of sampling a detached camera element forever.
+          const discover = () => {
+            for (const video of document.querySelectorAll<HTMLVideoElement>(
+              '.hc-center .hc-tile--stream [data-testid="remote-media"][data-media-kind="video"]',
+            )) {
+              if (watched.has(video)) continue;
+              watched.add(video);
+              const frame = () => {
+                if (finished || !video.isConnected) return;
+                if (video.videoWidth) {
+                  context.drawImage(video, 0, 0, 320, 180);
+                  const marker = context.getImageData(160, 130, 1, 1).data;
+                  if (marker[0] > 180 && marker[1] < 70 && marker[2] > 180) {
+                    let value = 0;
+                    for (let bit = 0; bit < 32; bit++) {
+                      const pixel = context.getImageData(
+                        bit * 10 + 5,
+                        40,
+                        1,
+                        1,
+                      ).data;
+                      value = (value * 2 + (pixel[0] > 128 ? 1 : 0)) >>> 0;
+                    }
+                    const age = ((Date.now() >>> 0) - value) >>> 0;
+                    if (age < 2000 && value !== lastTimestamp) {
+                      samples.push(age);
+                      lastTimestamp = value;
+                    }
+                    if (samples.length >= 30) finish();
                   }
-                  const age = ((Date.now() >>> 0) - value) >>> 0;
-                  if (age < 2000) samples.push(age);
-                  if (samples.length >= 30) finish();
                 }
-              }
+                video.requestVideoFrameCallback(frame);
+              };
               video.requestVideoFrameCallback(frame);
-            };
-            video.requestVideoFrameCallback(frame);
-          }
+            }
+          };
+          const deadline = setTimeout(finish, 30000);
+          const discovery = setInterval(discover, 100);
+          discover();
         }),
     );
     expect(
@@ -300,7 +356,7 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
     for (const context of contexts) {
       const page = context.pages()[0];
       const bar = page.getByTestId("call-bar");
-      await bar.getByRole("button", { name: "Leave", exact: true }).click();
+      await leaveVoice(page);
       await expect(
         bar.getByRole("button", { name: "Join", exact: true }),
       ).toBeVisible();
@@ -369,7 +425,7 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
       test.info().outputPath("client-voice-diagnostics.json"),
       JSON.stringify({ browser: diagnostic, server }, null, 2),
     );
-    for (const context of contexts) await context.close();
+    await closeVoiceContexts(contexts);
   }
 });
 
@@ -427,12 +483,12 @@ test("call stage owns center", async ({ browser, request }) => {
     await host.locator(".hc-stage__spot").getByRole("button", { name: /^Stop focusing / }).click();
     await expect(host.locator(".hc-stage__spot")).toHaveCount(0);
     // Leaving restores the normal layout.
-    await host.getByTestId("call-bar").getByRole("button", { name: "Leave", exact: true }).click();
+    await leaveVoice(host);
     await expect(host.locator(".hc-center [data-testid=screen-composer]")).toBeVisible();
     await expect(host.getByRole("tab", { name: "Chat", exact: true })).toHaveCount(0);
     await expect(host.getByTestId("call-bar").getByRole("button", { name: "Join", exact: true })).toBeVisible();
   } finally {
-    for (const context of contexts) await context.close();
+    await closeVoiceContexts(contexts);
   }
 });
 
@@ -459,10 +515,12 @@ test("call stage on a phone: stage is the screen, chat opens as the sheet", asyn
     await expect(page.locator(".hc-right [data-testid=screen-composer]")).toBeVisible();
     await expect(page.getByRole("tab", { name: "Chat", exact: true })).toHaveAttribute("aria-selected", "true");
     await page.locator(".hc-right").getByRole("button", { name: "Close", exact: true }).click();
-    await bar.getByRole("button", { name: "Leave", exact: true }).click();
+    await expect(page.locator(".hc-shell")).not.toHaveAttribute("data-sheet");
+    await expect(page.locator(".hc-right [data-testid=screen-composer]")).toBeHidden();
+    await leaveVoice(page);
     await expect(page.locator(".hc-center [data-testid=screen-composer]")).toBeVisible();
   } finally {
-    await context.close();
+    await closeVoiceContexts([context]);
   }
 });
 
@@ -647,7 +705,7 @@ test("screen share presets, share audio as its own track, and a separate volume 
     if (!source.used.startsWith("synthetic")) await bar.getByRole("button", { name: "Stop sharing", exact: true }).click();
     await expect(bar.getByRole("button", { name: "Share screen", exact: true })).toBeVisible({ timeout: 15000 });
   } finally {
-    for (const context of contexts) await context.close();
+    await closeVoiceContexts(contexts);
   }
 });
 
@@ -714,7 +772,7 @@ test("video orientation is not negotiated on the publish leg, and the subscribe 
     // And no server offer to a viewer carries it either, whichever way it is negotiated.
     for (const item of subscribe.filter(entry => entry.step === "remote" && entry.type === "offer")) expect(item.sdp).not.toContain(orientation);
   } finally {
-    for (const context of contexts) await context.close();
+    await closeVoiceContexts(contexts);
   }
 });
 
@@ -752,6 +810,6 @@ test("joins and shows a warning when a saved device is missing",async ({ browser
     await warning.getByRole("button", { name: "Dismiss", exact: true }).click();
     await expect(warning).toHaveCount(0);
   } finally {
-    await context.close();
+    await closeVoiceContexts([context]);
   }
 });

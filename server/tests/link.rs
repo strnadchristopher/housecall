@@ -57,7 +57,12 @@ async fn public(app: &Router, path: &str, body: Value) -> Value {
     let response = app.clone().oneshot(req).await.unwrap();
     let status = response.status();
     let bytes = response.into_body().collect().await.unwrap().to_bytes();
-    assert_eq!(status, StatusCode::OK, "{path}: {}", String::from_utf8_lossy(&bytes));
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "{path}: {}",
+        String::from_utf8_lossy(&bytes)
+    );
     serde_json::from_slice(&bytes).unwrap()
 }
 /// owner, alice and bob; all three are in the owner's server.
@@ -65,7 +70,9 @@ async fn fixture() -> (Router, AppState, Value, Value, Value) {
     let mut state = AppState::new(":memory:", SETUP).unwrap();
     state.public_auth_limit = 1000;
     let dir = tempfile::tempdir().unwrap();
-    state.media = Some(std::sync::Arc::new(housecall_media::Store::new(dir.path(), [7; 32]).unwrap()));
+    state.media = Some(std::sync::Arc::new(
+        housecall_media::Store::new(dir.path(), [7; 32]).unwrap(),
+    ));
     std::mem::forget(dir);
     let api = app(state.clone(), None);
     let owner = public(
@@ -111,7 +118,13 @@ async fn post_public(app: &Router, path: &str, body: Value) -> Reply {
         .unwrap();
     let response = app.clone().oneshot(req).await.unwrap();
     let status = response.status();
-    let bytes = response.into_body().collect().await.unwrap().to_bytes().to_vec();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .unwrap()
+        .to_bytes()
+        .to_vec();
     Reply { status, bytes }
 }
 fn b43(n: u8) -> String {
@@ -138,10 +151,24 @@ fn wrapped() -> String {
     B64.encode(b)
 }
 async fn approve(api: &Router, who: &Value, l: &Value) -> Reply {
-    call(api, "POST", &format!("/api/link/{}/approve", l["link_id"].as_str().unwrap()), who, json!({"wrapped_keys":wrapped()})).await
+    call(
+        api,
+        "POST",
+        &format!("/api/link/{}/approve", l["link_id"].as_str().unwrap()),
+        who,
+        json!({"wrapped_keys":wrapped()}),
+    )
+    .await
 }
 async fn get_link(api: &Router, who: &Value, l: &Value) -> Reply {
-    call(api, "GET", &format!("/api/link/{}", l["link_id"].as_str().unwrap()), who, Value::Null).await
+    call(
+        api,
+        "GET",
+        &format!("/api/link/{}", l["link_id"].as_str().unwrap()),
+        who,
+        Value::Null,
+    )
+    .await
 }
 fn expire(state: &AppState, l: &Value) {
     // Memory-only state: reach in through a fresh start would not help, so age it via the public clock-free hook.
@@ -173,7 +200,10 @@ async fn happy_path_and_session_bound_to_claimed_device() {
     let r = post_public(&api, "/api/link/result", result_body(&l, &dkey(0xcd))).await;
     assert_eq!(r.status, StatusCode::NOT_FOUND);
     // the starter's other session cannot approve; the owner cannot either
-    assert_eq!(approve(&api, &owner, &l).await.status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        approve(&api, &owner, &l).await.status,
+        StatusCode::FORBIDDEN
+    );
     let a = approve(&api, &alice, &l).await;
     assert_eq!(a.status, StatusCode::OK);
     assert_eq!(a.json(), json!({"state":"approved"}));
@@ -189,34 +219,75 @@ async fn happy_path_and_session_bound_to_claimed_device() {
     assert!(out["expires_at"].as_i64().unwrap() > 0);
     // the token works with the claimed device key only
     let ok = json!({"token":out["token"],"device_key":dkey(0xab)});
-    assert_eq!(call(&api, "GET", "/api/me", &ok, Value::Null).await.status, StatusCode::OK);
+    assert_eq!(
+        call(&api, "GET", "/api/me", &ok, Value::Null).await.status,
+        StatusCode::OK
+    );
     let bad = json!({"token":out["token"],"device_key":dkey(0xcd)});
-    assert_eq!(call(&api, "GET", "/api/me", &bad, Value::Null).await.status, StatusCode::UNAUTHORIZED);
+    assert_eq!(
+        call(&api, "GET", "/api/me", &bad, Value::Null).await.status,
+        StatusCode::UNAUTHORIZED
+    );
     // second result: burnt
     let r = post_public(&api, "/api/link/result", result_body(&l, &dkey(0xab))).await;
     assert_eq!(r.status, StatusCode::CONFLICT);
     assert_eq!(r.error(), "link already used");
     // devices list: how each device was added
-    let d = call(&api, "GET", "/api/devices", &alice, Value::Null).await.json();
-    let via: Vec<&str> = d["devices"].as_array().unwrap().iter().map(|x| x["added_via"].as_str().unwrap_or("")).collect();
+    let d = call(&api, "GET", "/api/devices", &alice, Value::Null)
+        .await
+        .json();
+    let via: Vec<&str> = d["devices"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|x| x["added_via"].as_str().unwrap_or(""))
+        .collect();
     assert!(via.contains(&"qr") && via.contains(&"invite"), "{via:?}");
     // new device notice reaches the account's devices
-    let ev = call(&api, "GET", "/api/events?after=0", &alice, Value::Null).await.json();
-    let notices: Vec<&Value> = ev["events"].as_array().unwrap().iter().filter(|e| e["kind"] == "device.added").collect();
-    let qr = notices.iter().find(|e| e["payload"]["added_via"] == "qr").expect("qr notice");
+    let ev = call(&api, "GET", "/api/events?after=0", &alice, Value::Null)
+        .await
+        .json();
+    let notices: Vec<&Value> = ev["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["kind"] == "device.added")
+        .collect();
+    let qr = notices
+        .iter()
+        .find(|e| e["payload"]["added_via"] == "qr")
+        .expect("qr notice");
     assert_eq!(qr["payload"]["device_name"], "Pixel 9");
     assert!(qr["payload"]["session_id"].is_string());
-    assert!(notices.iter().any(|e| e["payload"]["added_via"] == "invite"));
+    assert!(notices
+        .iter()
+        .any(|e| e["payload"]["added_via"] == "invite"));
 }
 
 #[tokio::test]
 async fn every_session_creation_raises_device_added() {
     let (api, _state, owner, _a, _b) = fixture().await;
-    let l = post_public(&api, "/api/login", json!({"username":"owner","password":PW,"device_name":"laptop"})).await;
+    let l = post_public(
+        &api,
+        "/api/login",
+        json!({"username":"owner","password":PW,"device_name":"laptop"}),
+    )
+    .await;
     assert_eq!(l.status, StatusCode::OK);
-    let ev = call(&api, "GET", "/api/events?after=0", &owner, Value::Null).await.json();
-    let vias: Vec<&str> = ev["events"].as_array().unwrap().iter().filter(|e| e["kind"] == "device.added").map(|e| e["payload"]["added_via"].as_str().unwrap()).collect();
-    assert!(vias.contains(&"setup") && vias.contains(&"password"), "{vias:?}");
+    let ev = call(&api, "GET", "/api/events?after=0", &owner, Value::Null)
+        .await
+        .json();
+    let vias: Vec<&str> = ev["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["kind"] == "device.added")
+        .map(|e| e["payload"]["added_via"].as_str().unwrap())
+        .collect();
+    assert!(
+        vias.contains(&"setup") && vias.contains(&"password"),
+        "{vias:?}"
+    );
 }
 
 #[tokio::test]
@@ -235,8 +306,18 @@ async fn wrong_secret_and_unknown_id_are_the_same_404_and_three_burn() {
     assert_eq!(r1.json(), json!({"error":"not found"}));
     // a wrong secret never used the dummy digest: it went through the real one
     assert_eq!(housecall_server::link::dummy_compares(), before + 1);
-    assert_eq!(post_public(&api, "/api/link/claim", wrong.clone()).await.status, StatusCode::NOT_FOUND);
-    assert_eq!(post_public(&api, "/api/link/claim", wrong.clone()).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        post_public(&api, "/api/link/claim", wrong.clone())
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        post_public(&api, "/api/link/claim", wrong.clone())
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
     // third wrong secret burnt it, even for the right secret
     let r = post_public(&api, "/api/link/claim", claim_body(&l, &dkey(1))).await;
     assert_eq!(r.status, StatusCode::CONFLICT);
@@ -249,12 +330,20 @@ async fn wrong_secret_and_unknown_id_are_the_same_404_and_three_burn() {
 async fn double_claim_burns_for_both() {
     let (api, _state, _o, alice, _b) = fixture().await;
     let l = start(&api, &alice).await;
-    assert_eq!(post_public(&api, "/api/link/claim", claim_body(&l, &dkey(1))).await.status, StatusCode::OK);
+    assert_eq!(
+        post_public(&api, "/api/link/claim", claim_body(&l, &dkey(1)))
+            .await
+            .status,
+        StatusCode::OK
+    );
     let second = post_public(&api, "/api/link/claim", claim_body(&l, &dkey(2))).await;
     assert_eq!(second.status, StatusCode::CONFLICT);
     assert_eq!(second.error(), "link already used");
     let g = get_link(&api, &alice, &l).await.json();
-    assert_eq!((g["state"].as_str(), g["burn_reason"].as_str()), (Some("burnt"), Some("double_claim")));
+    assert_eq!(
+        (g["state"].as_str(), g["burn_reason"].as_str()),
+        (Some("burnt"), Some("double_claim"))
+    );
     // the first claimer's result is 409 from now on, and approving is refused
     let r = post_public(&api, "/api/link/result", result_body(&l, &dkey(1))).await;
     assert_eq!(r.status, StatusCode::CONFLICT);
@@ -267,8 +356,18 @@ async fn claim_after_approval_burns_and_result_is_refused() {
     let l = start(&api, &alice).await;
     post_public(&api, "/api/link/claim", claim_body(&l, &dkey(1))).await;
     assert_eq!(approve(&api, &alice, &l).await.status, StatusCode::OK);
-    assert_eq!(post_public(&api, "/api/link/claim", claim_body(&l, &dkey(2))).await.status, StatusCode::CONFLICT);
-    assert_eq!(post_public(&api, "/api/link/result", result_body(&l, &dkey(1))).await.status, StatusCode::CONFLICT);
+    assert_eq!(
+        post_public(&api, "/api/link/claim", claim_body(&l, &dkey(2)))
+            .await
+            .status,
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        post_public(&api, "/api/link/result", result_body(&l, &dkey(1)))
+            .await
+            .status,
+        StatusCode::CONFLICT
+    );
 }
 
 #[tokio::test]
@@ -277,13 +376,31 @@ async fn other_sessions_get_403_and_unknown_ids_404() {
     let l = start(&api, &alice).await;
     assert_eq!(get_link(&api, &bob, &l).await.status, StatusCode::FORBIDDEN);
     // same user, other session
-    let second = post_public(&api, "/api/login", json!({"username":"alice","password":PW,"device_name":"b"})).await;
+    let second = post_public(
+        &api,
+        "/api/login",
+        json!({"username":"alice","password":PW,"device_name":"b"}),
+    )
+    .await;
     let second = serde_json::from_slice::<Value>(&second.bytes).unwrap();
-    assert_eq!(get_link(&api, &second, &l).await.status, StatusCode::FORBIDDEN);
-    let deny = call(&api, "POST", &format!("/api/link/{}/deny", l["link_id"].as_str().unwrap()), &second, json!({})).await;
+    assert_eq!(
+        get_link(&api, &second, &l).await.status,
+        StatusCode::FORBIDDEN
+    );
+    let deny = call(
+        &api,
+        "POST",
+        &format!("/api/link/{}/deny", l["link_id"].as_str().unwrap()),
+        &second,
+        json!({}),
+    )
+    .await;
     assert_eq!(deny.status, StatusCode::FORBIDDEN);
     let missing = json!({"link_id":"1".repeat(32)});
-    assert_eq!(get_link(&api, &alice, &missing).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        get_link(&api, &alice, &missing).await.status,
+        StatusCode::NOT_FOUND
+    );
 }
 
 #[tokio::test]
@@ -293,13 +410,24 @@ async fn deny_and_cancel() {
     let path = format!("/api/link/{}/deny", l["link_id"].as_str().unwrap());
     let d = call(&api, "POST", &path, &alice, json!({})).await;
     assert_eq!(d.json(), json!({"state":"denied"}));
-    assert_eq!(call(&api, "POST", &path, &alice, json!({})).await.status, StatusCode::CONFLICT);
-    assert_eq!(post_public(&api, "/api/link/claim", claim_body(&l, &dkey(1))).await.status, StatusCode::CONFLICT);
+    assert_eq!(
+        call(&api, "POST", &path, &alice, json!({})).await.status,
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        post_public(&api, "/api/link/claim", claim_body(&l, &dkey(1)))
+            .await
+            .status,
+        StatusCode::CONFLICT
+    );
     // deny after claim: the claimer is told no
     let l = start(&api, &alice).await;
     post_public(&api, "/api/link/claim", claim_body(&l, &dkey(1))).await;
     let path = format!("/api/link/{}/deny", l["link_id"].as_str().unwrap());
-    assert_eq!(call(&api, "POST", &path, &alice, json!({})).await.status, StatusCode::OK);
+    assert_eq!(
+        call(&api, "POST", &path, &alice, json!({})).await.status,
+        StatusCode::OK
+    );
     let r = post_public(&api, "/api/link/result", result_body(&l, &dkey(1))).await;
     assert_eq!(r.status, StatusCode::FORBIDDEN);
     assert_eq!(r.error(), "link denied");
@@ -310,20 +438,35 @@ async fn expiry_gives_410() {
     let (api, state, _o, alice, _b) = fixture().await;
     let l = start(&api, &alice).await;
     expire(&state, &l);
-    assert_eq!(post_public(&api, "/api/link/claim", claim_body(&l, &dkey(1))).await.status, StatusCode::GONE);
+    assert_eq!(
+        post_public(&api, "/api/link/claim", claim_body(&l, &dkey(1)))
+            .await
+            .status,
+        StatusCode::GONE
+    );
     assert_eq!(get_link(&api, &alice, &l).await.json()["state"], "expired");
     // claimed then expired before approval
     let l = start(&api, &alice).await;
     post_public(&api, "/api/link/claim", claim_body(&l, &dkey(1))).await;
     expire(&state, &l);
     assert_eq!(approve(&api, &alice, &l).await.status, StatusCode::GONE);
-    assert_eq!(post_public(&api, "/api/link/result", result_body(&l, &dkey(1))).await.status, StatusCode::GONE);
+    assert_eq!(
+        post_public(&api, "/api/link/result", result_body(&l, &dkey(1)))
+            .await
+            .status,
+        StatusCode::GONE
+    );
     // approved but result not collected in 60 s
     let l = start(&api, &alice).await;
     post_public(&api, "/api/link/claim", claim_body(&l, &dkey(1))).await;
     approve(&api, &alice, &l).await;
     housecall_server::link::age_for_test(&state, l["link_id"].as_str().unwrap(), 61_000);
-    assert_eq!(post_public(&api, "/api/link/result", result_body(&l, &dkey(1))).await.status, StatusCode::GONE);
+    assert_eq!(
+        post_public(&api, "/api/link/result", result_body(&l, &dkey(1)))
+            .await
+            .status,
+        StatusCode::GONE
+    );
 }
 
 #[tokio::test]
@@ -331,9 +474,20 @@ async fn second_start_cancels_the_first_unclaimed_link() {
     let (api, _state, _o, alice, _b) = fixture().await;
     let first = start(&api, &alice).await;
     let second = start(&api, &alice).await;
-    assert_eq!(get_link(&api, &alice, &first).await.json()["state"], "denied");
-    assert_eq!(get_link(&api, &alice, &second).await.json()["state"], "started");
-    assert_eq!(post_public(&api, "/api/link/claim", claim_body(&first, &dkey(1))).await.status, StatusCode::CONFLICT);
+    assert_eq!(
+        get_link(&api, &alice, &first).await.json()["state"],
+        "denied"
+    );
+    assert_eq!(
+        get_link(&api, &alice, &second).await.json()["state"],
+        "started"
+    );
+    assert_eq!(
+        post_public(&api, "/api/link/claim", claim_body(&first, &dkey(1)))
+            .await
+            .status,
+        StatusCode::CONFLICT
+    );
 }
 
 #[tokio::test]
@@ -373,14 +527,24 @@ async fn validation_refusals_are_400() {
     }
     for b in cases {
         let r = post_public(&api, "/api/link/claim", b.clone()).await;
-        assert_eq!((r.status, r.error()), (StatusCode::BAD_REQUEST, json!("invalid link request")), "{b}");
+        assert_eq!(
+            (r.status, r.error()),
+            (StatusCode::BAD_REQUEST, json!("invalid link request")),
+            "{b}"
+        );
     }
     // none of that touched the link
     assert_eq!(get_link(&api, &alice, &l).await.json()["state"], "started");
     // approve: wrapped_keys shapes
     post_public(&api, "/api/link/claim", claim_body(&l, &dkey(1))).await;
     let path = format!("/api/link/{}/approve", l["link_id"].as_str().unwrap());
-    for w in [json!("!!"), json!(B64.encode([1u8; 78])), json!(B64.encode([2u8; 100])), json!(B64.encode(vec![1u8; 65537])), json!(5)] {
+    for w in [
+        json!("!!"),
+        json!(B64.encode([1u8; 78])),
+        json!(B64.encode([2u8; 100])),
+        json!(B64.encode(vec![1u8; 65537])),
+        json!(5),
+    ] {
         let r = call(&api, "POST", &path, &alice, json!({"wrapped_keys":w})).await;
         assert_eq!(r.status, StatusCode::BAD_REQUEST, "{w}");
     }
@@ -388,17 +552,34 @@ async fn validation_refusals_are_400() {
     assert_eq!(r.status, StatusCode::OK);
     let r = post_public(&api, "/api/link/result", result_body(&l, &dkey(1))).await;
     assert!(r.json()["wrapped_keys"].is_null());
-    assert_eq!(post_public(&api, "/api/link/result", json!({"link_id":"x"})).await.status.is_client_error(), true);
+    assert!(
+        post_public(&api, "/api/link/result", json!({"link_id":"x"}))
+            .await
+            .status
+            .is_client_error()
+    );
 }
 
 #[tokio::test]
 async fn disabled_account_cannot_be_claimed() {
     let (api, _state, owner, alice, _b) = fixture().await;
     let l = start(&api, &alice).await;
-    let r = call(&api, "POST", &format!("/api/users/{}/disable", uid(&alice)), &owner, json!({})).await;
+    let r = call(
+        &api,
+        "POST",
+        &format!("/api/users/{}/disable", uid(&alice)),
+        &owner,
+        json!({}),
+    )
+    .await;
     assert_eq!(r.status, StatusCode::OK);
     // the starter's session is gone too, so claim is what we test
-    assert_eq!(post_public(&api, "/api/link/claim", claim_body(&l, &dkey(1))).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        post_public(&api, "/api/link/claim", claim_body(&l, &dkey(1)))
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
 }
 
 #[tokio::test]
@@ -416,7 +597,12 @@ async fn result_polling_does_not_starve_login() {
         }
     }
     assert!(limited, "the result bucket has its own limit");
-    let r = post_public(&api, "/api/login", json!({"username":"alice","password":PW,"device_name":"x"})).await;
+    let r = post_public(
+        &api,
+        "/api/login",
+        json!({"username":"alice","password":PW,"device_name":"x"}),
+    )
+    .await;
     assert_eq!(r.status, StatusCode::OK);
 }
 
@@ -427,7 +613,9 @@ async fn result_is_limited_per_link() {
     post_public(&api, "/api/link/claim", claim_body(&l, &dkey(1))).await;
     let mut last = StatusCode::OK;
     for _ in 0..61 {
-        last = post_public(&api, "/api/link/result", result_body(&l, &dkey(1))).await.status;
+        last = post_public(&api, "/api/link/result", result_body(&l, &dkey(1)))
+            .await
+            .status;
     }
     assert_eq!(last, StatusCode::TOO_MANY_REQUESTS);
 }
@@ -458,7 +646,11 @@ async fn no_secret_appears_in_logs() {
     let cap = CAP
         .get_or_init(|| {
             let cap = Capture::default();
-            let sub = tracing_subscriber::fmt().with_writer(cap.clone()).with_max_level(tracing::Level::TRACE).with_ansi(false).finish();
+            let sub = tracing_subscriber::fmt()
+                .with_writer(cap.clone())
+                .with_max_level(tracing::Level::TRACE)
+                .with_ansi(false)
+                .finish();
             tracing::subscriber::set_global_default(sub).unwrap();
             cap
         })
@@ -471,11 +663,21 @@ async fn no_secret_appears_in_logs() {
     wrong["secret"] = json!(b43(5));
     post_public(&api, "/api/link/claim", wrong).await;
     approve(&api, &alice, &l).await;
-    let out = post_public(&api, "/api/link/result", result_body(&l, &dk)).await.json();
+    let out = post_public(&api, "/api/link/result", result_body(&l, &dk))
+        .await
+        .json();
     let logs = String::from_utf8_lossy(&cap.0.lock().unwrap()).to_string();
     let mine = &l["link_id"].as_str().unwrap()[..8];
-    for want in ["link started", "link claimed", "link approved", "link burnt"] {
-        assert!(logs.lines().any(|x| x.contains(want) && x.contains(mine)), "missing {want:?} in {logs:?}");
+    for want in [
+        "link started",
+        "link claimed",
+        "link approved",
+        "link burnt",
+    ] {
+        assert!(
+            logs.lines().any(|x| x.contains(want) && x.contains(mine)),
+            "missing {want:?} in {logs:?}"
+        );
     }
     assert!(logs.contains("qr session created"));
     for secret in [
@@ -495,8 +697,16 @@ async fn no_secret_appears_in_logs() {
 #[tokio::test]
 async fn the_link_page_is_static_strict_and_sends_nothing() {
     let (api, _state, _o, _a, _b) = fixture().await;
-    for (path, kind) in [("/link", "text/html"), ("/link.js", "text/javascript"), ("/link.css", "text/css")] {
-        let req = Request::builder().method("GET").uri(path).body(Body::empty()).unwrap();
+    for (path, kind) in [
+        ("/link", "text/html"),
+        ("/link.js", "text/javascript"),
+        ("/link.css", "text/css"),
+    ] {
+        let req = Request::builder()
+            .method("GET")
+            .uri(path)
+            .body(Body::empty())
+            .unwrap();
         let r = api.clone().oneshot(req).await.unwrap();
         assert_eq!(r.status(), StatusCode::OK, "{path}");
         let h = r.headers().clone();
@@ -505,8 +715,14 @@ async fn the_link_page_is_static_strict_and_sends_nothing() {
         assert_eq!(h["x-content-type-options"], "nosniff");
         assert_eq!(h["cache-control"], "no-store");
         let csp = h["content-security-policy"].to_str().unwrap();
-        assert!(csp.contains("script-src 'self'") && !csp.contains("unsafe-inline") && csp.contains("default-src 'self'"), "{csp}");
-        let body = String::from_utf8(r.into_body().collect().await.unwrap().to_bytes().to_vec()).unwrap();
+        assert!(
+            csp.contains("script-src 'self'")
+                && !csp.contains("unsafe-inline")
+                && csp.contains("default-src 'self'"),
+            "{csp}"
+        );
+        let body =
+            String::from_utf8(r.into_body().collect().await.unwrap().to_bytes().to_vec()).unwrap();
         if path == "/link" {
             assert!(body.contains("Open in Housecall") && body.contains("Continue in browser"));
             assert!(body.contains("housecall://link-scan") && !body.contains("link?c="));
@@ -517,7 +733,19 @@ async fn the_link_page_is_static_strict_and_sends_nothing() {
             }
         }
         if path == "/link.js" {
-            for banned in ["fetch(", "XMLHttpRequest", "sendBeacon", "WebSocket", "new Image", "localStorage", "sessionStorage", "document.cookie", "location.href", "location.assign", "console."] {
+            for banned in [
+                "fetch(",
+                "XMLHttpRequest",
+                "sendBeacon",
+                "WebSocket",
+                "new Image",
+                "localStorage",
+                "sessionStorage",
+                "document.cookie",
+                "location.href",
+                "location.assign",
+                "console.",
+            ] {
                 assert!(!body.contains(banned), "link.js uses {banned}");
             }
             // the fragment is dropped from the address bar before anything else is read
@@ -525,6 +753,13 @@ async fn the_link_page_is_static_strict_and_sends_nothing() {
             assert!(!body.contains('\u{2014}'));
         }
     }
-    let req = Request::builder().method("POST").uri("/link").body(Body::empty()).unwrap();
-    assert_eq!(api.clone().oneshot(req).await.unwrap().status(), StatusCode::METHOD_NOT_ALLOWED);
+    let req = Request::builder()
+        .method("POST")
+        .uri("/link")
+        .body(Body::empty())
+        .unwrap();
+    assert_eq!(
+        api.clone().oneshot(req).await.unwrap().status(),
+        StatusCode::METHOD_NOT_ALLOWED
+    );
 }

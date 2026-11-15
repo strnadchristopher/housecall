@@ -20,7 +20,11 @@ fn https_ok(headers: &HeaderMap) -> bool {
     let forwarded = headers
         .get("x-forwarded-proto")
         .and_then(|v| v.to_str().ok())
-        .is_some_and(|v| v.split(',').next().is_some_and(|p| p.trim().eq_ignore_ascii_case("https")));
+        .is_some_and(|v| {
+            v.split(',')
+                .next()
+                .is_some_and(|p| p.trim().eq_ignore_ascii_case("https"))
+        });
     forwarded
 }
 

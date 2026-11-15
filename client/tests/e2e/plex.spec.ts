@@ -59,7 +59,8 @@ test("three live voice peers browse and synchronously play real HLS from a synth
     for (const context of contexts) {
       const page = context.pages()[0];
       const bar = page.getByTestId("call-bar");
-      await bar.getByRole("button", { name: "Join", exact: true }).click();
+      // Calls now start from voice channels; general is a text channel without a call bar.
+      await page.getByTestId("voice-channel").getByRole("button", { name: "Open Lounge", exact: true }).click();
       await expect(bar).toHaveAttribute("data-phase", "live", {
         timeout: 30000,
       });

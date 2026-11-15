@@ -59,5 +59,9 @@ async fn health_ok_with_all_integration_variables_empty() {
     let bytes = response.into_body().collect().await.unwrap().to_bytes();
     let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(value["ok"], true);
-    assert_eq!(value["version"], env!("CARGO_PKG_VERSION"), "Settings, About shows the server version");
+    assert_eq!(
+        value["version"],
+        env!("CARGO_PKG_VERSION"),
+        "Settings, About shows the server version"
+    );
 }
