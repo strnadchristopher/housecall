@@ -351,25 +351,25 @@ PINNED ── server key equals pin ──────────────�
 
 An envelope that names a peer `key_rev` above the pin does **not** change state by itself (R-12). It makes the client fetch the peer's keys at once (ignoring the once-a-minute limit, at most once per envelope revision). Only the server's answer moves the state, by the rules above. If the server does not list that revision, the message shows "This message couldn't be decrypted." and nothing else changes. Otherwise a host could inject envelopes with made-up revisions to raise the "key changed" banner over and over, until people tap "I understand" out of habit.
 
-**`KEY_ROLLBACK`** (R-3). `key_rev` never goes down, an old revision's key never changes, and the server refuses to publish a key that was already used at an earlier revision (15.4). So any of the three triggers means the host is lying or broken. The classic attack: christopher's phone is stolen, christopher resets (`key_rev` 3), and the host then serves the stolen key again so that christopher's peers encrypt to it. In `KEY_ROLLBACK` the composer is disabled and the banner says: "The server is showing an older security key for christopher. You can't send messages until this is fixed. This can mean the server is broken, or that someone is trying to read your messages." Buttons: "Compare safety numbers" only. Messages under revisions in the pin's history still decrypt and show normally, because their keys are pinned. Label: "Key problem" (level 0).
+**`KEY_ROLLBACK`** (R-3). `key_rev` never goes down, an old revision's key never changes, and the server refuses to publish a key that was already used at an earlier revision (15.4). So any of the three triggers means the host is lying or broken. The classic attack: alex's phone is stolen, alex resets (`key_rev` 3), and the host then serves the stolen key again so that alex's peers encrypt to it. In `KEY_ROLLBACK` the composer is disabled and the banner says: "The server is showing an older security key for alex. You can't send messages until this is fixed. This can mean the server is broken, or that someone is trying to read your messages." Buttons: "Compare safety numbers" only. Messages under revisions in the pin's history still decrypt and show normally, because their keys are pinned. Label: "Key problem" (level 0).
 
-- **No silent downgrade.** Once a peer is PINNED, the client never sends plaintext to that DM, whatever the server says. A server that reports no key for a pinned peer puts it in CHANGED_UNACKNOWLEDGED. A legitimate key is never removed (there is no route to remove one), so this only happens if the host is lying or broken. Acknowledging it does not unlock plaintext: the composer stays disabled with "christopher has no security key on this server. Messages can't be sent until they set one up again."
-- **While CHANGED_UNACKNOWLEDGED:** the composer is disabled. The banner says "christopher's security key changed. This can happen if they reset their key or got a new device without their recovery key. It can also mean someone is trying to read your messages. Compare safety numbers with them before you continue." Buttons: "Compare safety numbers", "I understand". The label is "Key changed" (level 0).
+- **No silent downgrade.** Once a peer is PINNED, the client never sends plaintext to that DM, whatever the server says. A server that reports no key for a pinned peer puts it in CHANGED_UNACKNOWLEDGED. A legitimate key is never removed (there is no route to remove one), so this only happens if the host is lying or broken. Acknowledging it does not unlock plaintext: the composer stays disabled with "alex has no security key on this server. Messages can't be sent until they set one up again."
+- **While CHANGED_UNACKNOWLEDGED:** the composer is disabled. The banner says "alex's security key changed. This can happen if they reset their key or got a new device without their recovery key. It can also mean someone is trying to read your messages. Compare safety numbers with them before you continue." Buttons: "Compare safety numbers", "I understand". The label is "Key changed" (level 0).
 - **Where changes are noticed:** on opening a DM (`GET /api/users/{id}/keys`, at most once per minute per peer), on the `keys.changed` event, and on receiving an envelope whose peer revision is above the pinned one (which triggers a fetch, as above).
 - **On "I understand":** the client fetches the keys again and adds every revision above the old pin, up to and including the current one, to `history`. The same consistency rules as first contact apply.
 - Pin on first use happens without asking. The DM details show "Not verified" until the user marks the safety number as verified.
 
 ### 10.3 Receiving under a changed key
 
-Messages whose peer `key_rev` is above the pinned revision are not decrypted or shown while the peer is CHANGED_UNACKNOWLEDGED. The timeline shows one line: "3 messages are waiting until you check christopher's new security key." After "I understand" they are decrypted and shown normally. Messages under older revisions that are in `history` decrypt normally at any time.
+Messages whose peer `key_rev` is above the pinned revision are not decrypted or shown while the peer is CHANGED_UNACKNOWLEDGED. The timeline shows one line: "3 messages are waiting until you check alex's new security key." After "I understand" they are decrypted and shown normally. Messages under older revisions that are in `history` decrypt normally at any time.
 
 ### 10.4 Keys for old messages
 
 To open an envelope the client needs the peer's key for the revision it names, and takes it **only from the pin's `history`** (R-1). It never fetches one missing revision from the server and trusts it.
 
-Why: the earlier text trusted any historical key the server supplied for a revision the pin did not have. A host could then invent "christopher's key at revision 1" (its own key), seal messages to me under it, and show them as from christopher in a DM labelled End-to-end encrypted, even after we had compared safety numbers, with no key-change warning (vector `pin_state` "server inserts a forged older revision that the pin never saw").
+Why: the earlier text trusted any historical key the server supplied for a revision the pin did not have. A host could then invent "alex's key at revision 1" (its own key), seal messages to me under it, and show them as from alex in a DM labelled End-to-end encrypted, even after we had compared safety numbers, with no key-change warning (vector `pin_state` "server inserts a forged older revision that the pin never saw").
 
-Because first contact pins the whole history at once (10.1), a device that pins christopher today can still read christopher's messages from before christopher's last reset. A device restored from recovery words pins everything at first contact, which is trust on first use for all of it, until safety numbers are compared (section 18 item 3). A device linked by QR gets the full histories from the approving device (`LINK-V1.md` section 7).
+Because first contact pins the whole history at once (10.1), a device that pins alex today can still read alex's messages from before alex's last reset. A device restored from recovery words pins everything at first contact, which is trust on first use for all of it, until safety numbers are compared (section 18 item 3). A device linked by QR gets the full histories from the approving device (`LINK-V1.md` section 7).
 
 ### 10.5 Sending
 
@@ -392,7 +392,7 @@ Rule: in a 1:1 DM where the peer is PINNED, CHANGED_UNACKNOWLEDGED or `KEY_ROLLB
 
 ### 10.8 Replies (R-8)
 
-`reply_to` is a clear field the host controls. Without a binding, a host could move christopher's genuine "Yes, go ahead" from "Shall I cancel the trip?" to "Shall I send the money?".
+`reply_to` is a clear field the host controls. Without a binding, a host could move alex's genuine "Yes, go ahead" from "Shall I cancel the trip?" to "Shall I send the money?".
 
 - Sending a reply in an encrypted DM: the payload's `re` is the nonce (bytes 9 to 32) of the current envelope of the message being replied to, and `reply_to` is set as today.
 - Reading: if the payload has `re`, the client looks up the message the server names in `reply_to`, and shows the quoted message only if it is an `enc = 1` message in this DM whose current envelope nonce equals `re`. In every other case (no `reply_to`, a different message, a plaintext message, a message not loaded and not fetchable) it shows the reply with "The message this replies to couldn't be checked." instead of a quote. If `reply_to` is set but the payload has no `re`, the same text is shown.
@@ -491,10 +491,10 @@ What protects the web client against a modified client: nothing beyond the label
 
 | Condition | DM header label | Detail sheet sentence |
 |---|---|---|
-| 1:1 DM, native app, both have keys, peer PINNED | "End-to-end encrypted" | "Only you and christopher can read messages and files here. The host can see that you talk, when, and how much. This encryption has been attack-tested by us and not audited by an outside firm." |
-| Same, peer marked verified | "End-to-end encrypted" with "Verified" | Same, plus "You checked christopher's safety number." |
+| 1:1 DM, native app, both have keys, peer PINNED | "End-to-end encrypted" | "Only you and alex can read messages and files here. The host can see that you talk, when, and how much. This encryption has been attack-tested by us and not audited by an outside firm." |
+| Same, peer marked verified | "End-to-end encrypted" with "Verified" | Same, plus "You checked alex's safety number." |
 | Web client with keys | "Encrypted in browser" | Section 13 |
-| Peer has no keys | "Not encrypted yet" | "christopher hasn't updated Housecall yet. Messages are readable by the host until they do." |
+| Peer has no keys | "Not encrypted yet" | "alex hasn't updated Housecall yet. Messages are readable by the host until they do." |
 | I have no keys on this host | "Not encrypted" | "Set up your security key to encrypt your DMs." |
 | CHANGED_UNACKNOWLEDGED | "Key changed" | Banner text in 10.2 |
 | `KEY_ROLLBACK` | "Key problem" | Banner text in 10.2 |
@@ -510,7 +510,7 @@ What protects the web client against a modified client: nothing beyond the label
 |---|---|---|
 | Search | Encrypted messages are not sent to or found by any server search. Client-side search over loaded, decrypted messages is allowed. | Search panel footer: "Encrypted messages aren't included in search." |
 | Link previews | The client never requests a preview for a URL in an encrypted DM. | None in the timeline. Explainer: "Link previews are off in encrypted DMs." |
-| Notification text | Push and in-app notifications for `enc = 1` show a generic line. | "New message from christopher" |
+| Notification text | Push and in-app notifications for `enc = 1` show a generic line. | "New message from alex" |
 | Virus scanning | Sealed files are not scanned. | On each file: "Not virus-scanned (encrypted)" |
 | Video conversion and thumbnails | Not done; files play only if the device supports the format. | On a file that fails to play: "This file can't be played on this device. Download it instead." |
 | Snaps | Not available in v1. | Snap button disabled, tooltip and long-press text: "Snaps aren't available in encrypted DMs yet." |

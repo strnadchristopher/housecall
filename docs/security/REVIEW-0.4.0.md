@@ -65,7 +65,7 @@ Fix: in a DM with a pinned peer, every `enc = 0` message carries "Not encrypted"
 
 Attack, hostile host or someone who stole a device and colludes with the host:
 
-1. christopher's phone is stolen. He resets: `key_rev 3`.
+1. alex's phone is stolen. He resets: `key_rev 3`.
 2. The host serves the stolen key again, as `key_rev 4` or as `key_rev 2`.
 3. Pre-review, peers saw an ordinary "key changed", tapped "I understand", and encrypted to the stolen key.
 
@@ -110,7 +110,7 @@ Fix: Replace's wording says it does not protect against words that have already 
 
 ### R-8 (Medium): moving a reply
 
-Attack, hostile host: `reply_to` is a clear field. Move christopher's genuine "Yes, go ahead" from "Shall I cancel the trip?" to "Shall I send the money?".
+Attack, hostile host: `reply_to` is a clear field. Move alex's genuine "Yes, go ahead" from "Shall I cancel the trip?" to "Shall I send the money?".
 
 Fix: the sealed payload carries `re`, the nonce of the quoted message's current envelope. A reader shows the quote only if the server's `reply_to` target matches; otherwise "The message this replies to couldn't be checked."
 

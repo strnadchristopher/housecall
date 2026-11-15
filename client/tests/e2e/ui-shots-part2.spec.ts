@@ -34,7 +34,7 @@ test("ui shots: part 2", async ({ browser, request }) => {
   const auth = await (await request.post(`${api}/api/setup`, { data: { setup_token: setupToken, username: "owner", password, device_name: "fixture" } })).json();
   const headers = { authorization: `Bearer ${auth.token}`, "x-device-key": auth.device_key };
   await request.patch(`${api}/api/servers/home`, { headers, data: { name: "Maple Street" } });
-  await request.patch(`${api}/api/me`, { headers, data: { display_name: "Christopher" } });
+  await request.patch(`${api}/api/me`, { headers, data: { display_name: "Alex" } });
   const invite = await (await request.post(`${api}/api/invites`, { headers, data: { expires_in_seconds: null, max_uses: null } })).json();
   const member = await (await request.post(`${api}/api/invites/accept`, { data: { token: invite.token, username: "linda", password, device_name: "fixture" } })).json();
   expect(member.token).toBeTruthy();

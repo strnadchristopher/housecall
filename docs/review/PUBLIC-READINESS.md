@@ -19,7 +19,7 @@ Intended scope is history reachable from **all locally available refs**, includi
 
 ## Other release gates
 
-The server-image workflow has job-scoped `packages: write`, builds the selected tag's existing Dockerfile, and supplies version/latest tags plus OCI source/version/revision labels. It contains no visibility mutation. GitHub's initial package visibility and existing-package access must still be confirmed by Noah. Existing desktop signing/publication jobs are preserved.
+The server-image workflow has job-scoped `packages: write`, builds the selected tag's existing Dockerfile, and supplies version/latest tags plus OCI source/version/revision labels. It contains no visibility mutation. GitHub's initial package visibility and existing-package access must still be confirmed by the host operator. Existing desktop signing/publication jobs are preserved.
 
 Runtime hosting acceptance remains open: private GHCR login/pull on a clean host, scanner healthy/socket access, app volume ownership, Caddy certificate issuance/renewal, owner claim, upload round trip, persistent data/restore, external UDP two-client call, and the documented Tailscale/tunnel variants. Integration provider and VM gates are listed in [self-hosting](../SELF-HOSTING.md) and [VM](../apps/VM.md). Static Compose resolution is not runtime certification.
 

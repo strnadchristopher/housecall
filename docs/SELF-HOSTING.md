@@ -38,7 +38,7 @@ The GHCR package is private. An account with package access must first authentic
 docker login ghcr.io --username YOUR_GITHUB_USERNAME
 ```
 
-Enter the token at the password prompt; never put it on the command line. Do not assume making the repository public automatically makes its existing GHCR package public. Noah must explicitly verify package access policy before removing this prerequisite.
+Enter the token at the password prompt; never put it on the command line. Do not assume making the repository public automatically makes its existing GHCR package public. The host operator must explicitly verify package access policy before removing this prerequisite.
 
 For public hosting, create DNS A records for your domain pointing at your reachable public IPv4. Remove incorrect AAAA records. Forward TCP 80 and 443 to this host, allow outbound certificate-authority access, and forward UDP 50000 separately for calls. Caddy provisions and renews certificates automatically. A proxy/CDN in front must support the chosen certificate challenge, or leave DNS unproxied for this recipe. CGNAT may prevent direct inbound connectivity.
 
@@ -83,7 +83,7 @@ Inspect logs locally and redact before sharing. Never paste `docker compose conf
 
 ## No public domain: Tailscale
 
-Use an existing Tailscale tailnet with all participants enrolled and access allowed by its ACLs. On the host, obtain its numeric Tailscale IPv4 and its full MagicDNS name. Enable tailnet HTTPS certificates as required by Tailscale. Set `HOUSECALL_ORIGIN` and `HOUSECALL_PUBLIC_URL` to `https://HOST.TAILNET.ts.net`, `SFU_PUBLIC_IP` to the host's Tailscale IPv4 and `SFU_HOST_BIND` to that same IPv4. Calls still use UDP 50000 over the tailnet; verify ACLs and a real call.
+Use an existing Tailscale tailnet with all participants enrolled and access allowed by its ACLs. On the host, obtain its numeric Tailscale IPv4 and its full MagicDNS name. Enable tailnet HTTPS certificates as required by Tailscale. Set `HOUSECALL_ORIGIN` and `HOUSECALL_PUBLIC_URL` to the host's full MagicDNS HTTPS URL, `SFU_PUBLIC_IP` to the host's Tailscale IPv4 and `SFU_HOST_BIND` to that same IPv4. Calls still use UDP 50000 over the tailnet; verify ACLs and a real call.
 
 Use the repository's authoritative `compose.yaml` for this variant (local build required): set `HOUSECALL_PORT=4317`, initialize `.env` with `python3 scripts/init-env.py`, edit it privately, then:
 

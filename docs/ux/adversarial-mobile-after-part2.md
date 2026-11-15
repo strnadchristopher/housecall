@@ -22,7 +22,7 @@ Raw log and screens: [`mobile-after-part2/linda/`](mobile-after-part2/linda/resu
 
 "The first screen has a big lit door, fine, and two buttons that say what they do. My link took me straight to
 'Join Housecall' and asked for a username and a password. That's it. Next morning it already knew I was linda.
-I wanted to get Rosa in and it told me Christopher does the inviting and gave me a button to text him. Rosa didn't
+I wanted to get Rosa in and it told me Alex does the inviting and gave me a button to text him. Rosa didn't
 have a code; she typed the address, pressed Request access and it said the owner has it and she can close the app.
 When she came back it said Approved and let her in with her password. I'd have liked fewer words about 'servers'."
 

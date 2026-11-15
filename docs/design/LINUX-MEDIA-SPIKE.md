@@ -21,10 +21,10 @@
   `cargo test linux_permissions` on a machine with more memory.
 - Client `npm test` and `npm run build` pass.
 
-## Not changed, waiting on Noah's evidence from Archie
+## Not changed, waiting on the developer's evidence from the desktop test host
 
 - AppImage bundling and `tauri.conf.json` (GStreamer plugins, PipeWire / xdg-desktop-portal
   screencast availability).
 - Whether WebKitGTK actually offers a screen picker and delivers frames, and share audio, on
-  Archie. Capture: does the share button open a portal dialog, does the viewer get video, device
+  the desktop test host. Capture: does the share button open a portal dialog, does the viewer get video, device
   labels shown in the menu, and the app's stderr during a share attempt.

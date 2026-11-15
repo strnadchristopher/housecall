@@ -5,7 +5,7 @@ Plan Task 0.4. Candidate: the unmodified `bc7e751` client served by Vite against
 Driven by `client/tests/e2e/linda.spec.ts`; re-run with `node tests/run-linda.mjs <out-dir>` from `client/`.
 Raw run log: [`mobile-baseline/result.md`](mobile-baseline/result.md). No console errors during the run.
 
-**Persona.** Linda, 61, Christopher's aunt. iPhone, texts and Facebook only. She was texted an invite link and
+**Persona.** Linda, 61, Alex's aunt. iPhone, texts and Facebook only. She was texted an invite link and
 wants to say hi in the family chat, and will give up if she sees a word she doesn't know.
 
 **Tasks tried.** Open the invite link and create an account, find the main chat and post, come back the next day
@@ -44,7 +44,7 @@ Severity: **material** = any user would hit it (RED), **minor** = real but narro
 | 3 | The top-left arrow in a chat goes "back" to a list that isn't a previous screen; the list is really a menu. | 4 | material | Tasks 6.2/6.3 (hamburger + slide-out drawer) |
 | 4 | Settings on a phone is a wrapping row of loose words above the pane, with no clear current item and no grouping beyond one "Server" label. | 7, 8 | material | Tasks 7.2–7.4 (iOS-style tree) |
 | 5 | Leaving settings lands on the list, not the chat she opened it from. | 10 | material | Task 7.4 (phone back from root returns to the chat) |
-| 6 | No way to choose a colour; the whole app carries an amber tint. | 7, 8 | material (Christopher's direct request) | Phase 1 + Task 7.5 |
+| 6 | No way to choose a colour; the whole app carries an amber tint. | 7, 8 | material (the owner's direct request) | Phase 1 + Task 7.5 |
 | 7 | On an iPhone the root pads by `env(safe-area-inset-*)`, so the page background shows as a flat band under the status bar instead of the header running behind it. Measured: `.hc-root` padding comes from `env()`; Playwright reports 0 because it has no notch. | code, 4 | material | Phase 2 |
 | 8 | Join asks for a **Display name**, but the value becomes the login name and Sign in asks for **Username** the next day. | 1, 5 | material | Task 5.4 (label "Username"; part 2) |
 | 9 | Join shows no server name or host: "Join" with nothing about what she is joining. | 1 | material | Task 5.4 ("Join {host}"; part 2) |
@@ -57,6 +57,6 @@ Severity: **material** = any user would hit it (RED), **minor** = real but narro
 ## Unplanned
 
 - **Finding 12, members can't invite.** No task in the plan lets a non-owner invite or ask the owner for an invite,
-  and settings doesn't say why there's nothing there. Options for Noah/Christopher: a member-side "Ask the owner for
+  and settings doesn't say why there's nothing there. Options for the developer/owner: a member-side "Ask the owner for
   an invite" line in Settings, or member invites gated by a server setting (server change, core lane). Reported to
-  Noah before Phase 5 as required by Task 0.4.
+  the developer before Phase 5 as required by Task 0.4.

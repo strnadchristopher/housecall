@@ -20,7 +20,7 @@ PLAN W5 C1 and decision S-1 were the outline. These are the differences, and why
 8. **A device that is already logged in but has no identity keys uses the same flow** (section 9.3), then replaces its session.
 9. **The web client may be the new device but never the showing device** (DM-V1 section 13).
 10. **One open link per session.** Starting a new link cancels the session's earlier unclaimed one, so the 60 s QR refresh does not leave old codes alive.
-11. **The new device confirms the account after claiming.** The plan showed "Log in as christopher on …?" before anything was sent, but the username is only known from the claim response. The new device now asks "Log in on <host>?" before claiming, then shows the username together with the number.
+11. **The new device confirms the account after claiming.** The plan showed "Log in as alex on …?" before anything was sent, but the username is only known from the claim response. The new device now asks "Log in on <host>?" before claiming, then shows the username together with the number.
 12. **Every new session on the account raises "New device logged in"** (event `device.added`), not only QR sessions. The Devices list shows `added_via` for each.
 
 Changes from the paper review (`REVIEW-0.4.0.md`). These strengthen S-1; none weakens it.
@@ -44,7 +44,7 @@ Showing device (logged in)                 Server                         New de
                                                        ◄── POST /api/link/claim {link_id, secret, device_name,
                                                                                  device_key, B, claim_tag}
                                                        ──► { username, display_name }
-  poll GET /api/link/{id} ◄── state claimed, B, claim_tag, device_name           show "Log in as christopher" + number 94
+  poll GET /api/link/{id} ◄── state claimed, B, claim_tag, device_name           show "Log in as alex" + number 94
   verify claim_tag; compute number (not shown)
   "Type the number shown on Pixel 9" → person types 94
   typed = number? else deny
@@ -205,9 +205,9 @@ STARTED ───────────────► CLAIMED ─────
 
 - Log in → "Log in with QR code" → short explainer ("On a device where you're already logged in, open Settings → Log in with QR code") → "Scan QR code". This opens the camera preview from `SnapCamera` with `jsqr`. If camera permission is refused: "Housecall needs the camera to scan the code. You can also log in with your password."
 - `housecall://link-scan` opens this scanner directly (section 3). It never carries a code.
-- After a valid scan: "Log in on housecall.littleobelisk.com?" with "Continue" and "Cancel".
+- After a valid scan: "Log in on chat.example.com?" with "Continue" and "Cancel".
 - Continue: generate `b`, `B`, and `device_key` (32 random bytes as 64 lowercase hex, the same format as today's server-made device keys). Compute `claim_tag` and claim.
-- On 200: "Log in as christopher?" with the number large, "Type this number on your other device: **94**", and "Cancel". Poll `POST /api/link/result` every 2 s.
+- On 200: "Log in as alex?" with the number large, "Type this number on your other device: **94**", and "Cancel". Poll `POST /api/link/result` every 2 s.
 - On 200 from `result`: store the session `{token, device_key, username, expires_at}` exactly as a password login does (`secureSession` on native, memory on web). Then handle `wrapped_keys` (section 7).
 - Cancel at any point: forget `b`, `device_key` and the secret, and stop polling. The link then expires or is denied. Without the `device_key`, nobody can collect the result.
 - Error mapping: 404 or 400 on claim: "This code didn't work. Make a new one on your other device." 410: "This code expired. Make a new one on your other device." 409: "This code was used by another device too, so it was cancelled for safety. Make a new one." 403 from result: "Your other device said no."
@@ -230,7 +230,7 @@ Before claiming, the web client shows the browser notice (R-4): "This browser lo
 | Approve prompt (showing device) | Title "Pixel 9 wants to log in". Field label "Type the number shown on Pixel 9". Button "Deny". Small print: "Approving gives that device your security key. If it's a web browser, whoever runs the server could keep a copy." The number itself is never shown here. |
 | User verification reason (OS prompt) | "Approve logging in on Pixel 9" |
 | Numbers didn't match (showing device) | "The numbers didn't match, so the login was cancelled. If you typed the number correctly, someone else may have used this code or your server may be interfering with logins." Button "Make a new code" |
-| New device, after claim | "Log in as christopher?" "Type this number on your other device: **94**" Button "Cancel" |
+| New device, after claim | "Log in as alex?" "Type this number on your other device: **94**" Button "Cancel" |
 | `/link` page | "Open in Housecall" with "Then scan this code again from inside the app." and "Continue in browser" with the browser sentence (section 3) |
 | Tag failed (showing device) | "A device tried to use this code without scanning it, so it was cancelled. If this keeps happening, your server may be interfering with logins." |
 | Link burnt (showing device) | "This code was used by two devices, so it was cancelled. Make a new one." |
@@ -328,7 +328,7 @@ Errors: 429 `try again later`, 503 `try again later`.
   "ephemeral_pub": "<b64u, 43 chars>", "claim_tag": "<b64u, 22 chars>" }
 ```
 
-→ 200 `{ "username": "christopher", "display_name": "Christopher" }` (`display_name` may be null). The claim moves the link to CLAIMED.
+→ 200 `{ "username": "alex", "display_name": "Alex" }` (`display_name` may be null). The claim moves the link to CLAIMED.
 
 | Status | Body `error` | When |
 |---|---|---|
@@ -370,7 +370,7 @@ Errors:
 `{ "link_id": "…", "secret": "…", "device_key": "<the claim's device_key>" }` → 200:
 
 ```json
-{ "token": "<64 lowercase hex>", "user": { "id": "…", "username": "christopher", "is_owner": false },
+{ "token": "<64 lowercase hex>", "user": { "id": "…", "username": "alex", "is_owner": false },
   "expires_at": 1765641720000, "wrapped_keys": "<b64u or null>" }
 ```
 

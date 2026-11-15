@@ -31,7 +31,7 @@ Tests:
 Chromium measured: offer lists `a=extmap:13 urn:3gpp:video-orientation`; the answer lists only
 abs-send-time, transport-cc, mid, rtp-stream-id, repaired-rtp-stream-id.
 
-## Still outstanding (Noah, real iPhone)
+## Still outstanding (the developer, real iPhone)
 
 The three-orientation check has not been done. On an iPhone in the PWA/native client, publish
 camera in portrait, landscape-left and landscape-right, and confirm a desktop viewer sees an

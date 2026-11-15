@@ -117,7 +117,7 @@ Reviewer checks: the lock icon and "End-to-end encrypted" appear only for label 
 - `snap-camera.html` was not changed. Its `wrong` state still shows the old words "That isn't a Housecall login code"; the spec string (10.5, `camera.scanWrong`) is the contract's.
 - Real-app pictures (`after-voice-*`, `after-fixes-*`) show the app before the corrections in section 3. There is no real-app picture of any section 4 flow: none is built yet.
 
-## 6. Decisions for Christopher
+## 6. Decisions for the owner
 
 None of these blocks the work above; each has a default that is already in the spec.
 
