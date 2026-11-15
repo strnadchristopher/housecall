@@ -295,6 +295,30 @@
       "type": "string",
       "oneOf": [
         {
+          "description": "Enables the bindings_get command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-bindings-get",
+          "markdownDescription": "Enables the bindings_get command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the bindings_get command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-bindings-get",
+          "markdownDescription": "Denies the bindings_get command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the bindings_set command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-bindings-set",
+          "markdownDescription": "Enables the bindings_set command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the bindings_set command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-bindings-set",
+          "markdownDescription": "Denies the bindings_set command without any pre-configured scope."
+        },
+        {
           "description": "Enables the get command without any pre-configured scope.",
           "type": "string",
           "const": "allow-get",
@@ -305,6 +329,42 @@
           "type": "string",
           "const": "deny-get",
           "markdownDescription": "Denies the get command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the identity_get command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-identity-get",
+          "markdownDescription": "Enables the identity_get command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the identity_get command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-identity-get",
+          "markdownDescription": "Denies the identity_get command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the identity_remove command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-identity-remove",
+          "markdownDescription": "Enables the identity_remove command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the identity_remove command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-identity-remove",
+          "markdownDescription": "Denies the identity_remove command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the identity_set command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-identity-set",
+          "markdownDescription": "Enables the identity_set command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the identity_set command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-identity-set",
+          "markdownDescription": "Denies the identity_set command without any pre-configured scope."
         },
         {
           "description": "Enables the list command without any pre-configured scope.",
@@ -319,6 +379,30 @@
           "markdownDescription": "Denies the list command without any pre-configured scope."
         },
         {
+          "description": "Enables the pins_get command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-pins-get",
+          "markdownDescription": "Enables the pins_get command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the pins_get command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-pins-get",
+          "markdownDescription": "Denies the pins_get command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the pins_set command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-pins-set",
+          "markdownDescription": "Enables the pins_set command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the pins_set command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-pins-set",
+          "markdownDescription": "Denies the pins_set command without any pre-configured scope."
+        },
+        {
           "description": "Enables the remove command without any pre-configured scope.",
           "type": "string",
           "const": "allow-remove",
@@ -329,6 +413,18 @@
           "type": "string",
           "const": "deny-remove",
           "markdownDescription": "Denies the remove command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the sensitive_surface command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-sensitive-surface",
+          "markdownDescription": "Enables the sensitive_surface command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the sensitive_surface command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-sensitive-surface",
+          "markdownDescription": "Denies the sensitive_surface command without any pre-configured scope."
         },
         {
           "description": "Enables the set command without any pre-configured scope.",
@@ -343,10 +439,22 @@
           "markdownDescription": "Denies the set command without any pre-configured scope."
         },
         {
-          "description": "Lets the local webview keep and restore the Housecall session in OS secure storage.\n#### This default permission set includes:\n\n- `allow-get`\n- `allow-set`\n- `allow-remove`\n- `allow-list`",
+          "description": "Enables the verify_owner command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-verify-owner",
+          "markdownDescription": "Enables the verify_owner command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the verify_owner command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-verify-owner",
+          "markdownDescription": "Denies the verify_owner command without any pre-configured scope."
+        },
+        {
+          "description": "Lets the local webview store sessions, the install identity and full pin histories in OS secure storage, and request device owner verification.\n#### This default permission set includes:\n\n- `allow-get`\n- `allow-set`\n- `allow-remove`\n- `allow-list`\n- `allow-identity-get`\n- `allow-identity-set`\n- `allow-identity-remove`\n- `allow-pins-get`\n- `allow-pins-set`\n- `allow-bindings-get`\n- `allow-bindings-set`\n- `allow-verify-owner`\n- `allow-sensitive-surface`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Lets the local webview keep and restore the Housecall session in OS secure storage.\n#### This default permission set includes:\n\n- `allow-get`\n- `allow-set`\n- `allow-remove`\n- `allow-list`"
+          "markdownDescription": "Lets the local webview store sessions, the install identity and full pin histories in OS secure storage, and request device owner verification.\n#### This default permission set includes:\n\n- `allow-get`\n- `allow-set`\n- `allow-remove`\n- `allow-list`\n- `allow-identity-get`\n- `allow-identity-set`\n- `allow-identity-remove`\n- `allow-pins-get`\n- `allow-pins-set`\n- `allow-bindings-get`\n- `allow-bindings-set`\n- `allow-verify-owner`\n- `allow-sensitive-surface`"
         }
       ]
     }

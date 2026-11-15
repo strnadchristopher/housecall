@@ -1,10 +1,13 @@
-# Generated command permission; kept in source for platform builds.
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
 [[permission]]
 identifier = "allow-pins-get"
-description = "Enables pins_get in the local webview."
+description = "Enables the pins_get command without any pre-configured scope."
 commands.allow = ["pins_get"]
 
 [[permission]]
 identifier = "deny-pins-get"
-description = "Denies pins_get."
+description = "Denies the pins_get command without any pre-configured scope."
 commands.deny = ["pins_get"]

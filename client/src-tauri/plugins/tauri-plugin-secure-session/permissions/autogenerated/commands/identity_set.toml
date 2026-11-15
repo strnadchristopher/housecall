@@ -1,10 +1,13 @@
-# Generated command permission; kept in source for platform builds.
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
 [[permission]]
 identifier = "allow-identity-set"
-description = "Enables identity_set in the local webview."
+description = "Enables the identity_set command without any pre-configured scope."
 commands.allow = ["identity_set"]
 
 [[permission]]
 identifier = "deny-identity-set"
-description = "Denies identity_set."
+description = "Denies the identity_set command without any pre-configured scope."
 commands.deny = ["identity_set"]

@@ -1,10 +1,13 @@
-# Generated command permission; kept in source for platform builds.
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
 [[permission]]
 identifier = "allow-bindings-get"
-description = "Enables bindings_get in the local webview."
+description = "Enables the bindings_get command without any pre-configured scope."
 commands.allow = ["bindings_get"]
 
 [[permission]]
 identifier = "deny-bindings-get"
-description = "Denies bindings_get."
+description = "Denies the bindings_get command without any pre-configured scope."
 commands.deny = ["bindings_get"]
