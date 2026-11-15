@@ -355,11 +355,10 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
     await publisher.evaluate(() => (window as any).testScreenStop());
     for (const context of contexts) {
       const page = context.pages()[0];
-      const bar = page.getByTestId("call-bar");
       await leaveVoice(page);
-      await expect(
-        bar.getByRole("button", { name: "Join", exact: true }),
-      ).toBeVisible();
+      // Leaving returns to the chat you were in before (0.4.2), out of the call and off Lounge.
+      await expect(page.locator(".hc-stage.is-full")).toHaveCount(0);
+      await expect(page.locator(".hc-header h1")).not.toHaveText("Lounge");
     }
   } finally {
     const diagnostic = [];
@@ -486,7 +485,9 @@ test("call stage owns center", async ({ browser, request }) => {
     await leaveVoice(host);
     await expect(host.locator(".hc-center [data-testid=screen-composer]")).toBeVisible();
     await expect(host.getByRole("tab", { name: "Chat", exact: true })).toHaveCount(0);
-    await expect(host.getByTestId("call-bar").getByRole("button", { name: "Join", exact: true })).toBeVisible();
+    // ...and returns to the previous chat instead of the idle Lounge (0.4.2).
+    await expect(host.locator(".hc-header h1")).not.toHaveText("Lounge");
+    await expect(host.locator(".hc-stage.is-full")).toHaveCount(0);
   } finally {
     await closeVoiceContexts(contexts);
   }
