@@ -85,6 +85,19 @@ export class ShowingLink {
     } catch (error) { if (epoch === this.epoch) { if (error instanceof ApiError && error.status === 410) this.end('expired'); else { await this.deny('invalid-claim').catch(() => {}); } } throw error; }
     finally { this.busy = false; }
   }
+  /** UI-only split: validate the number before mounting the separate owner-verification screen. */
+  async matchNumber(typed: string) {
+    this.expire();
+    if (!this.link || !this.keys || this.state.phase !== 'confirmation' || this.busy) throw new Error('Confirmation unavailable');
+    if (!typedCodeMatches(typed, this.keys.code)) { await this.deny('number-mismatch'); return false; }
+    this.state = { ...this.state, phase: 'verifying' }; return true;
+  }
+  async verifyMatched(password?: string) {
+    if (this.state.phase !== 'verifying' || !this.keys) throw new Error('Verification unavailable');
+    const prompt = this.state; this.state = { ...prompt, phase: 'confirmation' };
+    try { return await this.submitNumber(this.keys.code, password); }
+    finally { if (this.state.phase === 'confirmation') this.state = { ...this.state, phase: 'verifying' }; }
+  }
   async submitNumber(typed: string, password?: string) {
     this.expire(); if (!this.link || !this.keys || this.state.phase !== 'confirmation' || this.busy) throw new Error('Confirmation unavailable');
     if (!typedCodeMatches(typed, this.keys.code)) { await this.deny('number-mismatch'); return false; }
@@ -133,8 +146,9 @@ export class ReceivingLink {
   private nextPoll = 0;
   private expiryTimer?: ReturnType<typeof setTimeout>;
   private completionApi?: Api;
+  private completedSession?: { origin: string; auth: Auth };
   private revocationPending = false;
-  constructor(private vault: SecurityVault, private oldSession?: { origin: string; userId: string; sessionId: string }) {}
+  constructor(private vault: SecurityVault, private oldSession?: { origin: string; userId: string; sessionId: string }, private adopt?: (origin: string, auth: Auth) => Promise<void>) {}
   snapshot(): ReceivingState { return { ...this.state }; }
   scan(text: string, source: 'native-camera' | 'browser') {
     if (this.vault.native && source !== 'native-camera') throw new Error('Scan again inside the native app');
@@ -192,6 +206,7 @@ export class ReceivingLink {
   private finish(): Promise<Auth> { return withIdentityLock(this.vault, () => this.finishUnlocked()); }
   private async finishUnlocked(): Promise<Auth> {
     const pending = this.pending; if (!pending || !this.qr) throw new Error('Link result unavailable');
+    if (this.oldSession && !this.adopt) throw new Error('Replacement session adoption required');
     const { auth, api, identity } = pending, origin = this.qr.origin, epoch = this.epoch;
     const active = () => { if (epoch !== this.epoch) throw new Error('Link cancelled'); };
     let recoveryAhead = false;
@@ -204,14 +219,16 @@ export class ReceivingLink {
         updates.push({ origin: host, account, pins: unwrap(mergePins(await this.vault.loadPins(host, account), identity.pins.filter(p => p.origin === host))) });
       }
       active(); recoveryAhead = (await new SecurityApi(api).synchronizeTransferred(auth.user.id, origin, identity.seed, identity.recoveryRev)).recoveryAhead;
-      active(); await this.vault.saveIdentity({ seed: identity.seed, recoveryRev: identity.recoveryRev, confirmed: true, wordsRequirePassword: true });
-      for (const update of updates) { active(); await this.vault.savePins(update.origin, update.account, update.pins); }
+      active(); await this.vault.importIdentity({ seed: identity.seed, recoveryRev: identity.recoveryRev, confirmed: true, wordsRequirePassword: true }, updates);
     }
     active(); let sessionSecure = false;
     if (this.vault.native) sessionSecure = await secureSession.set(origin, { token: auth.token, device_key: auth.device_key, username: auth.user.username, expires_at: auth.expires_at });
     active(); let exposureReportPending = false;
     if (identity && !this.vault.native) { try { await new SecurityApi(api).exposure(); } catch { exposureReportPending = true; } }
-    active(); this.completionApi = api;
+    active(); this.completionApi = api; this.completedSession = { origin, auth };
+    // Invalidate old polling and adopt the validated replacement before any revocation.
+    if (this.adopt) await this.adopt(origin, auth);
+    active();
     if (this.oldSession) {
       try { await api.delete(`/api/devices/${encodeURIComponent(this.oldSession.sessionId)}`); }
       catch { this.revocationPending = true; }
@@ -219,6 +236,14 @@ export class ReceivingLink {
     active(); if (this.expiryTimer) clearTimeout(this.expiryTimer); this.expiryTimer = undefined;
     this.pending = undefined; identity?.seed.fill(0); this.qr.secret.fill(0); this.qr = undefined;
     this.state = { phase: 'completed', sessionSecure, exposureReportPending, oldSessionRevocationPending: this.revocationPending, recoveryAhead }; return auth;
+  }
+  nativeSessionPending(): boolean { return this.vault.native && this.state.phase === 'completed' && this.state.sessionSecure === false; }
+  async retrySessionStorage() {
+    if (!this.vault.native || this.state.phase !== 'completed' || !this.completedSession) throw new Error('No session to store');
+    const { origin, auth } = this.completedSession;
+    const secure = await secureSession.set(origin, { token: auth.token, device_key: auth.device_key, username: auth.user.username, expires_at: auth.expires_at });
+    this.state = { ...this.state, sessionSecure: secure };
+    if (!secure) throw new Error('Secure session storage unavailable');
   }
   async retryExposureReport() {
     if (this.state.phase !== 'completed' || !this.completionApi || !this.state.exposureReportPending) throw new Error('No exposure report pending');
@@ -231,5 +256,5 @@ export class ReceivingLink {
   }
   private cleanupEphemeral() { this.ephemeral?.priv.fill(0); this.ephemeral = undefined; wipeKeys(this.keys); this.keys = undefined; this.deviceKey = undefined; }
   private fail(error: unknown) { this.cancel(); this.state = { phase: error instanceof ApiError && error.status === 410 ? 'expired' : error instanceof ApiError && error.status === 403 ? 'denied' : error instanceof ApiError && error.status === 409 ? 'burnt' : 'failed' }; }
-  cancel() { if (this.expiryTimer) clearTimeout(this.expiryTimer); this.expiryTimer = undefined; this.completionApi = undefined; this.revocationPending = false; this.epoch++; this.cleanupEphemeral(); this.qr?.secret.fill(0); this.qr = undefined; this.pending?.identity?.seed.fill(0); this.pending = undefined; this.username = undefined; this.state = { phase: 'cancelled' }; }
+  cancel() { if (this.expiryTimer) clearTimeout(this.expiryTimer); this.expiryTimer = undefined; this.completionApi = undefined; this.completedSession = undefined; this.revocationPending = false; this.epoch++; this.cleanupEphemeral(); this.qr?.secret.fill(0); this.qr = undefined; this.pending?.identity?.seed.fill(0); this.pending = undefined; this.username = undefined; this.state = { phase: 'cancelled' }; }
 }

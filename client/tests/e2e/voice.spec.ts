@@ -1,3 +1,9 @@
+
+async function openShareQuality(page: import("@playwright/test").Page) {
+  await page.getByRole("button", { name: "Server settings", exact: true }).click();
+  await page.getByTestId("screen-settings").getByRole("button", { name: "Audio and video", exact: true }).click();
+  await page.getByTestId("screen-settings").getByRole("button", { name: "Share quality", exact: true }).click();
+}
 import { test, expect, type BrowserContext } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { fillSignIn, logInButton, openMenu } from "./helpers";
@@ -183,7 +189,7 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
       ).toBeGreaterThanOrEqual(2);
     }
     await writeFile(
-      "test-results/client-voice-three-user.json",
+      test.info().outputPath("client-voice-three-user.json"),
       JSON.stringify(
         {
           note: "Actual RTP from Chromium fake capture devices. Does not measure physical glass-to-glass latency.",
@@ -278,7 +284,7 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
     ).toBeGreaterThanOrEqual(10);
     const sorted = [...captureAge].sort((a, b) => a - b);
     await writeFile(
-      "test-results/client-screen-capture-latency.json",
+      test.info().outputPath("client-screen-capture-latency.json"),
       JSON.stringify(
         {
           note: "Synthetic canvas timestamp capture to decoded browser video callback over localhost SFU; same host wall clock. Excludes physical camera exposure, display scanout and real OS screen-capture permissions. Not physical glass-to-glass.",
@@ -360,7 +366,7 @@ test("three browsers exchange real fake-device audio/video through the Rust SFU"
       })
     ).json();
     await writeFile(
-      "test-results/client-voice-diagnostics.json",
+      test.info().outputPath("client-voice-diagnostics.json"),
       JSON.stringify({ browser: diagnostic, server }, null, 2),
     );
     for (const context of contexts) await context.close();
@@ -416,9 +422,9 @@ test("call stage owns center", async ({ browser, request }) => {
     await expect(host.locator(".hc-right").getByText(text)).toBeVisible();
     await expect(guest.locator(".hc-right").getByText(text)).toBeVisible({ timeout: 15000 });
     // Pin spotlights a tile; unpin returns to the grid.
-    await guestTile.getByRole("button", { name: /^Pin / }).click();
+    await guestTile.getByRole("button", { name: /^Focus / }).click();
     await expect(host.locator(".hc-stage__spot")).toBeVisible();
-    await host.locator(".hc-stage__spot").getByRole("button", { name: /^Unpin / }).click();
+    await host.locator(".hc-stage__spot").getByRole("button", { name: /^Stop focusing / }).click();
     await expect(host.locator(".hc-stage__spot")).toHaveCount(0);
     // Leaving restores the normal layout.
     await host.getByTestId("call-bar").getByRole("button", { name: "Leave", exact: true }).click();
@@ -449,7 +455,7 @@ test("call stage on a phone: stage is the screen, chat opens as the sheet", asyn
     await expect(bar).toHaveAttribute("data-phase", "live", { timeout: 30000 });
     await expect(page.locator(".hc-center [data-testid=call-stage]")).toBeVisible();
     await expect(page.locator(".hc-center [data-testid=screen-composer]")).toHaveCount(0);
-    await bar.getByRole("button", { name: "Chat", exact: true }).click();
+    await page.locator(".hc-center .hc-header").getByRole("button", { name: "Chat", exact: true }).click({ timeout: 15000 });
     await expect(page.locator(".hc-right [data-testid=screen-composer]")).toBeVisible();
     await expect(page.getByRole("tab", { name: "Chat", exact: true })).toHaveAttribute("aria-selected", "true");
     await page.locator(".hc-right").getByRole("button", { name: "Close", exact: true }).click();
@@ -500,7 +506,7 @@ test("screen share presets, share audio as its own track, and a separate volume 
 
     // The preset picker: three choices, a line that says what each is for, and the choice is remembered.
     const bar = sharer.getByTestId("call-bar");
-    await bar.getByRole("button", { name: "Share quality", exact: true }).click();
+    await openShareQuality(sharer);
     const picker = sharer.getByTestId("share-quality");
     await expect(picker.getByRole("radio")).toHaveCount(3);
     await expect(picker.getByRole("radio", { name: "Smooth" })).toBeChecked();
@@ -508,6 +514,7 @@ test("screen share presets, share audio as its own track, and a separate volume 
     await expect(sharer.getByTestId("share-quality-hint")).toContainText("Documents and code");
     expect(await sharer.evaluate(() => localStorage.getItem("hc.shareQuality"))).toBe("sharp");
     await picker.getByRole("button", { name: "Done", exact: true }).click();
+    await sharer.keyboard.press("Escape");
     await expect(picker).toBeHidden();
 
     // Screen capture. Chromium's own fake capture is tried first; if this build has none that works headless,
@@ -569,13 +576,14 @@ test("screen share presets, share audio as its own track, and a separate volume 
     if (source.used.startsWith("synthetic") || source.nativeAudio) expect(sharp.audioSenders).toBe(2);
 
     // Changing the preset during the share applies at once.
-    await bar.getByRole("button", { name: "Share quality", exact: true }).click();
+    await openShareQuality(sharer);
     await sharer.getByTestId("share-quality").getByText("Smooth", { exact: true }).click();
     await expect.poll(async () => (await outgoing()).degradation).toBe("maintain-framerate");
     expect(await outgoing()).toMatchObject({ hint: "motion", maxBitrate: 2_500_000 });
     await sharer.getByTestId("share-quality").getByText("Source", { exact: true }).click();
     await expect.poll(async () => (await outgoing()).maxBitrate).toBe(8_000_000);
     await sharer.getByTestId("share-quality").getByRole("button", { name: "Done", exact: true }).click();
+    await sharer.keyboard.press("Escape");
 
     // The viewer gets a picture and, separately, the screen's sound.
     const received = () => viewer.evaluate(async () => {
@@ -592,15 +600,18 @@ test("screen share presets, share audio as its own track, and a separate volume 
     if (hasSound) {
       // voice from the sharer, plus the share audio, both with packets (the viewer's own microphone is outbound).
       await expect.poll(async () => (await received()).filter(r => r.kind === "audio" && Number(r.packets) > 0).length, { timeout: 30000 }).toBeGreaterThanOrEqual(2);
-      const sharerTile = viewer.locator("[data-testid=call-tile]").filter({ hasText: "owner" });
-      await expect(sharerTile.locator("video[data-share]")).toHaveCount(1);
-      await expect(sharerTile.locator("video[data-testid=remote-media]:not([data-share])")).not.toHaveCount(0);
+      const sharerTile = viewer.locator(".hc-tile--stream").filter({ hasText: "owner's screen" });
+      const personTile = viewer.locator("[data-testid=call-tile]:not(.hc-tile--stream)").filter({ hasText: "owner" });
+      await expect(sharerTile).toHaveCount(1);
+      await expect(sharerTile.locator('video[data-media-kind="video"]')).toHaveCount(1);
+      await expect(sharerTile.locator('video[data-share][data-media-kind="audio"]')).toHaveCount(1);
+      await expect(personTile.locator('video[data-media-kind="audio"]:not([data-share])')).not.toHaveCount(0);
       // The slider changes the screen's sound and leaves the voice alone.
       const slider = sharerTile.getByTestId("share-volume");
       await slider.fill("30");
-      await expect.poll(() => sharerTile.locator("video[data-share]").evaluate((v: HTMLVideoElement) => v.volume)).toBeCloseTo(0.3, 1);
-      expect(await sharerTile.locator("video[data-testid=remote-media]:not([data-share])").evaluateAll((all: HTMLVideoElement[]) => all.map(v => v.volume))).toEqual(
-        Array(await sharerTile.locator("video[data-testid=remote-media]:not([data-share])").count()).fill(1));
+      await expect.poll(() => sharerTile.locator('video[data-share][data-media-kind="audio"]').evaluate((v: HTMLVideoElement) => v.volume)).toBeCloseTo(0.3, 1);
+      expect(await personTile.locator('video[data-media-kind="audio"]:not([data-share])').evaluateAll((all: HTMLVideoElement[]) => all.map(v => v.volume))).toEqual(
+        Array(await personTile.locator('video[data-media-kind="audio"]:not([data-share])').count()).fill(1));
     }
     // Measured: resolution and frame rate the viewer decodes, at the Source preset.
     await viewer.waitForTimeout(4000);
@@ -613,15 +624,16 @@ test("screen share presets, share audio as its own track, and a separate volume 
     // The same measurement at the other two presets, a few seconds after each is applied live.
     const perPreset: Record<string, unknown> = { source: picture };
     for (const name of ["Sharp", "Smooth"]) {
-      await bar.getByRole("button", { name: "Share quality", exact: true }).click();
+      await openShareQuality(sharer);
       await sharer.getByTestId("share-quality").getByText(name, { exact: true }).click();
       await sharer.getByTestId("share-quality").getByRole("button", { name: "Done", exact: true }).click();
+    await sharer.keyboard.press("Escape");
       await viewer.waitForTimeout(6000);
       const row = (await received()).filter(r => r.kind === "video" && Number(r.width) > 0)[0];
       perPreset[name.toLowerCase()] = row;
       console.log(`share quality measured at ${name}: ${row.width}x${row.height} at ${row.fps} fps`);
     }
-    await writeFile("test-results/client-share-quality.json", JSON.stringify({ note: "Viewer inbound-rtp video from getStats per preset, applied live during one share, localhost SFU", capture: source, perPreset, audio: (await received()).filter(r => r.kind === "audio") }, null, 2));
+    await writeFile(test.info().outputPath("client-share-quality.json"), JSON.stringify({ note: "Viewer inbound-rtp video from getStats per preset, applied live during one share, localhost SFU", capture: source, perPreset, audio: (await received()).filter(r => r.kind === "audio") }, null, 2));
 
     // Muting the microphone does not silence the share.
     if (hasSound) {
@@ -691,7 +703,7 @@ test("video orientation is not negotiated on the publish leg, and the subscribe 
     const dump = async (page: typeof publisher) => (await page.evaluate(() => (window as unknown as { sdpLog: { step: string; type: string; sdp: string }[] }).sdpLog)).map(item => ({ ...item, video: videoSection(item.sdp) }));
     const publish = await dump(publisher);
     const subscribe = await dump(viewer);
-    await writeFile("test-results/client-video-extmap.json", JSON.stringify({ publish, subscribe }, null, 2));
+    await writeFile(test.info().outputPath("client-video-extmap.json"), JSON.stringify({ publish, subscribe }, null, 2));
     const offer = publish.find(item => item.step === "local" && item.type === "offer")!;
     const answer = publish.find(item => item.step === "remote" && item.type === "answer")!;
     console.log("publish offer video extmaps", JSON.stringify(offer.video));
@@ -735,9 +747,10 @@ test("joins and shows a warning when a saved device is missing",async ({ browser
     await joinLounge(page);
     await expect(bar).toHaveAttribute("data-phase", "live", { timeout: 30000 });
     await expect(page.getByText("Call failed")).toHaveCount(0);
-    await expect(bar.getByRole("status")).toContainText("Using the default device");
-    await bar.getByRole("button", { name: "Dismiss", exact: true }).click();
-    await expect(bar.getByRole("status")).toHaveCount(0);
+    const warning = page.getByTestId("call-stage").getByRole("alert").filter({ hasText: "Using the default device" });
+    await expect(warning).toBeVisible();
+    await warning.getByRole("button", { name: "Dismiss", exact: true }).click();
+    await expect(warning).toHaveCount(0);
   } finally {
     await context.close();
   }

@@ -1,0 +1,10 @@
+# Source-authored pending native generation/compile gate.
+"$schema" = "../../schemas/schema.json"
+[[permission]]
+identifier = "allow-sensitive-surface"
+description = "Enables the scoped QR capture and obscured-touch protection."
+commands.allow = ["sensitive_surface"]
+[[permission]]
+identifier = "deny-sensitive-surface"
+description = "Denies scoped QR surface protection."
+commands.deny = ["sensitive_surface"]

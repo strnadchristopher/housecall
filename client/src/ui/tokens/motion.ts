@@ -61,3 +61,17 @@ export function useFlip(ref: RefObject<HTMLElement | null>, order: string) {
     before.current = new Map(rows.map(row => [row.dataset.flip!, row.offsetTop]));
   }, [order]); // eslint-disable-line react-hooks/exhaustive-deps
 }
+
+/** An entrance is consumed once, even if animation events are paused or motion is reduced mid-flight. */
+export function useEntrance(ms: number, enabled = true): [boolean, () => void] {
+  const [entering, setEntering] = useState(() => enabled && !prefersReducedMotion());
+  useEffect(() => {
+    if (!entering) return;
+    const list = matchMedia("(prefers-reduced-motion: reduce)");
+    const change = () => { if (list.matches) setEntering(false); };
+    list.addEventListener("change", change);
+    const timer = setTimeout(() => setEntering(false), ms);
+    return () => { clearTimeout(timer); list.removeEventListener("change", change); };
+  }, [entering, ms]);
+  return [entering, () => setEntering(false)];
+}

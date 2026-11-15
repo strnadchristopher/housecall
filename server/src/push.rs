@@ -1710,6 +1710,52 @@ mod tests {
         let next_message = message(&s).await;
         assert_eq!(states(&s).await["events"][0]["message_id"], next_message);
     }
+    /// Cross-runtime regression: the production TypeScript DmService supplies its own send
+    /// payload over real HTTP; provider assertions cannot accidentally idealize mention_ids.
+    /// Explicit opt-in command is recorded in takeover-security-fixes2.md; client CI runs it. No native bridge involved.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    #[ignore = "requires prepared client/node_modules; explicitly run in the client CI job"]
+    async fn encrypted_client_service_routes_notification_and_id_only_push() {
+        let client = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent().unwrap().join("client");
+        for kind in [Kind::Apns, Kind::Fcm] {
+            let provider = Fixture::new(vec![200], false);
+            let mut state = AppState::new(":memory:", "test-setup-token-at-least-32-characters").unwrap();
+            state.push = worker(kind, &provider.origin);
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let origin = format!("http://{}", listener.local_addr().unwrap());
+            let app = crate::app(state.clone(), None);
+            let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+            let mut command = tokio::process::Command::new("node");
+            command.current_dir(&client)
+                .arg("node_modules/vitest/vitest.mjs").arg("run")
+                .arg("tests/identity-push-live.test.ts").arg("--maxWorkers=1")
+                .env("HOUSECALL_PUSH_SERVICE_TEST_ORIGIN", &origin)
+                .env("HOUSECALL_PUSH_SERVICE_TEST_PROVIDER", kind.name())
+                .kill_on_drop(true);
+            let result = tokio::time::timeout(Duration::from_secs(75), command.output()).await;
+            server.abort();
+            let output = result.expect("client service integration timed out").expect("run prepared local Node/Vitest");
+            assert!(output.status.success(), "client service integration failed: {} {}",
+                String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
+            let message: String = state.db.lock().unwrap().query_row(
+                "SELECT id FROM messages WHERE enc=1", [], |row| row.get(0)).unwrap();
+            state.push.tick(&state.db).await.unwrap();
+            let payloads = provider.payloads();
+            assert_eq!(payloads.len(), 1);
+            let data = if kind == Kind::Fcm { &payloads[0]["message"]["data"] } else { &payloads[0] };
+            assert_eq!(data["message_id"], message);
+            assert_eq!(data["operation"], "alert");
+            let wire = payloads[0].to_string();
+            assert!(!wire.contains("sealed service notification fixture"));
+            assert!(!wire.contains("envelope"));
+            assert!(!wire.contains("servicealice"));
+            assert!(payloads[0].get("alert").is_none());
+            assert!(payloads[0]["aps"].get("alert").is_none());
+            assert!(payloads[0]["message"].get("notification").is_none());
+        }
+    }
+
     #[tokio::test]
     async fn apns_accept_unsend_and_ack_keep_tombstone_pending_until_device_applies_it() {
         let fixture = Fixture::new(vec![200, 200], false);

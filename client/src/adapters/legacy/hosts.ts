@@ -89,6 +89,9 @@ export function useHosts() {
   const clearToken = useCallback((id: string) => {
     setHosts(list => list.map(host => (host.id === id && host.token ? { ...host, token: "" } : host)));
   }, []);
+  const connected = useCallback((id: string, origin: string) => {
+    setHosts(list => list.map(host => host.id === id ? { ...host, origin } : host));
+  }, []);
   const finishRestore = useCallback((id: string) => {
     setHosts(list => list.map(host => (host.id === id && host.restoring ? { ...host, restoring: false } : host)));
   }, []);
@@ -112,7 +115,7 @@ export function useHosts() {
     });
     return () => { cancelled = true; };
   }, []);
-  return { hosts, active, setActive, add, remove, clearToken, finishRestore, directory };
+  return { hosts, active, setActive, add, remove, clearToken, finishRestore, connected, directory };
 }
 
 export type Hosts = ReturnType<typeof useHosts>;

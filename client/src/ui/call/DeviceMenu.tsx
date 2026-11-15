@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { ShareQualitySheet } from "./ShareQuality";
 import { useCall } from "../../core/context";
 import { copy } from "../copy";
 import { Button, ErrorLine, Field } from "../kit";
@@ -10,6 +11,7 @@ import { SHORTCUTS, keyLabel } from "./useCallShortcuts";
 /** Microphone and camera choice, bitrate and noise suppression. Lives in Settings. */
 export function DeviceMenu() {
   const call = useCall();
+  const [shareQuality, setShareQuality] = useState(false);
   const [bitrate, setBitrate] = useState(String(call.bitrate));
   const [noise, setNoise] = useState(call.noiseSuppression);
   const [preview, setPreview] = useState(previewEnabled());
@@ -56,6 +58,8 @@ export function DeviceMenu() {
       ) : (
         <div className="hc-pair" data-testid="speaker-fixed"><span>{copy.call.speaker}</span><strong>{copy.call.speakerDefault}</strong></div>
       )}
+      <Button onClick={() => setShareQuality(true)}>{copy.call.shareQuality}</Button>
+      <ShareQualitySheet open={shareQuality} onClose={() => setShareQuality(false)} />
       <Button onClick={() => void call.refreshDevices()}>{copy.call.refresh}</Button>
       <label className="hc-check"><input type="checkbox" checked={sounds.on} onChange={event => changeSounds({ ...sounds, on: event.target.checked })} /><span>{copy.call.sounds}</span></label>
       <p className="hc-note">{copy.call.soundsHint}</p>

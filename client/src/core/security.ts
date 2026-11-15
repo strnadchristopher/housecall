@@ -3,12 +3,17 @@ import type { StoredIdentity } from '../crypto/keystore';
 
 export type StorageAvailability = 'secure' | 'memory-web' | 'memory-unavailable';
 export interface InstallIdentity extends StoredIdentity { confirmed: boolean; wordsRequirePassword?: boolean }
+export interface PinImport { origin: string; account: string; pins: Pin[] }
+export interface ConversationBinding { id: string; peer: string | null }
 export interface SecurityVault {
   readonly native: boolean;
   readonly availability: StorageAvailability;
   loadIdentity(): Promise<InstallIdentity | null>;
   saveIdentity(identity: InstallIdentity): Promise<void>;
+  importIdentity(identity: InstallIdentity, pins: readonly PinImport[]): Promise<void>;
   removeIdentity(): Promise<void>;
+  loadBindings(origin: string, accountId: string): Promise<ConversationBinding[]>;
+  saveBindings(origin: string, accountId: string, bindings: readonly ConversationBinding[]): Promise<void>;
   loadPins(origin: string, accountId: string): Promise<Pin[]>;
   savePins(origin: string, accountId: string, pins: readonly Pin[]): Promise<void>;
 }
@@ -27,7 +32,7 @@ export interface PeerSecurity {
   canSendEncrypted: boolean;
   canSendPlaintext: boolean;
 }
-export type IdentityPhase = 'uninitialized' | 'needs-identity' | 'needs-import' | 'pending-confirmation' | 'ready' | 'collision' | 'recovery-ahead';
+export type IdentityPhase = 'uninitialized' | 'needs-identity' | 'needs-import' | 'pending-confirmation' | 'ready' | 'collision' | 'recovery-ahead' | 'backup-pending';
 export interface IdentityStatus {
   phase: IdentityPhase;
   storage: StorageAvailability;

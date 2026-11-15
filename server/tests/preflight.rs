@@ -28,9 +28,7 @@ async fn preflight_reports_booleans_before_an_owner_exists_then_404s() {
 
     let (_, plain) = call(&api, "GET", "/api/preflight", &[], Value::Null).await;
     let v: Value = serde_json::from_str(&plain).unwrap();
-    if std::env::var("HOUSECALL_PUBLIC_URL").is_err() {
-        assert_eq!(v["https"]["reason"], "plain_http");
-    }
+    assert_eq!(v["https"]["reason"], "plain_http");
 
     let (status, _) = call(&api, "POST", "/api/setup", &[], json!({"setup_token":secret,"username":"first","password":"long fixture password123","device_name":"t"})).await;
     assert_eq!(status, StatusCode::OK);

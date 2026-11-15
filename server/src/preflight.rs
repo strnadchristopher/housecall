@@ -21,10 +21,7 @@ fn https_ok(headers: &HeaderMap) -> bool {
         .get("x-forwarded-proto")
         .and_then(|v| v.to_str().ok())
         .is_some_and(|v| v.split(',').next().is_some_and(|p| p.trim().eq_ignore_ascii_case("https")));
-    let configured = std::env::var("HOUSECALL_PUBLIC_URL")
-        .map(|v| v.starts_with("https://"))
-        .unwrap_or(false);
-    forwarded || configured
+    forwarded
 }
 
 async fn preflight(State(s): State<AppState>, headers: HeaderMap) -> ApiResult<Value> {
@@ -48,7 +45,8 @@ async fn preflight(State(s): State<AppState>, headers: HeaderMap) -> ApiResult<V
     };
     Ok(Json(json!({
         "https": check(https_ok(&headers), "plain_http"),
-        "call_port": check(s.voice.is_some(), "voice_off"),
+        // A bound SFU is configuration, not evidence of external UDP reachability.
+        "call_port": check(false, if s.voice.is_some() { "external_unverified" } else { "voice_off" }),
         "storage": check(storage, "not_writable"),
     })))
 }

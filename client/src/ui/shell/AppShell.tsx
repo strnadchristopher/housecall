@@ -7,6 +7,7 @@ import { MessageList } from "../chat/MessageList";
 import { CallBar } from "../chat/CallBar";
 import { Composer } from "../chat/Composer";
 import { CallStage } from "../call/CallStage";
+import { PersonCards } from "../people/PersonCard";
 import { IncomingCall } from "../call/IncomingCall";
 import { DmView } from "../dm/DmView";
 import { RightPanel } from "../side/RightPanel";
@@ -76,6 +77,7 @@ export function AppShell() {
 
   return (
     <NavContext.Provider value={{ ...nav, set }}>
+      <PersonCards>
       <IncomingCall />
       <ConfirmJoin />
       <div ref={shell} className={cx("hc-shell", phone && "is-phone")} data-screen={nav.screen} data-sheet={nav.sheet ? "" : undefined}>
@@ -97,10 +99,8 @@ export function AppShell() {
           {nav.main === "settings" ? null : staged ? (
             <>
               <ChannelHeader />
-              {!chat.online && <p className="hc-offline" role="status">{copy.state.reconnecting}</p>}
               <CallStage full />
               <ErrorLine text={chat.error} onDismiss={chat.clearError} dismissLabel={copy.common.dismiss} />
-              <CallBar />
             </>
           ) : (
             <>
@@ -126,6 +126,7 @@ export function AppShell() {
           </>
         )}
       </div>
+      </PersonCards>
     </NavContext.Provider>
   );
 }

@@ -80,12 +80,43 @@ mod tests {
     }
 }
 
-/// Only the install seed/recovery revision and durable word-confirmation gate.
+/// Install identity, word-confirmation gate, and optional crash-replay pin journal.
 pub fn identity(value: &Value) -> Result<Value, &'static str> {
     let seed = value.get("seed").and_then(Value::as_str).ok_or("invalid identity")?;
     if seed.len() != 43 || !seed.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-') || !b"AEIMQUYcgkosw048".contains(&seed.as_bytes()[42]) { return Err("invalid identity"); }
     let rev = value.get("recovery_rev").and_then(Value::as_u64).filter(|r| *r > 0 && *r <= u32::MAX as u64).ok_or("invalid identity")?;
     let confirmed = value.get("confirmed").and_then(Value::as_bool).ok_or("invalid identity")?;
     let words_require_password = value.get("words_require_password").and_then(Value::as_bool).unwrap_or(false);
-    Ok(json!({"seed":seed,"recovery_rev":rev,"confirmed":confirmed,"words_require_password":words_require_password}))
+    let mut record = json!({"seed":seed,"recovery_rev":rev,"confirmed":confirmed,"words_require_password":words_require_password});
+    if let Some(journal) = value.get("pin_import") {
+        let updates = journal.as_array().filter(|v| v.len() <= 1000).ok_or("invalid pin import")?;
+        if journal.to_string().len() > 4_000_000 { return Err("invalid pin import"); }
+        for update in updates {
+            let host = update.get("origin").and_then(Value::as_str).ok_or("invalid pin import")?;
+            origin(host)?;
+            let account = update.get("account").and_then(Value::as_str).ok_or("invalid pin import")?;
+            if account.is_empty() || account.len() > 128 || account.chars().any(char::is_control) { return Err("invalid pin import"); }
+            let pins = update.get("pins").and_then(Value::as_array).ok_or("invalid pin import")?;
+            for pin in pins {
+                if pin.get("origin").and_then(Value::as_str) != Some(host) || !pin.get("history").is_some_and(Value::is_array) { return Err("invalid pin import"); }
+            }
+        }
+        record["pin_import"] = journal.clone();
+    }
+    Ok(record)
+}
+
+#[cfg(test)]
+mod import_tests {
+    use super::*;
+    #[test]
+    fn identity_preserves_durable_import_gate() {
+        let mut raw = json!({"seed":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","recovery_rev":1,"confirmed":true,
+            "pin_import":[{"origin":"https://chat.example.test","account":"me","pins":[]} ]});
+        assert_eq!(identity(&raw).unwrap()["pin_import"], raw["pin_import"]);
+        raw["pin_import"][0]["origin"] = json!("http://remote.test");
+        assert!(identity(&raw).is_err());
+        raw["pin_import"] = Value::Null;
+        assert!(identity(&raw).is_err());
+    }
 }

@@ -1,0 +1,10 @@
+# Generated command permission; kept in source for platform builds.
+[[permission]]
+identifier = "allow-bindings-set"
+description = "Enables bindings_set in the local webview."
+commands.allow = ["bindings_set"]
+
+[[permission]]
+identifier = "deny-bindings-set"
+description = "Denies bindings_set."
+commands.deny = ["bindings_set"]

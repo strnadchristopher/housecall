@@ -1,3 +1,5 @@
+import { useSecurity } from "../../core/securityContext";
+import { DmSecurityBanner } from "../security/DmSecurity";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useChat } from "../../core/context";
 import { copy } from "../copy";
@@ -20,6 +22,7 @@ function grow(field: HTMLTextAreaElement) {
 /** Attach, text, emoji, GIF. Uploads, replies, edits and mention suggestions sit above the field. */
 export function Composer({ compact }: { compact?: boolean }) {
   const chat = useChat();
+  const security = useSecurity();
   const [panel, setPanel] = useState<"" | "emoji" | "gif">("");
   const input = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
@@ -29,6 +32,8 @@ export function Composer({ compact }: { compact?: boolean }) {
   const phone = usePhone();
   const coarse = useCoarsePointer();
   const touch = phone || coarse;
+  const encryptedDm = !!chat.dmSecurity && !chat.dmSecurity.peer.canSendPlaintext;
+  const blocked = !!chat.dmSecurity && !chat.dmSecurity.canSend;
   const snaps = touch && chat.can.attach && !chat.editing;
   useEffect(() => { if (chat.replyingTo || chat.editing) input.current?.focus(); }, [chat.replyingTo?.id, chat.editing?.id]);
   useEffect(() => setPanel(""), [chat.current?.id]);
@@ -39,7 +44,7 @@ export function Composer({ compact }: { compact?: boolean }) {
 
   const submit = (event?: FormEvent) => {
     event?.preventDefault();
-    if (chat.draft.trim() || chat.attached.length) void chat.send();
+    if (!blocked && (chat.draft.trim() || chat.attached.length)) void chat.send();
   };
   const onKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); }
@@ -48,6 +53,8 @@ export function Composer({ compact }: { compact?: boolean }) {
   const uploadState = upload && { uploading: copy.composer.uploading, paused: copy.composer.paused, held: copy.composer.held, ready: copy.composer.ready, failed: copy.composer.failed }[upload.state];
 
   return (
+    <>
+    <DmSecurityBanner />
     <form className={cx("hc-composer", compact && "is-compact")} data-testid="screen-composer" onSubmit={submit}>
       {(chat.replyingTo || chat.editing) && (
         <div className="hc-composer__context">
@@ -70,8 +77,8 @@ export function Composer({ compact }: { compact?: boolean }) {
         <div className="hc-upload" data-testid="upload" data-state={upload.state}>
           <span className="hc-upload__name"><strong>{upload.filename}</strong><small>{uploadState} · {bytes(upload.sent)} / {bytes(upload.total)}</small></span>
           {upload.note && <span className="hc-upload__note">{upload.note}</span>}
-          {upload.state === "uploading" && <Button kind="text" onClick={chat.pauseUpload}>{copy.composer.pause}</Button>}
-          {(upload.state === "paused" || upload.state === "failed") && <Button kind="text" onClick={() => void chat.resumeUpload()}>{copy.composer.resume}</Button>}
+          {upload.state === "uploading" && !upload.encrypted && <Button kind="text" onClick={chat.pauseUpload}>{copy.composer.pause}</Button>}
+          {(upload.state === "paused" || upload.state === "failed") && !upload.encrypted && <Button kind="text" onClick={() => void chat.resumeUpload()}>{copy.composer.resume}</Button>}
           {upload.state === "held" && <Button kind="text" onClick={() => void chat.checkScan()}>{copy.composer.checkScan}</Button>}
           {upload.state === "held" && upload.canRetryScan && <Button kind="text" onClick={() => void chat.retryScan()}>{copy.composer.retryScan}</Button>}
           <IconButton icon="close" label={`${copy.common.remove} ${upload.filename}`} onClick={chat.discardUpload} />
@@ -94,22 +101,25 @@ export function Composer({ compact }: { compact?: boolean }) {
         <EmojiPicker onClose={() => setPanel("")} onPick={emoji => { chat.setDraft(chat.draft + emoji); input.current?.focus(); }} />
       </Presence>
       <Presence show={panel === "gif"}><GifPicker onDone={() => setPanel("")} /></Presence>
+      {chat.dmSecurity && <p className="hc-composer__note">{blocked ? chat.dmSecurity.removalAcknowledged ? copy.e2e.noteNoKey(chat.current.name) : chat.dmSecurity.peer.state === "CHANGED_UNACKNOWLEDGED" || chat.dmSecurity.peer.state === "KEY_ROLLBACK" ? copy.e2e.notePausedKey : security?.status?.keyRev === 0 ? copy.e2e.noteSetUp : copy.e2e.notePausedLocked : chat.dmSecurity.peer.state === "NONE" ? copy.security.notYetComposer : ""}</p>}
       <div className="hc-composer__row">
         {chat.can.attach && (
           <>
-            <IconButton icon="plus" label={copy.composer.attach} onClick={() => picker.current?.click()} />
+            <IconButton icon="plus" label={copy.composer.attach} disabled={blocked || chat.busy} onClick={() => picker.current?.click()} />
             <input ref={picker} type="file" className="hc-sr" tabIndex={-1} aria-hidden="true"
               onChange={event => { const chosen = event.target.files?.[0]; event.target.value = ""; if (chosen) void chat.attach(chosen); }} />
           </>
         )}
-        {snaps && <SnapCapture />}
-        <textarea ref={input} rows={1} name="body" aria-label={copy.composer.label} placeholder={copy.composer.placeholder(chat.current.name)}
+        {snaps && (encryptedDm ? <IconButton icon="camera" label={copy.e2e.off.snaps} disabled /> : <SnapCapture />)}
+        <textarea disabled={blocked} ref={input} rows={1} name="body" aria-label={copy.composer.label} placeholder={copy.composer.placeholder(chat.current.name)}
           value={chat.draft} onChange={event => { chat.setDraft(event.target.value); grow(event.target); }} onKeyDown={onKey} />
         <IconButton data-panel-toggle="" icon="emoji" label={copy.composer.emoji} active={panel === "emoji"} onClick={() => setPanel(panel === "emoji" ? "" : "emoji")} />
+        {encryptedDm && <IconButton icon="gif" label={copy.e2e.off.gifs} disabled />}
         {chat.can.gif && <IconButton data-panel-toggle="" icon="gif" label={copy.composer.gif} active={panel === "gif"} onClick={() => setPanel(panel === "gif" ? "" : "gif")} />}
         <IconButton icon="send" className="hc-composer__send" label={chat.editing ? copy.composer.saveEdit : copy.composer.send} type="submit"
-          disabled={chat.busy || !(chat.draft.trim() || chat.attached.length)} />
+          disabled={blocked || chat.busy || !(chat.draft.trim() || chat.attached.length)} />
       </div>
     </form>
+    </>
   );
 }

@@ -1,3 +1,4 @@
+import { useSecurity } from "../../core/securityContext";
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { Preflight, ServerInfo } from "../../core/identity";
 import { useIdentity } from "../../core/context";
@@ -36,7 +37,6 @@ export function Onboarding() {
   };
   useEffect(() => { if (identity.inviteToken) go("join"); }, [identity.inviteToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (identity.restoring) return <Launch />;
   const home = () => (identity.adding ? identity.cancelAdd() : go("welcome", true));
   const screens: Record<Mode, () => ReactNode> = {
     welcome: () => <Welcome go={go} />,
@@ -56,15 +56,6 @@ export function Onboarding() {
       <div key={mode} className={cx("hc-onb__screen", mode === "welcome" && "hc-welcome", back ? "hc-anim-slide-left" : "hc-anim-slide-right")}>
         {screens[mode]()}
       </div>
-    </main>
-  );
-}
-
-/** Native cold start with a stored session: the mark alone, the door opening, never a flash of Welcome. */
-function Launch() {
-  return (
-    <main className="hc-onb hc-launch" data-testid="screen-launch" aria-busy="true">
-      <Logo open label={C.opening} />
     </main>
   );
 }
@@ -318,6 +309,7 @@ function Join({ name, onBack, onHaveAccount }: { name?: string; onBack: () => vo
  * the server's address).
  */
 function SignIn({ preset, onBack, onSignUp }: { preset?: Preset; onBack: () => void; onSignUp: () => void }) {
+  const security = useSecurity();
   const identity = useIdentity();
   const accounts = identity.remembered;
   const [manual, setManual] = useState(false);
@@ -390,6 +382,7 @@ function SignIn({ preset, onBack, onSignUp }: { preset?: Preset; onBack: () => v
           <ErrorLine text={identity.error} />
           <div className="hc-onb__actions">
             <Button kind="primary" type="submit" busy={identity.busy}>{C.logIn}</Button>
+            <Button onClick={() => void security?.act(() => security.openReceive())}>{copy.link.title}</Button>
             {!identity.adding && !preset && <Button kind="text" className="hc-onb__quiet" onClick={onSignUp}>{C.newHere}</Button>}
           </div>
         </>
@@ -420,7 +413,7 @@ function Checklist({ address }: { address: string }) {
               <span className="hc-preflight__mark" aria-hidden="true">{row.ok ? "✓" : "!"}</span>
               <span className="hc-preflight__text">
                 <span>{row.label}<span className="hc-sr"> {row.ok ? "passed" : "needs attention"}</span></span>
-                {row.help && <span className="hc-preflight__help">{row.help} <a href={`/${row.href}`} target="_blank" rel="noreferrer">{P.guide}</a></span>}
+                {row.help && <span className="hc-preflight__help">{row.help} <a href={`https://github.com/strnadchristopher/housecall/blob/housecall/${row.href}`} target="_blank" rel="noreferrer">{P.guide}</a></span>}
               </span>
             </li>
           ))}

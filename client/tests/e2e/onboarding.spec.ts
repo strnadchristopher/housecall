@@ -188,7 +188,11 @@ test("onboarding: a closed server says so; Back walks the way you came", async (
   await signIn(owner, "owner");
   await owner.getByRole("button", { name: "Server settings" }).click();
   await owner.getByTestId("screen-settings").getByRole("button", { name: "Access requests", exact: true }).click();
-  await owner.getByRole("switch", { name: "Let people request access" }).uncheck();
+  {
+    const response = owner.waitForResponse(r => r.url().endsWith("/api/instance") && r.request().method() === "PATCH");
+    await owner.getByRole("switch", { name: "Let people request access" }).click();
+    expect((await response).ok()).toBe(true);
+  }
   await expect(owner.getByRole("switch", { name: "Let people request access" })).not.toBeChecked();
 
   const context = await browser.newContext(phone);
@@ -212,7 +216,11 @@ test("onboarding: a closed server says so; Back walks the way you came", async (
   await page.getByRole("button", { name: "New here? Sign up" }).click();
   await expect(page.getByTestId("screen-sign-up")).toBeVisible();
 
-  await owner.getByRole("switch", { name: "Let people request access" }).check();
+  {
+    const response = owner.waitForResponse(r => r.url().endsWith("/api/instance") && r.request().method() === "PATCH");
+    await owner.getByRole("switch", { name: "Let people request access" }).click();
+    expect((await response).ok()).toBe(true);
+  }
   await expect(owner.getByRole("switch", { name: "Let people request access" })).toBeChecked();
   await context.close();
   await ownerCtx.close();

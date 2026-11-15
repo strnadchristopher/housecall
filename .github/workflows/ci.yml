@@ -44,6 +44,8 @@ jobs:
       - run: npm ci --prefix client
       - run: npm run build --prefix client && npm test --prefix client
       - run: cargo build --locked
+      - name: Encrypted client service to local push providers
+        run: cargo test --locked -p housecall-server push::tests::encrypted_client_service_routes_notification_and_id_only_push -- --ignored --exact --nocapture
       - if: vars.CI_HOSTED == 'true'
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: cd client && npx playwright install --with-deps chromium && npm run e2e && npm run test:voice && node tests/run-plex.mjs

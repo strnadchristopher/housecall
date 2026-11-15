@@ -3,6 +3,8 @@ export interface Message {
   channel_id: string;
   author_id: string;
   body: string;
+  enc?: number;
+  envelope?: string | null;
   created_at: number;
   edited_at?: number | null;
   mention_ids?: string[];

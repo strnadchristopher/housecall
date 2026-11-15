@@ -292,6 +292,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .allow_methods([
             axum::http::Method::GET,
             axum::http::Method::POST,
+            axum::http::Method::PUT,
             axum::http::Method::PATCH,
             axum::http::Method::DELETE,
             axum::http::Method::HEAD,
@@ -382,8 +383,8 @@ async fn link_page(request: axum::extract::Request, next: Next) -> Response {
     use axum::{http::Method, response::IntoResponse};
     let (kind, body) = match request.uri().path() {
         "/link" => ("text/html; charset=utf-8", include_str!("link_page/index.html")),
-        "/link.js" => ("text/javascript; charset=utf-8", include_str!("link_page/link.js")),
-        "/link.css" => ("text/css; charset=utf-8", include_str!("link_page/link.css")),
+        "/link.js" | "/link/link.js" => ("text/javascript; charset=utf-8", include_str!("link_page/link.js")),
+        "/link.css" | "/link/link.css" => ("text/css; charset=utf-8", include_str!("link_page/link.css")),
         _ => return next.run(request).await,
     };
     match *request.method() {

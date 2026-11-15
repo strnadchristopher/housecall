@@ -56,7 +56,7 @@ describe('closed pin history integration vectors (formerly crypto TODOs)', () =>
 
 describe('identity lifecycle through authenticated REST', () => {
   function host(initial: PublicKeys = noKeys()) {
-    let keys = initial, backup: string | null = null;
+    let keys = initial, backup: string | null = null, failBackup = false;
     const writes: string[] = [];
     const fetch = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const path = String(input).replace(origin, ''), body = init?.body ? JSON.parse(String(init.body)) : {};
@@ -66,12 +66,12 @@ describe('identity lifecycle through authenticated REST', () => {
       if (path === '/api/me/password-check') return body.password === 'correct' ? response({ ok: true }) : response({ error: 'password required' }, 403);
       if (path === '/api/me/key-backup' && init?.method !== 'PUT') return response({ key_backup: backup });
       if (path === '/api/me/keys') { writes.push('keys'); keys = { user_id: 'me', identity_key: body.identity_key, key_rev: keys.key_rev || 1, history: [{ key_rev: keys.key_rev || 1, identity_key: body.identity_key }] }; return response({ key_rev: keys.key_rev }); }
-      if (path === '/api/me/key-backup') { writes.push('backup'); backup = body.key_backup; return response({ recovery_rev: 1 }); }
+      if (path === '/api/me/key-backup') { if (failBackup) return response({ error: 'fixture interrupted backup upload' }, 503); writes.push('backup'); backup = body.key_backup; return response({ recovery_rev: 1 }); }
       if (path === '/api/me/key-exposure') { writes.push('exposure'); return response({}); }
       throw new Error(`Unexpected route: ${path}`);
     });
     vi.stubGlobal('fetch', fetch); const api = new Api(origin); api.authenticate({ token: 'session', device_key: 'device' });
-    return { remote: new SecurityApi(api), writes, setBackup: (b: string) => { backup = b; } };
+    return { remote: new SecurityApi(api), writes, failBackup: (fail: boolean) => { failBackup = fail; }, setBackup: (b: string) => { backup = b; } };
   }
   it('survives restart before confirmation with no publish; only a real word challenge unlocks publication', async () => {
     const h = host(), vault = nativeMemory();
@@ -83,6 +83,34 @@ describe('identity lifecycle through authenticated REST', () => {
     await service.showWords(); const next = service.confirmationChallenge(); expect(next.every(n => !positions.includes(n))).toBe(true);
     expect(await service.confirmWords([words[next[0] - 1], words[next[1] - 1]])).toBe(true);
     await service.publish(); expect(h.writes).toEqual(['keys', 'backup']); expect(service.snapshot().phase).toBe('ready');
+  });
+  it('repairs interrupted confirmed publication after service recreation and exposes a retryable startup failure', async () => {
+    const h = host(), vault = nativeMemory();
+    const first = new IdentityService(vault, h.remote, origin, 'me'); await first.bootstrap(); first.acknowledgeNotice('security-introduction'); await first.beginCreation();
+    const words = (await first.showWords()).split(' '), positions = first.confirmationChallenge();
+    expect(await first.confirmWords([words[positions[0] - 1], words[positions[1] - 1]])).toBe(true);
+    h.failBackup(true); await expect(first.publish()).rejects.toThrow('interrupted'); expect(h.writes).toEqual(['keys']);
+    const resumed = new IdentityService(vault, h.remote, origin, 'me');
+    await expect(resumed.bootstrap()).rejects.toThrow('interrupted'); expect(resumed.snapshot().phase).toBe('backup-pending');
+    h.failBackup(false); expect((await resumed.bootstrap()).phase).toBe('ready'); expect(h.writes).toEqual(['keys', 'backup']);
+    const local = (await vault.loadIdentity())!;
+    const { wordsToRecoveryKey, openBackup } = await import('../src/crypto/backup');
+    const r = unwrap(wordsToRecoveryKey(words.join(' ')));
+    const opened = unwrap(openBackup(unwrap(unb64u((await h.remote.backup()).key_backup)), r, publicIdentityKey(local.seed)));
+    expect(opened).toEqual(local.seed); opened.fill(0); r.fill(0); local.seed.fill(0);
+  });
+  it('repairs older same-key backups, preserves newer/corrupt/substituted backups and never publishes unconfirmed or mismatching local identities', async () => {
+    const key = b64u(publicIdentityKey(seed));
+    const h = host({ user_id: 'me', identity_key: key, key_rev: 1, history: [{ key_rev: 1, identity_key: key }] });
+    const vault = nativeMemory(); await vault.saveIdentity({ seed, recoveryRev: 2, confirmed: true });
+    const service = new IdentityService(vault, h.remote, origin, 'me');
+    h.setBackup(b64u(sealBackup(seed, 1))); expect((await service.bootstrap()).phase).toBe('ready'); expect(h.writes).toEqual(['backup']);
+    h.writes.length = 0; h.setBackup(b64u(sealBackup(seed, 3))); expect((await service.bootstrap()).phase).toBe('recovery-ahead'); expect(h.writes).toEqual([]);
+    for (const backup of ['corrupt', b64u(sealBackup(new Uint8Array(32).fill(99), 1)), b64u(sealBackup(new Uint8Array(32).fill(99), 2))]) {
+      h.setBackup(backup); await expect(service.bootstrap()).rejects.toThrow(); expect(h.writes).toEqual([]); expect(service.snapshot().phase).toBe('backup-pending');
+    }
+    await vault.saveIdentity({ seed, recoveryRev: 2, confirmed: false }); expect((await service.bootstrap()).phase).toBe('pending-confirmation'); expect(h.writes).toEqual([]);
+    await vault.saveIdentity({ seed: new Uint8Array(32).fill(99), recoveryRev: 2, confirmed: true }); expect((await service.bootstrap()).phase).toBe('collision'); expect(h.writes).toEqual([]);
   });
   it('serializes simultaneous host setup and rejects stale word challenges after another explicit reset', async () => {
     const h = host(), vault = nativeMemory(), first = new IdentityService(vault, h.remote, origin, 'me'), second = new IdentityService(vault, h.remote, origin, 'me');
@@ -109,6 +137,7 @@ describe('identity lifecycle through authenticated REST', () => {
   });
   it('pending recovery replacement retains its password gate across restart', async () => {
     const key = b64u(publicIdentityKey(seed)), h = host({ user_id: 'me', identity_key: key, key_rev: 1, history: [{ key_rev: 1, identity_key: key }] });
+    h.setBackup(b64u(sealBackup(seed, 1)));
     const vault = nativeMemory(); await vault.saveIdentity({ seed, recoveryRev: 1, confirmed: true });
     const service = new IdentityService(vault, h.remote, origin, 'me'); await service.bootstrap(); service.acknowledgeNotice('replace-does-not-revoke-leaked-words'); await service.replaceRecovery('correct');
     const resumed = new IdentityService(vault, h.remote, origin, 'me'); expect((await resumed.bootstrap()).phase).toBe('pending-confirmation');
@@ -119,9 +148,11 @@ describe('identity lifecycle through authenticated REST', () => {
   });
   it('requires password and leak warning for recovery replacement; refuses stale recovery words', async () => {
     const key = b64u(publicIdentityKey(seed)), h = host({ user_id: 'me', identity_key: key, key_rev: 1, history: [{ key_rev: 1, identity_key: key }] });
+    h.setBackup(b64u(sealBackup(seed, 1)));
     const vault = nativeMemory(); await vault.saveIdentity({ seed, recoveryRev: 1, confirmed: true }); const service = new IdentityService(vault, h.remote, origin, 'me'); await service.bootstrap();
     await expect(service.replaceRecovery('correct')).rejects.toThrow('Notice'); service.acknowledgeNotice('replace-does-not-revoke-leaked-words'); await expect(service.replaceRecovery('wrong')).rejects.toThrow('password');
-    h.setBackup(b64u(sealBackup(seed, 2))); expect((await service.bootstrap()).phase).toBe('recovery-ahead'); await expect(service.showWords('correct')).rejects.toThrow('Current'); await expect(service.replaceRecovery('correct')).rejects.toThrow('Current');
+    h.setBackup(b64u(sealBackup(new Uint8Array(32).fill(93), 2))); await expect(service.replaceRecovery('correct')).rejects.toThrow(); expect((await vault.loadIdentity())?.recoveryRev).toBe(1);
+    h.setBackup(b64u(sealBackup(seed, 2))); expect((await service.bootstrap()).phase).toBe('recovery-ahead'); await expect(service.showWords('correct')).rejects.toThrow('Current'); await service.replaceRecovery('correct'); expect(service.snapshot().phase).toBe('pending-confirmation'); expect((await vault.loadIdentity())?.recoveryRev).toBe(3); expect(h.writes).toEqual([]);
   });
 });
 

@@ -2,4 +2,4 @@
 
 [default]
 description = "Lets the local webview store sessions, the install identity and full pin histories in OS secure storage, and request device owner verification."
-permissions = ["allow-get", "allow-set", "allow-remove", "allow-list", "allow-identity-get", "allow-identity-set", "allow-identity-remove", "allow-pins-get", "allow-pins-set", "allow-verify-owner"]
+permissions = ["allow-get", "allow-set", "allow-remove", "allow-list", "allow-identity-get", "allow-identity-set", "allow-identity-remove", "allow-pins-get", "allow-pins-set", "allow-bindings-get", "allow-bindings-set", "allow-verify-owner", "allow-sensitive-surface"]

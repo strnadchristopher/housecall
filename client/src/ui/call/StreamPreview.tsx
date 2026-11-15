@@ -68,7 +68,7 @@ function Body({ target, channelName }: { target: PreviewTarget; channelName: str
 }
 
 /** HC-040 section 4.2: a popover beside the sidebar on wide screens, a sheet on phones. */
-export function StreamPreview({ target, onClose, onOpenCall }: { target?: PreviewTarget; onClose: () => void; onOpenCall: (channelId: string) => void }) {
+export function StreamPreview({ target, onClose, onOpenCall }: { target?: PreviewTarget; onClose: () => void; onOpenCall: (channelId: string, personId: string) => void }) {
   const chat = useChat();
   const phone = usePhone();
   const pop = useRef<HTMLDivElement>(null);
@@ -95,7 +95,7 @@ export function StreamPreview({ target, onClose, onOpenCall }: { target?: Previe
   const shown = target ?? last;
   if (!shown) return null;
   const channelName = chat.conversations.find(conversation => conversation.id === shown.channelId)?.name ?? "";
-  const watch = () => { onClose(); onOpenCall(shown.channelId); };
+  const watch = () => { onClose(); onOpenCall(shown.channelId, shown.member.personId); };
   if (phone) {
     return (
       <Sheet open={!!target} onClose={onClose} title={copy.voice.streamOf(shown.member.name)} testId="stream-preview"

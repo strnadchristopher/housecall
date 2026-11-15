@@ -1,0 +1,34 @@
+import { createContext, useContext } from 'react';
+import type { IdentityService } from './identityService';
+import type { IdentityStatus } from './security';
+import type { ReceivingLink, ShowingLink } from './linkService';
+import type { HostIdentitySync } from './identityCoordinator';
+export interface SecurityUI {
+  bootstrap: boolean;
+  status?: IdentityStatus;
+  service?: IdentityService;
+  origin: string;
+  busy: boolean;
+  error: string;
+  deviceNotice?: string;
+  flow?: 'identity' | 'receive' | 'show';
+  receiver?: ReceivingLink;
+  pendingLink?: ReceivingLink;
+  retryLink(kind: "exposure" | "revocation" | "session"): Promise<void>;
+  showing?: ShowingLink;
+  outcomes: HostIdentitySync[];
+  exposures: { created_at: number }[];
+  refresh(): Promise<void>;
+  act(work: () => Promise<void>): Promise<boolean>;
+  synchronize(password?: string): Promise<void>;
+  openIdentity(): void;
+  openReceive(scan?: boolean): Promise<void>;
+  scanImmediately: boolean;
+  openShowing(): void;
+  close(): void;
+  acceptReceived(origin: string, auth: import('../data/types').Auth, completion?: ReceivingLink): Promise<void>;
+  memoryOnly(): void;
+  dismissDeviceNotice(): void;
+}
+export const SecurityContext = createContext<SecurityUI | undefined>(undefined);
+export const useSecurity = () => useContext(SecurityContext);

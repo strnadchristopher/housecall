@@ -33,6 +33,8 @@ export interface Upload {
   status: "uploading" | "quarantined" | "ready";
   scan?: UploadScan | null;
 }
+export type UploadPermit = <T>(send: () => Promise<T>) => Promise<T>;
+const allowed: UploadPermit = send => send();
 /** File slices bound memory regardless of total file size; server offsets are authoritative. */
 export class ResumableUpload {
   private active?: AbortController;
@@ -50,26 +52,33 @@ export class ResumableUpload {
     this.active = controller;
     return controller;
   }
-  private publish(upload: Upload, controller: AbortController) {
+  private check(controller: AbortController) {
     if (controller.signal.aborted || this.active !== controller)
       throw new DOMException("Upload paused", "AbortError");
+  }
+  private publish(upload: Upload, controller: AbortController) {
+    this.check(controller);
     this.changed(upload);
   }
-  async create(channelId: string, file: File) {
+  async create(channelId: string, file: File, permit: UploadPermit = allowed) {
     const controller = this.begin();
-    const upload = await this.api.request<Upload>("/api/uploads", {
-      method: "POST", signal: controller.signal,
-      body: JSON.stringify({ channel_id: channelId, filename: file.name, length: String(file.size) }),
+    const upload = await permit(() => {
+      this.check(controller);
+      return this.api.request<Upload>("/api/uploads", {
+        method: "POST", signal: controller.signal,
+        body: JSON.stringify({ channel_id: channelId, filename: file.name, length: String(file.size) }),
+      });
     });
     this.publish(upload, controller);
     return upload;
   }
-  async resume(uploadId: string, file: File) {
+  async resume(uploadId: string, file: File, permit: UploadPermit = allowed) {
     const controller = this.begin();
     let upload = await this.api.get<Upload>(
       `/api/uploads/${uploadId}`,
       controller.signal,
     );
+    await permit(async () => { this.check(controller); });
     if (
       upload.filename !== file.name ||
       BigInt(upload.length) !== BigInt(file.size)
@@ -88,18 +97,21 @@ export class ResumableUpload {
         offset,
         Math.min(offset + 4 * 1024 * 1024, file.size),
       );
-      upload = await this.api.request<Upload>(`/api/uploads/${uploadId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/octet-stream",
-          "Upload-Offset": upload.offset,
-        },
-        body: chunk,
-        signal: controller.signal,
+      upload = await permit(() => {
+        this.check(controller);
+        return this.api.request<Upload>(`/api/uploads/${uploadId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/octet-stream",
+            "Upload-Offset": upload.offset,
+          },
+          body: chunk,
+          signal: controller.signal,
+        });
       });
       this.publish(upload, controller);
     }
-    return this.complete(uploadId, controller);
+    return this.complete(uploadId, controller, permit);
   }
   async refreshScan(uploadId: string) {
     const controller = this.begin();
@@ -108,11 +120,14 @@ export class ResumableUpload {
     return upload;
   }
   async retryScan(uploadId: string) { return this.complete(uploadId, this.begin()); }
-  private async complete(uploadId: string, controller: AbortController) {
+  private async complete(uploadId: string, controller: AbortController, permit: UploadPermit = allowed) {
     let upload: Upload;
     try {
-      upload = await this.api.request<Upload>(`/api/uploads/${uploadId}/complete`,
-        { method: "POST", body: "{}", signal: controller.signal });
+      upload = await permit(() => {
+        this.check(controller);
+        return this.api.request<Upload>(`/api/uploads/${uploadId}/complete`,
+          { method: "POST", body: "{}", signal: controller.signal });
+      });
     } catch (error) {
       if (!controller.signal.aborted && this.active === controller) {
         const current = await this.api.get<Upload>(`/api/uploads/${uploadId}`, controller.signal);

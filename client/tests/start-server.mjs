@@ -8,7 +8,7 @@ const stopPlex =
     ? await (await import("./plex-fixture.mjs")).startPlexFixture()
     : undefined;
 const directory = await mkdtemp(join(tmpdir(), "housecall-e2e-"));
-const wantsScanner = process.env.HOUSECALL_TEST_REPORTS === "1" || process.env.HOUSECALL_TEST_UPLOAD_VIDEO === "1" || process.env.HOUSECALL_TEST_UPLOADS === "1" || process.env.HOUSECALL_TEST_SNAPS === "1" || process.env.HOUSECALL_TEST_SHOTS === "1" || process.env.HOUSECALL_TEST_PROFILE === "1";
+const wantsScanner = process.env.HOUSECALL_TEST_SECURITY === "1" || process.env.HOUSECALL_TEST_REPORTS === "1" || process.env.HOUSECALL_TEST_UPLOAD_VIDEO === "1" || process.env.HOUSECALL_TEST_UPLOADS === "1" || process.env.HOUSECALL_TEST_SNAPS === "1" || process.env.HOUSECALL_TEST_SHOTS === "1" || process.env.HOUSECALL_TEST_PROFILE === "1";
 // Real ClamAV when its socket exists; otherwise a local INSTREAM stand-in (OK unless EICAR).
 let clamdSocket = resolve("../.runtime/scan/clamd.sock");
 let stopClamd;
@@ -27,7 +27,7 @@ const child = spawn(binary, [], {
     DJ_ENABLED: "false",
     ...(wantsScanner ? { HOUSECALL_CLAMD_SOCKET: clamdSocket } : {}),
     HOUSECALL_BIND: "127.0.0.1:3031",
-    ...(process.env.HOUSECALL_TEST_VOICE === "1" || process.env.HOUSECALL_TEST_DM_CALLS === "1" || process.env.HOUSECALL_TEST_VOICECHANNELS === "1" || process.env.HOUSECALL_TEST_VOICESHOTS === "1" || process.env.HOUSECALL_TEST_MEDIASHOTS === "1" || process.env.HOUSECALL_TEST_SHELL === "1" || process.env.HOUSECALL_TEST_SHOTS === "1"
+    ...(process.env.HOUSECALL_TEST_PHASE4 === "1" || process.env.HOUSECALL_TEST_VOICE === "1" || process.env.HOUSECALL_TEST_DM_CALLS === "1" || process.env.HOUSECALL_TEST_VOICECHANNELS === "1" || process.env.HOUSECALL_TEST_VOICESHOTS === "1" || process.env.HOUSECALL_TEST_MEDIASHOTS === "1" || process.env.HOUSECALL_TEST_SHELL === "1" || process.env.HOUSECALL_TEST_SHOTS === "1"
       ? { SFU_BIND: "127.0.0.1:50010", SFU_PUBLIC_IP: "127.0.0.1" }
       : {}),
     ...(process.env.HOUSECALL_TEST_PLEX === "1"

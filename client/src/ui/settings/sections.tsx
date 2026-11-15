@@ -1,3 +1,5 @@
+import { NavRow } from "../kit";
+import { useSecurity } from "../../core/securityContext";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ACCENTS, type AccentId } from "../tokens/accent";
 import type { AccessRequestRecord, InviteRecord, InviteResult } from "../../core/identity";
@@ -77,6 +79,7 @@ export function Account() {
       </form>
       <PictureField label={copy.profile.avatar} remove={copy.profile.removeAvatar} saveLabel={copy.profile.saveAvatar}current={me.avatarUrl} shape="arch" name={me.name}
         save={image => identity.setAvatar(image)} clear={() => identity.setAvatar(undefined)} />
+      <p className="hc-note">{identity.native ? copy.security.signOutNative : copy.security.signOutWeb}</p>
       <Button kind="danger" onClick={() => void identity.signOut()}>{copy.settings.signOut}</Button>
     </div>
   );
@@ -100,13 +103,16 @@ export function ServerProfile() {
 }
 
 export function Devices() {
+  const security = useSecurity();
   const identity = useIdentity();
   useEffect(() => { void identity.loadDevices(); }, []);
   return (
     <ul className="hc-results" data-testid="screen-devices">
+      {identity.native && <li><NavRow label={copy.link.title} onClick={() => security?.openShowing()} /></li>}
+      <li className="hc-note">{copy.security.stolen}</li>
       {identity.devices.map(device => (
         <li key={device.id} className="hc-results__action">
-          <span><strong>{device.name}</strong><small>{device.current ? copy.settings.thisDevice : new Date(device.createdAt).toLocaleDateString()}</small></span>
+          <span><strong>{device.name}</strong>{device.addedVia && <small>{copy.link.addedVia[device.addedVia]}</small>}<small>{device.current ? copy.settings.thisDevice : new Date(device.createdAt).toLocaleDateString()}</small></span>
           <Button kind="danger" onClick={() => void identity.revokeDevice(device.id)}>{copy.settings.revoke}</Button>
         </li>
       ))}
@@ -358,6 +364,7 @@ export function Roles() {
 }
 
 export function ReportProblem() {
+  const secureChat = useChat().dmSecurity;
   const identity = useIdentity();
   const [body, setBody] = useState("");
   const [feature, setFeature] = useState(false);
@@ -374,6 +381,7 @@ export function ReportProblem() {
   };
   return (
     <form className="hc-stack" data-testid="screen-report" onSubmit={submit}>
+      {secureChat && secureChat.peer.state !== "NONE" && <p className="hc-note">{copy.e2e.reportShares}</p>}
       <div className="hc-inline" role="radiogroup" aria-label={copy.settings.report}>
         <label className="hc-check"><input type="radio" name="kind" checked={!feature} onChange={() => setFeature(false)} /><span>{copy.settings.bug}</span></label>
         <label className="hc-check"><input type="radio" name="kind" checked={feature} onChange={() => setFeature(true)} /><span>{copy.settings.feature}</span></label>

@@ -15,7 +15,7 @@ function FileCard({ attachment }: { attachment: Attachment }) {
   return (
     <div className="hc-file">
       <Icon name={attachment.video ? "film" : "file"} />
-      <span><strong>{attachment.filename}</strong><small>{bytes(attachment.size)}</small></span>
+      <span><strong>{attachment.filename}</strong><small>{bytes(attachment.size)}{attachment.sealed ? ` · ${copy.e2e.notScanned}` : ""}</small></span>
       <IconButton icon="download" label={`${copy.messages.download} ${attachment.filename}`} onClick={() => void chat.download(attachment)} />
     </div>
   );

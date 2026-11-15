@@ -6,6 +6,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    readonly sessionGeneration?: number,
   ) {
     super(message);
     this.name = "ApiError";
@@ -14,6 +15,9 @@ export class ApiError extends Error {
 /** Secrets stay in memory. Reload requires authentication; never localStorage/URLs/logs. */
 export class Api {
   private session?: Session;
+  private sessionGeneration = 0;
+  requestGuard?: (path: string, options: RequestInit) => void;
+  responseObserver?: (path: string, value: unknown, options: RequestInit) => void;
   constructor(private origin = "") {
     this.configure(origin);
   }
@@ -34,9 +38,12 @@ export class Api {
       this.origin = parsed.origin;
     }
   }
+  /** Canonical transport origin, without constructing a credential-bearing Request. */
+  serverOrigin(): string { return this.origin || location.origin; }
   authenticate(session?: Session) {
-    this.session = session;
+    this.sessionGeneration++; this.session = session;
   }
+  isCurrentSessionError(error: ApiError) { return error.sessionGeneration === undefined || error.sessionGeneration === this.sessionGeneration; }
   /** Native/HLS media gets auth headers without exposing credentials to media URLs or redirects. */
   mediaRequest(url: string, init: RequestInit = {}): Request {
     const base = this.origin || location.origin;
@@ -48,6 +55,7 @@ export class Api {
       target.password
     )
       throw new Error("Authenticated media must remain on this server");
+    this.requestGuard?.(target.pathname + target.search, init);
     const headers = new Headers(init.headers);
     if (this.session) {
       headers.set("Authorization", `Bearer ${this.session.token}`);
@@ -64,6 +72,7 @@ export class Api {
   async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     if (!path.startsWith("/api/") || path.includes("://"))
       throw new Error("API path required");
+    this.requestGuard?.(path, options);
     const headers = new Headers(options.headers);
     if (this.session) {
       headers.set("Authorization", `Bearer ${this.session.token}`);
@@ -71,6 +80,7 @@ export class Api {
     }
     if (options.body && typeof options.body === "string")
       headers.set("Content-Type", "application/json");
+    const sessionGeneration = this.sessionGeneration, observer = this.responseObserver;
     const response = await fetch(this.origin + path, {
       ...options,
       headers,
@@ -85,10 +95,11 @@ export class Api {
       throw new ApiError(
         response.status,
         data.error ?? `Request failed (${response.status})`,
+        sessionGeneration,
       );
     }
     if (response.status === 204) return undefined as T;
-    return response.json() as Promise<T>;
+    const value = await response.json() as T; observer?.(path, value, options); return value;
   }
   get<T>(path: string, signal?: AbortSignal) {
     return this.request<T>(path, { signal });

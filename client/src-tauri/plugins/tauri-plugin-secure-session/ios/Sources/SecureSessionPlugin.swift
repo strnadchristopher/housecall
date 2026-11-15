@@ -1,9 +1,11 @@
+import UIKit
 import Foundation
 import Security
 import LocalAuthentication
 import Tauri
 
 private struct Args: Decodable {
+  let enabled: Bool?
   let origin: String?
   /// `set` only: the session as a JSON string. Rust has already reduced it to the four known fields.
   let session: String?
@@ -11,6 +13,8 @@ private struct Args: Decodable {
   let value: String?
   let reason: String?
 }
+
+private struct SurfaceReply: Encodable { let ok: Bool; let captured: Bool }
 
 private struct Reply: Encodable {
   var session: String?
@@ -134,6 +138,44 @@ class SecureSessionPlugin: Plugin {
       let status = SecItemDelete(self.recordQuery(account) as CFDictionary)
       guard status == errSecSuccess || status == errSecItemNotFound else { return invoke.reject("secure storage unavailable") }
       invoke.resolve(Reply(ok: true))
+    }
+  }
+
+  private var captureCover: UIView?
+  private var captureObserver: NSObjectProtocol?
+  private var inactiveObserver: NSObjectProtocol?
+  private var activeObserver: NSObjectProtocol?
+  private var sensitive = false
+  private func updateCaptureCover() {
+    guard let window = self.manager.viewController?.view.window else { return }
+    let hidden = sensitive && (window.screen.isCaptured || UIApplication.shared.applicationState != .active)
+    if hidden && captureCover == nil {
+      let cover = UIView(frame: window.bounds)
+      cover.backgroundColor = .black
+      cover.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+      cover.isUserInteractionEnabled = true
+      window.addSubview(cover); captureCover = cover
+    } else if !hidden { captureCover?.removeFromSuperview(); captureCover = nil }
+  }
+  @objc(sensitiveSurface:)
+  func sensitiveSurface(_ invoke: Invoke) {
+    guard let args = try? invoke.parseArgs(Args.self), let enabled = args.enabled else { return invoke.reject("invalid screen protection request") }
+    DispatchQueue.main.async {
+      self.sensitive = enabled
+      if enabled && self.captureObserver == nil {
+        self.captureObserver = NotificationCenter.default.addObserver(forName: UIScreen.capturedDidChangeNotification, object: nil, queue: .main) { [weak self] _ in self?.updateCaptureCover() }
+        self.inactiveObserver = NotificationCenter.default.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
+          guard let self, self.sensitive, let window = self.manager.viewController?.view.window else { return }
+          if self.captureCover == nil { let cover = UIView(frame: window.bounds); cover.backgroundColor = .black; cover.autoresizingMask = [.flexibleWidth, .flexibleHeight]; window.addSubview(cover); self.captureCover = cover }
+        }
+        self.activeObserver = NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in self?.updateCaptureCover() }
+      }
+      if !enabled {
+        for observer in [self.captureObserver, self.inactiveObserver, self.activeObserver] { if let observer { NotificationCenter.default.removeObserver(observer) } }
+        self.captureObserver = nil; self.inactiveObserver = nil; self.activeObserver = nil
+      }
+      self.updateCaptureCover()
+      invoke.resolve(SurfaceReply(ok: true, captured: self.manager.viewController?.view.window?.screen.isCaptured ?? true))
     }
   }
 

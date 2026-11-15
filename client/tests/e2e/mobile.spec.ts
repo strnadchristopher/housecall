@@ -19,12 +19,19 @@ test("phone: content runs behind the status bar, controls stay clear of it", asy
   await expect(root).toHaveCSS("padding-top", "0px");
   const header = page.locator(".hc-center .hc-header").first();
   const box = await header.boundingBox();
-  expect(box?.y).toBe(0);                                 // header colour reaches the top edge
-  await expect(header).toHaveCSS("padding-top", "51px");  // 47 inset + 4 (space-1)
+  const notice = page.locator(".hc-security-notice");
+  await expect(notice).toBeVisible();
+  const noticeBox = (await notice.boundingBox())!;
+  expect(noticeBox.y).toBe(0); // the first painted surface reaches the top edge
+  await expect(notice).toHaveCSS("padding-top", "55px"); // safe inset consumed once
+  expect(box?.y).toBeCloseTo(noticeBox.y + noticeBox.height, 0);
+  await expect(header).toHaveCSS("padding-top", "4px");
+  const menuBox = (await header.getByRole("button", { name: "Menu", exact: true }).boundingBox())!;
+  expect(menuBox.y).toBeGreaterThanOrEqual(noticeBox.y + noticeBox.height);
   await expect(page.locator(".hc-center")).toHaveCSS("padding-bottom", "34px");
   // The drawer clears the status bar too.
   await page.getByRole("button", { name: "Menu", exact: true }).click();
-  await expect(page.locator(".hc-left")).toHaveCSS("padding-top", "55px"); // 47 inset + 8 (space-2)
+  await expect(page.locator(".hc-left")).toHaveCSS("padding-top", "8px"); // notice already consumes the top inset
   await context.close();
 });
 

@@ -1,70 +1,107 @@
 name: Desktop release
 
-# Builds on self-hosted runners by default: Linux + Windows (cargo-xwin cross) on council-linux,
-# macOS universal on council-macos. Each build uploads straight to a draft release; the publish job writes
-# latest.json, verifies every asset and publishes the release as latest.
-# GitHub-hosted fallback: set repo variable CI_HOSTED=true or dispatch with hosted=true.
+# Council runners only. Verify a parent-built image before preparing desktop drafts.
+# Publish clients manually only after server deployment and acceptance.
 # Server deploy is separate: .github/workflows/deploy.yml (manual dispatch only).
 
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
         description: Release tag to build (must exist)
         required: true
         type: string
-      hosted:
-        description: Use GitHub-hosted runners instead of the self-hosted ones
-        type: boolean
-        default: false
+      image_digest:
+        description: Parent-built GHCR expected sha256 digest (index or manifest)
+        required: true
+        type: string
       publish:
         description: Publish the release (false leaves it as a draft)
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  group: release-${{ inputs.tag }}
   cancel-in-progress: false
 
 env:
-  TAG: ${{ github.event.inputs.tag || github.ref_name }}
-  HOSTED: ${{ (github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && 'true' || 'false' }}
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  TAG: ${{ inputs.tag }}
   GH_REPO: ${{ github.repository }}
 
 jobs:
+  server-image:
+    runs-on: [self-hosted, council-linux]
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      revision: ${{ steps.identity.outputs.revision }}
+    steps:
+      - name: Validate release tag
+        shell: bash
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]] || exit 1
+      - uses: actions/checkout@v4
+        with: { ref: "refs/tags/${{ env.TAG }}", persist-credentials: false }
+      - name: Validate source version and resolve tag commit
+        id: identity
+        shell: bash
+        run: |
+          python3 - <<'PYTHON'
+          import json, os, re
+          from pathlib import Path
+          version = os.environ['TAG'][1:]
+          for path in ('client/package.json', 'client/src-tauri/tauri.conf.json'):
+              assert json.loads(Path(path).read_text())['version'] == version, 'Tag/version mismatch'
+          cargo = Path('client/src-tauri/Cargo.toml').read_text()
+          assert re.search(r'^version = "([^"]+)"', cargo, re.M)[1] == version, 'Tag/Cargo version mismatch'
+          PYTHON
+          echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Verify parent-built registry image
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_DIGEST: ${{ inputs.image_digest }}
+          REVISION: ${{ steps.identity.outputs.revision }}
+        run: |
+          python3 scripts/verify-registry.py --repository "$GH_REPO" --tag "$TAG" \
+            --digest "$EXPECTED_DIGEST" --revision "$REVISION"
+
   prepare:
-    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"ubuntu-22.04"' || '["self-hosted","council-linux"]') }}
+    needs: server-image
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    runs-on: [self-hosted, council-linux]
     outputs:
       version: ${{ steps.v.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-        with: { ref: "${{ env.TAG }}" }
+        with: { ref: "${{ needs.server-image.outputs.revision }}", persist-credentials: false }
       - id: v
         run: echo "version=$(jq -r .version client/src-tauri/tauri.conf.json)" >> "$GITHUB_OUTPUT"
       - name: Create or reuse the draft release
         run: |
-          if gh release view "$TAG" >/dev/null 2>&1; then echo "release exists"; else
+          if draft=$(gh release view "$TAG" --json isDraft --jq .isDraft); then
+            [ "$draft" = true ] || { echo "Refusing to modify a published release"; exit 1; }
+          else
             gh release create "$TAG" --verify-tag --draft --title "Housecall $TAG" \
               --notes "Housecall ${{ steps.v.outputs.version }}"
           fi
 
   linux:
-    needs: prepare
-    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"ubuntu-22.04"' || '["self-hosted","council-linux"]') }}
+    needs: [server-image, prepare]
+    runs-on: [self-hosted, council-linux]
     env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
-        with: { ref: "${{ env.TAG }}" }
+        with: { ref: "${{ needs.server-image.outputs.revision }}", persist-credentials: false }
       - uses: ./.github/actions/toolchain
-        with: { hosted: "${{ env.HOSTED }}", linux-gui: "true", cache-key: linux }
+        with: { hosted: "false", linux-gui: "true", cache-key: linux }
       - run: npm ci --prefix client
       - run: cd client && npx tauri build --bundles appimage,deb
       - name: Upload to draft release
@@ -72,13 +109,15 @@ jobs:
           B="${CARGO_TARGET_DIR:-client/src-tauri/target}/release/bundle"
           V=${{ needs.prepare.outputs.version }}
           ls -la "$B"/appimage "$B"/deb
+          [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = true ] || { echo "Release must remain draft"; exit 1; }
           gh release upload "$TAG" --clobber "$B"/appimage/*_${V}_*.AppImage{,.sig} "$B"/deb/*_${V}_*.deb{,.sig}
           ldd --version | head -1
 
   windows:
-    needs: prepare
-    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"windows-latest"' || '["self-hosted","council-linux"]') }}
+    needs: [server-image, prepare]
+    runs-on: [self-hosted, council-linux]
     env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     defaults:
@@ -86,9 +125,9 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
-        with: { ref: "${{ env.TAG }}" }
+        with: { ref: "${{ needs.server-image.outputs.revision }}", persist-credentials: false }
       - uses: ./.github/actions/toolchain
-        with: { hosted: "${{ env.HOSTED }}", cache-key: windows }
+        with: { hosted: "false", cache-key: windows }
       - run: npm ci --prefix client
       - name: Build NSIS installer
         run: |
@@ -101,19 +140,21 @@ jobs:
           T="${CARGO_TARGET_DIR:-client/src-tauri/target}"
           B="$T/x86_64-pc-windows-msvc/release/bundle/nsis"; [ -d "$B" ] || B="$T/release/bundle/nsis"
           ls -la "$B"
+          [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = true ] || { echo "Release must remain draft"; exit 1; }
           gh release upload "$TAG" --clobber "$B"/*_${V}_x64-setup.exe{,.sig}
 
   macos:
-    needs: prepare
-    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"macos-14"' || '["self-hosted","council-macos"]') }}
+    needs: [server-image, prepare]
+    runs-on: [self-hosted, council-macos]
     env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
-        with: { ref: "${{ env.TAG }}" }
+        with: { ref: "${{ needs.server-image.outputs.revision }}", persist-credentials: false }
       - uses: ./.github/actions/toolchain
-        with: { hosted: "${{ env.HOSTED }}", rust-targets: "aarch64-apple-darwin,x86_64-apple-darwin", cache-key: macos }
+        with: { hosted: "false", rust-targets: "aarch64-apple-darwin,x86_64-apple-darwin", cache-key: macos }
       - run: npm ci --prefix client
       - run: cd client && npx tauri build --target universal-apple-darwin --bundles app,dmg
       - name: Upload to draft release
@@ -125,21 +166,23 @@ jobs:
           cp "$T"/dmg/*_${V}_universal.dmg "$M/"
           cp "$T"/macos/Housecall.app.tar.gz "$M/Housecall_${V}_universal.app.tar.gz"
           cp "$T"/macos/Housecall.app.tar.gz.sig "$M/Housecall_${V}_universal.app.tar.gz.sig"
+          [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = true ] || { echo "Release must remain draft"; exit 1; }
           gh release upload "$TAG" --clobber "$M"/*
           rm -rf "$M"
 
   publish:
-    needs: [prepare, linux, windows, macos]
-    runs-on: ${{ fromJSON((github.event.inputs.hosted == 'true' || vars.CI_HOSTED == 'true') && '"ubuntu-22.04"' || '["self-hosted","council-linux"]') }}
+    needs: [server-image, prepare, linux, windows, macos]
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    runs-on: [self-hosted, council-linux]
     steps:
       - uses: actions/checkout@v4
-        with: { ref: "${{ env.TAG }}" }
+        with: { ref: "${{ needs.server-image.outputs.revision }}", persist-credentials: false }
       - name: Write latest.json and verify assets
         run: |
           V=${{ needs.prepare.outputs.version }}
           D="$RUNNER_TEMP/rel"; rm -rf "$D"; mkdir -p "$D"
           gh release download "$TAG" -D "$D" -p '*.sig'
-          git fetch -q origin "refs/tags/$TAG:refs/tags/$TAG" --force || true
           NOTES=$(git tag -l --format='%(contents)' "$TAG" | sed '/^-----BEGIN/,$d' | sed '/^\s*$/d' | head -20)
           [ -n "$NOTES" ] || NOTES="Housecall $V"
           BASE="https://github.com/$GH_REPO/releases/download/$TAG"
@@ -160,6 +203,7 @@ jobs:
           json.dump(out, open(os.path.join(d, "latest.json"), "w"), indent=2)
           print("platforms:", ", ".join(out["platforms"]))
           PY
+          [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = true ] || { echo "Release must remain draft"; exit 1; }
           gh release upload "$TAG" --clobber "$D/latest.json"
           want="Housecall_${V}_amd64.AppImage Housecall_${V}_amd64.AppImage.sig Housecall_${V}_amd64.deb Housecall_${V}_amd64.deb.sig Housecall_${V}_x64-setup.exe Housecall_${V}_x64-setup.exe.sig Housecall_${V}_universal.dmg Housecall_${V}_universal.app.tar.gz Housecall_${V}_universal.app.tar.gz.sig latest.json"
           have=$(gh release view "$TAG" --json assets --jq '.assets[].name')
@@ -168,7 +212,8 @@ jobs:
           rm -rf "$D"
           exit $miss
       - name: Publish as latest
-        if: github.event_name == 'push' || github.event.inputs.publish == 'true'
+        if: inputs.publish == true
         run: |
+          [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = true ] || { echo "Release must remain draft"; exit 1; }
           gh release edit "$TAG" --draft=false --prerelease=false --latest --title "Housecall $TAG"
           gh release view "$TAG" --json isDraft,isPrerelease,url --jq '"draft=\(.isDraft) prerelease=\(.isPrerelease) \(.url)"'

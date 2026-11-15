@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<script src="/link/link.js"></script>
+<title>Finish logging in · Housecall</title>
+<!-- HC-040 section 10.6, LINK-V1 section 3. This file IS the static page shipped as link/index.html, with the
+     external link.js beside it (the CSP forbids inline script). No framework, no request. The colours are the
+     Doorway tokens copied by value, because the page loads without the client bundle. "Open in Housecall" is
+     the fixed text housecall://link-scan: the code is never passed to the app (R-0).
+     mockup states: default = opened from a scanned code, missing = no code or a malformed one after the # -->
+<link rel="stylesheet" href="/link/link.css">
+</head>
+<body>
+<main>
+  <svg viewBox="0 0 32 32" role="img" aria-label="Housecall">
+    <path fill="var(--ink)" d="M6 3H12V10.83A10 10 0 0 1 26 20V29H20V20A4 4 0 0 0 12 20V29H6Z"/>
+    <path fill="var(--accent)" d="M12 29V20A4 4 0 0 1 20 20V29Z"/>
+    <path fill="var(--leaf)" d="M12 29V20A4 4 0 0 1 12.6 17.9L15.4 19.6V29Z"/>
+  </svg>
+
+  <div id="ok" hidden>
+    <h1>Finish logging in</h1>
+    <p class="lead">You scanned a login code for <strong id="host">this server</strong>.</p>
+    <div class="actions">
+      <a class="button primary" id="app" href="housecall://link-scan">Open in Housecall</a>
+      <small>Then scan this code again from inside the app.</small>
+      <a class="button" id="web" href="/">Continue in browser</a>
+      <small>A browser loads Housecall from this server, so whoever runs it could keep a copy of your security key. The app doesn't have this risk.</small>
+    </div>
+  </div>
+
+  <div id="missing">
+    <h1>This isn't a Housecall login code</h1>
+    <p class="lead">Open Housecall, choose Log in with QR code, and scan the code from there.</p>
+  </div>
+
+  <noscript><p>Open Housecall, choose Log in with QR code, and scan the code from there.</p></noscript>
+</main>
+</body>
+</html>

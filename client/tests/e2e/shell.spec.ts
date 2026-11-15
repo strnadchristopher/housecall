@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { test, expect } from "@playwright/test";
-import { accept, invite, send, setup, signIn } from "./helpers";
+import { accept, invite, send, setup, signIn, password, setupToken } from "./helpers";
+import { tapAwayFromMessageTray } from "./messageTray";
 
 // Fictional fixture only. The GIF provider is not reachable from tests, so its
 // routes are answered locally and the capability flag is set on /api/me.
@@ -89,14 +90,14 @@ test("shell: picker, channel, call, composer, tabs, direct messages", async ({ p
   await page.getByRole("button", { name: "Unsend for everyone", exact: true }).click();
   await expect(page.getByTestId("screen-conversation").locator("video")).toHaveCount(0);
 
-  // Call bar: Join, then count, duration and avatars under the channel name.
+  // The stage owns compact controls; count and duration stay in the header.
   const bar = page.getByTestId("call-bar");
   // A text channel has no call bar; joining is one click on a voice channel and rings nobody.
   await expect(bar).toHaveCount(0);
   await page.getByRole("button", { name: "Open Lounge", exact: true }).click();
   await expect(bar).toHaveAttribute("data-phase", "live", { timeout: 30000 });
-  await expect(bar.getByTestId("call-duration")).toBeVisible();
-  await expect(bar).toContainText("1");
+  await expect(page.locator(".hc-header").getByTestId("call-duration")).toBeVisible();
+  await expect(page.locator(".hc-header__meta")).toContainText("1 inside");
   await expect(page.getByTestId("voice-person").first()).toBeVisible();
   // The stage carries the full controls and the call card stays in the sidebar above the user bar.
   await expect(page.getByTestId("call-dock")).toBeVisible(); // HC-040 6: the call card does not leave the sidebar
@@ -225,30 +226,36 @@ test("motion: settings and pickers slide out and are gone at once under reduced 
   await expect(emoji).toHaveCount(0, { timeout: 250 });
 });
 
-test("phone: one message toolbar is open at a time; tapping elsewhere or Escape closes it", async ({ browser }) => {
+test("phone: one message toolbar is open at a time; tapping elsewhere or Escape closes it", async ({ browser, request }) => {
+  // This case also runs alone on a fresh disposable server or after a worker restart.
+  const setupResult = await request.post("/api/setup", { timeout: 15000, data: { username: "owner", password, setup_token: setupToken, device_name: "shell tray synthetic" } });
+  expect([200, 201, 409]).toContain(setupResult.status());
+  // Bound individual actions so a failure retains its original action before fixture cleanup.
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const page = await context.newPage();
-  await page.goto("/");
-  await signIn(page, "owner");
-  await send(page, "First tap target");
-  await send(page, "Second tap target");
-  const open = page.locator(".hc-msg.is-open");
-  const first = page.locator(".hc-msg", { has: page.locator(".hc-md", { hasText: "First tap target" }) });
-  const second = page.locator(".hc-msg", { has: page.locator(".hc-md", { hasText: "Second tap target" }) });
-  await first.locator(".hc-md").tap();
-  await expect(open).toHaveCount(1);
-  await expect(first).toHaveClass(/is-open/);
-  await second.locator(".hc-md").tap();
-  await expect(open).toHaveCount(1);
-  await expect(second).toHaveClass(/is-open/);
-  await expect(first).not.toHaveClass(/is-open/);
-  await page.getByTestId("screen-composer").getByLabel("Message", { exact: true }).tap();
-  await expect(open).toHaveCount(0);
-  await second.locator(".hc-md").tap();
-  await expect(open).toHaveCount(1);
-  await page.keyboard.press("Escape");
-  await expect(open).toHaveCount(0);
-  await context.close();
+  page.setDefaultTimeout(15000);
+  try {
+    await page.goto("/");
+    await signIn(page, "owner");
+    await send(page, "First tap target");
+    await send(page, "Second tap target");
+    const open = page.locator(".hc-msg.is-open");
+    const first = page.locator(".hc-msg", { has: page.locator(".hc-md", { hasText: "First tap target" }) });
+    const second = page.locator(".hc-msg", { has: page.locator(".hc-md", { hasText: "Second tap target" }) });
+    await test.step("select first message", () => first.locator(".hc-md").tap({ timeout: 15000 }));
+    await expect(open).toHaveCount(1);
+    await expect(first).toHaveClass(/is-open/);
+    await test.step("select second message", () => second.locator(".hc-md").tap({ timeout: 15000 }));
+    await expect(open).toHaveCount(1);
+    await expect(second).toHaveClass(/is-open/);
+    await expect(first).not.toHaveClass(/is-open/);
+    await test.step("tap visible neutral channel glyph", () => tapAwayFromMessageTray(page));
+    await expect(open).toHaveCount(0);
+    await test.step("select second message", () => second.locator(".hc-md").tap({ timeout: 15000 }));
+    await expect(open).toHaveCount(1);
+    await page.keyboard.press("Escape");
+    await expect(open).toHaveCount(0);
+  } finally { await context.close(); }
 });
 
 test("user bar: your name and avatar open your profile (wide and phone)", async ({ browser }) => {

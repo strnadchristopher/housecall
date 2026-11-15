@@ -97,7 +97,7 @@ export function useLegacyCall(c: Housecall) {
 
   // The per-peer roster is reported only to a session that is in the call.
   useEffect(() => {
-    if (status.phase !== "live" || !channelId) { setPeers([]); return; }
+    if (status.phase !== "live" || !channelId) { if (!status.reconnecting) setPeers([]); return; }
     let stopped = false;
     const tick = async () => {
       try {
@@ -108,7 +108,7 @@ export function useLegacyCall(c: Housecall) {
     void tick();
     const timer = setInterval(() => void tick(), 2000);
     return () => { stopped = true; clearInterval(timer); };
-  }, [status.phase, channelId, c.api]);
+  }, [status.phase, status.reconnecting, channelId, c.api]);
 
   const fail = (reason: unknown) => setError(reason instanceof Error ? reason.message : String(reason));
   const nameOf = (id: string) => { const member = c.members.find(candidate => candidate.id === id); return member ? userName(member) : id; };
@@ -257,7 +257,7 @@ export function useLegacyCall(c: Housecall) {
   /** Joins the conversation's call; resolves to whether the join worked. */
   const joinCall = async (conversationId: string): Promise<boolean> => {
     // Leave the current call properly (server DELETE) before joining another.
-    if (status.phase !== "idle" && channelId && channelId !== conversationId) {
+    if (status.phase !== "idle" && channelId && (channelId !== conversationId || status.phase === "failed")) {
       try { await voice.leave(); } catch { /* the join below closes any remainder */ }
     }
     setError(""); setMuted(false); setDeafened(false); setCamera(false); setPeers([]); setRinging(undefined);
@@ -274,9 +274,10 @@ export function useLegacyCall(c: Housecall) {
     outgoing: active && ringing && ringing.channelId === channelId ? (ringing.declined ? "declined" : "ringing") : undefined,
     available: c.capabilities.voice === true,
     phase: status.phase,
+    reconnecting: !!status.reconnecting || status.phase === "live" && !c.online,
     conversationId: active ? channelId : undefined,
     conversationName: active ? c.channels.find(channel => channel.id === channelId)?.name : undefined,
-    participants: status.phase !== "live" ? []
+    participants: status.phase !== "live" && !status.reconnecting ? []
       : members.length ? members.map(peer => ({ id: String(peer.peer_id), personId: peer.user_id, name: nameOf(peer.user_id), avatarUrl: avatarOf(peer.user_id), me: peer.current_session, connected: peer.connected }))
       : c.auth ? [{ id: status.peerId ?? "self", personId: c.auth.user.id, name: userName(currentUser(c) ?? c.auth.user), avatarUrl: avatarOf(c.auth.user.id), me: true, connected: true }] : [],
     active: Object.fromEntries(Object.entries(rooms).map(([room, list]) => [room, list.map(p => ({ personId: p.personId, name: nameOf(p.personId), avatarUrl: avatarOf(p.personId) }))])),
@@ -284,10 +285,10 @@ export function useLegacyCall(c: Housecall) {
     media: status.streams
       .map(stream => ({ stream, ...shareStreamId(status.sourcePeers?.[stream.id] ?? "") }))
       .filter(({ peer }) => !publishers.has(peer))
-      .map(({ stream, peer, share }) => ({ id: stream.id, stream, participantId: peer || undefined, video: stream.getVideoTracks().length > 0, share: share || undefined })),
+      .map(({ stream, peer, share }) => ({ id: stream.id, stream, participantId: peer || undefined, video: stream.getVideoTracks().some(track => track.readyState === "live"), share: share || undefined })),
     speaking: status.phase === "live" ? status.speaking ?? [] : [],
-    localVideo: status.phase === "live" ? voice.localPicture() : undefined,
-    joinedAt: status.phase === "live" ? joinedAt : undefined,
+    localVideo: status.phase === "live" || status.reconnecting ? voice.localPicture() : undefined,
+    joinedAt: status.phase === "live" || status.reconnecting ? joinedAt : undefined,
     muted, deafened, camera,
     sharing: voice.sharing,
     shareQuality: voice.shareQuality,

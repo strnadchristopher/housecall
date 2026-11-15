@@ -1,3 +1,4 @@
+import { canControlLocalAudio } from "../../core/call";
 import { useId } from "react";
 import { useCall, useChat } from "../../core/context";
 import { cardState, signalBars, signalTip } from "../../state/callQuality";
@@ -9,9 +10,9 @@ import { useNav } from "./nav";
 export function Signal() {
   const call = useCall();
   const tip = useId();
-  const quality = { phase: call.phase, rttMs: call.quality.rttMs, loss: call.quality.loss };
+  const quality = { phase: call.reconnecting ? "connecting" as const : call.phase, rttMs: call.quality.rttMs, loss: call.quality.loss };
   return (
-    <button type="button" className="hc-signal hc-tipped" data-bars={signalBars(quality)} data-busy={call.phase === "connecting" ? "" : undefined}
+    <button type="button" className="hc-signal hc-tipped" data-bars={signalBars(quality)} data-busy={call.phase === "connecting" || call.reconnecting ? "" : undefined}
       aria-label={copy.call.connection} aria-describedby={tip}
       onClick={event => { const el = event.currentTarget; el.toggleAttribute("data-open"); }}
       onBlur={event => event.currentTarget.removeAttribute("data-open")}>
@@ -25,9 +26,9 @@ function useCard() {
   const call = useCall();
   const chat = useChat();
   const nav = useNav();
-  const state = cardState({ phase: call.phase, rttMs: call.quality.rttMs, loss: call.quality.loss });
+  const state = cardState({ phase: call.reconnecting ? "connecting" as const : call.phase, rttMs: call.quality.rttMs, loss: call.quality.loss });
   const id = call.conversationId;
-  const line = state === "connecting" ? copy.call.connecting : state === "failed" ? copy.call.failed : state === "weak" ? copy.call.weak : copy.call.connected;
+  const line = call.reconnecting ? copy.call.reconnecting : state === "connecting" ? copy.call.connecting : state === "failed" ? copy.call.failed : state === "weak" ? copy.call.weak : copy.call.connected;
   const open = () => { if (!id) return; nav.set({ main: "chat", screen: "main", left: "channels" }); if (chat.current?.id !== id) void chat.open(id); };
   return { call, state, line, open, show: call.phase !== "idle" && !!id };
 }
@@ -45,8 +46,8 @@ export function CallDock() {
         </button>
         <div className="hc-callcard__ctl" role="toolbar" aria-label={copy.call.label}>
           {state === "failed" && call.conversationId && <Button onClick={() => void call.join(call.conversationId!)}>{copy.call.tryAgain}</Button>}
-          <IconButton icon="mic" off={call.muted} active={call.muted} disabled={state === "connecting" || state === "failed"} label={call.muted ? copy.call.unmute : copy.call.mute} onClick={() => call.setMuted(!call.muted)} />
-          <IconButton icon="headphones" off={call.deafened} active={call.deafened} disabled={state === "connecting" || state === "failed"} label={call.deafened ? copy.call.undeafen : copy.call.deafen} onClick={() => call.setDeafened(!call.deafened)} />
+          <IconButton icon="mic" off={call.muted} active={call.muted} disabled={!canControlLocalAudio(call)} label={call.muted ? copy.call.unmute : copy.call.mute} onClick={() => call.setMuted(!call.muted)} />
+          <IconButton icon="headphones" off={call.deafened} active={call.deafened} disabled={!canControlLocalAudio(call)} label={call.deafened ? copy.call.undeafen : copy.call.deafen} onClick={() => call.setDeafened(!call.deafened)} />
           <IconButton icon="leave" className="hc-ibtn--danger" label={copy.call.leave} onClick={() => void call.leave()} />
         </div>
       </section>
@@ -65,7 +66,7 @@ export function CallStrip() {
         <strong>{call.conversationName}</strong>
         <small>{line}</small>
       </button>
-      <IconButton icon="mic" off={call.muted} active={call.muted} disabled={state === "connecting" || state === "failed"} label={call.muted ? copy.call.unmute : copy.call.mute} onClick={() => call.setMuted(!call.muted)} />
+      <IconButton icon="mic" off={call.muted} active={call.muted} disabled={!canControlLocalAudio(call)} label={call.muted ? copy.call.unmute : copy.call.mute} onClick={() => call.setMuted(!call.muted)} />
       <IconButton icon="leave" className="hc-ibtn--danger" label={copy.call.leave} onClick={() => void call.leave()} />
     </section>
   );

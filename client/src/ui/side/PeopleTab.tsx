@@ -1,28 +1,17 @@
-import { useCall, useChat } from "../../core/context";
+import { useChat } from "../../core/context";
 import { copy } from "../copy";
-import { Avatar, IconButton } from "../kit";
-import { useNav } from "../shell/nav";
+import { Avatar } from "../kit";
+import { usePersonCard } from "../people/PersonCard";
 
-/**
- * Members of the conversation. The current backend reports no presence, so none is drawn.
- * Each other person has a Call button: it opens your direct conversation with them and rings.
- */
 export function PeopleTab() {
   const chat = useChat();
-  const call = useCall();
-  const nav = useNav();
-  return (
-    <ul className="hc-people" data-testid="people">
-      {chat.people.map(person => (
-        <li key={person.id}>
-          <Avatar name={person.name} src={person.avatarUrl} />
-          <span><strong>{person.name}{person.owner && <em className="hc-role">{copy.side.owner}</em>}</strong>{person.bio && <small className="hc-muted">{person.bio}</small>}</span>
-          {call.available && person.id !== chat.me.id && (
-            <IconButton icon="phone" label={copy.call.callPerson(person.name)}
-              onClick={() => { nav.set({ main: "chat", screen: "main" }); void call.callPerson(person.id); }} />
-          )}
-        </li>
-      ))}
-    </ul>
-  );
+  const openPerson = usePersonCard();
+  return <ul className="hc-people" data-testid="people">
+    {chat.people.map(person => <li key={person.id}>
+      <button type="button" className="hc-people__open" onClick={event => openPerson({ id: person.id, anchor: event.currentTarget })} aria-label={person.name}>
+        <Avatar name={person.name} src={person.avatarUrl} />
+        <span><strong>{person.name}{person.owner && <em className="hc-role">{copy.side.owner}</em>}</strong>{person.bio && <small className="hc-muted">{person.bio}</small>}</span>
+      </button>
+    </li>)}
+  </ul>;
 }

@@ -1,3 +1,5 @@
+import { copy } from "../ui/copy";
+import { securitySession, endSecuritySession } from "../adapters/legacy/securityRuntime";
 import { clearNativePush, reconcileNativePush } from "../transport/nativePush";
 import type { GimmeRequestStatus } from "../data/gimme";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -32,6 +34,7 @@ export function useHousecall() {
     store = useMemo(() => new MessageStore(), []),
     notifications = useMemo(() => new NotificationReconciler(), []),
     callEvents = useMemo(() => new CallEvents(), []);
+  const [sessionId, setSessionId] = useState('');
   const [auth, setAuth] = useState<Auth>(),
     [channels, setChannels] = useState<Channel[]>([]),
     [members, setMembers] = useState<User[]>([]),
@@ -51,6 +54,11 @@ export function useHousecall() {
   const [activities, setActivities] = useState<
     Record<string, ActivitySnapshot | undefined>
   >({});
+  const securityEvents = useMemo(() => {
+    const listeners = new Set<(event: ServerEvent) => void>();
+    return { subscribe(fn: (event: ServerEvent) => void) { listeners.add(fn); return () => { listeners.delete(fn); }; }, emit(event: ServerEvent) { for (const fn of listeners) fn(event); } };
+  }, []);
+  const account = useRef<Auth | undefined>(auth); account.current = auth;
   const cursor = useRef(0),
     selected = useRef(channel),
     preferred = useRef<string | undefined>(undefined),
@@ -60,11 +68,12 @@ export function useHousecall() {
   selected.current = channel;
   const logout = useCallback(async () => {
     generation.current++;
+    if (account.current) await endSecuritySession(api.serverOrigin(), account.current.user.id);
     const stored = storedOrigin.current;
     storedOrigin.current = undefined;
     if (stored) await secureSession.remove(stored);
-    api.authenticate();
-    setAuth(undefined);
+    api.responseObserver = undefined; api.requestGuard = undefined; api.authenticate(); account.current = undefined;
+    setAuth(undefined); setSessionId('');
     setMessages([]);
     setGimmeRequests([]);
     setChannels([]);
@@ -94,11 +103,24 @@ export function useHousecall() {
         api.get<{ servers: Server[] }>("/api/servers"),
       ]);
       if (epoch !== generation.current) return;
+      const currentAuth = account.current;
+      if (currentAuth) {
+        const bindings = securitySession(api, api.serverOrigin(), currentAuth.user.id).dm.conversations;
+        await bindings.observe(cs.channels);
+        if (epoch !== generation.current) return;
+        api.requestGuard = (path, options) => bindings.guard(path, options, selected.current);
+        api.responseObserver = (path, value, options) => bindings.observeResponse(path, value, options);
+      }
       setChannels(cs.channels);
       setMembers(ms.members);
       setServers(ss.servers);
       setNoticeList(ns.notifications);
-      notifications.reconcile(ns.notifications);
+      notifications.reconcile(ns.notifications.map(notice => {
+        const conversation = cs.channels.find(row => row.id === notice.channel_id);
+        if (conversation?.kind !== 'dm') return notice;
+        const peer = ms.members.find(member => member.id === conversation.peer_id);
+        return { ...notice, body: copy.security.notification(peer?.display_name || peer?.username || conversation.name) };
+      }));
       const active = id || initialConversation(cs.channels, ss.servers, preferred.current);
       if (active) {
         if (!selected.current) setChannel(active);
@@ -107,6 +129,7 @@ export function useHousecall() {
           api.get<{ requests: GimmeRequestStatus[] }>(`/api/channels/${encodeURIComponent(active)}/gimme/requests`),
         ]);
         if (epoch !== generation.current) return;
+        if (account.current) securitySession(api, api.serverOrigin(), account.current.user.id).dm.conversations.observeMessages(result.messages);
         for (const m of result.messages) store.upsert(m);
         if (active === selected.current || !selected.current) {
           setMessages(store.list(active));
@@ -126,7 +149,7 @@ export function useHousecall() {
         return true;
       } catch (e) {
         setError(e instanceof Error ? e.message : "Request failed");
-        if (e instanceof ApiError && e.status === 401) {
+        if (e instanceof ApiError && e.status === 401 && api.isCurrentSessionError(e)) {
           try { await logout(); } catch (cleanup) { setError(String(cleanup)); }
         }
         return false;
@@ -134,18 +157,21 @@ export function useHousecall() {
         setBusy(false);
       }
     },
-    [logout],
+    [logout, api],
   );
   const run = useCallback(async (fn: () => Promise<void>) => { await attempt(fn); }, [attempt]);
   const establish = async (result: Auth) => {
     generation.current++;
-    api.authenticate(result);
+    api.responseObserver = undefined; api.requestGuard = undefined; api.authenticate(result); account.current = result;
+    const bindings = securitySession(api, api.serverOrigin(), result.user.id).dm.conversations;
+    api.requestGuard = (path, options) => bindings.guard(path, options, selected.current);
+    api.responseObserver = (path, value, options) => bindings.observeResponse(path, value, options);
     setAuth(result);
     cursor.current = 0;
-    const me = await api.get<{ capabilities: Record<string, unknown> }>(
+    const me = await api.get<{ session_id: string; capabilities: Record<string, unknown> }>(
       "/api/me",
     );
-    setCapabilities(me.capabilities);
+    setCapabilities(me.capabilities); setSessionId(me.session_id);
     await refresh();
   };
   const authenticate = async (
@@ -191,6 +217,7 @@ export function useHousecall() {
   };
   useEffect(() => {
     if (!auth) return;
+    const epoch = generation.current;
     let stop = false;
     const abort = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
@@ -200,8 +227,9 @@ export function useHousecall() {
           `/api/events?after=${cursor.current}`,
           abort.signal,
         );
-        if (stop) return;
+        if (stop || epoch !== generation.current) return;
         for (const e of result.events) {
+          securityEvents.emit(e);
           typingStore.apply(e);
           callEvents.emitRaw(e);
           const ring = toCallEvent(e, result.now);
@@ -240,7 +268,7 @@ export function useHousecall() {
         setOnline(true);
         if (result.events.length) await refresh();
       } catch (e) {
-        if (stop) return;
+        if (stop || epoch !== generation.current) return;
         if (e instanceof ApiError && e.status === 401) {
           try {
             await logout();
@@ -250,7 +278,7 @@ export function useHousecall() {
         }
         setOnline(false);
       }
-      if (!stop) timer = setTimeout(poll, 1000);
+      if (!stop && epoch === generation.current) timer = setTimeout(poll, 1000);
     };
     void poll();
     return () => {
@@ -310,6 +338,13 @@ export function useHousecall() {
     run,
     attempt,
     loading,
+    sessionId,
+    securityEvents,
+    acceptLinked: async (origin: string, result: Auth) => {
+      await clearNativePush();
+      api.configure(origin); await establish(result);
+      if ("__TAURI_INTERNALS__" in window) storedOrigin.current = origin;
+    },
     authenticate,
     restore,
     prefer: (id?: string) => { preferred.current = id; },

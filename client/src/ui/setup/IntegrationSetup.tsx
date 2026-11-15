@@ -98,7 +98,7 @@ function Steps({ steps }: { steps: Step[] }) {
   return (
     <ol className="hc-steps">
       {steps.map((step, index) => (
-        <li key={index}>{typeof step === "string" ? step : <Snippet code={step.code} />}</li>
+        <li key={index}>{typeof step === "string" ? step : "code" in step ? <Snippet code={step.code} /> : <a href={step.href} target="_blank" rel="noreferrer">{step.label}</a>}</li>
       ))}
     </ol>
   );

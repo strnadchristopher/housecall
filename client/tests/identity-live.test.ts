@@ -6,6 +6,8 @@ import { SecurityApi } from '../src/adapters/legacy/security';
 import { IdentityService } from '../src/core/identityService';
 import { DmService } from '../src/adapters/legacy/dm';
 import { ReceivingLink, ShowingLink } from '../src/core/linkService';
+import { b64u, publicIdentityKey } from '../src/crypto/identity';
+import { sealBackup } from '../src/crypto/backup';
 import { IdentityStorage } from '../src/transport/identityStorage';
 import type { Auth } from '../src/data/types';
 import type { DmContext, SecureMessageRow } from '../src/core/dm';
@@ -31,11 +33,45 @@ it('live identity publication, DM encryption/edit/file, pin hold/reset and QR se
     expect((await service.remote.keys(service.userId)).key_rev).toBe(0); await expect(service.publish()).rejects.toThrow();
     await confirm(service); await service.publish(); expect((await service.remote.keys(service.userId)).key_rev).toBe(1);
   }
+  // Actual interrupted service/API publication: let the public-key PUT reach the real host,
+  // interrupt only the subsequent backup upload, then recreate the native service.
+  const repairInvite = await ownerApi.post<{ token: string }>('/api/invites', {});
+  const repairApi = new Api(origin);
+  const repairAuth = await repairApi.post<Auth>('/api/invites/accept', { token: repairInvite.token, username: 'identityrepair', password, device_name: 'Interrupted backup fixture' }); repairApi.authenticate(repairAuth);
+  const repairVault = nativeMemory(), repairRemote = new SecurityApi(repairApi);
+  const initialRepair = new IdentityService(repairVault, repairRemote, origin, repairAuth.user.id);
+  await initialRepair.bootstrap(); initialRepair.acknowledgeNotice('security-introduction'); await initialRepair.beginCreation(); await confirm(initialRepair);
+  const realRequest = repairApi.request.bind(repairApi);
+  repairApi.request = async <T>(path: string, options: RequestInit = {}): Promise<T> => {
+    if (path === '/api/me/key-backup' && options.method === 'PUT') throw new Error('Simulated interruption after public key publication');
+    return realRequest<T>(path, options);
+  };
+  await expect(initialRepair.publish()).rejects.toThrow('Simulated interruption');
+  expect((await repairRemote.keys(repairAuth.user.id)).key_rev).toBe(1); expect((await repairRemote.backup()).key_backup).toBeNull();
+  const restart = new IdentityService(repairVault, repairRemote, origin, repairAuth.user.id);
+  await expect(restart.bootstrap()).rejects.toThrow('Simulated interruption'); expect(restart.snapshot().phase).toBe('backup-pending');
+  repairApi.request = realRequest;
+  expect((await restart.bootstrap()).phase).toBe('ready'); expect((await repairRemote.backup()).key_backup).not.toBeNull();
+  // An actual interrupted replacement leaves the host's authenticated revision 1 backup intact.
+  restart.acknowledgeNotice('replace-does-not-revoke-leaked-words'); await restart.replaceRecovery(password); await confirm(restart);
+  const repairedAgain = new IdentityService(repairVault, repairRemote, origin, repairAuth.user.id);
+  expect((await repairedAgain.bootstrap()).phase).toBe('ready');
+  const repairLocal = (await repairVault.loadIdentity())!;
+  expect(repairLocal.recoveryRev).toBe(2);
+  const corrupt = b64u(sealBackup(new Uint8Array(32).fill(121), 2));
+  await repairRemote.putBackup(corrupt);
+  await expect(repairedAgain.bootstrap()).rejects.toThrow(); expect((await repairRemote.backup()).key_backup).toBe(corrupt);
+  const newer = b64u(sealBackup(repairLocal.seed, 3)); await repairRemote.putBackup(newer);
+  expect((await repairedAgain.bootstrap()).phase).toBe('recovery-ahead'); expect((await repairRemote.backup()).key_backup).toBe(newer);
+  repairLocal.seed.fill(0);
   const dm = await ownerApi.post<{ id: string }>('/api/channels', { name: 'Identity live DM', kind: 'dm', member_ids: [peer.user.id] });
   const context: DmContext = { id: dm.id, kind: 'dm', memberIds: [owner.user.id, peer.user.id] };
   const sender = new DmService(ownerApi, ownerVault, origin, owner.user.id), receiver = new DmService(peerApi, peerVault, origin, peer.user.id);
   const row = await sender.send(context, 'actual live encrypted text');
   expect(row.enc).toBe(1); expect(row.body).not.toContain('actual live');
+  const notices = await peerApi.get<{ notifications: { message_id: string }[] }>('/api/notifications');
+  expect(notices.notifications.some(n => n.message_id === row.id)).toBe(true);
+  expect(JSON.stringify(notices)).not.toContain('actual live encrypted text');
   const read = await peerApi.get<{ messages: SecureMessageRow[] }>(`/api/channels/${dm.id}/messages`);
   expect((await receiver.openHistory(context, read.messages)).get(row.id)).toMatchObject({ status: 'opened', payload: { text: 'actual live encrypted text' } });
   await expect(ownerApi.post(`/api/channels/${dm.id}/messages`, { body: 'downgrade refused' })).rejects.toMatchObject({ status: 422 });

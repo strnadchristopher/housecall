@@ -175,6 +175,36 @@ async fn desktop_origins_pass_cors_preflight() {
 }
 
 #[tokio::test]
+async fn native_security_put_preflights_allow_auth_and_device_headers() {
+    let mut state = AppState::new(":memory:", SETUP).unwrap();
+    state.client_origins = ["tauri://localhost", "http://tauri.localhost"]
+        .into_iter().map(|origin| origin.parse().unwrap()).collect();
+    let api = app(state, None);
+    for path in ["/api/me/keys", "/api/me/key-backup"] {
+        for origin in ["tauri://localhost", "http://tauri.localhost", "https://unlisted.example"] {
+            let response = api.clone().oneshot(Request::builder()
+                .method("OPTIONS").uri(path)
+                .header("origin", origin)
+                .header("access-control-request-method", "PUT")
+                .header("access-control-request-headers", "authorization,content-type,x-device-key")
+                .body(Body::empty()).unwrap()).await.unwrap();
+            assert!(response.status().is_success(), "{origin} {path}");
+            if origin == "https://unlisted.example" {
+                assert!(!response.headers().contains_key("access-control-allow-origin"));
+                continue;
+            }
+            assert_eq!(response.headers()["access-control-allow-origin"], origin);
+            let methods = response.headers()["access-control-allow-methods"].to_str().unwrap();
+            assert!(methods.split(',').any(|m| m.trim() == "PUT"), "{path}: {methods}");
+            let headers = response.headers()["access-control-allow-headers"].to_str().unwrap().to_ascii_lowercase();
+            for required in ["authorization", "content-type", "x-device-key"] {
+                assert!(headers.split(',').any(|h| h.trim() == required), "{path}: {headers}");
+            }
+        }
+    }
+}
+
+#[tokio::test]
 async fn initialized_server_restarts_without_setup_token() {
     let directory = tempfile::tempdir().unwrap();
     let database = directory.path().join("housecall.sqlite");

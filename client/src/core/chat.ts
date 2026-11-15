@@ -48,6 +48,7 @@ export interface Attachment {
   kind: "image" | "gif" | "video" | "video_pending" | "file" | "snap" | "snap_expired";
   /** Kept for existing callers; true when kind === "video". */
   video: boolean;
+  sealed?: boolean;
   thumbnail?: string;
   /** Present for snaps (view-once photos). The server never sends a path for these. */
   snap?: { opened: boolean; openedCount: number; recipients: number };
@@ -60,6 +61,8 @@ export interface Reaction {
 }
 
 export interface ChatMessage {
+  plaintextMarker?: boolean;
+  security?: import('./dm').OpenedDmMessage;
   id: string;
   authorId: string;
   authorName: string;
@@ -96,6 +99,7 @@ export interface Suggestion {
 }
 
 export interface PendingUpload {
+  encrypted?: boolean;
   filename: string;
   sent: string;
   total: string;
@@ -122,6 +126,12 @@ export interface RequestCard {
 }
 
 export interface ChatState {
+  heldMessages?: number;
+  dmSecurity?: { removalAcknowledged?: boolean; label: string; canSend: boolean; peer: import('./security').PeerSecurity };
+  retrySecurity?(): void;
+  acknowledgeKey?(): Promise<void>;
+  safetyNumber?(): Promise<{ number: string; verified: boolean; state: string } | undefined>;
+  verifySafety?(number: string): Promise<void>;
   online: boolean;
   busy: boolean;
   /** The current conversation's first page has not arrived yet. */

@@ -18,7 +18,7 @@ const seeds: Record<string, Uint8Array> = { [alice]: h(d.identities[0].seed), [b
 const publicKeys = (id: string, seed = seeds[id], rev = 1): PublicKeys => { const key = b64u(publicIdentityKey(seed)); return { user_id: id, identity_key: key, key_rev: rev, history: [{ key_rev: rev, identity_key: key }] }; };
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status });
 afterEach(() => { vi.unstubAllGlobals(); });
-async function fixture() {
+async function fixture(storedVault?: IdentityStorage) {
   const keys = new Map([[alice, publicKeys(alice)], [bob, publicKeys(bob)]]), rows: SecureMessageRow[] = [], uploads = new Map<string, Uint8Array>(); let uploadId = 0;
   const fetch = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
     const request = input instanceof Request ? input : undefined, path = new URL(request?.url ?? String(input)).pathname;
@@ -37,9 +37,9 @@ async function fixture() {
   });
   vi.stubGlobal('fetch', fetch);
   const api = new Api(origin); api.authenticate({ token: 'session', device_key: 'device' });
-  const vault = nativeMemory(); await vault.saveIdentity({ seed: seeds[alice], recoveryRev: 1, confirmed: true });
+  const vault = storedVault ?? nativeMemory(); await vault.saveIdentity({ seed: seeds[alice], recoveryRev: 1, confirmed: true });
   const receiverVault = new IdentityStorage(); await receiverVault.saveIdentity({ seed: seeds[bob], recoveryRev: 1, confirmed: true });
-  return { keys, rows, fetch, vault, sender: new DmService(api, vault, origin, alice), receiver: new DmService(api, receiverVault, origin, bob) };
+  return { keys, rows, fetch, vault, api, sender: new DmService(api, vault, origin, alice), receiver: new DmService(api, receiverVault, origin, bob) };
 }
 describe('DM service using actual REST adapter and crypto', () => {
   it('seals outgoing, opens incoming, edits with a fresh nonce, binds replies and detects edited quotes', async () => {
@@ -101,4 +101,100 @@ describe('DM service using actual REST adapter and crypto', () => {
     const { sender, keys } = await fixture(); await sender.refresh(bob); const safety = await sender.safety(bob); expect(safety?.verified).toBe(false); await sender.markVerified(bob, safety!.number); expect((await sender.safety(bob))?.verified).toBe(true);
     await expect(sender.markVerified(bob, 'wrong')).rejects.toThrow(); keys.set(alice, publicKeys(alice, new Uint8Array(32).fill(32), 2)); await sender.onKeysChanged(alice); await expect(sender.send(context, 'must not seal')).rejects.toThrow();
   });
+});
+
+it('an explicitly installed own reset rebinds only the own pin and never acknowledges the peer', async () => {
+  const { sender, keys, vault } = await fixture();
+  await sender.send(context, 'before reset');
+  const replacement = new Uint8Array(32).fill(81), previous = keys.get(alice)!;
+  const next = publicKeys(alice, replacement, 2); next.history.unshift(...previous.history); keys.set(alice, next);
+  await vault.saveIdentity({ seed: replacement, recoveryRev: 1, confirmed: true });
+  await sender.onKeysChanged(alice);
+  expect((await sender.security(context)).canSend).toBe(true);
+  const sent = await sender.send(context, 'after reset');
+  expect(unwrap(parseEnvelope(sent.envelope)).senderKeyRev).toBe(2);
+  const peer = publicKeys(bob, new Uint8Array(32).fill(82), 2); peer.history.unshift(...keys.get(bob)!.history); keys.set(bob, peer);
+  await sender.onKeysChanged(bob);
+  const state = await sender.security(context); expect(state.peer.state).toBe('CHANGED_UNACKNOWLEDGED'); expect(state.canSend).toBe(false);
+  const safety = await sender.safety(bob); expect(safety?.state).toBe('CHANGED_UNACKNOWLEDGED'); expect(safety?.verified).toBe(false);
+  expect((await vault.loadPins(origin, alice)).find(p => p.user_id === bob)?.key_rev).toBe(1);
+});
+
+
+// OS-store stand-in only: records survive storage/service recreation, unlike a page Map.
+function retainedNativeStore() {
+  const records = new Map<string, unknown>();
+  const invoke = async <T,>(command: string, args: Record<string, unknown> = {}): Promise<T> => {
+    const name = command.split('|')[1], slot = `${name.split('_')[0]}:${args.origin ?? ''}:${args.userId ?? ''}`;
+    if (name.endsWith('_get')) return { [name.split('_')[0]]: records.get(slot) } as T;
+    if (name.endsWith('_set')) { records.set(slot, structuredClone(args[name.split('_')[0]])); return { ok: true } as T; }
+    throw new Error('Unexpected secure fixture command');
+  };
+  return { reopen: () => new IdentityStorage(invoke), records };
+}
+it('retains established native DM membership through restart/signout and rejects kind/keyless-peer downgrade before any outbound payload', async () => {
+  const store = retainedNativeStore(), f = await fixture(store.reopen());
+  const original = await f.sender.send(context, 'established encrypted exchange');
+  expect((await f.receiver.openHistory(context, [original])).get(original.id)?.status).toBe('opened');
+  f.sender.dispose(); f.receiver.dispose();
+  for (const change of [{ kind: 'channel' }, { kind: 'group_dm' }, { peer_id: 'unpinned-keyless-peer' }, { peer_id: null }, { peer_id: alice }]) {
+    const restarted = new DmService(f.api, store.reopen(), origin, alice), bindings = restarted.conversations;
+    f.api.requestGuard = (path, options) => bindings.guard(path, options, context.id);
+    await bindings.observe([{ id: context.id, kind: 'dm', peer_id: bob, ...change }, { id: 'public-channel', kind: 'channel' }]);
+    bindings.observeMessages([{ id: original.id, channel_id: context.id }]);
+    bindings.observeResponse('/api/uploads/resume-id', { id: 'resume-id', channel_id: context.id });
+    const before = f.fetch.mock.calls.length;
+    // Same branch/boundary used by the composer when the host relabels a DM as a channel.
+    await expect(f.api.post(`/api/channels/${context.id}/messages`, { body: 'channel downgrade secret' })).rejects.toThrow('security details changed');
+    await expect(restarted.send({ ...context, memberIds: [alice, 'unpinned-keyless-peer'] }, 'keyless downgrade secret')).rejects.toThrow('security details changed');
+    await expect(restarted.send(context, 'reply secret', [], { row: original, opened: { status: 'opened', encrypted: true, nonce: 'nonce', reply: 'none', payload: { v: 1, text: 'quote' } } })).rejects.toThrow();
+    await expect(restarted.edit(context, original, { v: 1, text: 'edit secret' })).rejects.toThrow();
+    await expect(restarted.uploadAttachment(context, new TextEncoder().encode('raw secret'), 'private.txt', 'text/plain')).rejects.toThrow();
+    await expect(f.api.post('/api/uploads', { channel_id: context.id, filename: 'private.txt' })).rejects.toThrow();
+    await expect(f.api.request('/api/uploads/resume-id', { method: 'PATCH', body: new Blob(['resumed raw secret']) })).rejects.toThrow();
+    expect(f.fetch.mock.calls.length).toBe(before);
+    expect(bindings.context(context.id)).toEqual(context);
+    restarted.dispose();
+  }
+  const healthy = new DmService(f.api, store.reopen(), origin, alice);
+  f.api.requestGuard = (path, options) => healthy.conversations.guard(path, options, 'public-channel');
+  await healthy.conversations.observe([{ id: context.id, kind: 'dm', peer_id: bob }, { id: 'public-channel', kind: 'channel' }, { id: 'new-group', kind: 'group_dm' }]);
+  const sent = await healthy.send(context, 'healthy encrypted after restart'); expect(sent.enc).toBe(1); expect(sent.body).toBe('');
+  // Use actual fetch boundary for legitimate plaintext, without teaching the mock server to reject leaks.
+  const network = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => json({ id: 'plain' })); vi.stubGlobal('fetch', network);
+  await f.api.post('/api/channels/public-channel/messages', { body: 'legitimate channel plaintext' });
+  await f.api.post('/api/channels/new-group/messages', { body: 'legitimate group plaintext' });
+  expect(network).toHaveBeenCalledTimes(2);
+  expect(JSON.parse(network.mock.calls[0][1]!.body as string).body).toBe('legitimate channel plaintext');
+  healthy.dispose();
+});
+it('fails closed before native bindings load and after either secure load or persistence fails', async () => {
+  for (const failure of ['load', 'save'] as const) {
+    const store = retainedNativeStore(), vault = store.reopen(), api = new Api(origin);
+    if (failure === 'load') vi.spyOn(vault, 'loadBindings').mockRejectedValue(new Error('locked'));
+    else vi.spyOn(vault, 'saveBindings').mockRejectedValue(new Error('write failed'));
+    const service = new DmService(api, vault, origin, alice);
+    api.requestGuard = (path, options) => service.conversations.guard(path, options, context.id);
+    const network = vi.fn(); vi.stubGlobal('fetch', network);
+    await expect(api.post(`/api/channels/${context.id}/messages`, { body: 'early secret' })).rejects.toThrow('storage');
+    await expect(service.conversations.observe([{ id: context.id, kind: 'dm', peer_id: bob }])).rejects.toThrow();
+    await expect(service.send(context, 'secret after failure')).rejects.toThrow('storage');
+    await expect(api.post('/api/uploads', { channel_id: context.id })).rejects.toThrow('storage');
+    expect(network).not.toHaveBeenCalled(); service.dispose();
+  }
+});
+
+it('allows a genuinely new keyless DM alongside retained native bindings', async () => {
+  const store = retainedNativeStore(), f = await fixture(store.reopen());
+  await f.sender.send(context, 'established'); f.sender.dispose();
+  const service = new DmService(f.api, store.reopen(), origin, alice);
+  const fresh: DmContext = { id: 'new-conversation', kind: 'dm', memberIds: [alice, 'new-keyless-peer'] };
+  const network = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+    if (String(input).endsWith('/keys')) return json({ user_id: 'new-keyless-peer', key_rev: 0, identity_key: null, history: [] });
+    return json({ id: 'new-plain', body: JSON.parse(init!.body as string).body });
+  });
+  vi.stubGlobal('fetch', network);
+  f.api.requestGuard = (path, options) => service.conversations.guard(path, options, fresh.id);
+  const sent = await service.send(fresh, 'legitimate first plaintext'); expect(sent.body).toBe('legitimate first plaintext');
+  expect(network).toHaveBeenCalledTimes(2); service.dispose();
 });

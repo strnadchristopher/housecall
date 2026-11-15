@@ -1,4 +1,4 @@
-import { checkConfirm, openBackup, parseBackup, pickConfirmPositions, recoveryKey, recoveryWords, sealBackup, wordsToRecoveryKey } from '../crypto/backup';
+import { normaliseWords, checkConfirm, openBackup, parseBackup, pickConfirmPositions, recoveryKey, recoveryWords, sealBackup, wordsToRecoveryKey } from '../crypto/backup';
 import { b64u, newSeed, publicIdentityKey, unb64u } from '../crypto/identity';
 import { ctEqual, unwrap } from '../crypto/common';
 import { validOrigin } from '../crypto/link';
@@ -12,6 +12,7 @@ export class IdentityService {
   private status: IdentityStatus;
   private notices = new Set<IdentityNotice>();
   private positions?: [number, number];
+  private mismatches: number[] = [];
   private displayOpen = false;
   private challengeIdentity?: string;
   private replacement = false;
@@ -26,7 +27,8 @@ export class IdentityService {
   acknowledgeNotice(notice: IdentityNotice) { this.notices.add(notice); }
   private requireNotice(notice: IdentityNotice) { if (!this.notices.has(notice)) throw new Error(`Notice required: ${notice}`); }
   private native() { this.active(); if (!this.vault.native) throw new Error('Native app required'); }
-  async bootstrap(): Promise<IdentityStatus> {
+  bootstrap(): Promise<IdentityStatus> { return withIdentityLock(this.vault, () => this.bootstrapUnlocked()); }
+  private async bootstrapUnlocked(): Promise<IdentityStatus> {
     this.active(); const own = await this.remote.keys(this.userId);
     this.active(); validatePublicKeys(own, this.origin, this.userId);
     const local = await this.vault.loadIdentity();
@@ -36,11 +38,15 @@ export class IdentityService {
       this.status.requiredNotices = !this.vault.native ? ['browser-exposure'] : !own.identity_key ? local ? ['cross-host-linkability'] : ['security-introduction'] : [];
       this.status.phase = !local ? (own.key_rev ? 'needs-import' : 'needs-identity') : !local.confirmed ? 'pending-confirmation' : !own.identity_key ? 'needs-identity' : b64u(publicIdentityKey(local.seed)) === own.identity_key ? 'ready' : 'collision';
       if (this.status.phase === 'ready') {
-        const backup = await this.remote.backup();
-        if (backup.key_backup) {
-          const parsed = unwrap(parseBackup(unwrap(unb64u(backup.key_backup))));
-          if (parsed.recoveryRev > local!.recoveryRev) this.status.phase = 'recovery-ahead';
+        // Native startup repairs an interrupted publish only for the confirmed matching identity.
+        this.status.phase = 'backup-pending';
+        if (this.vault.native) await this.syncBackup(local!, true);
+        else {
+          const backup = await this.remote.backup();
+          if (backup.key_backup && unwrap(parseBackup(unwrap(unb64u(backup.key_backup)))).recoveryRev > local!.recoveryRev) this.status.phase = 'recovery-ahead';
         }
+        this.active();
+        if (this.status.phase === 'backup-pending') this.status.phase = 'ready';
       }
       return this.snapshot();
     } finally { local?.seed.fill(0); }
@@ -69,12 +75,13 @@ export class IdentityService {
   }
   private async local() { const value = await this.vault.loadIdentity(); if (!value) throw new Error('Identity required'); return value; }
   /** Pending setup words need no password. Existing words always check the host password + backup revision. */
-  async showWords(password?: string): Promise<string> {
+  showWords(password?: string): Promise<string> { return withIdentityLock(this.vault, () => this.showWordsUnlocked(password)); }
+  private async showWordsUnlocked(password?: string): Promise<string> {
     this.native();
     if (this.status.phase !== 'pending-confirmation') {
       if (password === undefined) throw new Error('Password required');
       await this.remote.password(password);
-      await this.bootstrap();
+      await this.bootstrapUnlocked();
       if (this.status.phase !== 'ready') throw new Error('Current recovery key required');
     }
     const local = await this.local();
@@ -84,13 +91,21 @@ export class IdentityService {
         await this.remote.password(password); this.wordAccessAuthorized = true;
       }
       this.active(); this.status.wordDisplayRequiresPassword = false;
-      const r = recoveryKey(local.seed, local.recoveryRev); try { this.displayOpen = true; this.challengeIdentity = `${b64u(publicIdentityKey(local.seed))}:${local.recoveryRev}`; return recoveryWords(r); } finally { r.fill(0); } }
+      const r = recoveryKey(local.seed, local.recoveryRev); try {
+        if (this.status.phase !== 'pending-confirmation') {
+          const backup = await this.remote.backup();
+          if (!backup.key_backup) throw new Error('Recovery backup unavailable');
+          const opened = openBackup(unwrap(unb64u(backup.key_backup)), r, publicIdentityKey(local.seed));
+          if (!opened.ok) throw new Error('Current recovery key required');
+          opened.value.fill(0);
+        }
+        this.active(); this.displayOpen = true; this.challengeIdentity = `${b64u(publicIdentityKey(local.seed))}:${local.recoveryRev}`; return recoveryWords(r); } finally { r.fill(0); } }
     finally { local.seed.fill(0); }
   }
   /** UI closes the word list before rendering these positions. Returning to the list excludes both old positions. */
   confirmationChallenge(): readonly [number, number] {
     this.native(); if (!this.displayOpen || this.status.phase !== 'pending-confirmation') throw new Error('Display recovery words first');
-    this.displayOpen = false; this.positions = pickConfirmPositions(undefined, this.positions); return [...this.positions];
+    this.displayOpen = false; this.mismatches = []; this.positions = pickConfirmPositions(undefined, this.positions); return [...this.positions];
   }
   private async confirmWordsUnlocked(typed: readonly [string, string]) {
     this.native();
@@ -99,12 +114,19 @@ export class IdentityService {
     try {
       if (this.challengeIdentity !== `${b64u(publicIdentityKey(local.seed))}:${local.recoveryRev}`) throw new Error('Recovery challenge changed');
       const r = recoveryKey(local.seed, local.recoveryRev);
-      let valid: boolean; try { valid = checkConfirm(recoveryWords(r), this.positions, typed); } finally { r.fill(0); }
+      let valid: boolean; try {
+        const words = recoveryWords(r);
+        valid = checkConfirm(words, this.positions, typed);
+        const list = words.split(' ');
+        this.mismatches = this.positions.filter((position, index) => normaliseWords(typed[index]) !== list[position - 1]);
+      } finally { r.fill(0); }
       if (!valid) return false;
       local.confirmed = true; this.active(); await this.vault.saveIdentity(local); this.positions = undefined;
       return true;
     } finally { local.seed.fill(0); }
   }
+  /** Failed positions only, never words. The view can put the exact error under the relevant field. */
+  confirmationFailures(): readonly number[] { return [...this.mismatches]; }
   /** Explicit publish/resume action. Password is required by the server for collision/reset. */
   private async publishUnlocked(password?: string) {
     this.native(); const local = await this.local();
@@ -118,21 +140,35 @@ export class IdentityService {
       await this.syncBackup(local); this.replacement = false; this.status.phase = 'ready';
     } finally { local.seed.fill(0); }
   }
-  private async syncBackup(local: InstallIdentity) {
+  private async syncBackup(local: InstallIdentity, allowAhead = false) {
+    if (!local.confirmed) throw new Error('Recovery words must be confirmed');
     const remote = await this.remote.backup();
     if (remote.key_backup) {
       const rev = unwrap(parseBackup(unwrap(unb64u(remote.key_backup)))).recoveryRev;
-      if (rev > local.recoveryRev) { this.status.phase = 'recovery-ahead'; throw new Error('A newer recovery key exists'); }
+      if (rev > local.recoveryRev) { this.status.phase = 'recovery-ahead'; if (allowAhead) return; throw new Error('A newer recovery key exists'); }
+      const r = recoveryKey(local.seed, rev);
+      try { const opened = unwrap(openBackup(unwrap(unb64u(remote.key_backup)), r, publicIdentityKey(local.seed))); opened.fill(0); }
+      finally { r.fill(0); }
       if (rev === local.recoveryRev && !this.replacement) return;
     }
+    const own = await this.remote.keys(this.userId); validatePublicKeys(own, this.origin, this.userId);
+    if (own.identity_key !== b64u(publicIdentityKey(local.seed))) { this.status.phase = 'collision'; throw new Error('Account security key changed'); }
     this.active(); await this.remote.putBackup(b64u(sealBackup(local.seed, local.recoveryRev)));
   }
   private async replaceRecoveryUnlocked(password: string) {
     this.native(); this.requireNotice('replace-does-not-revoke-leaked-words');
-    await this.remote.password(password); await this.bootstrap();
-    if (this.status.phase !== 'ready') throw new Error('Current recovery key required');
+    await this.remote.password(password); await this.bootstrapUnlocked();
+    if (this.status.phase !== 'ready' && this.status.phase !== 'recovery-ahead') throw new Error('Current recovery key required');
     const local = await this.local();
-    try { if (local.recoveryRev === 0xffffffff) throw new Error('Recovery revision exhausted'); local.recoveryRev++; local.confirmed = false; local.wordsRequirePassword = true; this.active(); await this.vault.saveIdentity(local); this.wordAccessAuthorized = true; this.replacement = true; this.status.phase = 'pending-confirmation'; this.positions = undefined; }
+    try {
+      if (this.status.phase === 'recovery-ahead') {
+        const backup = await this.remote.backup(); if (!backup.key_backup) throw new Error('Recovery backup unavailable');
+        const blob = unwrap(unb64u(backup.key_backup)), revision = unwrap(parseBackup(blob)).recoveryRev;
+        const r = recoveryKey(local.seed, revision);
+        try { const checked = unwrap(openBackup(blob, r, publicIdentityKey(local.seed))); checked.fill(0); } finally { r.fill(0); }
+        local.recoveryRev = revision;
+      }
+      if (local.recoveryRev === 0xffffffff) throw new Error('Recovery revision exhausted'); local.recoveryRev++; local.confirmed = false; local.wordsRequirePassword = true; this.active(); await this.vault.saveIdentity(local); this.wordAccessAuthorized = true; this.replacement = true; this.status.phase = 'pending-confirmation'; this.positions = undefined; }
     finally { local.seed.fill(0); }
   }
   /** Browser warning must be acknowledged before the UI accepts words. */
@@ -155,7 +191,7 @@ export class IdentityService {
     } finally { r.fill(0); seed?.fill(0); }
   }
   /** Sign-out discards this host's challenges/notices; the per-install key stays stored. */
-  dispose() { this.disposed = true; this.positions = undefined; this.challengeIdentity = undefined; this.displayOpen = false; this.wordAccessAuthorized = false; this.notices.clear(); }
+  dispose() { this.disposed = true; this.positions = undefined; this.challengeIdentity = undefined; this.displayOpen = false; this.wordAccessAuthorized = false; this.notices.clear(); this.mismatches = []; }
   beginCreation() { return withIdentityLock(this.vault, () => this.beginCreationUnlocked()); }
   beginReset(password: string) { return withIdentityLock(this.vault, () => this.beginResetUnlocked(password)); }
   confirmWords(typed: readonly [string, string]) { return withIdentityLock(this.vault, () => this.confirmWordsUnlocked(typed)); }
@@ -163,7 +199,7 @@ export class IdentityService {
   replaceRecovery(password: string) { return withIdentityLock(this.vault, () => this.replaceRecoveryUnlocked(password)); }
   importRecovery(words: string) { return withIdentityLock(this.vault, () => this.importRecoveryUnlocked(words)); }
   removeDeviceKey() { return withIdentityLock(this.vault, () => this.removeDeviceKeyUnlocked()); }
-  async reportExposure() { this.active(); this.status.exposure = 'report-pending'; await this.remote.exposure(); this.status.exposure = 'reported'; }
+  async reportExposure() { this.active(); this.status.exposure = 'report-pending'; await this.remote.exposure(); this.active(); this.status.exposure = 'reported'; }
   /** Only explicit device-key removal calls this. Ordinary host sign-out never does. */
   private async removeDeviceKeyUnlocked() { this.active(); await this.vault.removeIdentity(); this.status.phase = 'uninitialized'; this.positions = undefined; this.displayOpen = false; }
 }

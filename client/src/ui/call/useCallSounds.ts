@@ -8,7 +8,7 @@ import { speakerId } from "../../state/audioOutput";
 export function useCallSounds() {
   const call = useCall();
   const chat = useChat();
-  const live = call.phase === "live";
+  const live = call.phase === "live" || !!call.reconnecting;
   const room = call.conversationId ? call.rooms[call.conversationId] : undefined;
   const me = chat.me.id;
   const previous = useRef<{ live: boolean; ids: Map<string, boolean>; muted: boolean; deafened: boolean }>({ live: false, ids: new Map(), muted: false, deafened: false });

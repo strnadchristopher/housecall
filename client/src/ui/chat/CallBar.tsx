@@ -33,6 +33,7 @@ export function CallBar() {
     return (
       <section className="hc-callbar is-live" data-testid="call-bar" data-phase={call.phase} data-elsewhere="" aria-label={copy.call.label}>
         <div className="hc-callbar__title">
+          {chat.current.kind === "dm" && <small title={copy.e2e.relayedTip}>{copy.e2e.relayed}</small>}
           <strong>{copy.call.inCallIn(call.conversationName ?? "")}</strong>
           {call.error && <small>{call.error}</small>}
         </div>
@@ -50,6 +51,7 @@ export function CallBar() {
           ? <div className="hc-callbar__people">{running.slice(0, 5).map(person => <span key={person.personId} title={person.name}><Avatar name={person.name} src={person.avatarUrl} size="sm" /></span>)}</div>
           : <span className="hc-callbar__mark"><Icon name="phone" /></span>}
         <div className="hc-callbar__title">
+          {chat.current.kind === "dm" && <small title={copy.e2e.relayedTip}>{copy.e2e.relayed}</small>}
           <strong>{running.length > 0 ? copy.call.inProgress : copy.call.label}</strong>
           {running.length > 0 && <small>{running.map(person => person.name).join(", ")}</small>}
         </div>
@@ -63,6 +65,7 @@ export function CallBar() {
         {call.participants.slice(0, 5).map(participant => <span key={participant.id} title={participant.name}><Avatar name={participant.name} src={participant.avatarUrl} size="sm" /></span>)}
       </div>
       <div className="hc-callbar__title">
+          {chat.current.kind === "dm" && <small title={copy.e2e.relayedTip}>{copy.e2e.relayed}</small>}
         <strong>
           {/* Ringing and declined are shown once, on the stage. */}
           {call.phase === "live" ? copy.call.people(call.participants.length) : call.phase === "failed" ? copy.call.failed : copy.call.joining}

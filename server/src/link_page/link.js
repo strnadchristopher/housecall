@@ -1,16 +1,18 @@
-// Reads the login code from the address fragment, which the browser never sends to the server.
-// Nothing here makes a network request. The code goes only into the "Continue in browser" link.
+// LINK-V1: strip the code synchronously before parsing, rendering, or setting a link.
 (function () {
-  var fragment = location.hash;
+  var fragment = location.hash.slice(1);
   history.replaceState(null, "", "/link");
-  var host = document.getElementById("host");
-  host.textContent = "Log in on " + location.host;
-  var ok = /^#hcl1\.[0-9a-f]{32}\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(fragment);
-  if (ok) {
-    document.getElementById("web").href = "/#link=" + fragment.slice(1);
-    document.getElementById("ok").hidden = false;
-  } else {
-    document.getElementById("bad").hidden = false;
-  }
-  fragment = "";
+  var origin;
+  try { origin = new URL(location.origin); } catch (_) { fragment = ""; }
+  var allowed = origin && origin.origin === location.origin && !origin.username && !origin.password && (origin.protocol === "https:" || origin.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].indexOf(origin.hostname) !== -1);
+  var valid = allowed && (location.origin + "/link#" + fragment).length <= 512 && /^hcl1\.[0-9a-f]{32}\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(fragment);
+  document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById("ok").hidden = !valid;
+    document.getElementById("missing").hidden = !!valid;
+    if (valid) {
+      document.getElementById("host").textContent = location.host;
+      document.getElementById("web").href = "/#link=" + fragment;
+    } else document.getElementById("ok").remove();
+    fragment = "";
+  }, { once: true });
 })();

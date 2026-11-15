@@ -26,6 +26,7 @@ export function SearchPanel({ pins }: { pins: boolean }) {
         </form>
       )}
       {results && results.length === 0 && <p className="hc-muted">{pins ? copy.side.noPins : copy.side.noResults}</p>}
+      {!pins && chat.dmSecurity && <p className="hc-note">{copy.e2e.notSearched}</p>}
       <ul className="hc-results">
         {results?.map(message => (
           <li key={message.id}>

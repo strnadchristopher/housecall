@@ -1,3 +1,5 @@
+import { SecurityPane } from "../security/IdentityFlow";
+import { useSecurity } from "../../core/securityContext";
 import { useState, type ReactNode } from "react";
 import { useIdentity } from "../../core/context";
 import { DeviceMenu } from "../call/DeviceMenu";
@@ -19,6 +21,7 @@ type Group = { label: string; rows: Row[] };
  */
 export function SettingsView() {
   const identity = useIdentity();
+  const security = useSecurity();
   const nav = useNav();
   const phone = usePhone();
   const [accent, setAccent] = useState<AccentId>(() => readAccent());
@@ -30,6 +33,7 @@ export function SettingsView() {
       { id: "notifications", label: copy.settings.notifications, icon: "bell" },
       { id: "call", label: copy.settings.call, icon: "mic" },
       { id: "devices", label: copy.settings.devices, icon: "screen" },
+      { id: "security", label: copy.security.title, icon: "lock" },
     ] },
     { label: identity.serverName, rows: [
       ...(identity.owner ? [
@@ -87,6 +91,8 @@ export function SettingsView() {
           <section key={section} className="hc-settings__pane hc-anim-slide-right" aria-label={title}>
             {!phone && <h2>{title}</h2>}
             <ErrorLine text={identity.error} onDismiss={identity.clearError} dismissLabel={copy.common.dismiss} />
+            {section === "security" && <SecurityPane />}
+            {section === "qr" && <p>{copy.link.useApp}</p>}
             {section === "account" && identity.me && <Account />}
             {section === "appearance" && <Appearance accent={accent} onChange={chooseAccent} />}
             {section === "server" && identity.owner && <ServerProfile />}

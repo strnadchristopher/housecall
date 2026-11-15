@@ -21,6 +21,7 @@ export async function availableVoiceInputs(): Promise<VoiceDevice[]> {
 }
 export interface VoiceStatus {
   phase: "idle" | "connecting" | "live" | "failed";
+  reconnecting?: boolean;
   peerId?: string;
   streams: MediaStream[];
   /** SFU msid is the originating peer ID; values contain no session credential. */
@@ -194,10 +195,11 @@ export class VoiceSession {
       };
       pc.onconnectionstatechange = () => { if (this.pc !== pc) return;
         this.update({
+          reconnecting: pc.connectionState !== "connected" && pc.connectionState !== "failed" && pc.connectionState !== "closed" && (this.state.phase === "live" || !!this.state.reconnecting),
           phase:
             pc.connectionState === "connected"
               ? "live"
-              : pc.connectionState === "failed"
+              : (pc.connectionState === "failed" || pc.connectionState === "closed")
                 ? "failed"
                 : "connecting",
         }); };

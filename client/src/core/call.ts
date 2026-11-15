@@ -62,6 +62,8 @@ export interface CallState {
   /** False when the server has no voice transport: no call control is rendered. */
   available: boolean;
   phase: "idle" | "connecting" | "live" | "failed";
+  /** Recovering an established media or signaling connection; retain the last roster. */
+  reconnecting?: boolean;
   conversationId?: string;
   conversationName?: string;
   /** Known only while this client is in the call (backend limit). */
@@ -118,4 +120,9 @@ export interface CallTransport extends CallState {
   refreshDevices(): Promise<void>;
   selectDevices(selected: { microphone?: string; camera?: string }): void;
   setAudio(bitrate: number, noiseSuppression: boolean): Promise<void>;
+}
+
+/** Local audio choices remain available while an established call recovers. */
+export function canControlLocalAudio(call: Pick<CallState, "phase" | "reconnecting">): boolean {
+  return call.phase === "live" || call.phase === "connecting" && !!call.reconnecting;
 }

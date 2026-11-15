@@ -4,10 +4,11 @@ import { preflightRows } from "../src/ui/setup/preflight";
 const good = { https: { ok: true }, call_port: { ok: true }, storage: { ok: true } };
 
 describe("first-run checklist rows", () => {
-  it("lists the three checks in order and passes when all are ok", () => {
+  it("never treats a configured call port as externally verified", () => {
     const rows = preflightRows(good);
     expect(rows.map(r => r.id)).toEqual(["https", "call_port", "storage"]);
-    expect(rows.every(r => r.ok && !r.help && !r.href)).toBe(true);
+    expect(rows.filter(r => r.ok).map(r => r.id)).toEqual(["https", "storage"]);
+    expect(rows[1].help).toContain("another network");
   });
   it("gives one sentence and a SELF-HOSTING link per failed check", () => {
     const rows = preflightRows({ https: { ok: false, reason: "plain_http" }, call_port: { ok: false, reason: "voice_off" }, storage: { ok: false, reason: "not_writable" } });

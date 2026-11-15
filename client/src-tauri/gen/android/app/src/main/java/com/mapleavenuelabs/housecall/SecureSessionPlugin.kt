@@ -60,6 +60,19 @@ class SecureSessionPlugin(private val activity: Activity) : Plugin(activity) {
             invoke.resolve(JSObject().put("ok", true))
         } catch (_: Exception) { invoke.reject("secure storage unavailable") }
     }
+    @Command fun sensitiveSurface(invoke: Invoke) {
+        activity.runOnUiThread {
+            try {
+                val enabled = invoke.getArgs().getBoolean("enabled")
+                val main = activity as? MainActivity ?: throw IllegalStateException()
+                main.sensitiveSurface = enabled
+                activity.window.decorView.filterTouchesWhenObscured = enabled
+                if (enabled) activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                else activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                invoke.resolve(JSObject().put("ok", true).put("captured", false))
+            } catch (_: Exception) { invoke.reject("screen protection unavailable") }
+        }
+    }
     private var verifyingOwner = false
     @Command fun verifyOwner(invoke: Invoke) {
         activity.runOnUiThread {

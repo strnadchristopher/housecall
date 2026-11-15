@@ -11,7 +11,8 @@ const ANCHOR = { https: "https", call_port: "call-port", storage: "storage" } as
 export function preflightRows(result: Preflight): PreflightRow[] {
   return (["https", "call_port", "storage"] as const).map(id => {
     const check = result[id];
-    if (check.ok) return { id, label: C.labels[id], ok: true };
+    // Older hosts may report an SFU bind as success; it cannot verify the external path.
+    if (check.ok && id !== "call_port") return { id, label: C.labels[id], ok: true };
     const help = (check.reason && C.help[id][check.reason]) || C.help[id].default;
     return { id, label: C.labels[id], ok: false, help, href: `${DOC}#${ANCHOR[id]}` };
   });

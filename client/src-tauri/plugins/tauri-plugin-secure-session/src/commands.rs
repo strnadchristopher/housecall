@@ -140,6 +140,26 @@ pub async fn pins_set<R: Runtime>(app: AppHandle<R>, origin: String, user_id: St
     record(&app, "recordSet", account, Some(pins)).await
 }
 
+// Same OS record store as pins; session signout/removal never deletes these bindings.
+#[tauri::command]
+pub async fn bindings_get<R: Runtime>(app: AppHandle<R>, origin: String, user_id: String) -> Result<Value, String> {
+    let account = format!("bindings-v1:{}", pin_account(&origin, &user_id)?);
+    let result = record(&app, "recordGet", account, None).await?;
+    Ok(json!({"bindings":result.get("value")}))
+}
+#[tauri::command]
+pub async fn bindings_set<R: Runtime>(app: AppHandle<R>, origin: String, user_id: String, bindings: Value) -> Result<Value, String> {
+    let account = format!("bindings-v1:{}", pin_account(&origin, &user_id)?);
+    if !bindings.is_array() || bindings.to_string().len() > 4_000_000 { return Err("invalid bindings".into()); }
+    for row in bindings.as_array().unwrap() {
+        let id = row.get("id").and_then(Value::as_str).ok_or("invalid bindings")?;
+        if id.is_empty() || id.len() > 128 || id.chars().any(char::is_control) { return Err("invalid bindings".into()); }
+        let peer = row.get("peer").ok_or("invalid bindings")?;
+        if !peer.is_null() && !peer.as_str().is_some_and(|p| !p.is_empty() && p.len() <= 128 && p != user_id && !p.chars().any(char::is_control)) { return Err("invalid bindings".into()); }
+    }
+    record(&app, "recordSet", account, Some(bindings)).await
+}
+
 #[tauri::command]
 pub async fn verify_owner<R: Runtime>(app: AppHandle<R>, reason: String) -> Result<Value, String> {
     if reason.is_empty() || reason.len() > 200 || reason.chars().any(char::is_control) { return Err("invalid verification reason".into()); }
@@ -147,4 +167,13 @@ pub async fn verify_owner<R: Runtime>(app: AppHandle<R>, reason: String) -> Resu
     return native(&app, "verifyOwner", json!({"reason":reason})).await.map_err(|_| "device verification unavailable".to_owned());
     #[cfg(desktop)]
     { let _ = (app, reason); Ok(json!({"supported":false,"verified":false})) }
+}
+
+/// Scoped QR protection. The UI tears it down on close. Never accepts secrets.
+#[tauri::command]
+pub async fn sensitive_surface<R: Runtime>(app: AppHandle<R>, enabled: bool) -> Result<Value, String> {
+    #[cfg(mobile)]
+    return native(&app, "sensitiveSurface", json!({"enabled": enabled})).await;
+    #[cfg(desktop)]
+    { let _ = (app, enabled); Ok(json!({"ok":true,"captured":false})) }
 }

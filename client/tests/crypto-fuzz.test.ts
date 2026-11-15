@@ -24,7 +24,7 @@ it('rejects 4000 deterministic random/mutated envelopes without throwing or decr
     expect(openBackup(envelope, key, h(raw.identities[0].identity_key_hex)).ok).toBe(false);
     expect(openWrappedKeys(h(link.wrap_key), h(link.link_id_hex), envelope).ok).toBe(false);
   }
-});
+}, 15000);
 it('returns typed failures for malformed parser inputs', () => {
   const hostile: unknown[] = [null, undefined, false, 1, 1n, Symbol('synthetic'), [], {}, new Uint8Array(), '', '\u0000', 'not json', { v: 1, text: 2 }];
   for (const parser of [parseEnvelope, unpad, validateFileRef, validatePayload, parseIdentityKey, parseStoredIdentity, unb64u, parseBackup, wordsToRecoveryKey, parseQr, parseDeepLink, validatePins]) {

@@ -240,3 +240,32 @@ it("turning the camera on retries with the default camera when the saved one is 
   expect(media.getUserMedia).toHaveBeenCalledTimes(3);
   expect(updates.at(-1)?.warning).toMatch(/camera/i);
 });
+
+
+it("retains the actual media streams and muted track across a connection interruption", async () => {
+  const audio = track("audio");
+  const { session, updates } = fixture(async () => stream([audio]));
+  await session.join("lounge", false);
+  const peer = Peer.created[0];
+  const change = () => (peer.onconnectionstatechange as unknown as () => void)();
+  peer.connectionState = "connected"; change();
+  expect(updates.at(-1)?.phase).toBe("live");
+  session.mute(true);
+  const before = updates.at(-1)?.streams;
+  peer.connectionState = "disconnected"; change();
+  expect(updates.at(-1)?.phase).toBe("connecting");
+  expect(updates.at(-1)?.reconnecting).toBe(true);
+  expect(updates.at(-1)?.streams).toBe(before);
+  expect(audio.enabled).toBe(false);
+  session.mute(false);
+  expect(audio.enabled).toBe(true);
+  session.mute(true);
+  expect(audio.enabled).toBe(false);
+  peer.connectionState = "connected"; change();
+  expect(updates.at(-1)?.phase).toBe("live");
+  expect(updates.at(-1)?.reconnecting).toBe(false);
+  expect(audio.enabled).toBe(false);
+  peer.connectionState = "failed"; change();
+  expect(updates.at(-1)?.phase).toBe("failed");
+  expect(updates.at(-1)?.reconnecting).toBe(false);
+});

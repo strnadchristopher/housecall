@@ -286,13 +286,13 @@ describe("call stage navigation", () => {
     expect(sideTabs(false, true)).toEqual(["people", "chords"]);
     expect(sideTabs(false, false)).toEqual(["people"]);
   });
-  it("stages the call only for its own conversation, in a live or connecting call, outside Settings", () => {
+  it("stages the call only for its own conversation, in a live, connecting or failed call, outside Settings", () => {
     const live = { phase: "live", conversationId: "a" };
     expect(isStaged(live, "a", "chat")).toBe(true);
     expect(isStaged({ phase: "connecting", conversationId: "a" }, "a", "chat")).toBe(true);
     expect(isStaged(live, "b", "chat")).toBe(false);
     expect(isStaged(live, "a", "settings")).toBe(false);
-    expect(isStaged({ phase: "failed", conversationId: "a" }, "a", "chat")).toBe(false);
+    expect(isStaged({ phase: "failed", conversationId: "a" }, "a", "chat")).toBe(true);
     expect(isStaged({ phase: "idle" }, "a", "chat")).toBe(false);
     expect(isStaged(live, undefined, "chat")).toBe(false);
   });

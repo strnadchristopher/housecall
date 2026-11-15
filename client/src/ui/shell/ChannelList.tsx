@@ -1,15 +1,15 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { useCall, useChat, useIdentity } from "../../core/context";
 import type { VoiceRoomMember } from "../../core/call";
 import { copy } from "../copy";
 import { Avatar, Button, ErrorLine, Field, Icon, IconButton, cx, type IconName } from "../kit";
 import { Sheet } from "../Sheet";
-import { useFlip, usePhone } from "../tokens/motion";
+import { useFlip, usePhone, useEntrance } from "../tokens/motion";
 import { StreamPreview, type PreviewTarget } from "../call/StreamPreview";
-import { PersonVolume } from "../call/PersonVolume";
+import { LivePill } from "../call/LivePill";
+import { LivePress } from "../people/livePress";
+import { usePersonCard } from "../people/PersonCard";
 import { useNav } from "./nav";
-
-const LEAVE_MS = 110;
 
 /** A mouse resting on the LIVE mark for 250 ms opens the preview; touch uses the tap. */
 function hover(event: React.PointerEvent<HTMLElement>, open?: (target: HTMLElement, pinned: boolean) => void) {
@@ -31,59 +31,56 @@ export function stateWords(member: Pick<VoiceRoomMember, "sharing" | "camera" | 
 
 /** The state icons of one person: LIVE mark (a button), camera, then one audio icon. */
 export function StateIcons({ member, name, onLive }: { member: VoiceRoomMember; name: string; onLive?: (target: HTMLElement, pinned: boolean) => void }) {
+  const phone = usePhone();
   return (
     <span className="hc-vrow__state">
-      {member.sharing && <button type="button" className="hc-livepill" aria-label={copy.voice.livePreview(name)} onClick={event => onLive?.(event.currentTarget, true)} onFocus={event => event.currentTarget.matches(":focus-visible") && onLive?.(event.currentTarget, true)} onPointerEnter={event => hover(event, onLive)}>{copy.voice.live}</button>}
+      {member.sharing && <LivePill button aria-label={copy.voice.livePreview(name)} onClick={event => onLive?.(event.currentTarget, true)} onFocus={event => !phone && event.currentTarget.matches(":focus-visible") && onLive?.(event.currentTarget, true)} onPointerEnter={event => hover(event, onLive)} />}
       {member.camera && <Icon name="camera" />}
       {member.deafened ? <Icon name="headphones" off /> : member.muted ? <Icon name="mic" off /> : null}
     </span>
   );
 }
 
-/** Keeps a person who just left in the list for one exit animation, and marks who just arrived. */
-function useRows(members: VoiceRoomMember[]) {
-  const [rows, setRows] = useState(() => members.map(member => ({ member, leaving: false, entering: false })));
-  const first = useRef(true);
-  useEffect(() => {
-    if (first.current) { first.current = false; return; }
-    setRows(current => {
-      const known = new Set(current.filter(row => !row.leaving).map(row => row.member.personId));
-      const now = new Set(members.map(member => member.personId));
-      const left = current.filter(row => !now.has(row.member.personId));
-      const stay = members.map(member => ({ member, leaving: false, entering: !known.has(member.personId) }));
-      const result = [...stay];
-      for (const row of left) result.splice(Math.min(current.indexOf(row), result.length), 0, { member: row.member, leaving: true, entering: false });
-      return result;
-    });
-    const timer = setTimeout(() => setRows(current => current.filter(row => !row.leaving)), LEAVE_MS);
-    return () => clearTimeout(timer);
-  }, [members]);
-  return rows;
+function VoicePerson({ member, meId, entering, onLive, onOpen }: {
+  member: VoiceRoomMember; meId: string; entering: boolean;
+  onLive: (member: VoiceRoomMember, anchor: HTMLElement, pinned: boolean) => void;
+  onOpen: (member: VoiceRoomMember, anchor: HTMLElement) => void;
+}) {
+  const call = useCall();
+  const press = useRef(new LivePress());
+  const [arriving, finishArrival] = useEntrance(190, entering);
+  useEffect(() => () => press.current.cancel(), []);
+  useEffect(() => { if (!member.sharing) press.current.cancel(); }, [member.sharing]);
+  const speaking = call.speaking.includes(member.personId);
+  return <li data-testid="voice-person" className={cx("hc-vrow", speaking && "is-speaking", member.personId === meId && "is-me", arriving && "is-entering")}
+    onAnimationEnd={event => { if (event.target === event.currentTarget) finishArrival(); }}
+    onPointerDown={event => {
+      if (!member.sharing || event.pointerType === "mouse" || event.button > 0) return;
+      const anchor = event.currentTarget.querySelector<HTMLElement>(".hc-vrow__open")!;
+      press.current.start(event.clientX, event.clientY, () => onLive(member, anchor, true));
+    }}
+    onPointerMove={event => press.current.move(event.clientX, event.clientY)}
+    onPointerUp={() => press.current.cancel()} onPointerCancel={() => press.current.cancel()} onPointerLeave={() => press.current.cancel()}
+    onClickCapture={event => { if (press.current.consumeClick()) { event.preventDefault(); event.stopPropagation(); } }}
+    onContextMenu={event => { if (member.sharing) { event.preventDefault(); press.current.cancel(); onLive(member, event.currentTarget.querySelector<HTMLElement>(".hc-vrow__open")!, true); } }}>
+    <button type="button" className="hc-vrow__open" aria-label={copy.voice.rowLabel(member.name, stateWords(member))} onClick={event => onOpen(member, event.currentTarget)} />
+    <span className={cx("hc-face", speaking && "is-speaking")}><Avatar name={member.name} src={member.avatarUrl} size="xs" /></span>
+    <span className="hc-vrow__name">{member.name}</span>
+    <StateIcons member={member} name={member.name} onLive={(anchor, pinned) => onLive(member, anchor, pinned)} />
+  </li>;
 }
 
 function People({ channelName, members, meId, onLive, onOpen }: {
-  channelName: string; members: VoiceRoomMember[]; meId: string; onLive: (member: VoiceRoomMember, anchor: HTMLElement, pinned: boolean) => void; onOpen: (member: VoiceRoomMember) => void;
+  channelName: string; members: VoiceRoomMember[]; meId: string;
+  onLive: (member: VoiceRoomMember, anchor: HTMLElement, pinned: boolean) => void;
+  onOpen: (member: VoiceRoomMember, anchor: HTMLElement) => void;
 }) {
-  const call = useCall();
-  const rows = useRows(members);
-  const list = useRef<HTMLUListElement>(null);
-  useFlip(list, members.map(member => member.personId).join());
-  return (
-    <ul ref={list} className="hc-voice__people" aria-label={copy.channels.peopleIn(channelName)}>
-      {rows.map(({ member, leaving, entering }) => {
-        const speaking = call.speaking.includes(member.personId);
-        return (
-          <li key={member.personId} data-flip={member.personId} data-testid="voice-person"
-            className={cx("hc-vrow", speaking && "is-speaking", member.personId === meId && "is-me", entering && "is-entering", leaving && "is-leaving")}>
-            <button type="button" className="hc-vrow__open" aria-label={copy.voice.rowLabel(member.name, stateWords(member))} onClick={() => onOpen(member)} />
-            <span className={cx("hc-face", speaking && "is-speaking")}><Avatar name={member.name} src={member.avatarUrl} size="xs" /></span>
-            <span className="hc-vrow__name">{member.name}</span>
-            <StateIcons member={member} name={member.name} onLive={(anchor, pinned) => onLive(member, anchor, pinned)} />
-          </li>
-        );
-      })}
-    </ul>
-  );
+  const known = useRef(new Set<string>());
+  const arrived = new Set(members.filter(member => !known.current.has(member.personId)).map(member => member.personId));
+  useLayoutEffect(() => { known.current = new Set(members.map(member => member.personId)); }, [members]);
+  return <ul className="hc-voice__people" aria-label={copy.channels.peopleIn(channelName)}>
+    {members.map(member => <VoicePerson key={member.personId} member={member} meId={meId} entering={arrived.has(member.personId)} onLive={onLive} onOpen={onOpen} />)}
+  </ul>;
 }
 
 function CreateChannel({ kind, onClose }: { kind: "channel" | "voice" | null; onClose: () => void }) {
@@ -141,13 +138,13 @@ export function ChannelList() {
   const [sheet, setSheet] = useState<string>();
   const [switching, setSwitching] = useState<string>();
   const [preview, setPreview] = useState<PreviewTarget>();
-  const [person, setPerson] = useState<VoiceRoomMember>();
+  const openPerson = usePersonCard();
   const voiceList = useRef<HTMLUListElement>(null);
   const text = chat.conversations.filter(conversation => conversation.kind === "channel");
   const voice = chat.conversations.filter(conversation => conversation.kind === "voice");
   const inside = (id: string) => call.phase !== "idle" && call.conversationId === id;
   const membersOf = (id: string): VoiceRoomMember[] => call.rooms[id] ?? [];
-  useFlip(voiceList, voice.map(channel => channel.id + ":" + membersOf(channel.id).map(member => member.personId + Number(member.sharing)).join()).join("|"));
+  useFlip(voiceList, voice.map(channel => channel.id).join("|"));
 
   const enter = (id: string) => { nav.set({ main: "chat", screen: "main" }); void chat.open(id); };
   const join = (id: string) => {
@@ -203,7 +200,7 @@ export function ChannelList() {
               {members.length > 0 && (
                 <People channelName={channel.name} members={members} meId={chat.me.id}
                   onLive={(member, anchor, pinned) => setPreview({ channelId: channel.id, member, anchor, pinned })}
-                  onOpen={member => (joined && member.personId !== chat.me.id ? setPerson(member) : phone ? open(channel) : member.sharing ? setPreview({ channelId: channel.id, member, anchor: undefined }) : enter(channel.id))} />
+                  onOpen={(member, anchor) => openPerson({ id: member.personId, anchor, name: member.name, avatarUrl: member.avatarUrl })} />
               )}
             </li>
           );
@@ -229,11 +226,10 @@ export function ChannelList() {
             </ul>
           ))}
       </Sheet>
-      <Sheet open={!!switchTo} onClose={() => setSwitching(undefined)} title={copy.voice.switchTitle(elsewhereName)} testId="switch-call"
+      <Sheet open={!!switchTo} onClose={() => { setSwitching(undefined); nav.set({ watchStream: undefined }); }} title={copy.voice.switchTitle(elsewhereName)} testId="switch-call"
         actions={switchTo && <><Button kind="primary" onClick={() => { const id = switchTo.id; setSwitching(undefined); void call.join(id); }}>{copy.voice.switchJoin(switchTo.name)}</Button>
-          <Button kind="text" onClick={() => setSwitching(undefined)}>{copy.voice.stay}</Button></>} />
-      <PersonVolume member={person} onClose={() => setPerson(undefined)} />
-      <StreamPreview target={preview} onClose={() => setPreview(undefined)} onOpenCall={id => { enter(id); join(id); }} />
+          <Button kind="text" onClick={() => { setSwitching(undefined); nav.set({ watchStream: undefined }); }}>{copy.voice.stay}</Button></>} />
+      <StreamPreview target={preview} onClose={() => setPreview(undefined)} onOpenCall={(id, personId) => { nav.set({ watchStream: { conversationId: id, personId } }); enter(id); join(id); }} />
     </div>
   );
 }

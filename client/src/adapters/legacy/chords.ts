@@ -1,3 +1,4 @@
+import { copy } from "../../ui/copy";
 import { useEffect, useRef, useState } from "react";
 import type { BrowserState, ChordEntry, ChordRegistry, SharedSession } from "../../core/chords";
 import type { RequestCard } from "../../core/chat";
@@ -12,7 +13,8 @@ interface PlexItem { id: string; title: string; kind: string; duration_ms: numbe
 interface Track { title: string; source: string; duration_ms: number }
 
 /** ChordRegistry over the current activity, Plex, DJ, Gimme and VM routes. */
-export function useLegacyChords(c: Housecall, voice: { status: VoiceStatus; live: boolean }, requests: RequestCard[]): ChordRegistry {
+export function useLegacyChords(c: Housecall, voice: { status: VoiceStatus; live: boolean }, requests: RequestCard[], encryptedDm = false): ChordRegistry {
+  const disabled = encryptedDm;
   const cap = c.capabilities;
   const me = c.auth?.user.id ?? "";
   const activity = c.activities[c.channel];
@@ -101,7 +103,7 @@ export function useLegacyChords(c: Housecall, voice: { status: VoiceStatus; live
     queue: snapshot.queue.map(track => ({ id: track.id, title: track.title, requestedBy: nameOf(track.requested_by), current: track.id === snapshot.playback.media_id })),
     votedSkip: snapshot.skip_votes.includes(me),
   });
-  const run = (work: () => Promise<void>) => c.run(async () => { setError(""); await work(); });
+  const run = (work: () => Promise<void>) => c.run(async () => { setError(""); if (disabled) throw new Error(copy.e2e.off.apps); await work(); });
   const command = (body: Record<string, unknown>) => run(async () => {
     if (!activity) return;
     await c.api.post(`/api/channels/${c.channel}/activity/commands`, { expected_revision: activity.revision, command: body });

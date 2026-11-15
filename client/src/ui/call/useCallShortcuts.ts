@@ -1,3 +1,4 @@
+import { canControlLocalAudio } from "../../core/call";
 import { useEffect, useRef } from "react";
 import { useCall } from "../../core/context";
 
@@ -23,7 +24,7 @@ export function useCallShortcuts() {
     const onKey = (event: KeyboardEvent) => {
       if (!event.shiftKey || !(isMac() ? event.metaKey : event.ctrlKey) || event.altKey) return;
       const current = latest.current;
-      if (current.phase !== "live") return;
+      if (!canControlLocalAudio(current)) return;
       const key = event.key.toLowerCase();
       if (key === "m") { event.preventDefault(); current.setMuted(!current.muted); }
       else if (key === "d") { event.preventDefault(); current.setDeafened(!current.deafened); }

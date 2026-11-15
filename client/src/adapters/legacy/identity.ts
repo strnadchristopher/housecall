@@ -28,11 +28,13 @@ function initialInvite(): string {
 export function useLegacyIdentity(
   c: Housecall, host: HostEntry, hosts: Hosts, updater: Updater,
   server: { id: string; roles: Role[]; setRoles: (roles: Role[]) => void },
+  onLinkScan: () => void,
 ): IdentityProvider {
   const [inviteToken, setInviteToken] = useState(() => host.added ? host.token : initialInvite());
   const [address, setAddress] = useState(host.origin);
   const [push, setPush] = useState<NativePushStatus>();
   const [, bump] = useState(0);
+  const linkScan = useRef(onLinkScan); linkScan.current = onLinkScan;
   const signedIn = useRef(false);
   signedIn.current = !!c.auth;
 
@@ -71,7 +73,7 @@ export function useLegacyIdentity(
       if (signedIn.current) { setJoinOffer({ origin: invite.server_origin, token: invite.token }); return; }
       setAddress(invite.server_origin);
       setInviteToken(invite.token);
-    }, error => void c.run(async () => { throw error; }));
+    }, error => void c.run(async () => { throw error; }), () => linkScan.current());
   }, [c.run, host.added]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A code for this already-connected host arrived through hosts.add: redeem it once signed in.
@@ -128,6 +130,7 @@ export function useLegacyIdentity(
     consuming.current = true;
     try {
       await c.authenticate(path, { server_origin: serverOrigin, ...values }, lastConversation(target, name));
+      if (isNative()) hosts.connected(host.id, target);
       remember({ origin: target, username: name });
       // An approved access request is spent once its owner has logged in.
       for (const request of readPending()) if (request.origin === target && request.username === name) removePending(request.id);
@@ -159,7 +162,8 @@ export function useLegacyIdentity(
       .map(({ origin, username }) => ({ origin, username })),
     inviteAppLink: !isNative() && inviteToken && /^[a-f0-9]{64}$/.test(inviteToken)
       ? `housecall://invite?code=${encodeInviteCode(address || location.origin, inviteToken)}` : undefined,
-    restoring: host.restoring && !c.auth,
+    // Splash readiness includes establish/refresh, not only the first auth assignment.
+    restoring: host.restoring,
     pendingJoin: joinOffer ? { host: new URL(joinOffer.origin).host } : undefined,
     pendingRequests: pendingNow.map(request => ({ ...request, status: requestStatus[request.id] ?? "pending" })),
     accessRequestsPending: accessCount,

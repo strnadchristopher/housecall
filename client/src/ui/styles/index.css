@@ -224,28 +224,90 @@ a { color: var(--hc-accent); }
 
 /* Call stage */
 .hc-stage.is-away { position: absolute; width: var(--hc-space-1); height: var(--hc-space-1); overflow: hidden; opacity: 0; pointer-events: none; padding: 0; }
-.hc-stage.is-full { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--hc-space-2); padding: 0 var(--hc-space-4) var(--hc-space-2); }
-.hc-stage__grid { flex: 1; min-height: 0; container-type: size; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); align-content: center; gap: var(--hc-space-2); overflow-y: auto; }
-.hc-stage__grid[data-count="1"] > .hc-tile { width: min(100%, 177.78cqh); justify-self: center; }
+/*
+ * HC-040 section 5: voice stage. Replaces the "Call stage" block of index.css (keep .hc-stage.is-away,
+ * .hc-tile__video.is-hidden, .hc-tile__pin and .hc-stage__ring as they are) and adds the stage bar.
+ */
+.hc-stage.is-full { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--hc-space-3); padding: 0 var(--hc-space-4) var(--hc-space-4); }
+.hc-stage__grid { flex: 1; min-height: 0; container-type: size; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); align-content: center; gap: var(--hc-space-3); overflow-y: auto; }
+.hc-stage__grid[data-count="1"] > .hc-tile { width: min(100%, 177.78cqh, 40rem); justify-self: center; }
 .hc-stage__spot { flex: 1; min-height: 0; container-type: size; display: grid; place-items: center; }
 .hc-stage__spot > .hc-tile { width: min(100%, 177.78cqh); }
 .hc-stage__spot .hc-tile__video { object-fit: contain; }
-.hc-stage__strip { display: flex; gap: var(--hc-space-2); height: calc(var(--hc-space-8) * 2); overflow-x: auto; flex: none; }
-.hc-stage__strip > .hc-tile { height: 100%; width: auto; flex: none; }
-.hc-tile { position: relative; container-type: inline-size; border-radius: var(--hc-radius-md); overflow: hidden; background: var(--hc-surface-raised); aspect-ratio: 16 / 9; }
-.hc-tile__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; background: var(--hc-bg); }
+.hc-stage__strip { display: flex; justify-content: safe center; gap: var(--hc-space-2); height: 84px; overflow-x: auto; flex: none; }
+.hc-stage__strip > .hc-tile { height: 100%; width: auto; flex: none; border-radius: var(--hc-radius-md); }
+.hc-stage__strip .hc-tile figcaption { left: var(--hc-space-1); bottom: var(--hc-space-1); font-size: var(--hc-text-2xs); }
+
+/* Tile: one person, or one shared screen. A step lighter than the stage; no border. */
+.hc-tile { position: relative; container-type: inline-size; border-radius: var(--hc-radius-lg); overflow: hidden; background: var(--hc-shell); aspect-ratio: 16 / 9; }
+.hc-tile__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; background: var(--hc-stage); }
+.hc-tile__face { position: absolute; inset: 0; display: grid; place-items: center; --hc-face: clamp(var(--hc-space-7), 24cqw, 7rem); }
+.hc-tile__face .hc-avatar { width: var(--hc-face); height: calc(var(--hc-face) * 1.125); font-size: calc(var(--hc-face) * 0.4); border-radius: 50% 50% 14% 14% / 44.4% 44.4% 12% 12%; }
+/* Speaking: the edge of the tile lights. Opacity only. */
+.hc-tile::after { content: ""; position: absolute; inset: 0; z-index: 3; border-radius: inherit; border: 2px solid var(--hc-live); pointer-events: none; opacity: 0; transition: opacity var(--hc-dur-base) var(--hc-ease-in); }
+.hc-tile.is-speaking::after { opacity: 1; transition: opacity var(--hc-dur-fast) var(--hc-ease-out); border-color: var(--hc-live); }
+.hc-tile figcaption {
+  position: absolute; z-index: 2; left: var(--hc-space-2); bottom: var(--hc-space-2); max-width: calc(100% - var(--hc-space-4)); display: flex; align-items: center; gap: 6px;
+  padding: 2px var(--hc-space-2) 1px; border-radius: var(--hc-radius-sm); background: color-mix(in oklab, var(--hc-stage) 80%, transparent); color: var(--hc-text);
+  font-size: var(--hc-text-sm); line-height: 1.6; pointer-events: none;
+}
+.hc-tile figcaption .hc-icon { width: 16px; height: 16px; color: var(--hc-text-muted); }
+.hc-tile__state { display: grid; color: var(--hc-text-muted); }
+.hc-tile figcaption .hc-livepill { margin-inline-start: 2px; }
+/* The hint that a tile can take the stage: shown on hover and keyboard focus; a tap does it on touch. */
+.hc-tile__hint { position: absolute; z-index: 2; top: var(--hc-space-2); right: var(--hc-space-2); display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--hc-radius-sm); background: color-mix(in oklab, var(--hc-stage) 80%, transparent); color: var(--hc-text); opacity: 0; pointer-events: none; transition: opacity var(--hc-dur-fast) var(--hc-ease-out); }
+.hc-tile__hint .hc-icon { width: 16px; height: 16px; }
+.hc-tile__pin:focus-visible ~ .hc-tile__hint { opacity: 1; }
+@media (hover: hover) { .hc-tile:hover .hc-tile__hint { opacity: 1; } }
+@media (prefers-reduced-motion: no-preference) {
+  .hc-tile.is-entering { animation: hc-tile-in var(--hc-dur-slow) var(--hc-ease-spring) backwards; }
+  @keyframes hc-tile-in { from { opacity: 0; transform: scale(0.94); } }
+  .hc-stagebar { animation: hc-card-in var(--hc-dur-slow) var(--hc-ease-out) backwards; } /* keyframes: section 6 */
+}
+
+/* Stage bar: the controls, centred under the tiles. Lit means on (camera, sharing); a slash means off. */
+.hc-stagebar { align-self: center; flex: none; display: flex; align-items: center; gap: var(--hc-space-1); padding: var(--hc-space-1); border-radius: calc(var(--hc-radius-md) + var(--hc-space-1)); background: var(--hc-shell); }
+.hc-stagebar .hc-ibtn { width: var(--hc-hit); height: var(--hc-hit); border-radius: var(--hc-radius-md); }
+.hc-stagebar .hc-ibtn .hc-icon { width: 22px; height: 22px; }
+.hc-ibtn.is-lit, .hc-ibtn.is-lit:hover:not(:disabled) { color: var(--hc-on-accent); background: var(--hc-live); }
+.hc-stagebar .hc-stagebar__leave, .hc-stagebar__leave:hover:not(:disabled), .hc-stagebar__leave:active:not(:disabled) { width: 60px; margin-inline-start: var(--hc-space-2); background: var(--hc-danger); color: var(--hc-on-danger); }
+.hc-stagebar__time { padding-inline: var(--hc-space-3) var(--hc-space-2); font-size: var(--hc-text-sm); color: var(--hc-text-muted); }
+
+/* Alone: your tile, then one line about what happens next. */
+.hc-stage__alone { flex: 1; min-height: 0; container-type: size; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--hc-space-4); }
+.hc-stage__alone > .hc-tile { width: min(100%, 30rem, 110cqh); flex: none; }
+.hc-stage__alone p { max-width: 24rem; text-align: center; color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-stage__alone p strong { display: block; color: var(--hc-text); font-size: var(--hc-text-md); }
+
+/* Side chat button in the header carries the unread count. */
+.hc-header__chat { position: relative; display: grid; }
+.hc-header__chat .hc-count { position: absolute; top: -2px; right: -4px; pointer-events: none; box-shadow: 0 0 0 2px var(--hc-stage); }
+/* The right column while the stage is open: the chat fills it. */
+.hc-right .hc-messages { padding-top: 0; }
+
+@media (max-width: 47.5em) {
+  .hc-stage.is-full { padding: 0 var(--hc-space-2) calc(var(--hc-space-2)); gap: var(--hc-space-2); }
+  /* The tiles fill the screen: two columns from three people up, rows share the height. No letterboxed grid. */
+  .hc-stage__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(8.5rem, 1fr); align-content: stretch; gap: var(--hc-space-2); }
+  .hc-stage__grid[data-count="1"], .hc-stage__grid[data-count="2"] { grid-template-columns: minmax(0, 1fr); }
+  .hc-stage__grid > .hc-tile, .hc-stage__grid[data-count="1"] > .hc-tile { aspect-ratio: auto; width: auto; justify-self: stretch; }
+  /* An odd one out takes the full row. */
+  .hc-stage__grid:not([data-count="1"], [data-count="2"]) > .hc-tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .hc-tile { border-radius: var(--hc-radius-md); }
+  .hc-stage__strip { height: 72px; }
+  .hc-stagebar { align-self: stretch; justify-content: space-between; }
+  .hc-stagebar .hc-ibtn { flex: 1; height: 48px; }
+  .hc-stagebar .hc-stagebar__leave { flex: 1.3; margin-inline-start: 0; }
+  .hc-stagebar__time { display: none; }
+}
 .hc-tile__video.is-hidden { width: var(--hc-space-1); height: var(--hc-space-1); inset: auto; opacity: 0; pointer-events: none; }
-.hc-tile__face { position: absolute; inset: 0; display: grid; place-items: center; --hc-face: clamp(var(--hc-space-7), 26cqw, calc(var(--hc-space-8) * 1.75)); }
-.hc-tile__face .hc-avatar { width: var(--hc-face); height: calc(var(--hc-face) * 1.125); font-size: calc(var(--hc-face) * 0.4); }
 .hc-tile__pin { position: absolute; inset: 0; z-index: 1; padding: 0; border: 0; background: none; cursor: pointer; border-radius: inherit; }
 .hc-tile__pin:focus-visible { outline-offset: calc(var(--hc-space-1) / -1); }
-.hc-tile::after { content: ""; position: absolute; inset: 0; z-index: 3; border-radius: inherit; border: calc(var(--hc-space-1) / 2) solid transparent; pointer-events: none; transition: border-color var(--hc-dur-fast) var(--hc-ease-out); }
-.hc-tile.is-speaking::after { border-color: var(--hc-accent); }
-.hc-tile figcaption { position: absolute; z-index: 2; left: var(--hc-space-2); bottom: var(--hc-space-2); max-width: calc(100% - var(--hc-space-4)); display: flex; align-items: center; gap: var(--hc-space-1); padding: 0 var(--hc-space-2); border-radius: var(--hc-radius-sm); background: var(--hc-bg); font-size: var(--hc-text-xs); line-height: 1.6; pointer-events: none; }
 .hc-tile__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hc-tile__name small { color: var(--hc-text-muted); font-size: inherit; }
-.hc-tile__state { display: grid; color: var(--hc-danger); }
-
+@media (min-width: 47.51em) {
+  .hc-stage__grid { grid-template-columns: repeat(var(--hc-cols, 1), var(--hc-tile-w, minmax(0, 1fr))); justify-content: center; align-content: center; gap: 12px; }
+}
 /* Messages */
 .hc-messages { flex: 1; min-height: 0; overflow-y: auto; padding: var(--hc-space-2) 0; display: flex; flex-direction: column; }
 .hc-messages > ol { margin-top: auto; }
@@ -268,16 +330,50 @@ a { color: var(--hc-accent); }
 .hc-msg__flag { display: inline-flex; align-items: center; gap: var(--hc-space-1); font-size: var(--hc-text-xs); color: var(--hc-accent); }
 .hc-msg__reply { display: flex; align-items: center; gap: var(--hc-space-2); font-size: var(--hc-text-sm); color: var(--hc-text-muted); min-width: 0; }
 .hc-msg__reply span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/*
+ * HC-040 section 8: message actions. Replaces .hc-msg__bar and its show/hide rules in index.css
+ * (including the two .hc-msg__bar lines in the 47.5em phone block). Works with plan A1: MessageList owns
+ * the one open id and sets .is-open.
+ */
+/* Wide screens: a small bar that rides the top edge of the row, at the right. */
 .hc-msg__bar {
-  position: absolute; top: 0; right: calc(var(--hc-space-2) * -1); z-index: 1; display: flex; padding: calc(var(--hc-space-1) / 2);
-  background: var(--hc-surface-raised); border-radius: var(--hc-radius-md);
-  box-shadow: 0 var(--hc-space-1) var(--hc-space-3) calc(var(--hc-space-1) * -1) color-mix(in oklab, var(--hc-bg) 80%, transparent);
-  opacity: 0; pointer-events: none; transition: opacity var(--hc-dur-fast) var(--hc-ease-in);
+  position: absolute; top: -18px; right: 0; z-index: 2; display: flex; gap: 0; padding: 2px;
+  background: var(--hc-pop); border-radius: var(--hc-radius-md); box-shadow: var(--hc-float);
+  opacity: 0; pointer-events: none; transform: translateY(2px);
+  transition: opacity var(--hc-dur-fast) var(--hc-ease-in), transform var(--hc-dur-fast) var(--hc-ease-in);
 }
-.hc-msg.is-open .hc-msg__bar, .hc-msg:focus-visible .hc-msg__bar, .hc-msg:has(:focus-visible) .hc-msg__bar { opacity: 1; pointer-events: auto; transition: opacity var(--hc-dur-fast) var(--hc-ease-out); }
+.hc-msg.is-grouped .hc-msg__bar { top: -22px; }
+.hc-msg__bar .hc-ibtn { width: 30px; height: 30px; border-radius: var(--hc-radius-sm); }
+.hc-msg__bar .hc-icon { width: 18px; height: 18px; }
+.hc-msg__lab { display: none; }
+.hc-msg.is-open .hc-msg__bar, .hc-msg:focus-visible .hc-msg__bar, .hc-msg:has(:focus-visible) .hc-msg__bar {
+  opacity: 1; pointer-events: auto; transform: none;
+  transition: opacity var(--hc-dur-fast) var(--hc-ease-out), transform var(--hc-dur-base) var(--hc-ease-out);
+}
 @media (hover: hover) {
-  .hc-msg:hover::before { background: color-mix(in oklab, var(--hc-surface-raised) 55%, transparent); }
-  .hc-msg:hover .hc-msg__bar { opacity: 1; pointer-events: auto; transition: opacity var(--hc-dur-fast) var(--hc-ease-out); }
+  .hc-msg:hover .hc-msg__bar { opacity: 1; pointer-events: auto; transform: none; transition: opacity var(--hc-dur-fast) var(--hc-ease-out), transform var(--hc-dur-base) var(--hc-ease-out); }
+}
+
+/* A touch screen wider than a phone: the same bar, with full-size targets. */
+@media (pointer: coarse) and (min-width: 47.51em) { .hc-msg__bar { top: -26px; } .hc-msg__bar .hc-ibtn { width: var(--hc-hit); height: var(--hc-hit); } }
+
+/* Phones: the same toolbar is a tray at the thumb. Nothing in the list moves when it opens. */
+@media (max-width: 47.5em) {
+  .hc-msg__bar, .hc-msg.is-grouped .hc-msg__bar {
+    position: fixed; inset: auto 0 0 0; top: auto; justify-self: normal; z-index: 12; display: flex; justify-content: space-between; gap: 0;
+    padding: var(--hc-space-2) calc(var(--hc-space-2) + var(--hc-safe-right)) calc(var(--hc-space-2) + var(--hc-safe-bottom)) calc(var(--hc-space-2) + var(--hc-safe-left));
+    border-radius: var(--hc-radius-lg) var(--hc-radius-lg) 0 0; background: var(--hc-pop); box-shadow: var(--hc-lip);
+    opacity: 1; transform: translateY(100%); visibility: hidden; pointer-events: none;
+    transition: transform var(--hc-dur-fast) var(--hc-ease-in), visibility 0s linear var(--hc-dur-fast);
+  }
+  .hc-msg.is-open .hc-msg__bar { display: flex; flex-wrap: nowrap; transform: none; visibility: visible; pointer-events: auto; transition: transform var(--hc-dur-base) var(--hc-ease-out), visibility 0s; }
+  .hc-msg:focus-visible:not(.is-open) .hc-msg__bar, .hc-msg:has(:focus-visible):not(.is-open) .hc-msg__bar { transform: translateY(100%); visibility: hidden; }
+  .hc-msg__bar .hc-ibtn { flex: 1 1 0; min-width: 0; width: auto; height: 56px; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: var(--hc-radius-md); color: var(--hc-text); }
+  .hc-msg__bar .hc-icon { width: 22px; height: 22px; }
+  .hc-msg__lab { display: block; font-size: var(--hc-text-2xs); line-height: 1.2; color: var(--hc-text-muted); }
+  .hc-msg__bar .hc-ibtn--danger, .hc-msg__bar .hc-ibtn--danger .hc-msg__lab { color: var(--hc-danger); }
+  /* The open row is marked; the rest of the list steps back a little so the eye stays on it. */
+  .hc-msg.is-open::before { background: var(--hc-wash-selected); }
 }
 .hc-msg__confirm { display: flex; gap: var(--hc-space-2); padding-top: var(--hc-space-1); }
 .hc-md { overflow-wrap: anywhere; }
@@ -391,7 +487,7 @@ a { color: var(--hc-accent); }
 .hc-incoming .hc-ibtn--danger { color: var(--hc-danger); }
 .hc-stage__ring { display: flex; align-items: center; justify-content: center; gap: var(--hc-space-2); text-align: center; font-size: var(--hc-text-lg); color: var(--hc-text-muted); padding-block: var(--hc-space-2); }
 .hc-stage__ring[data-state="declined"] { color: var(--hc-danger); }
-.hc-composer__row { display: flex; align-items: flex-end; gap: var(--hc-space-1); padding: var(--hc-space-1); background: var(--hc-surface-raised); border: thin solid var(--hc-line); border-radius: var(--hc-radius-md); }
+.hc-composer__row { display: flex; align-items: flex-end; gap: var(--hc-space-1); padding: var(--hc-space-1); background: var(--hc-surface-raised); border-radius: var(--hc-radius-md); }
 .hc-composer__row:focus-within { outline: calc(var(--hc-space-1) / 2) solid var(--hc-focus); outline-offset: calc(var(--hc-space-1) / 2); }
 .hc-composer textarea { flex: 1; min-width: 0; min-height: var(--hc-space-6); max-height: calc(var(--hc-space-8) * 2); padding: var(--hc-space-1) var(--hc-space-2); background: none; border: 0; outline: 0; resize: none; field-sizing: content; }
 .hc-composer__send:not(:disabled) { color: var(--hc-on-accent); background: var(--hc-accent); }
@@ -605,11 +701,7 @@ a { color: var(--hc-accent); }
   /* The door swings open once; its resting state (the end of the motion) is the drawn state. */
   .hc-welcome__leaf { animation: hc-door 900ms var(--hc-ease-spring) 250ms backwards; }
   @keyframes hc-door { from { transform: scaleX(3.2); } }
-  .hc-launch .hc-logo__leaf { animation: hc-door-mark 1.4s var(--hc-ease-out) infinite alternate; }
-  @keyframes hc-door-mark { from { transform: scaleX(1); } to { transform: scaleX(0.3); } }
 }
-.hc-launch { align-items: center; }
-.hc-launch .hc-logo { width: 64px; height: 64px; }
 @media (min-width: 47.51em) {
   .hc-onb__screen { justify-content: center; padding-top: calc(var(--hc-space-6) + var(--hc-safe-top)); padding-bottom: calc(var(--hc-space-6) + var(--hc-safe-bottom)); }
   .hc-onb__form { flex: none; }
@@ -671,8 +763,6 @@ a { color: var(--hc-accent); }
   .hc-left { padding: calc(var(--hc-space-2) + var(--hc-safe-top)) var(--hc-space-3) calc(var(--hc-space-2) + var(--hc-safe-bottom)) calc(var(--hc-space-3) + var(--hc-safe-left)); }
   .hc-right { padding-bottom: calc(var(--hc-space-3) + var(--hc-safe-bottom)); }
   .hc-msg { padding-inline: var(--hc-space-3); }
-  .hc-msg__bar { display: none; position: static; grid-column: 2; justify-self: start; opacity: 1; pointer-events: auto; }
-  .hc-msg.is-open .hc-msg__bar { display: flex; flex-wrap: wrap; }
   .hc-gimme { margin-inline: var(--hc-space-3); }
   .hc-composer, .hc-callbar { margin-inline: var(--hc-space-2); }
   .hc-composer { margin-bottom: var(--hc-space-2); }
@@ -851,7 +941,7 @@ p { text-wrap: pretty; }
 }
 
 /* Fields: the composer and inline fields lose the hard outline at rest; the focus ring is the edge. */
-.hc-composer__row { border-color: transparent; background: var(--hc-surface-raised); box-shadow: var(--hc-lip); border-radius: calc(var(--hc-radius-md) + 2px); }
+.hc-composer__row { background: var(--hc-surface-raised); box-shadow: var(--hc-lip); border-radius: calc(var(--hc-radius-md) + 2px); }
 
 /* The right column shares the shell; its tabs read as type, not buttons. */
 .hc-tab { font-size: var(--hc-text-md); padding-inline: var(--hc-space-2); }
@@ -1006,12 +1096,10 @@ p { text-wrap: pretty; }
 .hc-vrow:active { background: var(--hc-wash-press); }
 @media (hover: hover) { .hc-vrow:hover { background: var(--hc-wash-hover); } .hc-vrow:hover .hc-vrow__name { color: var(--hc-text); } }
 
-/* Rows arrive from above and leave to the side; the rows around them glide (useFlip, section 3.6). */
+/* Phase4: only the arriving row rises 4px; leaving rows unmount at once. */
 @media (prefers-reduced-motion: no-preference) {
   .hc-vrow.is-entering { animation: hc-vrow-in var(--hc-dur-base) var(--hc-ease-out) backwards; }
-  .hc-vrow.is-leaving { animation: hc-vrow-out var(--hc-dur-fast) var(--hc-ease-in) forwards; pointer-events: none; }
-  @keyframes hc-vrow-in { from { opacity: 0; transform: translateY(-6px); } }
-  @keyframes hc-vrow-out { to { opacity: 0; transform: translateX(-8px); } }
+  @keyframes hc-vrow-in { from { opacity: 0; transform: translateY(4px); } }
 }
 
 /* Phone: the drawer. Rows are a thumb tall; no tiles, no chevrons: the glyph says what a row is. */
@@ -1064,9 +1152,8 @@ p { text-wrap: pretty; }
 .hc-livepill { position: relative; }
 @media (prefers-reduced-motion: no-preference) {
   /* It lands with a small spring, then breathes three times and rests. Nothing in the sidebar blinks forever. */
-  .hc-livepill.is-entering { animation: hc-live-in var(--hc-dur-slow) var(--hc-ease-spring) backwards, hc-live-breathe 1.6s var(--hc-ease-out) var(--hc-dur-slow) 3; }
-  @keyframes hc-live-in { from { opacity: 0; transform: scale(0.6); } }
-  @keyframes hc-live-breathe { 50% { opacity: 0.55; } }
+  .hc-livepill.is-entering { animation: hc-live-in var(--hc-dur-slow) var(--hc-ease-out) backwards; }
+  @keyframes hc-live-in { from { opacity: 0; } }
 }
 
 /* Preview: a popover to the right of the row on wide screens, a sheet on phones. */
@@ -1157,7 +1244,7 @@ p { text-wrap: pretty; }
 @media (hover: hover) { .hc-people li:hover { background: var(--hc-wash-hover); } }
 
 /* Person card: a popover beside the row on wide screens, a sheet on phones. Also the per-person call controls. */
-.hc-personcard { width: 280px; padding: var(--hc-space-4); gap: var(--hc-space-3); }
+.hc-personcard { display: flex; flex-direction: column; width: 280px; padding: var(--hc-space-4); gap: var(--hc-space-3); }
 .hc-personcard__top { display: flex; align-items: flex-end; gap: var(--hc-space-3); }
 .hc-personcard__top > span:last-child { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; padding-bottom: 2px; }
 .hc-personcard__top strong { font-size: var(--hc-text-lg); letter-spacing: var(--hc-tracking-tight); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1280,3 +1367,453 @@ p { text-wrap: pretty; }
 
 /* Volume for the sound of a shared screen: a slider in the caption, 44 px tall to touch. */
 .hc-tile__sharevol { pointer-events: auto; width: 6rem; min-height: var(--hc-hit); margin: 0; accent-color: var(--hc-accent); }
+
+/*
+ * HC-040 section 10: QR login. New rules; append to index.css. The /link page has its own inline CSS
+ * (design/040/link.html) because the server serves it without the client bundle.
+ */
+/* Number plates: the two-digit check number, each digit on a lit doorway, like the number on a front door. */
+.hc-plates { display: inline-flex; gap: var(--hc-space-2); }
+.hc-plate {
+  display: grid; place-items: center; width: 64px; height: 76px; padding-top: 10px;
+  border-radius: 50% 50% var(--hc-radius-md) var(--hc-radius-md) / 42% 42% var(--hc-radius-md) var(--hc-radius-md);
+  background: var(--hc-accent); color: var(--hc-on-accent);
+  font-family: var(--hc-font-initial); font-size: 2.5rem; font-weight: var(--hc-weight-bold); line-height: 1; font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hc-plate { animation: hc-plate-in var(--hc-dur-slow) var(--hc-ease-spring) backwards; }
+  .hc-plate + .hc-plate { animation-delay: var(--hc-stagger); }
+  @keyframes hc-plate-in { from { opacity: 0; transform: translateY(var(--hc-space-2)) scale(0.92); } }
+}
+
+/* Countdown ring: two half discs that turn out of view. Transform only. */
+.hc-ring {
+  position: relative; display: inline-block; flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--hc-line-soft);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px));
+}
+.hc-ring i { position: absolute; inset: 0; clip-path: inset(0 0 0 50%); }
+.hc-ring i + i { clip-path: inset(0 50% 0 0); }
+.hc-ring i::before { content: ""; position: absolute; inset: 0; background: var(--hc-live); clip-path: inset(0 0 0 50%); }
+.hc-ring i + i::before { clip-path: inset(0 50% 0 0); }
+@media (prefers-reduced-motion: no-preference) {
+  .hc-ring i::before { animation: hc-ring-a var(--hc-ring-s, 60s) linear forwards; }
+  .hc-ring i + i::before { animation-name: hc-ring-b; }
+  @keyframes hc-ring-a { 50%, 100% { transform: rotate(180deg); } }
+  @keyframes hc-ring-b { 0%, 50% { transform: none; } 100% { transform: rotate(180deg); } }
+}
+
+/* Waiting: three small doorways breathing in turn. */
+.hc-wait { display: inline-flex; align-items: flex-end; gap: 5px; }
+.hc-wait i { width: 8px; height: 10px; border-radius: 50% 50% 2px 2px / 44% 44% 2px 2px; background: var(--hc-text-muted); }
+@media (prefers-reduced-motion: no-preference) {
+  .hc-wait i { animation: hc-signal-seek 1.2s var(--hc-ease-out) infinite; } /* keyframes: section 6 */
+  .hc-wait i:nth-child(2) { animation-delay: 160ms; }
+  .hc-wait i:nth-child(3) { animation-delay: 320ms; }
+}
+
+/* The code itself. Always dark on white. Before "Show my QR code" the tile holds a decoy, never the real code. */
+.hc-qr { position: relative; width: 232px; aspect-ratio: 1; padding: 14px; border-radius: var(--hc-radius-lg); background: var(--hc-qr-paper); color: var(--hc-qr-ink); overflow: hidden; }
+.hc-qr__svg { display: block; width: 100%; height: 100%; fill: currentColor; shape-rendering: crispEdges; }
+.hc-qr__veil { position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in oklab, var(--hc-qr-paper) 55%, transparent); }
+.hc-qr.is-hidden .hc-qr__svg { filter: blur(9px); opacity: 0.55; transform: scale(1.06); }
+.hc-qr__veil .hc-btn { min-height: var(--hc-hit); padding-inline: var(--hc-space-4); box-shadow: 0 6px 16px -8px color-mix(in oklab, var(--hc-qr-ink) 60%, transparent); }
+@media (prefers-reduced-motion: no-preference) {
+  /* Reveal: the veil and the decoy fade out over the sharp code. Opacity and transform only; the blur itself never animates. */
+  .hc-qr__code { animation: hc-qr-in var(--hc-dur-base) var(--hc-ease-out); }
+  @keyframes hc-qr-in { from { opacity: 0; transform: scale(1.04); } }
+}
+
+/* Settings, Log in with QR code. One card: the code, or the approval that follows a scan. */
+.hc-qrlogin { display: flex; flex-direction: column; gap: var(--hc-space-4); max-width: 26rem; }
+.hc-qrlogin__card { display: flex; flex-direction: column; align-items: center; gap: var(--hc-space-4); padding: var(--hc-space-5); border-radius: var(--hc-radius-lg); background: var(--hc-shell); text-align: center; }
+.hc-qrlogin__timer { display: flex; align-items: center; gap: var(--hc-space-2); min-height: var(--hc-space-6); font-size: var(--hc-text-sm); color: var(--hc-text-muted); }
+.hc-qrlogin__timer .hc-btn { min-height: var(--hc-space-6); }
+.hc-qrlogin__ask { display: flex; flex-direction: column; align-items: center; gap: var(--hc-space-1); }
+.hc-qrlogin__ask > .hc-icon { width: 28px; height: 28px; color: var(--hc-text-muted); margin-bottom: var(--hc-space-1); }
+.hc-qrlogin__ask strong { font-size: var(--hc-text-lg); letter-spacing: var(--hc-tracking-tight); overflow-wrap: anywhere; }
+.hc-qrlogin__ask p { color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-qrlogin__actions { align-self: stretch; display: flex; flex-direction: column; gap: var(--hc-space-1); }
+.hc-qrlogin__actions .hc-btn { min-height: var(--hc-hit); font-size: var(--hc-text-md); }
+.hc-qrlogin__done { color: var(--hc-live); }
+.hc-qrlogin__done .hc-icon { width: 28px; height: 28px; stroke-width: 2; }
+
+/* The new device (onboarding screens): one centred column under the title. */
+.hc-qrnew { display: flex; flex-direction: column; align-items: center; gap: var(--hc-space-4); padding-block: var(--hc-space-5); text-align: center; }
+.hc-qrnew__wait { display: inline-flex; align-items: center; gap: var(--hc-space-3); color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-qrnew .hc-empty__door { width: 64px; height: 80px; margin: 0; }
+.hc-qrnew__who { display: flex; flex-direction: column; align-items: center; gap: var(--hc-space-3); }
+.hc-qrnew__who strong { font-size: var(--hc-text-xl); line-height: 1.15; letter-spacing: var(--hc-tracking-tight); overflow-wrap: anywhere; }
+.hc-qrnew__who small { font-size: var(--hc-text-sm); overflow-wrap: anywhere; }
+.hc-onb__title.is-centered { align-items: center; text-align: center; }
+/* The three steps of the explainer: plain numbered lines, no rail, no tiles. */
+.hc-qrsteps { display: flex; flex-direction: column; gap: var(--hc-space-3); }
+.hc-qrsteps li { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); column-gap: var(--hc-space-2); line-height: 1.45; }
+.hc-qrsteps__n { font-weight: var(--hc-weight-bold); color: var(--hc-text-muted); }
+
+/*
+ * The typed check number on the device that shows the code (LINK-V1 section 5, R-5). The number is never
+ * displayed here: the person reads it off the new device and types it. One real input lies over two empty
+ * doorways, so the keyboard, paste and screen readers get a normal field and the eye gets the same two
+ * plates the new device shows. Dark doorways here, lit ones there.
+ */
+.hc-codefield { position: relative; display: inline-flex; gap: var(--hc-space-2); border-radius: var(--hc-radius-md); }
+.hc-codefield input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; font-size: 1rem; cursor: text; }
+.hc-codefield .hc-plate { background: var(--hc-wash-selected); color: var(--hc-text); animation: none; }
+.hc-codefield .hc-plate.is-next { box-shadow: inset 0 0 0 2px var(--hc-line-soft); }
+.hc-codefield:focus-within .hc-plate.is-next { box-shadow: inset 0 0 0 2px var(--hc-focus); }
+.hc-qrlogin__label { font-size: var(--hc-text-md); line-height: 1.4; overflow-wrap: anywhere; }
+/* Password (desktop) or the wait for the phone's own unlock: same card, same width as the actions. */
+.hc-qrlogin__verify { align-self: stretch; display: flex; flex-direction: column; gap: var(--hc-space-3); text-align: start; }
+.hc-qrlogin__verify .hc-field input, .hc-qrlogin__verify .hc-btn { min-height: var(--hc-hit); }
+.hc-qrlogin__verify .hc-btn { font-size: var(--hc-text-md); }
+/* The host takes its own line, one step smaller, so a long name never strands the question mark. */
+.hc-qrnew__host { display: block; font-size: var(--hc-text-lg); overflow-wrap: anywhere; }
+.hc-qrlogin__warn { color: var(--hc-danger); }
+.hc-qrlogin__warn .hc-icon { width: 28px; height: 28px; }
+
+/*
+ * HC-040 section 11: encryption surfaces. New rules; append to index.css.
+ */
+/* The label in a DM header: an icon and the exact words of 11.1. It is a button (opens the details sheet). */
+.hc-lockline { display: inline-flex; align-items: center; gap: var(--hc-space-1); flex: none; min-height: var(--hc-space-5); padding: 0 var(--hc-space-1); margin-inline: calc(var(--hc-space-1) * -1); border-radius: var(--hc-radius-xs); color: var(--hc-text-muted); font-size: var(--hc-text-sm); white-space: nowrap; }
+.hc-lockline .hc-icon { width: 14px; height: 14px; stroke-width: 1.8; }
+.hc-lockline.is-alert { color: var(--hc-danger); }
+@media (hover: hover) { .hc-lockline:hover { color: var(--hc-text); background: var(--hc-wash-hover); } .hc-lockline.is-alert:hover { color: var(--hc-danger); } }
+.hc-tip--wrap { white-space: normal; width: max-content; max-width: 16rem; text-align: start; line-height: 1.4; padding: var(--hc-space-2) var(--hc-space-3); }
+.hc-tip[data-below] { bottom: auto; top: calc(100% + var(--hc-space-2)); }
+.hc-lockline > span:not(.hc-tip) { overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 47.5em) { .hc-header__bio { display: none; } .hc-lockline { min-width: 0; min-height: 0; margin: 0; padding: 0; font-size: var(--hc-text-xs); } }
+
+/* A mark in the timeline: where encryption starts, where a key changed. Sits like the day label. */
+.hc-mark { display: flex; align-items: center; justify-content: center; gap: var(--hc-space-2); padding: var(--hc-space-4) var(--hc-space-5) var(--hc-space-2); font-size: var(--hc-text-xs); color: var(--hc-text-muted); text-align: center; }
+.hc-mark .hc-icon { width: 14px; height: 14px; flex: none; }
+.hc-mark.is-alert { color: var(--hc-danger); }
+
+/* A message this device cannot open. */
+.hc-sealed { display: inline-flex; align-items: center; gap: var(--hc-space-2); color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-sealed .hc-icon { width: 16px; height: 16px; }
+
+/* The note above the composer: not encrypted yet, or sending paused. */
+.hc-composer__note { display: flex; align-items: center; gap: var(--hc-space-2); padding: 0 var(--hc-space-2) var(--hc-space-1); font-size: var(--hc-text-sm); color: var(--hc-text-muted); }
+.hc-composer__note .hc-icon { width: 16px; height: 16px; flex: none; }
+
+/* The banner that stops you when a key changed, or when this device has no keys. One card above the composer. */
+.hc-keybanner { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--hc-space-3); row-gap: var(--hc-space-1); margin: 0 var(--hc-space-4) var(--hc-space-2); padding: var(--hc-space-4); border-radius: var(--hc-radius-md); background: var(--hc-surface-raised); box-shadow: var(--hc-lip); }
+.hc-keybanner > .hc-icon { grid-row: 1 / span 2; width: 22px; height: 22px; margin-top: 1px; color: var(--hc-text-muted); }
+.hc-keybanner.is-alert > .hc-icon { color: var(--hc-danger); }
+.hc-keybanner strong { grid-column: 2; }
+.hc-keybanner p { grid-column: 2; font-size: var(--hc-text-sm); color: var(--hc-text-muted); max-width: 38rem; }
+.hc-keybanner__actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: var(--hc-space-2); padding-top: var(--hc-space-2); }
+.hc-keybanner__actions .hc-btn:not(.hc-btn--primary, .hc-btn--text) { background: var(--hc-wash-selected); }
+@media (max-width: 47.5em) {
+  .hc-keybanner { margin-inline: var(--hc-space-2); padding: var(--hc-space-3); }
+  .hc-keybanner__actions { grid-column: 1 / -1; flex-direction: column; }
+}
+
+/* Safety number: twelve groups of five digits. Tabular, bold, easy to read aloud. */
+.hc-safety__who { display: flex; align-items: center; gap: var(--hc-space-2); color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-safety__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--hc-space-3) var(--hc-space-2); padding: var(--hc-space-4); border-radius: var(--hc-radius-md); background: var(--hc-wash-hover); font-size: var(--hc-text-md); font-weight: var(--hc-weight-bold); letter-spacing: 0.04em; text-align: center; font-variant-numeric: tabular-nums; -webkit-user-select: text; user-select: text; }
+.hc-sheet__text { font-size: var(--hc-text-sm); color: var(--hc-text-muted); line-height: 1.45; }
+.hc-sheet__text strong { color: var(--hc-text); }
+@media (max-width: 26em) { .hc-safety__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* Recovery key: 24 numbered words, read down each column. */
+.hc-words { display: grid; grid-auto-flow: column; grid-template-rows: repeat(6, auto); grid-auto-columns: minmax(0, 1fr); gap: var(--hc-space-1) var(--hc-space-3); padding: var(--hc-space-4); border-radius: var(--hc-radius-lg); background: var(--hc-surface-raised); box-shadow: var(--hc-lip); counter-reset: hc-word; -webkit-user-select: text; user-select: text; }
+.hc-words li { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); align-items: baseline; column-gap: var(--hc-space-1); min-height: 28px; counter-increment: hc-word; font-weight: var(--hc-weight-bold); }
+.hc-words li::before { content: counter(hc-word); font-size: var(--hc-text-xs); font-weight: var(--hc-weight-regular); color: var(--hc-text-muted); text-align: end; padding-inline-end: 2px; -webkit-user-select: none; user-select: none; }
+.hc-words.is-hidden li { color: transparent; }
+.hc-words.is-hidden li::after { content: ""; grid-column: 2; grid-row: 1; align-self: center; height: 10px; width: 80%; border-radius: 5px; background: var(--hc-wash-selected); }
+.hc-recovery { display: flex; flex-direction: column; gap: var(--hc-space-4); }
+.hc-recovery__row { display: flex; align-items: center; gap: var(--hc-space-2); flex-wrap: wrap; }
+.hc-recovery__row .hc-ring { margin-inline-start: auto; }
+.hc-recovery__pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--hc-space-3); }
+/* The recovery screens are a little wider than a sign-in form. */
+.hc-onb__screen.is-wide { max-width: calc(34rem + var(--hc-space-5) * 2); }
+@media (max-width: 47.5em) {
+  .hc-words { grid-template-rows: repeat(8, auto); padding: var(--hc-space-3); column-gap: var(--hc-space-2); }
+  .hc-words li { min-height: 32px; grid-template-columns: 1.25rem minmax(0, 1fr); font-size: var(--hc-text-sm); }
+}
+
+/* Security in Settings: a status card, then rows. */
+.hc-status { display: flex; align-items: center; gap: var(--hc-space-3); padding: var(--hc-space-4); border-radius: var(--hc-radius-lg); background: var(--hc-shell); }
+.hc-status > .hc-icon { width: 24px; height: 24px; flex: none; color: var(--hc-live); }
+.hc-status.is-off > .hc-icon { color: var(--hc-text-muted); }
+.hc-status > span { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
+.hc-status small { font-size: var(--hc-text-sm); }
+
+/* The reset warning: a list of what will happen, and a box to tick before the red button wakes. */
+.hc-consequences { display: flex; flex-direction: column; gap: var(--hc-space-2); font-size: var(--hc-text-sm); }
+.hc-consequences li { display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: var(--hc-space-2); line-height: 1.45; }
+.hc-consequences .hc-icon { width: 16px; height: 16px; margin-top: 2px; color: var(--hc-danger); stroke-width: 2; }
+.hc-consequences .is-kept .hc-icon { color: var(--hc-text-muted); }
+.hc-sheet .hc-check { align-items: flex-start; gap: var(--hc-space-3); padding: var(--hc-space-3); border-radius: var(--hc-radius-md); background: var(--hc-wash-hover); line-height: 1.4; }
+.hc-sheet .hc-check input { margin-top: 2px; flex: none; }
+.hc-sheet__icon { width: 28px; height: 28px; color: var(--hc-danger); }
+
+/* A plaintext row inside a DM that has the lock (DM-V1 10.7, R-2): two quiet words beside the time. Never the lock, never the accent. */
+.hc-msg__plain { font-size: var(--hc-text-xs); color: var(--hc-text-muted); }
+
+/*
+ * HC-040 section 12: how security works. Three slides after an account is first created, and the
+ * same three ideas as a page in Settings with the "What the host can see" table.
+ * PASTE: at the end of client/src/ui/styles/index.css.
+ */
+
+/* ---- Illustrations (viewBox 0 0 240 180). Flat tone, one lit thing per picture. -------------- */
+.hc-ill { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; overflow: visible; pointer-events: none; }
+.hc-ill__wall { fill: color-mix(in oklab, var(--hc-text) 13%, var(--hc-stage)); }
+.hc-ill__paper { fill: color-mix(in oklab, var(--hc-text) 20%, var(--hc-stage)); }
+.hc-ill__ink { fill: var(--hc-text); }
+.hc-ill__lit { fill: var(--hc-live); }
+.hc-ill__leaf { fill: var(--hc-on-accent); opacity: 0.38; transform-box: fill-box; transform-origin: left center; }
+.hc-ill__pane { fill: color-mix(in oklab, var(--hc-live) 42%, transparent); }
+.hc-ill__cut { fill: var(--hc-stage); }
+.hc-ill__word { fill: color-mix(in oklab, var(--hc-text) 18%, transparent); }
+.hc-ill__stop { stop-color: var(--hc-live); }
+.hc-ill__rule, .hc-ill__crease, .hc-ill__hole { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.hc-ill__rule { stroke: var(--hc-line-soft); stroke-width: 2; }
+.hc-ill__rule.is-dotted { stroke-width: 2.5; stroke-dasharray: 0.1 7; }
+.hc-ill__crease { stroke: var(--hc-stage); stroke-width: 2.5; }
+.hc-ill__hole { stroke: var(--hc-on-accent); stroke-width: 2.6; }
+.hc-ill__env, .hc-ill__seal, .hc-ill__key, .hc-ill__spill { transform-box: fill-box; transform-origin: center; }
+.hc-ill__spill { transform-origin: center top; }
+.hc-ill__key { transform-origin: 19% 60%; } /* the middle of the bow: the key turns in the hand */
+
+/* ---- Slides ---------------------------------------------------------------------------------- */
+.hc-slides .hc-onb__top { justify-content: space-between; }
+.hc-slides .hc-onb__top > :only-child { margin-inline-start: auto; }
+/* Progress: three doorways. The one you are in is lit. */
+.hc-slides__steps { display: flex; align-items: flex-end; gap: var(--hc-space-2); padding-inline-end: var(--hc-space-1); }
+.hc-slides__steps li { width: 10px; height: 12px; border-radius: 50% 50% 2px 2px / 42% 42% 2px 2px; background: var(--hc-wash-press); }
+.hc-slides__steps li.is-done { background: var(--hc-text-muted); }
+.hc-slides__steps li.is-current { background: var(--hc-live); }
+.hc-slide { flex: 1; display: flex; flex-direction: column; gap: var(--hc-space-3); }
+.hc-slide > .hc-ill { max-width: 20rem; align-self: center; margin-block: auto; }
+.hc-slide .hc-onb__title { gap: var(--hc-space-2); padding-block: var(--hc-space-2) 0; }
+.hc-slide .hc-onb__title p { line-height: 1.5; }
+.hc-slide .hc-onb__title p.hc-slide__lede { color: var(--hc-text); }
+@media (min-width: 47.51em) {
+  .hc-slides .hc-onb__screen { justify-content: center; }
+  .hc-slide { flex: none; min-height: 29rem; }
+  .hc-slide > .hc-ill { margin-block: 0 var(--hc-space-2); }
+  .hc-slides .hc-onb__actions { margin-top: var(--hc-space-4); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* A slide comes in from the side you are going to (--hc-slide-dir: 1 forward, -1 back). */
+  .hc-slide { animation: hc-slides-in var(--hc-dur-slow) var(--hc-ease-out) backwards; }
+  .hc-slide[data-state="exit"] { animation: hc-slides-out var(--hc-dur-fast) var(--hc-ease-in) forwards; }
+  @keyframes hc-slides-in { from { opacity: 0; transform: translateX(calc(var(--hc-space-5) * var(--hc-slide-dir, 1))); } }
+  @keyframes hc-slides-out { to { opacity: 0; transform: translateX(calc(var(--hc-space-4) * var(--hc-slide-dir, 1) * -1)); } }
+
+  /* Each picture moves once. The drawn state is the end of the motion. */
+  .hc-slide .hc-ill--house .hc-ill__leaf { animation: hc-ill-door var(--hc-dur-slower) var(--hc-ease-spring) var(--hc-dur-base) backwards; }
+  .hc-slide .hc-ill--house .hc-ill__spill { animation: hc-ill-spill var(--hc-dur-slower) var(--hc-ease-out) var(--hc-dur-base) backwards; }
+  .hc-slide .hc-ill--house .hc-ill__pane { animation: hc-ill-fade var(--hc-dur-slow) var(--hc-ease-out) backwards; animation-delay: calc(var(--hc-dur-slower) + var(--hc-stagger) * var(--i, 0)); }
+  .hc-slide .hc-ill--letter .hc-ill__env { animation: hc-ill-carry var(--hc-dur-slower) var(--hc-ease-out) backwards; }
+  .hc-slide .hc-ill--letter .hc-ill__seal { animation: hc-ill-stamp var(--hc-dur-slow) var(--hc-ease-spring) var(--hc-dur-slow) backwards; }
+  .hc-slide .hc-ill--letter .hc-ill__speed { animation: hc-ill-fade var(--hc-dur-slow) var(--hc-ease-out) var(--hc-dur-slow) backwards; }
+  .hc-slide .hc-ill--key .hc-ill__key { animation: hc-ill-turn var(--hc-dur-slower) var(--hc-ease-spring) var(--hc-stagger) backwards; }
+  .hc-slide .hc-ill--key .hc-ill__word { animation: hc-ill-fade var(--hc-dur-base) var(--hc-ease-out) backwards; animation-delay: calc(var(--hc-dur-slow) + 25ms * var(--i, 0)); }
+  @keyframes hc-ill-door { from { transform: scaleX(2.35); } }
+  @keyframes hc-ill-spill { from { opacity: 0; transform: scaleY(0.4); } }
+  @keyframes hc-ill-fade { from { opacity: 0; } }
+  @keyframes hc-ill-carry { from { opacity: 0; transform: translateX(-36px); } }
+  @keyframes hc-ill-stamp { from { opacity: 0; transform: scale(1.7); } }
+  @keyframes hc-ill-turn { from { opacity: 0; transform: rotate(-18deg); } }
+}
+
+/* ---- The page in Settings -------------------------------------------------------------------- */
+.hc-explain { display: flex; flex-direction: column; gap: var(--hc-space-5); }
+.hc-explain h3 { font-size: var(--hc-text-md); }
+.hc-explain__part { display: flex; flex-direction: column; gap: var(--hc-space-2); }
+.hc-explain__part > p { color: var(--hc-text-muted); font-size: var(--hc-text-sm); line-height: 1.5; }
+/* The three ideas: a small picture and a few lines each. */
+.hc-points { display: flex; flex-direction: column; gap: var(--hc-space-4); }
+.hc-point { display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: var(--hc-space-4); align-items: center; }
+.hc-point > span { display: flex; flex-direction: column; gap: 2px; }
+.hc-point small { font-size: var(--hc-text-sm); line-height: 1.45; }
+
+/* What the host can see. A real table; each row is a tile. An eye: the host can see it. A lock: it is sealed. */
+.hc-hostsees { display: flex; flex-direction: column; gap: 2px; width: 100%; font-size: var(--hc-text-sm); text-align: start; }
+.hc-hostsees caption { text-align: start; font-size: var(--hc-text-md); font-weight: var(--hc-weight-bold); letter-spacing: var(--hc-tracking-tight); padding-bottom: var(--hc-space-2); }
+.hc-hostsees thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.hc-hostsees tbody { display: flex; flex-direction: column; gap: 2px; }
+.hc-hostsees tr { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: var(--hc-space-3); align-items: center; min-height: 56px; padding: var(--hc-space-2) var(--hc-space-4); background: var(--hc-surface-raised); border-radius: var(--hc-radius-sm); }
+.hc-hostsees tr:first-child { border-top-left-radius: var(--hc-radius-md); border-top-right-radius: var(--hc-radius-md); }
+.hc-hostsees tr:last-child { border-bottom-left-radius: var(--hc-radius-md); border-bottom-right-radius: var(--hc-radius-md); }
+.hc-hostsees th { font-weight: var(--hc-weight-regular); text-align: start; line-height: 1.3; }
+.hc-hostsees td { display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: var(--hc-space-2); align-items: start; line-height: 1.3; }
+.hc-hostsees td > .hc-icon { width: 16px; height: 16px; margin-top: 1px; color: var(--hc-text-muted); }
+.hc-hostsees td[data-sees="sealed"] > .hc-icon { color: var(--hc-live); }
+.hc-hostsees td strong { grid-column: 2; }
+.hc-hostsees td small { grid-column: 2; font-size: var(--hc-text-xs); line-height: 1.35; }
+@media (max-width: 47.5em) {
+  .hc-point { grid-template-columns: 72px minmax(0, 1fr); column-gap: var(--hc-space-3); }
+  .hc-hostsees tr { padding-inline: var(--hc-space-3); }
+}
+
+/* Security integration: the existing Sheet scrolls above the keyboard; phone controls keep their contract hit area. */
+.hc-sheet { max-height: calc(100dvh - var(--hc-safe-top, 0px) - var(--hc-safe-bottom, 0px) - 24px); overflow-y: auto; overscroll-behavior: contain; }
+.hc-sheet .hc-btn, .hc-sheet .hc-ibtn, .hc-lockline { min-height: 44px; }
+.hc-sheet textarea { width: 100%; min-width: 0; font: inherit; padding: var(--hc-space-3); background: var(--hc-wash-hover); color: var(--hc-text); border-radius: var(--hc-radius-md); resize: vertical; }
+.hc-sheet input, .hc-sheet textarea { scroll-margin-block: 32px; }
+.hc-sheet p, .hc-sheet strong, .hc-sheet label { overflow-wrap: anywhere; }
+/* Same flow allocation as the update notice: the shell shrinks, its header stays visible.
+   Portalled full-screen flows use the measured notice height; ordinary sheets retain their safe areas. */
+.hc-notices { flex: none; }
+.hc-notices:not(:empty) ~ * { --hc-safe-top: 0px; }
+.hc-security-notice { flex: none; display: flex; align-items: center; gap: var(--hc-space-3); padding: calc(var(--hc-space-2) + var(--hc-safe-top, 0px)) calc(var(--hc-space-4) + var(--hc-safe-right, 0px)) var(--hc-space-2) calc(var(--hc-space-4) + var(--hc-safe-left, 0px)); background: var(--hc-surface-raised); font-size: var(--hc-text-sm); }
+.hc-security-notice p { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.hc-security-notice .hc-btn { flex: none; min-height: var(--hc-hit); }
+.hc-security-notice ~ * { --hc-safe-top: 0px; }
+.hc-header__title > .hc-lockline { max-width: 100%; flex: none; }
+.hc-safety__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 47.5em) {
+  .hc-sheet { max-width: 100%; padding: var(--hc-space-3); }
+  .hc-lockline { min-height: 44px; white-space: normal; text-align: start; }
+  .hc-sheet .hc-keybanner { margin: 0; }
+}
+.hc-security-illustration { width: 100%; max-width: 20rem; align-self: center; }
+.hc-point > .hc-security-illustration { width: 96px; }
+.hc-sheet .hc-slide { min-height: 0; }
+@media (max-width: 47.5em) { .hc-point > .hc-security-illustration { width: 72px; } }
+
+/* Security titles carry protected copy and must wrap fully at phone width. */
+[data-testid="security-flow"] .hc-sheet__head h2,
+[data-testid="screen-link-receive"] .hc-sheet__head h2,
+[data-testid="dm-security-details"] .hc-sheet__head h2 { white-space: normal; overflow: visible; }
+[data-testid="security-flow"] { width: min(34rem, 100vw); }
+@media (max-width: 47.5em) {
+  .hc-header__title:has(> .hc-lockline) { flex-direction: column; align-items: flex-start; gap: 0; }
+  .hc-header:has(.hc-lockline) { height: auto; min-height: 72px; }
+}
+/* The first-run security and receiving flows use Fable's existing onboarding column. */
+.hc-security-onb { position: fixed; inset: var(--hc-notices-height, 0px) 0 0; z-index: 32; }
+.hc-security-onb .hc-onb__screen { gap: var(--hc-space-4); padding-top: calc(var(--hc-space-2) + var(--hc-flow-safe-top, var(--hc-safe-top))); }
+.hc-security-onb .hc-btn, .hc-security-onb .hc-ibtn { min-height: 44px; }
+.hc-security-onb textarea { width: 100%; min-width: 0; padding: var(--hc-space-3); background: var(--hc-surface-raised); border-radius: var(--hc-radius-md); }
+.hc-security-onb .hc-onb__title { position: relative; padding-inline-end: 44px; }
+.hc-security-onb .hc-onb__title > .hc-ibtn { position: absolute; inset-inline-end: 0; top: 0; }
+@media (pointer: coarse), (max-width: 47.5em) { .hc-msg__plain { min-height: 44px; min-width: 44px; } }
+
+@media (max-width: 47.5em) {
+  .hc-msg { isolation: auto; }
+  .hc-messages[data-action-switch] .hc-msg.is-open .hc-msg__bar { transition: none; }
+  .hc-msg.is-open .hc-msg__bar.is-suspended { visibility: hidden; pointer-events: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hc-msg__bar, .hc-msg.is-open .hc-msg__bar { transform: none; transition: none; }
+}
+
+/*
+ * HC-040 section 13: the splash and the shell entrance. Transform and opacity only.
+ * PASTE: at the end of client/src/ui/styles/index.css. Remove the two .hc-launch rules and the
+ * hc-door-mark line they use (index.css 586 to 590); Splash replaces the Launch screen.
+ */
+
+/* The splash is the mark alone on the page colour. It has no background of its own: until the app
+   is ready nothing else is drawn, and when it is ready the shell rises in underneath. */
+.hc-splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; pointer-events: none; }
+.hc-splash__mark { position: relative; width: 88px; height: 88px; visibility: hidden; }
+.hc-splash[data-intro] .hc-splash__mark { visibility: visible; }
+/* The window the mark rises through. It and the logo move by equal and opposite amounts, so the
+   logo stays where it is and is uncovered from the ground up. */
+.hc-splash__rise { display: block; width: 100%; height: 100%; overflow: hidden; overflow: clip; }
+.hc-splash .hc-logo { width: 100%; height: 100%; }
+.hc-splash .hc-logo__leaf { transition: none; }
+/* Light from the doorway on the floor. The same 32-unit grid as the logo, continued downward. */
+.hc-splash__spill { position: absolute; left: 0; top: 90.625%; width: 100%; height: 43.75%; overflow: visible; }
+.hc-splash__stop { stop-color: var(--hc-live); }
+.hc-splash__status { position: absolute; top: calc(50% + 88px); left: 0; right: 0; text-align: center; font-size: var(--hc-text-sm); color: var(--hc-text-muted); padding-inline: var(--hc-space-5); }
+
+/* While the mark flies to its place in the picker, the real one waits out of sight. */
+.hc-shell[data-enter] .hc-picker .hc-logo { visibility: hidden; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Intro, from the moment [data-intro] is set (300 ms after mount, if the app is not ready by then). */
+  .hc-splash[data-intro] .hc-splash__rise { animation: hc-splash-rise var(--hc-dur-slow) var(--hc-ease-out) backwards; }
+  .hc-splash[data-intro] .hc-logo { animation: hc-splash-hold var(--hc-dur-slow) var(--hc-ease-out) backwards; }
+  .hc-splash[data-intro] .hc-logo__lit { animation: hc-fade-in var(--hc-dur-base) var(--hc-ease-out) var(--hc-dur-fast) backwards; }
+  .hc-splash[data-intro] .hc-logo__leaf { animation: hc-splash-door var(--hc-dur-slow) var(--hc-ease-spring) var(--hc-dur-base) backwards; }
+  .hc-splash[data-intro] .hc-splash__spill { animation: hc-fade-in var(--hc-dur-slow) var(--hc-ease-out) var(--hc-dur-base) backwards; }
+  @keyframes hc-splash-rise { from { transform: translateY(100%); } }
+  @keyframes hc-splash-hold { from { transform: translateY(-100%); } }
+  @keyframes hc-splash-door { from { transform: scaleX(2.35); } }
+  /* Still waiting after the intro: the door breathes. After four seconds the status line says what for. */
+  .hc-splash[data-intro]:not([data-out]) .hc-logo__leaf { animation: hc-splash-door var(--hc-dur-slow) var(--hc-ease-spring) var(--hc-dur-base) backwards, hc-splash-wait 1.4s var(--hc-ease-out) 1.4s infinite alternate; }
+  @keyframes hc-splash-wait { to { transform: scaleX(0.3); } }
+  .hc-splash__status { animation: hc-fade-in var(--hc-dur-slow) var(--hc-ease-out) 4s backwards; }
+
+  /* Exit. fly: the mark travels to the picker's logo and becomes it. fade: no logo on screen to land on. */
+  .hc-splash[data-out="fly"] .hc-splash__mark { animation: hc-splash-fly var(--hc-dur-slower) var(--hc-ease-out) forwards; }
+  .hc-splash[data-out="fade"] .hc-splash__mark { animation: hc-splash-fade var(--hc-dur-base) var(--hc-ease-in) forwards; }
+  .hc-splash[data-out] .hc-splash__spill, .hc-splash[data-out] .hc-splash__status { animation: hc-fade-out var(--hc-dur-fast) var(--hc-ease-in) forwards; }
+  @keyframes hc-splash-fly { to { transform: translate(var(--hc-splash-dx, 0px), var(--hc-splash-dy, 0px)) scale(var(--hc-splash-s, 1)); } }
+  @keyframes hc-splash-fade { to { opacity: 0; transform: scale(0.92); } }
+
+  /* Shell entrance: the sidebar, then the room, one stagger apart. Also used on its own when the splash was skipped. */
+  .hc-shell[data-enter] > .hc-left, .hc-shell[data-enter] > .hc-center, .hc-shell[data-enter] > .hc-right { animation: hc-shell-in var(--hc-dur-slow) var(--hc-ease-out) backwards; }
+  .hc-shell[data-enter] > .hc-center, .hc-shell[data-enter] > .hc-right { animation-delay: var(--hc-stagger); }
+  @keyframes hc-shell-in { from { opacity: 0; transform: translateY(var(--hc-space-3)); } }
+}
+/* Phones: one column fills the screen and the other is parked behind it, so the shell rises as one piece. */
+@media (prefers-reduced-motion: no-preference) and (max-width: 47.5em) {
+  .hc-shell[data-enter] { animation: hc-shell-in var(--hc-dur-slow) var(--hc-ease-out) backwards; }
+  .hc-shell[data-enter] > .hc-left, .hc-shell[data-enter] > .hc-center, .hc-shell[data-enter] > .hc-right { animation: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Nothing moves: the mark is simply there, then fades as the shell appears in place. */
+  .hc-splash[data-out] { animation: hc-splash-gone var(--hc-dur-base) linear forwards; }
+  @keyframes hc-splash-gone { to { opacity: 0; } }
+}
+
+.hc-root[data-launch-waiting] > .hc-shell, .hc-root[data-launch-waiting] > .hc-onb { visibility: hidden; }
+@media (prefers-reduced-motion: no-preference) {
+  .hc-shell[data-enter-fast] > .hc-left, .hc-shell[data-enter-fast] > .hc-center, .hc-shell[data-enter-fast] > .hc-right { animation: hc-shell-in var(--hc-dur-slow) var(--hc-ease-out) backwards; }
+  .hc-shell[data-enter-fast] > .hc-center, .hc-shell[data-enter-fast] > .hc-right { animation-delay: var(--hc-stagger); }
+  /* Status is timer driven, including when animations are disabled. */
+  .hc-splash__status { animation: hc-fade-in var(--hc-dur-slow) var(--hc-ease-out); }
+}
+
+.hc-people__open { display: flex; align-items: center; gap: var(--hc-space-3); width: 100%; min-height: var(--hc-hit); border: 0; padding: 0; background: none; color: var(--hc-text); text-align: start; cursor: pointer; }
+.hc-people__open > span:last-child { min-width: 0; display: flex; flex-direction: column; }
+.hc-personcard { max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow-y: auto; }
+.hc-sheet .hc-personcard { max-height: none; }
+
+.hc-tile__name { border: 0; padding: 0; background: none; color: inherit; font: inherit; text-align: start; cursor: pointer; pointer-events: auto; min-height: var(--hc-hit); }
+.hc-stage__note { text-align: center; color: var(--hc-text-muted); font-size: var(--hc-text-sm); }
+.hc-stage__note strong { display: block; color: var(--hc-text); }
+.hc-stage .hc-error:empty { display: none; }
+@media (max-width: 47.5em) { .hc-tile__hint { display: none; } }
+
+.hc-vrow { -webkit-touch-callout: none; }
+
+.hc-msg__bar .hc-msg__optional { display: none; }
+@media (max-width: 47.5em) {
+  .hc-msg__bar .hc-msg__optional { display: inline-flex; }
+  /* Retain every header control. The title and call status keep their own row. */
+  .hc-header.is-calling { flex-wrap: wrap; }
+  .hc-header.is-calling .hc-header__title { flex: 1 1 calc(100% - 60px); }
+  .hc-header.is-calling .hc-header__meta .hc-signal { width: var(--hc-hit); height: var(--hc-hit); flex: none; }
+}
+@media (min-width: 47.51em) { .hc-tile__name { min-height: 0; } }
+
+@media (max-width: 47.5em) {
+  .hc-messages[data-action-switch] .hc-msg:not(.is-open) .hc-msg__bar { visibility: hidden; transition: none; }
+}
+
+@media (max-width: 47.5em) {
+  .hc-vrow { min-height: var(--hc-hit); }
+  .hc-vrow__state .hc-livepill::before { top: calc((var(--hc-hit) - 100%) / -2); bottom: calc((var(--hc-hit) - 100%) / -2); }
+  .hc-personcard__vol input[type="range"], .hc-personcard .hc-switchrow { min-height: var(--hc-hit); }
+}
+
+@media (max-width: 47.5em) { .hc-msg.is-open::before { background: var(--hc-wash-selected); } }
+
+.hc-tile__sharevol { width: clamp(var(--hc-hit), 24cqw, 6rem); min-width: var(--hc-hit); }
+@media (prefers-reduced-motion: no-preference) and (max-width: 47.5em) {
+  .hc-shell[data-enter-fast] { animation: hc-shell-in var(--hc-dur-slow) var(--hc-ease-out) backwards; }
+  .hc-shell[data-enter-fast] > .hc-left, .hc-shell[data-enter-fast] > .hc-center, .hc-shell[data-enter-fast] > .hc-right { animation: none; }
+}

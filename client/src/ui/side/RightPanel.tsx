@@ -68,7 +68,7 @@ export function RightPanel() {
       <div className="hc-side__body">
         {side.kind === "chord" && <ErrorLine text={chords.error} />}
         {side.kind === "search" || side.kind === "pins" ? <SearchPanel key={side.kind} pins={side.kind === "pins"} />
-          : side.id === "gimme" ? <GimmePanel /> : side.id === "steve" ? <StevePanel /> : <SharedBrowserPanel />}
+          : chat.dmSecurity && chat.dmSecurity.peer.state !== "NONE" ? <p className="hc-note">{copy.e2e.off.apps}</p> : side.id === "gimme" ? <GimmePanel /> : side.id === "steve" ? <StevePanel /> : <SharedBrowserPanel />}
       </div>
     </>
   );

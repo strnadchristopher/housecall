@@ -7,14 +7,21 @@ const headers = (s: { token: string; device_key: string }) => ({ Authorization: 
 
 const stage = (page: Page) => page.getByTestId("call-stage");
 const toast = (page: Page) => page.getByTestId("incoming-call");
-const callButton = (page: Page, name: string) => page.getByTestId("people").getByRole("button", { name: `Call ${name}`, exact: true });
-const openGeneral = (page: Page) => page.getByRole("button", { name: "Open general", exact: true }).click();
+async function callPerson(page: Page, name: string) {
+  await page.locator(".hc-center .hc-header").getByRole("button", { name: "People", exact: true }).click();
+  await page.getByTestId("people").getByRole("button", { name, exact: true }).click();
+  await page.getByTestId("person-card").getByRole("button", { name: "Call", exact: true }).click();
+}
+const openGeneral = async (page: Page) => {
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await page.getByRole("button", { name: "Open general", exact: true }).click();
+};
 
 test("a 1:1 call rings the other person, who answers, declines, or loses the ring when the caller cancels", async ({ browser, request }) => {
   test.setTimeout(150000);
   const owner = await (await request.post("/api/setup", { data: { username: "dc_owner", password, setup_token: setupToken, device_name: "call fixture" } })).json();
   const me = await (await request.get("/api/me", { headers: headers(owner) })).json();
-  test.skip(me.capabilities.voice !== true, "SFU transport not configured in this backend binary");
+  expect(me.capabilities.voice, "SFU transport must be configured").toBe(true);
   for (const username of ["dc_bob", "dc_carol"]) {
     const invitation = await (await request.post("/api/invites", { headers: headers(owner), data: { expires_in_seconds: 300 } })).json();
     expect((await request.post("/api/invites/accept", { data: { token: invitation.token, username, password, device_name: "call fixture" } })).ok()).toBeTruthy();
@@ -22,7 +29,7 @@ test("a 1:1 call rings the other person, who answers, declines, or loses the rin
 
   const pages: Record<string, Page> = {};
   for (const name of ["dc_owner", "dc_bob", "dc_carol"]) {
-    const context = await browser.newContext({ permissions: ["camera", "microphone"] });
+    const context = await browser.newContext({ permissions: ["camera", "microphone"], viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
     const page = await context.newPage();
     page.setDefaultTimeout(20000);
     await page.goto("/");
@@ -32,12 +39,13 @@ test("a 1:1 call rings the other person, who answers, declines, or loses the rin
   const { dc_owner: ownerPage, dc_bob: bob, dc_carol: carol } = pages;
 
   // Call from People: the caller is in the call and sees Ringing until the other person joins.
-  await callButton(ownerPage, "dc_bob").click();
+  await callPerson(ownerPage, "dc_bob");
   await expect(stage(ownerPage)).toHaveAttribute("data-phase", "live", { timeout: 30000 });
   // Ringing is said once, on the stage, with who is being rung; the controls are not doubled up by the sidebar dock.
   await expect(ownerPage.getByTestId("call-ringing")).toHaveText("Ringing dc_bob");
   await expect(ownerPage.getByText(/^Ringing/)).toHaveCount(1);
-  await expect(ownerPage.getByTestId("call-dock")).toBeVisible(); // HC-040 6: the call card stays in the sidebar on the stage too
+  await expect(ownerPage.getByTestId("call-dock")).toBeAttached();
+  await expect(ownerPage.locator(".hc-scrim")).toHaveCount(0); // Card navigation leaves the stage reachable on a phone.
   await expect(toast(bob)).toBeVisible({ timeout: 15000 });
   await expect(toast(bob)).toContainText("dc_owner");
   await expect(toast(bob)).toContainText("Incoming call");
@@ -58,7 +66,7 @@ test("a 1:1 call rings the other person, who answers, declines, or loses the rin
 
   // Decline: the caller sees Declined and then leaves by itself.
   await openGeneral(ownerPage);
-  await callButton(ownerPage, "dc_carol").click();
+  await callPerson(ownerPage, "dc_carol");
   await expect(toast(carol)).toBeVisible({ timeout: 15000 });
   await carol.getByRole("button", { name: "Decline dc_owner", exact: true }).click();
   await expect(toast(carol)).toHaveCount(0);
@@ -67,7 +75,7 @@ test("a 1:1 call rings the other person, who answers, declines, or loses the rin
 
   // Cancel: the caller hangs up before an answer and the ring goes away on the other side.
   await openGeneral(carol);
-  await callButton(carol, "dc_bob").click();
+  await callPerson(carol, "dc_bob");
   await expect(stage(carol)).toHaveAttribute("data-phase", "live", { timeout: 30000 });
   await expect(toast(bob)).toBeVisible({ timeout: 15000 });
   await carol.getByTestId("call-bar").getByRole("button", { name: "Leave", exact: true }).click();
@@ -81,18 +89,25 @@ test("a 1:1 call rings the other person, who answers, declines, or loses the rin
   expect(dms).toBe(2); // owner with Bob, owner with Carol; Carol and Bob's is not the owner's to see
   await bob.waitForTimeout(10500);
   await openGeneral(bob);
-  await callButton(bob, "dc_owner").click();
+  await callPerson(bob, "dc_owner");
   await expect(toast(ownerPage)).toContainText("dc_bob", { timeout: 15000 });
   expect(await dmCount()).toBe(dms);
   await bob.getByTestId("call-bar").getByRole("button", { name: "Leave", exact: true }).click();
   await expect(toast(ownerPage)).toHaveCount(0, { timeout: 15000 });
 
   // Nobody has posted in the owner's conversation with Bob, yet its header still has the Call button.
+  await ownerPage.getByRole("button", { name: "Menu", exact: true }).click();
   await ownerPage.getByRole("button", { name: "Direct messages", exact: true }).click();
   await ownerPage.getByRole("button", { name: "Open dc_bob", exact: true }).click();
   const headerCall = ownerPage.locator("header.hc-header").getByRole("button", { name: "Call dc_bob", exact: true });
   await expect(headerCall).toBeVisible();
-  await expect(ownerPage.getByTestId("people").getByRole("button", { name: "Call dc_bob", exact: true })).toBeVisible();
+  await ownerPage.locator(".hc-center .hc-header").getByRole("button", { name: "People", exact: true }).click();
+  await ownerPage.getByTestId("people").getByRole("button", { name: "dc_bob", exact: true }).click();
+  const card = ownerPage.getByTestId("person-card");
+  await expect(card.getByRole("button", { name: "Call", exact: true })).toBeVisible();
+  await card.getByRole("button", { name: "Message", exact: true }).click();
+  await ownerPage.getByTestId("screen-composer").getByLabel("Message", { exact: true }).click();
+
   await bob.waitForTimeout(10500);
   await headerCall.click();
   await expect(toast(bob)).toContainText("dc_owner", { timeout: 15000 });

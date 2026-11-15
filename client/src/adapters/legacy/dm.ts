@@ -1,3 +1,4 @@
+import { ConversationBindings } from '../../core/conversationBinding';
 import { conversationKey, inlineMimeAllowed, openAttachment, openMessage, parseEnvelope, safeDownloadName, sealFile, sealMessage, validateFileRef, type FileRef, type Payload } from '../../crypto/dm';
 import { b64u, deriveIdentity, destroyIdentity, publicIdentityKey, unb64u } from '../../crypto/identity';
 import { randomBytes, unwrap } from '../../crypto/common';
@@ -14,18 +15,22 @@ import { SecurityApi } from './security';
 
 /** Dedicated opt-in adapter for the next UI phase. Does not activate identity setup or alter group/channel transport. */
 export class DmService {
+  readonly conversations: ConversationBindings;
   private peers = new Map<string, PeerSecurity>();
   private fetched = new Map<string, number>();
   private envelopeFetches = new Set<string>();
   private generation = 0;
   private queue: Promise<unknown> = Promise.resolve();
   readonly remote: SecurityApi;
-  constructor(readonly api: Api, readonly vault: SecurityVault, readonly origin: string, readonly myId: string) { this.remote = new SecurityApi(api); }
+  constructor(readonly api: Api, readonly vault: SecurityVault, readonly origin: string, readonly myId: string) { this.remote = new SecurityApi(api); this.conversations = new ConversationBindings(myId, vault, origin); }
   private active() { if (this.generation) throw new Error('Security session ended'); }
   private peer(context: DmContext): string {
-    this.active();
+    this.active(); this.conversations.assert(context.id);
     if (context.kind !== 'dm' || context.memberIds.length !== 2 || new Set(context.memberIds).size !== 2 || !context.memberIds.includes(this.myId)) throw new Error('Encrypted conversation must have exactly two members');
-    return context.memberIds.find(id => id !== this.myId)!;
+    const peer = context.memberIds.find(id => id !== this.myId)!;
+    const bound = this.conversations.context(context.id);
+    if (bound && !bound.memberIds.includes(peer)) throw new Error('Conversation security details changed');
+    return peer;
   }
   private async pins() { return this.vault.loadPins(this.origin, this.myId); }
   private async pin(user: string) { return (await this.pins()).find(p => p.user_id === user); }
@@ -61,9 +66,11 @@ export class DmService {
     await this.save(acknowledgePeer(pin, response), pin); return this.refresh(user, true);
   }
   async safety(user: string) {
-    const pin = await this.pin(user), local = await this.vault.loadIdentity();
+    const state = await this.refresh(user);
+    const pin = state.state === 'CHANGED_UNACKNOWLEDGED' ? state.candidate ?? state.pin : state.pin;
+    const local = await this.vault.loadIdentity();
     if (!pin || !local) { local?.seed.fill(0); return undefined; }
-    try { return { number: safetyNumber(publicIdentityKey(local.seed), unwrap(unb64u(pin.identity_key))), verified: pin.verified, state: (await this.refresh(user)).state }; }
+    try { return { number: safetyNumber(publicIdentityKey(local.seed), unwrap(unb64u(pin.identity_key))), verified: state.state === 'PINNED' && pin.verified, state: state.state }; }
     finally { local.seed.fill(0); }
   }
   async markVerified(user: string, expectedNumber: string) {
@@ -78,20 +85,39 @@ export class DmService {
     return accepted;
   }
   onKeysChanged(userId: string) { return this.refresh(userId, true); }
+  /** Our own new key was accepted by explicit local creation/reset/import. Never acknowledge a peer here. */
+  private async refreshOwn() {
+    let state = await this.refresh(this.myId);
+    if (state.state === 'CHANGED_UNACKNOWLEDGED' && state.pin && state.candidate) {
+      const local = await this.vault.loadIdentity();
+      try {
+        if (local?.confirmed && b64u(publicIdentityKey(local.seed)) === state.candidate.identity_key) {
+          const response = await this.remote.keys(this.myId);
+          if (response.identity_key === state.candidate.identity_key) {
+            await this.save(acknowledgePeer(state.pin, response), state.pin);
+            state = await this.refresh(this.myId, true);
+          }
+        }
+      } finally { local?.seed.fill(0); }
+    }
+    return state;
+  }
   private async own() {
-    const state = await this.refresh(this.myId), local = await this.vault.loadIdentity();
+    const state = await this.refreshOwn(), local = await this.vault.loadIdentity();
     if (!local || !local.confirmed) { local?.seed.fill(0); throw new Error('Set up security key first'); }
     return { state, local, key: b64u(publicIdentityKey(local.seed)) };
   }
   async security(context: DmContext) {
+    await this.conversations.establish(context);
     const peer = await this.refresh(this.peer(context)), local = await this.vault.loadIdentity();
     try {
-      const own = local && await this.refresh(this.myId);
+      const own = local && await this.refreshOwn();
       const ready = !!local?.confirmed && own?.state === 'PINNED' && own.pin?.identity_key === b64u(publicIdentityKey(local.seed));
       return { peer, canSend: peer.canSendPlaintext || (peer.canSendEncrypted && ready), label: peer.state === 'KEY_ROLLBACK' ? 'key-problem' : peer.state === 'CHANGED_UNACKNOWLEDGED' ? 'key-changed' : !ready ? 'not-encrypted' : peer.state === 'NONE' ? 'not-encrypted-yet' : this.vault.native ? 'end-to-end-encrypted' : 'encrypted-in-browser' };
     } finally { local?.seed.fill(0); }
   }
   private async seal(context: DmContext, payload: Payload) {
+    await this.conversations.establish(context);
     const peerId = this.peer(context), peer = await this.refresh(peerId), own = await this.own();
     try {
       this.active();
@@ -115,7 +141,38 @@ export class DmService {
       throw error;
     }
   }
+  /** Hold the install trust lock through a plaintext request. Each upload chunk rechecks
+   * publication and durable pins; pin adoption cannot race the check-to-fetch interval. */
+  async withLegacyPlaintext<T>(context: DmContext, send: () => Promise<T>): Promise<T> {
+    await this.conversations.establish(context);
+    const peer = this.peer(context), state = await this.refresh(peer, true);
+    if (!state.canSendPlaintext) throw new Error('Pinned peer cannot receive plaintext');
+    return withIdentityLock(this.vault, async () => {
+      this.active(); this.conversations.assert(context.id);
+      if (await this.pin(peer)) throw new Error('Pinned peer cannot receive plaintext');
+      this.active(); return send();
+    });
+  }
+  /** Preserve legacy plaintext DM replies/files/edits only while this peer has never been pinned. */
+  async sendLegacyPlaintext(context: DmContext, body: { body: string; [key: string]: unknown }, editId?: string) {
+    await this.conversations.establish(context);
+    const peer = this.peer(context), state = await this.refresh(peer);
+    if (!state.canSendPlaintext) throw new Error('Pinned peer cannot receive plaintext');
+    try {
+      return await withIdentityLock(this.vault, async () => {
+        this.active(); if (await this.pin(peer)) throw new Error('Pinned peer cannot receive plaintext');
+        this.active();
+        const result = editId ? await this.api.patch<SecureMessageRow>(`/api/messages/${encodeURIComponent(editId)}`, body)
+          : await this.api.post<SecureMessageRow>(`/api/channels/${encodeURIComponent(context.id)}/messages`, body);
+        this.active(); return result;
+      });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 422) await this.refresh(peer, true);
+      throw error;
+    }
+  }
   async send(context: DmContext, text: string, files: FileRef[] = [], reply?: { row: SecureMessageRow; opened: OpenedDmMessage }) {
+    await this.conversations.establish(context);
     const peerId = this.peer(context), state = await this.refresh(peerId);
     if (state.canSendPlaintext) {
       if (files.length || reply) throw new Error('Use legacy attachment/reply transport for plaintext');
@@ -131,7 +188,7 @@ export class DmService {
       payload.re = reply.opened.nonce;
     }
     const envelope = await this.seal(context, payload);
-    return this.encryptedRequest(context, `/api/channels/${encodeURIComponent(context.id)}/messages`, { enc: 1, envelope, attachment_ids: files.map(f => f.id), reply_to: reply?.row.id ?? null, mention_ids: [] });
+    return this.encryptedRequest(context, `/api/channels/${encodeURIComponent(context.id)}/messages`, { enc: 1, envelope, attachment_ids: files.map(f => f.id), reply_to: reply?.row.id ?? null, mention_ids: [peerId] });
   }
   async edit(context: DmContext, row: SecureMessageRow, payload: Payload, reply?: { row: SecureMessageRow; opened: OpenedDmMessage }) {
     if (row.enc !== 1 || row.channel_id !== context.id || row.author_id !== this.myId) throw new Error('Encrypted own message required');
@@ -144,8 +201,9 @@ export class DmService {
   }
   /** Rebuild from the complete loaded history after fetch/edit/delete; dedupe precedes presentation. */
   async openHistory(context: DmContext, rows: readonly SecureMessageRow[]): Promise<Map<string, OpenedDmMessage>> {
+    await this.conversations.establish(context);
     const peerId = this.peer(context), result = new Map<string, OpenedDmMessage>(), nonces = new Set<string>();
-    let peer = await this.refresh(peerId); await this.refresh(this.myId);
+    let peer = await this.refresh(peerId); await this.refreshOwn();
     const local = await this.vault.loadIdentity();
     try {
       for (const row of rows) {
@@ -180,29 +238,29 @@ export class DmService {
       this.active(); return result;
     } finally { local?.seed.fill(0); }
   }
-  async uploadAttachment(context: DmContext, plaintext: Uint8Array, name: string, mime: string): Promise<FileRef> {
+  async uploadAttachment(context: DmContext, plaintext: Uint8Array, name: string, mime: string, signal?: AbortSignal, progress?: (sent: number, total: number) => void): Promise<FileRef> {
     const security = await this.security(context); if (!security.canSend || security.peer.state !== 'PINNED') throw new Error('Encrypted conversation required');
     const key = randomBytes(32); let blob: Uint8Array | undefined;
     try {
       // Validate untrusted metadata before uploading anything.
       unwrap(validateFileRef({ id: '00000000-0000-0000-0000-000000000000', key: b64u(key), name, mime, size: plaintext.length }));
-      blob = sealFile(key, plaintext);
-      this.active(); let upload = await this.api.post<Upload>('/api/uploads', { channel_id: context.id, filename: 'sealed', length: String(blob.length), class: 'sealed' });
+      blob = sealFile(key, plaintext); progress?.(0, blob.length);
+      this.active(); let upload = await this.api.request<Upload>('/api/uploads', { method: 'POST', signal, body: JSON.stringify({ channel_id: context.id, filename: 'sealed', length: String(blob.length), class: 'sealed' }) });
       for (let offset = 0; offset < blob.length;) {
         this.active(); const end = Math.min(offset + 4 * 1024 * 1024, blob.length);
-        upload = await this.api.request<Upload>(`/api/uploads/${encodeURIComponent(upload.id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/octet-stream', 'Upload-Offset': String(offset) }, body: new Blob([blob.slice(offset, end)]) });
-        if (upload.offset !== String(end)) throw new Error('Unexpected upload offset'); offset = end;
+        upload = await this.api.request<Upload>(`/api/uploads/${encodeURIComponent(upload.id)}`, { method: 'PATCH', signal, headers: { 'Content-Type': 'application/octet-stream', 'Upload-Offset': String(offset) }, body: new Blob([blob.slice(offset, end)]) });
+        if (upload.offset !== String(end)) throw new Error('Unexpected upload offset'); offset = end; progress?.(offset, blob.length);
       }
-      this.active(); upload = await this.api.post<Upload>(`/api/uploads/${encodeURIComponent(upload.id)}/complete`, {});
+      this.active(); upload = await this.api.request<Upload>(`/api/uploads/${encodeURIComponent(upload.id)}/complete`, { method: 'POST', signal, body: '{}' });
       this.active(); if (upload.status !== 'ready') throw new Error('Sealed upload unavailable');
       return unwrap(validateFileRef({ id: upload.id, key: b64u(key), name, mime, size: plaintext.length }));
     } finally { key.fill(0); blob?.fill(0); }
   }
-  async downloadAttachment(row: SecureMessageRow, opened: OpenedDmMessage, id: string) {
+  async downloadAttachment(row: SecureMessageRow, opened: OpenedDmMessage, id: string, signal?: AbortSignal) {
     this.active();
     if (opened.status !== 'opened') throw new Error('Authenticated message required');
     const ref = opened.payload.files?.find(f => f.id === id); if (!ref || !row.attachments?.some(a => a.id === id)) throw new Error('Attachment not in message');
-    const response = await fetch(this.api.mediaRequest(`/api/media/${encodeURIComponent(id)}`));
+    const response = await fetch(this.api.mediaRequest(`/api/media/${encodeURIComponent(id)}`, { signal }));
     if (!response.ok || !response.body) throw new Error('Attachment unavailable');
     const reader = response.body.getReader(), chunks: Uint8Array[] = []; let length = 0;
     try {

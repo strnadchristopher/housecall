@@ -20,6 +20,7 @@ export function useCameraStream() {
   const [facing, setFacing] = useState<CameraFacing>("environment");
   const [front, setFront] = useState(false);
   const [state, setState] = useState<"starting" | "live" | "blocked">("starting");
+  const [blockedReason, setBlockedReason] = useState<"denied" | "unavailable">("unavailable");
   const [multiple, setMultiple] = useState(false);
   const [torchable, setTorchable] = useState(false);
   const [torch, setTorch] = useState(false);
@@ -43,11 +44,11 @@ export function useCameraStream() {
         if (element) { element.srcObject = next; void element.play().catch(() => {}); }
         const devices = await navigator.mediaDevices.enumerateDevices().catch(() => []);
         if (alive) { setMultiple(devices.filter(device => device.kind === "videoinput").length > 1); setState("live"); }
-      } catch {
-        if (alive) setState("blocked");
+      } catch (error) {
+        if (alive) { setBlockedReason(error instanceof DOMException && (error.name === "NotAllowedError" || error.name === "SecurityError") ? "denied" : "unavailable"); setState("blocked"); }
       }
     })();
-    return () => { alive = false; };
+    return () => { alive = false; stream.current?.getTracks().forEach(track => track.stop()); stream.current = null; };
   }, [facing, attempt]);
 
   useEffect(() => () => { stream.current?.getTracks().forEach(track => track.stop()); stream.current = null; }, []);
@@ -63,7 +64,7 @@ export function useCameraStream() {
   }, [torch]);
 
   return {
-    video, state, front, multiple, torchable, torch, toggleTorch,
+    video, state, blockedReason, front, multiple, torchable, torch, toggleTorch,
     flip: () => setFacing(current => (current === "user" ? "environment" : "user")),
     retry: () => setAttempt(count => count + 1),
     /** The current frame as a JPEG at the track's native resolution, not mirrored. */
@@ -104,6 +105,7 @@ export interface SnapCameraProps {
   /** "photo" takes a snap; "scan" is the QR finder (no shutter, gallery or flip). */
   mode?: "photo" | "scan";
   onClose: () => void;
+  onPassword?: () => void;
   /** Photo mode: send the picture. Resolves true when it went, and the layer then closes. */
   onSend?: (photo: File) => Promise<boolean>;
   /** Shown over the review actions after a failed send. */
@@ -111,6 +113,7 @@ export interface SnapCameraProps {
   /** Scan mode: called with the live video at most 8 times a second. */
   onFrame?: (video: HTMLVideoElement) => void;
   /** Scan mode: the finder shows the found state. */
+  scanAgain?: boolean;
   found?: boolean;
   /** Scan mode: a line that replaces the second hint line, in the danger colour. */
   wrong?: string;
@@ -121,7 +124,7 @@ export interface SnapCameraProps {
  * scan (a finder and a hint; the caller decodes frames). The preview and stream hook are exported
  * so the QR login flow mounts exactly this.
  */
-export function SnapCamera({ mode = "photo", onClose, onSend, error, onFrame, found, wrong }: SnapCameraProps) {
+export function SnapCamera({ mode = "photo", onClose, onSend, error, onFrame, found, wrong, scanAgain, onPassword }: SnapCameraProps) {
   const camera = useCameraStream();
   const root = useRef<HTMLDivElement>(null);
   const gallery = useRef<HTMLInputElement>(null);
@@ -187,7 +190,7 @@ export function SnapCamera({ mode = "photo", onClose, onSend, error, onFrame, fo
             </svg>
           </div>
           <p className="hc-cam__hint" role="status">
-            {found ? copy.camera.scanFound : copy.camera.scanHint}
+            {found ? copy.camera.scanFound : scanAgain ? copy.camera.scanAgain : copy.camera.scanHint}
             {!found && <small className={wrong ? "is-error" : undefined}>{wrong || copy.camera.scanWhere}</small>}
           </p>
         </>
@@ -207,9 +210,10 @@ export function SnapCamera({ mode = "photo", onClose, onSend, error, onFrame, fo
         <div className="hc-cam__blocked" data-testid="snap-camera-blocked">
           <Icon name="camera" off />
           <strong>{copy.camera.blockedTitle}</strong>
-          <p>{copy.camera.blockedBody}</p>
-          <Button kind="primary" onClick={camera.retry}>{copy.camera.tryAgain}</Button>
+          <p>{scan ? camera.blockedReason === "unavailable" ? copy.link.new.noCamera : copy.link.new.cameraRefused : copy.camera.blockedBody}</p>
+          <Button kind={scan ? "plain" : "primary"} onClick={camera.retry}>{copy.camera.tryAgain}</Button>
           {!scan && <Button kind="text" onClick={() => gallery.current?.click()}>{copy.camera.galleryInstead}</Button>}
+          {scan && onPassword && <Button kind="primary" onClick={onPassword}>{copy.link.new.passwordFirst}</Button>}
         </div>
       )}
 

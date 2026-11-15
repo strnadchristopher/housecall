@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 import { useDismiss } from "../useDismiss";
 import { useChat } from "../../core/context";
 import { copy } from "../copy";
@@ -17,10 +17,13 @@ export function MessageList({ compact }: { compact?: boolean }) {
   const stick = useRef(true);
   const last = chat.messages.at(-1)?.id;
   // One message at a time shows its action bar; a press elsewhere, Escape or a conversation change closes it.
-  const [openId, setOpenId] = useState<string>();
-  const toggleOpen = useCallback((id: string) => setOpenId(current => (current === id ? undefined : id)), []);
-  useDismiss(!!openId, () => setOpenId(undefined), target => !!openId && !!target.closest(`[data-message-id="${CSS.escape(openId)}"]`));
-  useEffect(() => setOpenId(undefined), [chat.current?.id]);
+  const [selection, setSelection] = useState<{ id?: string; switching: boolean }>({ switching: false });
+  const openId = selection.id;
+  const toggleOpen = useCallback((id: string) => setSelection(current => ({
+    id: current.id === id ? undefined : id, switching: !!current.id && current.id !== id,
+  })), []);
+  useDismiss(!!openId, () => setSelection({ switching: false }), target => !!target.closest("[data-message-id], .hc-emoji, .hc-msg__confirm"));
+  useEffect(() => setSelection({ switching: false }), [chat.current?.id]);
   // Roving tabindex: one message row is the tab stop (the newest until another is focused); arrows move between rows.
   const [focused, setFocused] = useState<string>();
   const stopId = chat.messages.some(message => message.id === focused) ? focused : last;
@@ -59,7 +62,7 @@ export function MessageList({ compact }: { compact?: boolean }) {
     if (last && stick.current && chat.current?.mentions && document.visibilityState === "visible") void chat.markRead();
   }, [last, chat.current?.mentions]);
   return (
-    <div ref={scroller} className={cx("hc-messages", compact && "is-compact")} data-testid="screen-conversation"
+    <div ref={scroller} className={cx("hc-messages", compact && "is-compact")} data-testid="screen-conversation" data-action-switch={selection.switching ? "" : undefined}
       onScroll={event => { const node = event.currentTarget; stick.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; }}>
       <button type="button" className="hc-sr hc-skip" onClick={() => document.querySelector<HTMLTextAreaElement>(".hc-composer textarea")?.focus()}>{copy.messages.skip}</button>
       <ol ref={list} aria-label={copy.messages.label} onFocus={remember} onKeyDown={navigate}>
@@ -67,8 +70,9 @@ export function MessageList({ compact }: { compact?: boolean }) {
           const before = chat.messages[index - 1];
           const newDay = !before || new Date(before.createdAt).toDateString() !== new Date(message.createdAt).toDateString();
           const grouped = !newDay && !message.replyTo && before.authorId === message.authorId && message.createdAt - before.createdAt < GROUP_WINDOW_MS;
-          return <Message key={message.id} message={message} grouped={grouped} me={chat.me.name} day={newDay ? day(message.createdAt) : undefined} stop={message.id === stopId} open={openId === message.id} onToggle={toggleOpen} />;
+          return <Fragment key={message.id}>{message.security?.encrypted && !chat.messages.slice(0, index).some(row => row.security?.encrypted) && <li className="hc-mark" role="note">{copy.e2e.markStart}</li>}<Message key={message.id} message={message} grouped={grouped} me={chat.me.name} day={newDay ? day(message.createdAt) : undefined} stop={message.id === stopId} open={openId === message.id} onToggle={toggleOpen} /></Fragment>;
         })}
+        {!!chat.heldMessages && <li className="hc-mark">{copy.e2e.waiting(chat.heldMessages, chat.current?.name ?? "")}</li>}
         {chat.requests.map(request => <GimmeCard key={request.id} request={request} />)}
       </ol>
       {chat.loading && chat.messages.length === 0 && <p className="hc-muted hc-loading" role="status">{copy.common.loading}</p>}

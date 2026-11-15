@@ -30,7 +30,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::remove,
             commands::list,
             commands::identity_get, commands::identity_set, commands::identity_remove,
-            commands::pins_get, commands::pins_set, commands::verify_owner
+            commands::pins_get, commands::pins_set, commands::bindings_get, commands::bindings_set, commands::verify_owner, commands::sensitive_surface
         ])
         .setup(|_app, _api| {
             #[cfg(target_os = "ios")]

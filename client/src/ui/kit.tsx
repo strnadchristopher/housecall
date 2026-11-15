@@ -9,6 +9,13 @@ import { afterExit, prefersReducedMotion } from "./tokens/motion";
  * the Apps mark (a sparkle, key `chords`) are drawn on the same grid.
  */
 const ICONS = {
+  expand: "M4 8V4h4M16 8V4h-4M4 12v4h4M16 12v4h-4",
+  lock: "M5.6 9.2h8.8a1.4 1.4 0 0 1 1.4 1.4v5a1.4 1.4 0 0 1-1.4 1.4H5.6a1.4 1.4 0 0 1-1.4-1.4v-5a1.4 1.4 0 0 1 1.4-1.4M6.8 9.2V6.6a3.2 3.2 0 0 1 6.4 0v2.6M10 12.4v1.6",
+  lockOpen: "M5.6 9.2h8.8a1.4 1.4 0 0 1 1.4 1.4v5a1.4 1.4 0 0 1-1.4 1.4H5.6a1.4 1.4 0 0 1-1.4-1.4v-5a1.4 1.4 0 0 1 1.4-1.4M6.8 9.2V6.6a3.2 3.2 0 0 1 6.1-1.3M10 12.4v1.6",
+  key: "M2.8 13.8V8.6a3.3 3.3 0 0 1 6.6 0v5.2zM9.4 10.4h8v3.2M14 10.4v2.4",
+  warn: "M10 3.6l7 12.400H3zM10 8.400v3.600M10 14.200v.2",
+  house: "M3.600 9.200L10 3.600l6.400 5.600v7.600H3.600zM8.200 16.800v-3.500a1.800 1.800 0 0 1 3.600 0v3.500",
+  scan: "M3.500 7.200V5.300a1.800 1.800 0 0 1 1.800-1.800h1.900M12.800 3.500h1.900a1.800 1.800 0 0 1 1.800 1.800v1.900M16.500 12.800v1.900a1.800 1.800 0 0 1-1.800 1.800h-1.900M7.200 16.500H5.300a1.800 1.800 0 0 1-1.800-1.800v-1.900",
   search: "M9 3.5a5.5 5.5 0 1 0 0 11a5.5 5.5 0 0 0 0-11M13.2 13.2L17 17",
   settings: "M3 6.5h2M9 6.5h8M3 13.5h8M15 13.5h2M7 4.5a2 2 0 1 0 0 4a2 2 0 0 0 0-4M13 11.5a2 2 0 1 0 0 4a2 2 0 0 0 0-4",
   gear: "M8.2 4.8L8.4 2.8L11.6 2.8L11.8 4.8L13.6 5.9L15.4 5.0L17.1 7.8L15.4 8.9L15.4 11.1L17.1 12.2L15.4 15.0L13.6 14.1L11.8 15.2L11.6 17.2L8.4 17.2L8.2 15.2L6.4 14.1L4.6 15.0L2.9 12.2L4.6 11.1L4.6 8.9L2.9 7.8L4.6 5.0L6.4 5.9zM10 7.7a2.3 2.3 0 1 0 0 4.6a2.3 2.3 0 0 0 0 -4.6",
@@ -195,12 +202,13 @@ export function MediaDropzone({ label, accept, maxBytes, value, onChange, hint, 
   );
 }
 
-export function IconButton({ icon, label, off, active, className, ...rest }: {
-  icon: IconName; label: string; off?: boolean; active?: boolean;
+export function IconButton({ icon, label, text, off, active, className, ...rest }: {
+  icon: IconName; label: string; text?: string; off?: boolean; active?: boolean;
 } & ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button type="button" {...rest} className={cx("hc-ibtn", active && "is-active", className)} aria-label={label} title={label}>
       <Icon name={icon} off={off} />
+      {text && <span className="hc-msg__lab" aria-hidden="true">{text}</span>}
     </button>
   );
 }
@@ -256,4 +264,9 @@ export function ErrorLine({ text, onDismiss, dismissLabel }: { text: string; onD
       {onDismiss && dismissLabel && <IconButton icon="close" label={dismissLabel} onClick={onDismiss} />}
     </p>
   );
+}
+
+/** The closed doorway used by Fable's empty and failed states. */
+export function Door() {
+  return <svg className="hc-empty__door" viewBox="0 0 24 30" aria-hidden="true"><path className="hc-door__frame" d="M1 30V12a11 11 0 0 1 22 0v18Z" /><path className="hc-door__shut" d="M4.5 30V12a7.5 7.5 0 0 1 15 0v18Z" /><path className="hc-door__knob" d="M15.5 19.5v1.4" /></svg>;
 }

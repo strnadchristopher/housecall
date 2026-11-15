@@ -1,0 +1,32 @@
+  :root {
+    color-scheme: dark light;
+    --stage: #0b1018; --raised: #1b2535; --text: #e8edf6; --muted: #a3afc4; --accent: #b8a4ff; --on-accent: #1b1236; --focus: #d9cdff;
+    --ink: #e8edf6; --leaf: rgb(27 18 54 / 0.38);
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --stage: #e2e5ef; --raised: #fafbfe; --text: #141a24; --muted: #525d70; --accent: #5b3fd1; --on-accent: #ffffff; --focus: #141a24; --ink: #141a24; --leaf: rgb(255 255 255 / 0.38); }
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: grid; place-items: center; background: var(--stage); color: var(--text);
+    font: 400 1rem/1.45 "Inria Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%;
+    padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  }
+  main { width: min(100%, 22.5rem); display: flex; flex-direction: column; gap: 12px; }
+  svg { width: 56px; height: 56px; margin-bottom: 12px; }
+  h1 { margin: 0; font-size: 1.625rem; line-height: 1.15; letter-spacing: -0.012em; text-wrap: balance; }
+  p { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+  p strong { color: var(--text); }
+  .actions { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; }
+  a.button {
+    display: flex; align-items: center; justify-content: center; min-height: 52px; padding: 4px 16px; border-radius: 10px;
+    background: var(--raised); color: var(--text); font-weight: 700; text-decoration: none;
+  }
+  a.button.primary { background: var(--accent); color: var(--on-accent); }
+  a.button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .lead { padding-top: 8px; }
+  /* Each caption belongs to the button above it: close under it, then a wider step before the next button. */
+  small { display: block; padding: 0 2px 12px; font-size: 0.875rem; color: var(--muted); }
+  small:last-child { padding-bottom: 0; }
+  [hidden] { display: none !important; }
