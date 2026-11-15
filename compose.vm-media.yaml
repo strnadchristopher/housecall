@@ -24,11 +24,14 @@ services:
     volumes: ["vm-display:/display", "vm-audio:/audio", "vm-signaling:/signaling"]
     read_only: true
     cap_drop: [ALL]
-    cap_add: [CHOWN, FOWNER]
-    security_opt: [no-new-privileges:true]
+    cap_add: [CHOWN, FOWNER, FSETID]
+    security_opt: ["no-new-privileges:true"]
     mem_limit: 32m
     pids_limit: 16
+  vm-policy:
+    restart: unless-stopped
   shared-vm:
+    restart: unless-stopped
     depends_on:
       vm-media-init:
         condition: service_completed_successfully
@@ -40,6 +43,7 @@ services:
       - vm-display:/display
       - vm-audio:/audio:ro
   vm-audio:
+    restart: unless-stopped
     profiles: [vm]
     build:
       context: infra/vm/media
@@ -53,7 +57,7 @@ services:
     read_only: true
     tmpfs: ["/tmp:size=16m,mode=1777"]
     cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
+    security_opt: ["no-new-privileges:true"]
     mem_limit: 128m
     memswap_limit: 128m
     pids_limit: 32
@@ -63,6 +67,7 @@ services:
       timeout: 1s
       retries: 15
   vm-publisher:
+    restart: unless-stopped
     profiles: [vm]
     build:
       context: infra/vm/media
@@ -85,7 +90,7 @@ services:
     tmpfs: ["/tmp:size=64m,mode=1777"]
     cap_drop: [ALL]
     cap_add: [NET_ADMIN, SETUID, SETGID, SETPCAP]
-    security_opt: [no-new-privileges:true]
+    security_opt: ["no-new-privileges:true"]
     mem_limit: 768m
     memswap_limit: 768m
     cpus: 2

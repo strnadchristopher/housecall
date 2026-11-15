@@ -18,12 +18,12 @@ Build the infrastructure images on a suitably resourced host (not executed in th
 docker compose -f compose.yaml -f compose.vm-media.yaml --profile vm build
 ```
 
-The image build does not create a browser guest OS. Prepare and verify your Debian desktop `base.qcow2` separately. No arbitrary guest download is part of first boot. For a reproducible **synthetic test desktop only**, the existing `scripts/prepare-vm-desktop.py` derives one from the checksum-pinned cached base described in VM-RUNTIME.md; it is not a production browser image recipe. The cloud base's root console is suitable only for the isolated test.
+The image build does not create a browser guest OS. For the production Debian browser recipe, run `bash scripts/prepare-vm-browser.sh PINNED_BASE NEW_OUTPUT` on a Docker/KVM build host. It verifies the Debian cloud SHA-512 from VM-RUNTIME.md, expands the root disk to 16 GiB, installs Xorg/LightDM/Openbox/Firefox ESR and guest PulseAudio, and applies `infra/vm/desktop/browser-guest.sh`. Its `browser` account autologins only into the graphical session; both account passwords are locked, root gettys are masked, SSH server is removed, cloud-init is disabled, IPv6 is disabled and DNS uses literal upstream resolvers. Firefox opens a local neutral search page, not a signed-in account. Debian package repositories are live security repositories rather than an immutable snapshot: preserve the final output SHA-512 and build logs; source pinning alone does not make later builds byte-identical. No arbitrary guest download is part of first boot. The separate `scripts/prepare-vm-desktop.py` remains a **synthetic test desktop only**, not the production browser recipe.
 
 Before launching QEMU, start the initializers (after configuring and starting Gluetun):
 
 ```sh
-docker compose -f compose.yaml -f compose.vm-media.yaml --profile vm run --rm vm-policy
+docker compose -f compose.yaml -f compose.vm-media.yaml --profile vm up -d vm-policy
 docker compose -f compose.yaml -f compose.vm-media.yaml --profile vm run --rm vm-media-init
 ```
 
@@ -37,7 +37,7 @@ docker compose -f compose.yaml -f compose.vm-media.yaml --profile vm up -d
 
 ## Keep the fail-closed boundary
 
-QEMU shares only the selected Gluetun network namespace. The separate `housecall_vm_47191` nft output table at priority -200 permits that UID's IPv4 traffic only through the selected tunnel interface, drops all other egress including IPv6/loopback, and survives Gluetun iptables flushes. Gluetun's ordinary firewall alone permits its Docker subnet and is insufficient. QEMU has no fallback bridge or host network. Its resolver file must point at a literal upstream/VPN resolver, never Docker's privileged loopback proxy.
+QEMU shares only the selected Gluetun network namespace. The separate `housecall_vm_47191` nft output table at priority -200 permits that UID's plaintext IPv4 traffic only through the selected tunnel interface, drops all other egress including IPv6/loopback, and survives Gluetun iptables flushes. For **kernel WireGuard**, encrypted outer packets inherit the original socket UID: the installer discovers its nonzero privileged fwmark and single numeric IPv4 peer endpoint, then permits only matching marked UDP to that endpoint. QEMU has neither NET_ADMIN nor NET_RAW and cannot set SO_MARK. Unmarked direct traffic remains denied. Invalid discovery aborts installation without replacing the old table; a peer endpoint/mark change fails closed until policy is reinstalled. OpenVPN has no such exception. Gluetun's ordinary firewall alone permits its Docker subnet and is insufficient. QEMU has no fallback bridge or host network. Its resolver file must point at a literal upstream/VPN resolver, never Docker's privileged loopback proxy.
 
 Compose waits for the policy before QEMU. If Gluetun is recreated, stop and recreate **both** policy and VM services for the new namespace; do not restart QEMU into a namespace without its verified policy. Do not flush namespace nft tables while the guest runs. Privileged host changes can defeat the boundary; a healthcheck cannot make them race-free.
 
@@ -58,7 +58,11 @@ docker compose -f compose.yaml -f compose.vm-media.yaml --profile vm run --rm --
 
 The helper installed by `infra/vm/Dockerfile` takes the same disk lock and preserves the base checksum. It discards all overlay changes and leaves the guest stopped. Back up deliberately before resetting, then restart with the full overlay command. Do not delete the volume or its reset journal as a recovery shortcut.
 
-## Evidence and runtime gates
+## After bring-up
+
+Record the final guest base SHA-512 privately with the deployment notes. Once the stack is up, ordinary `docker compose up -d` includes the VM services when the private `.env` lists `compose.vm-media.yaml` in `COMPOSE_FILE` and sets `COMPOSE_PROFILES=vm`. Production streaming is never armed by the operator: the owner joins the configured voice channel, starts Shared Browser and arms capture in the app. Then verify decoded video/audio, input/handoff, late viewers and reset/rearm with real clients. Recreating Gluetun or changing its WireGuard peer requires reinstalling the policy before QEMU restarts.
+
+## Historical evidence and runtime gates
 
 No image, guest, VPN, media or reset command on this page was executed in this W6 pass. Historical receipts in the source docs apply only to their exact fixtures. Independent Python policy tests do not prove a booted browser or production routing.
 
