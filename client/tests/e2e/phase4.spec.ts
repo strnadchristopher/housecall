@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { b64u, publicIdentityKey } from "../../src/crypto/identity";
 import { sealBackup } from "../../src/crypto/backup";
-import { signIn, openMenu, send, row } from "./helpers";
+import { signIn, fillSignIn, logInButton, openMenu, send, row } from "./helpers";
 import { tapAwayFromMessageTray } from "./messageTray";
 import { watchVoice, captureVoiceTrace, installPhase4PcProbe } from "./phase4Diagnostics";
 
@@ -49,8 +49,22 @@ async function open(browser: Browser, name: string, phone = false) {
   });
   const page = await context.newPage(); page.setDefaultTimeout(20000);
   watchVoice(page, name);
-  await page.goto("/"); await signIn(page, name, password);
-  return { page, context };
+  try {
+    await page.goto("/"); await fillSignIn(page, name, password);
+    // Authentication renders the shell before establish() has loaded its channels.
+    // With eight live SFU peers, wait for bootstrap I/O rather than spending the
+    // composer's five-second assertion budget on those requests.
+    const bootstrap = ["/api/channels", "/api/members", "/api/notifications", "/api/servers"].map(path =>
+      page.waitForResponse(response => new URL(response.url()).pathname === path));
+    const [responses] = await Promise.all([Promise.all(bootstrap), logInButton(page).click()]);
+    for (const response of responses) expect(response.ok(), `Bootstrap ${new URL(response.url()).pathname}`).toBe(true);
+    await expect(page.getByTestId("screen-composer")).toBeVisible();
+    return { page, context };
+  } catch (error) {
+    // A failed open() never reaches the caller's context list/finally.
+    await context.close();
+    throw error;
+  }
 }
 
 async function closeContexts(contexts: BrowserContext[]) {
@@ -536,9 +550,17 @@ test("Splash: fast skip, slow real session restore, one mark, landing, phone fad
         const frames: { t: number; marks: number; out?: string; intro: boolean }[] = [];
         Object.assign(window, { __p4LaunchFrames: frames });
         let start: number | undefined;
+        // Start at the root's DOM commit, before paint. The first rAF can be
+        // delayed by layout/module work and is not the splash's mount time.
+        const mountObserver = new MutationObserver(() => {
+          if (document.querySelector(".hc-root")) {
+            start = performance.now();
+            mountObserver.disconnect();
+          }
+        });
+        mountObserver.observe(document, { childList: true, subtree: true });
         const sample = () => {
-          if (!start && document.querySelector(".hc-root")) start = performance.now();
-          if (start) {
+          if (start !== undefined) {
             const marks = [...document.querySelectorAll(".hc-logo")].filter(node => {
               const box = node.getBoundingClientRect(), style = getComputedStyle(node);
               const mark = node.closest(".hc-splash__mark");
@@ -547,7 +569,7 @@ test("Splash: fast skip, slow real session restore, one mark, landing, phone fad
             const splash = document.querySelector<HTMLElement>(".hc-splash");
             frames.push({ t: performance.now() - start, marks, out: splash?.dataset.out, intro: !!splash?.hasAttribute("data-intro") });
           }
-          if (!start || performance.now() - start < 7000) requestAnimationFrame(sample);
+          if (start === undefined || performance.now() - start < 7000) requestAnimationFrame(sample);
         };
         requestAnimationFrame(sample);
       }, { session, seedText });
@@ -574,12 +596,12 @@ test("Splash: fast skip, slow real session restore, one mark, landing, phone fad
       await expect(page.locator(".hc-shell")).not.toHaveAttribute("data-enter", "");
       await expect(page.locator(".hc-center .hc-header h1")).toHaveText("general");
       const frames = await page.evaluate(() => (window as unknown as { __p4LaunchFrames: { t: number; marks: number; out?: string; intro: boolean }[] }).__p4LaunchFrames);
+      await writeFile(resolve(directory, `${prefix}-frames.json`), JSON.stringify(frames, null, 2));
       expect(frames.length).toBeGreaterThan(4);
       expect(frames.some(frame => frame.out === (size.width === 1280 && !reduced ? "fly" : "fade"))).toBe(true);
       expect(frames.filter(frame => frame.t < 280).every(frame => frame.marks === 0)).toBe(true);
       expect(frames.every(frame => frame.marks <= 1)).toBe(true);
       if (size.width === 1280 && !reduced) expect(frames.filter(frame => frame.out === "fly").every(frame => frame.marks === 1)).toBe(true);
-      await writeFile(resolve(directory, `${prefix}-frames.json`), JSON.stringify(frames, null, 2));
       // Signing out and back in within this module lifetime must not show Splash again.
       await page.getByRole("button", { name: "Server settings", exact: true }).click();
       await page.getByTestId("screen-settings").getByRole("button", { name: "Profile", exact: true }).click();
