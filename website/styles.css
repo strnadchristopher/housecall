@@ -1,0 +1,631 @@
+/*
+ * housecall.chat front door. One world: a house at night with the door lit.
+ * Black and ink come from the app icon; amber is only ever light (the door,
+ * what it spills on the floor, the one action that walks through it).
+ * Shape rule: things stand on the floor. Round top corners, square feet.
+ * No JS, no remote requests. See DESIGN.md.
+ */
+
+@font-face {
+  font-family: "Apfel Grotezk";
+  src: url("assets/fonts/ApfelGrotezk-Fett.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inria Sans";
+  src: url("assets/fonts/InriaSans-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inria Sans";
+  src: url("assets/fonts/InriaSans-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+
+  --night: #0b0b0b;        /* page, same black as the icon and the app shell */
+  --wall: #151514;         /* one step up: the privacy panel */
+  --wall-edge: #222120;    /* the panel's own colour, a little lighter */
+  --ink: #ededed;
+  --ink-soft: #bdb9b1;     /* 10:1 on --night */
+  --lamp: #e6a94f;
+  --lamp-hi: #f1bd6c;
+  --on-lamp: #1f1407;      /* 8:1 on --lamp */
+
+  --display: "Apfel Grotezk", "Inria Sans", system-ui, sans-serif;
+  --body: "Inria Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --gutter: clamp(24px, 5vw, 56px);
+  --measure: 1120px;
+  --foot-r: 4px;           /* square feet */
+  --head-r: 16px;          /* round shoulders */
+  --ease: cubic-bezier(.2, .8, .2, 1);
+
+  --house-h: clamp(196px, 30svh, 400px);
+  --house-w: calc(var(--house-h) * 20 / 26);
+  --door-w: calc(var(--house-w) * .4);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  background: var(--night);
+  scroll-behavior: smooth;
+  scroll-padding-top: 88px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--night);
+  color: var(--ink);
+  font: 400 1.0625rem/1.6 var(--body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+
+h1, h2, h3, p, dl, dd, figure { margin: 0; }
+img, svg { display: block; }
+a { color: inherit; }
+
+:focus-visible {
+  outline: 3px solid var(--lamp-hi);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.skip {
+  position: absolute;
+  left: var(--gutter);
+  top: -80px;
+  z-index: 20;
+  padding: 12px 18px;
+  background: var(--ink);
+  color: var(--night);
+  font-weight: 700;
+  border-radius: var(--head-r) var(--head-r) var(--foot-r) var(--foot-r);
+}
+.skip:focus { top: 12px; }
+
+.wrap {
+  width: 100%;
+  max-width: calc(var(--measure) + var(--gutter) * 2);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────────── */
+
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--night);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.bar__in {
+  max-width: calc(var(--measure) + var(--gutter) * 2);
+  margin-inline: auto;
+  padding: 12px var(--gutter);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  text-decoration: none;
+}
+.brand__mark { height: 30px; width: auto; }
+.brand__name {
+  font: 700 1.3125rem/1 var(--display);
+  letter-spacing: .005em;
+}
+
+.bar__nav {
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 1.4vw, 16px);
+}
+.bar__link {
+  display: none;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 12px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  transition: color .15s var(--ease);
+}
+.bar__link:hover { color: var(--ink); }
+@media (min-width: 760px) {
+  .bar__link { display: inline-flex; }
+}
+
+.login {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  min-width: 96px;
+  padding: 0 22px;
+  margin-left: 8px;
+  background: var(--ink);
+  color: var(--night);
+  font: 700 1.0625rem/1 var(--body);
+  text-decoration: none;
+  border-radius: var(--head-r) var(--head-r) var(--foot-r) var(--foot-r);
+  transition: background-color .15s var(--ease);
+}
+.login:hover { background: #fff; }
+
+/* ── Hero: the house owns the first screen ───────────────────────────── */
+
+.hero {
+  min-height: calc(100svh - 70px - env(safe-area-inset-top, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: clamp(20px, 5svh, 64px) var(--gutter) 0;
+}
+
+.hero__title {
+  font: 700 clamp(2rem, 8.6vw, 3.25rem)/1.04 var(--display);
+  letter-spacing: -.012em;
+  text-wrap: balance;
+}
+.hero__title span { display: block; }
+@media (min-width: 760px) {
+  .hero__title { font-size: clamp(3.25rem, 6.4vw, 5.5rem); }
+}
+
+.hero__lede {
+  max-width: 34em;
+  margin-top: clamp(14px, 2.4svh, 24px);
+  color: var(--ink-soft);
+  font-size: clamp(1.0625rem, 1.5vw, 1.25rem);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+/* The house and everything in its light is one link to /app/. */
+.door {
+  position: relative;
+  margin-top: auto;
+  padding-top: clamp(24px, 4svh, 48px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.door:focus-visible { outline: none; }
+.door:focus-visible .door__cta {
+  outline: 3px solid var(--ink);
+  outline-offset: 4px;
+}
+
+.door__house {
+  position: relative;
+  z-index: 1;
+  height: var(--house-h);
+  width: var(--house-w);
+}
+.door__leaf {
+  transform-box: fill-box;
+  transform-origin: left center;
+  transition: transform .32s var(--ease);
+}
+
+.door__floor {
+  position: relative;
+  width: min(100vw - var(--gutter) * 2, calc(var(--door-w) * 4));
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: clamp(22px, 3.4svh, 36px) 0 clamp(24px, 4svh, 56px);
+}
+/* Light through the doorway: one source, cast forward, fading before the fold.
+   Top edge is exactly the door's width; grain keeps the falloff from banding. */
+.door__floor::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 50%;
+  width: calc(var(--door-w) * 4);
+  translate: -50% 0;
+  clip-path: polygon(37.5% 0, 62.5% 0, 100% 100%, 0 100%);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E"),
+    linear-gradient(to bottom,
+      rgb(230 169 79 / .50) 0%,
+      rgb(230 169 79 / .40) 8%,
+      rgb(230 169 79 / .31) 17%,
+      rgb(230 169 79 / .235) 27%,
+      rgb(230 169 79 / .175) 38%,
+      rgb(230 169 79 / .125) 49%,
+      rgb(230 169 79 / .085) 60%,
+      rgb(230 169 79 / .052) 71%,
+      rgb(230 169 79 / .028) 81%,
+      rgb(230 169 79 / .011) 91%,
+      rgb(230 169 79 / 0) 100%);
+  opacity: .82;
+  transition: opacity .32s var(--ease);
+  pointer-events: none;
+}
+
+.door__cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 28px;
+  background: var(--lamp);
+  color: var(--on-lamp);
+  font: 700 1.1875rem/1 var(--display);
+  letter-spacing: .005em;
+  white-space: nowrap;
+  border-radius: var(--head-r) var(--head-r) var(--foot-r) var(--foot-r);
+  transition: background-color .15s var(--ease);
+}
+.door__note {
+  position: relative;
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.arrow {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  transition: translate .2s var(--ease);
+}
+
+/* Hover and focus: the door swings wider and more light reaches the floor. */
+.door:hover .door__leaf,
+.door:focus-visible .door__leaf,
+.foot__door:hover .door__leaf,
+.foot__door:focus-visible .door__leaf { transform: scaleX(.4); }
+.door:hover .door__floor::before,
+.door:focus-visible .door__floor::before { opacity: 1; }
+.door:hover .door__cta { background: var(--lamp-hi); }
+.door:hover .arrow,
+.way__link:hover .arrow { translate: 2px -2px; }
+
+/* ── Inside: the real product ────────────────────────────────────────── */
+
+.inside { padding-top: clamp(8px, 2vw, 24px); }
+
+.shot {
+  position: relative;
+  max-width: calc(1240px + var(--gutter) * 2);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+.shot__main {
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  outline: 1px solid var(--wall-edge);
+  outline-offset: -1px;
+}
+.shot__phone { display: none; }
+.shot__cap {
+  margin-top: 14px;
+  color: var(--ink-soft);
+  font-size: .9375rem;
+  text-align: center;
+}
+
+@media (max-width: 699px) {
+  .shot__main {
+    width: min(100%, 300px);
+    margin-inline: auto;
+    border-radius: 26px;
+  }
+}
+@media (min-width: 700px) {
+  .shot { padding-bottom: 0; }
+  .shot__phone {
+    display: block;
+    position: absolute;
+    right: calc(var(--gutter) + 4%);
+    bottom: -4%;
+    width: 19%;
+    height: auto;
+    border-radius: clamp(14px, 2vw, 26px);
+    outline: 1px solid #2c2b29;
+    outline-offset: -1px;
+    box-shadow: -10px 18px 28px -16px rgb(0 0 0 / .9);
+  }
+  .shot__cap {
+    text-align: left;
+    margin-top: 18px;
+  }
+}
+
+.h2 {
+  font: 700 clamp(1.75rem, 3.6vw, 2.75rem)/1.1 var(--display);
+  letter-spacing: -.008em;
+  max-width: 19em;
+  text-wrap: balance;
+}
+.h2--big { font-size: clamp(2.25rem, 6vw, 4.5rem); line-height: 1.02; }
+
+.inside .h2 { margin-top: clamp(64px, 9vw, 120px); }
+
+.rooms {
+  margin-top: clamp(32px, 5vw, 56px);
+  display: grid;
+  gap: clamp(28px, 3.4vw, 44px) clamp(32px, 6vw, 96px);
+}
+@media (min-width: 760px) {
+  .rooms { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 1080px) {
+  .rooms { grid-template-columns: repeat(3, 1fr); }
+}
+.room dt {
+  font: 700 1.3125rem/1.2 var(--display);
+  letter-spacing: .003em;
+}
+.room dd {
+  margin-top: 8px;
+  color: var(--ink-soft);
+  max-width: 30em;
+}
+
+/* ── Two ways in ─────────────────────────────────────────────────────── */
+
+.ways { padding-top: clamp(96px, 13vw, 176px); }
+
+.ways__grid {
+  margin-top: clamp(32px, 5vw, 56px);
+  display: grid;
+  gap: clamp(40px, 6vw, 96px);
+}
+@media (min-width: 760px) {
+  .ways__grid { grid-template-columns: 1fr 1fr; }
+}
+/* Title, body and link share rows across both columns, so the links line up
+   however long either paragraph runs. */
+.way {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 3;
+  gap: 0;
+}
+@supports not (grid-template-rows: subgrid) {
+  .way { display: flex; flex-direction: column; }
+  .way__link { margin-top: auto; }
+}
+.way__title { font: 700 1.5rem/1.2 var(--display); }
+.way__body {
+  margin-top: 12px;
+  color: var(--ink-soft);
+  max-width: 28em;
+}
+.way__link {
+  justify-self: start;
+  align-self: end;
+  margin-top: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  font: 700 1.125rem/1 var(--display);
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+  text-decoration-color: #6b6862;
+  transition: text-decoration-color .15s var(--ease), color .15s var(--ease);
+}
+.way__link:hover { text-decoration-color: var(--ink); }
+.way__link--lit { color: var(--lamp); text-decoration-color: #8a6a36; }
+.way__link--lit:hover { color: var(--lamp-hi); text-decoration-color: var(--lamp-hi); }
+
+.ways__aside {
+  margin-top: clamp(40px, 6vw, 72px);
+  max-width: 36em;
+  color: var(--ink-soft);
+}
+
+/* ── Privacy: a wall with round shoulders and square feet ────────────── */
+
+.private {
+  margin-top: clamp(96px, 13vw, 176px);
+  padding-inline: clamp(12px, 3vw, 40px);
+}
+.private__in {
+  max-width: 1240px;
+  margin-inline: auto;
+  padding: clamp(40px, 7vw, 96px) clamp(20px, 6vw, 96px);
+  background: var(--wall);
+  border-radius: clamp(28px, 5vw, 64px) clamp(28px, 5vw, 64px) var(--foot-r) var(--foot-r);
+  box-shadow: inset 0 1px 0 var(--wall-edge);
+}
+.private__lede {
+  margin-top: 18px;
+  max-width: 36em;
+  color: var(--ink-soft);
+  font-size: 1.125rem;
+}
+.facts {
+  margin-top: clamp(32px, 5vw, 56px);
+  display: grid;
+  gap: clamp(24px, 3vw, 36px);
+}
+.fact { display: grid; gap: 6px; }
+@media (min-width: 860px) {
+  .fact {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 8fr);
+    gap: 40px;
+    align-items: baseline;
+  }
+}
+.fact dt { font: 700 1.25rem/1.25 var(--display); }
+.fact dd { color: var(--ink); max-width: 36em; }
+.private__close {
+  margin-top: clamp(36px, 5vw, 64px);
+  font: 700 1.25rem/1.4 var(--display);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 20px;
+}
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font: 400 1.0625rem/1.4 var(--body);
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 5px;
+  text-decoration-color: #7a766f;
+  transition: text-decoration-color .15s var(--ease);
+}
+.text-link:hover { text-decoration-color: var(--ink); }
+
+/* ── Free ────────────────────────────────────────────────────────────── */
+
+.free { padding-top: clamp(96px, 13vw, 176px); }
+.free__body {
+  margin-top: 20px;
+  max-width: 34em;
+  color: var(--ink-soft);
+  font-size: 1.125rem;
+}
+
+/* ── Footer: back at the door ────────────────────────────────────────── */
+
+.foot {
+  margin-top: clamp(96px, 13vw, 176px);
+  padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+}
+.foot__in {
+  max-width: calc(var(--measure) + var(--gutter) * 2);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  display: grid;
+  gap: 28px;
+}
+.foot__door {
+  justify-self: start;
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 18px;
+  min-height: 78px;
+  text-decoration: none;
+  font: 700 clamp(2rem, 5vw, 3.25rem)/1 var(--display);
+  color: var(--ink);
+  transition: color .15s var(--ease);
+}
+.foot__door svg { height: 78px; width: 48px; flex: none; }
+.foot__door:hover { color: var(--lamp); }
+.foot__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 28px;
+}
+.foot__nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  transition: color .15s var(--ease);
+}
+.foot__nav a:hover { color: var(--ink); }
+.foot__fine { color: #a09c95; font-size: .9375rem; max-width: 40em; }
+
+/* ── Privacy page ────────────────────────────────────────────────────── */
+
+.doc {
+  max-width: calc(46rem + var(--gutter) * 2);
+  margin-inline: auto;
+  padding: clamp(40px, 8vw, 96px) var(--gutter) 0;
+}
+.doc__title { font: 700 clamp(2.25rem, 6vw, 3.75rem)/1.04 var(--display); letter-spacing: -.01em; }
+.doc__lede { margin-top: 20px; font-size: 1.25rem; line-height: 1.5; color: var(--ink); }
+.doc h2 { margin-top: clamp(48px, 7vw, 72px); font: 700 1.625rem/1.2 var(--display); }
+.doc p, .doc ul { margin-top: 14px; color: var(--ink-soft); }
+.doc ul { padding-left: 1.2em; }
+.doc li + li { margin-top: 8px; }
+.doc strong { color: var(--ink); }
+.doc a { color: var(--ink); text-decoration-thickness: 1.5px; text-underline-offset: 4px; text-decoration-color: #7a766f; }
+.doc a:hover { text-decoration-color: var(--ink); }
+
+.sees {
+  width: 100%;
+  margin-top: 24px;
+  border-collapse: collapse;
+  text-align: left;
+}
+.sees caption {
+  text-align: left;
+  color: var(--ink-soft);
+  padding-bottom: 12px;
+}
+.sees th, .sees td { padding: 14px 16px; vertical-align: top; }
+.sees thead th { font: 700 1rem/1.3 var(--display); color: var(--ink-soft); }
+.sees tbody th { font: 700 1.0625rem/1.4 var(--body); color: var(--ink); width: 40%; }
+.sees tbody td { color: var(--ink); }
+.sees tbody tr:nth-child(odd) { background: var(--wall); }
+.sees tbody tr:first-child th { border-top-left-radius: var(--head-r); }
+.sees tbody tr:first-child td { border-top-right-radius: var(--head-r); }
+@media (max-width: 560px) {
+  .sees thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .sees, .sees caption, .sees tbody, .sees tr, .sees th, .sees td { display: block; width: 100%; }
+  .sees tbody th { padding-bottom: 0; width: 100%; }
+  .sees tbody td { padding-top: 6px; }
+  .sees tbody tr:first-child th { border-radius: var(--head-r) var(--head-r) 0 0; }
+  .sees tbody tr:first-child td { border-radius: 0; }
+}
+
+/* ── Scroll: the screenshot settles as it arrives. Position only, never
+      opacity, so it is fully visible wherever the timeline is unsupported. ── */
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .shot__phone {
+      animation: settle linear both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 45%;
+    }
+    @keyframes settle {
+      from { translate: 0 36px; }
+      to { translate: 0 0; }
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    transition-duration: 0s !important;
+    animation: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .login, .door__cta { border: 2px solid ButtonText; }
+  .door__floor::before { display: none; }
+}

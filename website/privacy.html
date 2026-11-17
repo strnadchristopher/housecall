@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Privacy, said plainly | HouseCall</title>
+  <meta name="description" content="What this website collects, what the person hosting your HouseCall community can see, and what is end-to-end encrypted today.">
+  <meta name="theme-color" content="#0b0b0b">
+  <meta name="color-scheme" content="dark">
+  <meta name="referrer" content="no-referrer">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="bar">
+    <div class="bar__in">
+      <a class="brand" href="/" aria-label="HouseCall home">
+        <svg class="brand__mark" viewBox="6 3 20 26" aria-hidden="true" focusable="false">
+          <path fill="#ededed" d="M6 3H12V10.83A10 10 0 0 1 26 20V29H20V20A4 4 0 0 0 12 20V29H6Z"/>
+          <path fill="#e6a94f" d="M12 29V20A4 4 0 0 1 20 20V29Z"/>
+        </svg>
+        <span class="brand__name">HouseCall</span>
+      </a>
+      <nav class="bar__nav" aria-label="Primary">
+        <a class="bar__link" href="/#inside">What's inside</a>
+        <a class="bar__link" href="https://github.com/strnadchristopher/housecall" rel="noopener">Source</a>
+        <a class="login" href="/app/">Log in</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="doc">
+    <h1 class="doc__title">Privacy, said plainly.</h1>
+    <p class="doc__lede">
+      HouseCall communities run on servers that people host themselves. That is where most of the
+      privacy comes from, and it is also the thing to understand before you trust it.
+    </p>
+
+    <h2>This website</h2>
+    <p>
+      These pages set no cookies and run no analytics, ads or trackers. The fonts and images are
+      served from this site, so your browser isn't sent anywhere else to load them.
+    </p>
+    <p>
+      The site runs on one rented server with no outside proxy in front of it. The web server's
+      access log is turned off, and system logs are set to stay in memory for a day at most. The
+      server still sees your IP address and browser details while it answers you, and the companies
+      that provide its hosting, network and DNS may keep records of their own that we don't control.
+    </p>
+
+    <h2>Logging in here</h2>
+    <p>
+      housecall.chat is a front door. It doesn't host chats and it doesn't sign you in to anyone's
+      community. You type in the address of a server, and that server shows you its own login.
+      You can do that without a HouseCall account.
+    </p>
+    <p>
+      A HouseCall account is optional. It keeps an encrypted list of the server addresses you add,
+      and it doesn't hold your community passwords or messages. Logging in to it sets one secure
+      session cookie to keep you signed in. The account service sees your connection while you use
+      it, and because your browser gets the login page's code from this site, using an account
+      means trusting this site.
+    </p>
+
+    <h2>Your community and its host</h2>
+    <p>
+      Each community lives on its host's server: their computer, their database. The host decides
+      who gets in. Your messages and files there stay with that community's host. HouseCall's
+      account service doesn't store them.
+    </p>
+    <p>
+      That makes the host the person you are trusting. Join communities run by people you'd trust
+      with your group chat, or host your own.
+    </p>
+
+    <h2>What the host can see</h2>
+    <table class="sees">
+      <caption>How things stand today.</caption>
+      <thead>
+        <tr><th scope="col">Where</th><th scope="col">What the host can see</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Channels and group chats</th>
+          <td>Everything. These are not end-to-end encrypted.</td>
+        </tr>
+        <tr>
+          <th scope="row">Calls, including one-to-one calls</th>
+          <td>Calls are relayed through the host's server, which could listen.</td>
+        </tr>
+        <tr>
+          <th scope="row">One-to-one DMs between the apps, once you both have security keys and your app has saved the other person's key</th>
+          <td>Who you talk to, when, how often, roughly how long each message is, reactions and read state. Not what you say, and not what's in the files you send.</td>
+        </tr>
+        <tr>
+          <th scope="row">One-to-one DMs in a web browser</th>
+          <td>Encrypted only when you both have security keys. Even then, a browser loads its chat code from the community's host, and a dishonest host could change that code and read the conversation. The installed apps don't load chat code from the host. They still rely on you having a genuine copy on a device nobody else controls.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>The limits, so nobody is surprised</h2>
+    <ul>
+      <li><strong>No outside audit.</strong> The encryption has been tested by the project. No independent firm has reviewed it.</li>
+      <li><strong>First contact is taken on trust.</strong> The first time your app sees someone's key it accepts it. Compare safety numbers with them if it matters.</li>
+      <li><strong>No forward secrecy.</strong> If someone later gets your security key, they can read your past DMs with it.</li>
+      <li><strong>The other person keeps what you send.</strong> Encryption doesn't stop screenshots or forwarding.</li>
+      <li><strong>Pre-release software.</strong> Expect rough edges and changes.</li>
+    </ul>
+    <p>
+      The encryption design and the code that implements it are public in
+      <a href="https://github.com/strnadchristopher/housecall" rel="noopener">the HouseCall repository</a>.
+      To report a security problem privately, use the Security tab there.
+    </p>
+
+    <h2>Open source</h2>
+    <p>
+      HouseCall is free software under the AGPL-3.0 licence. You don't have to take any of this on
+      faith: <a href="https://github.com/strnadchristopher/housecall" rel="noopener">the code is on GitHub</a>.
+    </p>
+  </main>
+
+  <footer class="foot">
+    <div class="foot__in">
+      <nav class="foot__nav" aria-label="Footer">
+        <a href="/">Home</a>
+        <a href="/app/">Log in</a>
+        <a href="https://github.com/strnadchristopher/housecall" rel="noopener">Source on GitHub</a>
+        <a href="https://github.com/strnadchristopher/housecall/blob/main/LICENSE" rel="noopener">AGPL-3.0 licence</a>
+      </nav>
+      <p class="foot__fine">HouseCall is an independent open source project. It is not affiliated with Discord.</p>
+    </div>
+  </footer>
+</body>
+</html>
