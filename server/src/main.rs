@@ -1,4 +1,5 @@
 use housecall_server::{app, AppState, InviteMailConfig};
+mod media_limits;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
@@ -60,12 +61,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             )?,
         ));
     }
+    let media_limits = media_limits::from_env().map_err(std::io::Error::other)?;
     if let Ok(key) = std::env::var("HOUSECALL_MEDIA_KEY") {
         let key: [u8; 32] = hex::decode(key)?
             .try_into()
             .map_err(|_| "HOUSECALL_MEDIA_KEY must be 64 hex characters")?;
         let path = std::env::var("HOUSECALL_MEDIA_DIR").unwrap_or_else(|_| "data/media".into());
-        state.media = Some(std::sync::Arc::new(housecall_media::Store::new(path, key)?));
+        state.media = Some(std::sync::Arc::new(housecall_media::Store::with_limits(
+            path,
+            key,
+            media_limits,
+        )?));
     }
     let scanner_engine =
         std::env::var("HOUSECALL_MEDIA_SCANNER").unwrap_or_else(|_| "clamav".into());

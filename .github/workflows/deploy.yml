@@ -21,21 +21,38 @@ jobs:
   deploy-server:
     runs-on: [self-hosted, council-linux]
     environment: production
+    env:
+      TAG: ${{ inputs.tag }}
     steps:
+      - name: Validate release tag
+        shell: bash
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]] || exit 1
       - uses: actions/checkout@v4
-        with: { ref: "${{ inputs.tag }}" }
+        with: { ref: "refs/tags/${{ env.TAG }}", persist-credentials: false }
+      - name: Pin checked out tag commit
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          REVISION=$(git rev-parse --verify "refs/tags/$TAG^{commit}")
+          [ "$REVISION" = "$(git rev-parse HEAD)" ]
+          echo "revision=$REVISION" >> "$GITHUB_OUTPUT"
       - name: Deploy (forced-command key; data backup, rollback image, health check)
         env:
+          REVISION: ${{ steps.identity.outputs.revision }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
           DEPLOY_TARGET: ${{ secrets.DEPLOY_TARGET }}
+        shell: bash
         run: |
+          set -euo pipefail
           K="$RUNNER_TEMP/deploy"; rm -rf "$K"; mkdir -p "$K"; chmod 700 "$K"
           trap 'rm -rf "$K"' EXIT
           printf '%s\n' "$DEPLOY_SSH_KEY" > "$K/key"; chmod 600 "$K/key"
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$K/known_hosts"
-          git archive HEAD | ssh -i "$K/key" -o IdentitiesOnly=yes -o UserKnownHostsFile="$K/known_hosts" \
-            -o StrictHostKeyChecking=yes "$DEPLOY_TARGET" "deploy ${{ inputs.tag }}"
+          git archive "$REVISION" | ssh -i "$K/key" -o IdentitiesOnly=yes -o UserKnownHostsFile="$K/known_hosts" \
+            -o StrictHostKeyChecking=yes "$DEPLOY_TARGET" "deploy $TAG"
       - name: Verify public health
         env:
           DEPLOY_HEALTH_URL: ${{ vars.DEPLOY_HEALTH_URL }}

@@ -308,11 +308,11 @@ async fn run_job(
         }
         if db.execute("UPDATE media_jobs SET status='running',updated_at=? WHERE id=? AND status='queued'",params![crate::now(),id]).unwrap_or(0)!=1{return}
     }
-    let video = match store.create(
+    let video = match store.create_generated(
         &source.owner_id,
         &source.channel_id,
         "playback.mp4",
-        u64::MAX,
+        2 * 1024 * 1024 * 1024,
     ) {
         Ok(v) => v,
         Err(_) => {
@@ -320,11 +320,11 @@ async fn run_job(
             return;
         }
     };
-    let thumbnail = match store.create(
+    let thumbnail = match store.create_generated(
         &source.owner_id,
         &source.channel_id,
         "thumbnail.jpg",
-        u64::MAX,
+        16 * 1024 * 1024,
     ) {
         Ok(v) => v,
         Err(_) => {

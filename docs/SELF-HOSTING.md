@@ -2,6 +2,17 @@
 
 This recipe runs the existing server image, ClamAV and Caddy. It is source-validated; a clean-host install, certificate issuance and a two-network call have **not** been executed in this lane. The parent must build and push the versioned image before the release workflow can verify it. Nothing here changes repository or package visibility.
 
+## Current publication boundary
+
+The November 2026 bootstrap, storage-budget and deployment-workflow fixes are in the
+publication source. Previously published `0.4.x` images predate those fixes, and the
+registry package has not been qualified for unauthenticated installation. Making the
+source repository public does not publish or update its container package. For the
+reviewed implementation, use the root README's source-build Compose path. Treat the
+prebuilt-image recipe below as a separate release gate until a fixed immutable image
+has been built, exercised and made available; do not claim the old image includes the
+new controls.
+
 ## Release order (parent operated)
 
 The desktop release workflow is manual-dispatch only on Council Linux/macOS runners, with `publish=false` by default and no hosted fallback. It does not build server images. Tag pushes publish nothing. Keep the selected release tag immutable; its client package, Tauri and Cargo versions must match the tag without `v`. Every downstream checkout uses the resolved tag commit. Only an existing draft release may be reused; published releases are refused.
@@ -26,7 +37,7 @@ The desktop release workflow is manual-dispatch only on Council Linux/macOS runn
 
 Private GHCR package grants for the repository's Actions token (`packages:read`) and for each pulling account remain prerequisites. The parent's current `gh` OAuth scopes are `gist`, `read:org`, `repo`, `workflow`: they contain **no `write:packages`**, so that session cannot be assumed to push images. Parent must arrange separately authorized package-write access; this repair performs no authentication or network changes.
 
-The existing manual [deploy workflow](../.github/workflows/deploy.yml) remains unchanged as a separate **source-based backup/rollback route**. It archives the selected tag for the existing deploy script; it does not deploy the verified registry digest. Preserve its backup/rollback process and validate it independently. Neither its public health check nor a registry label check substitutes for server acceptance.
+The existing manual [deploy workflow](../.github/workflows/deploy.yml) is a separate **source-based backup/rollback route**. It validates a release-shaped tag before checkout and archives its pinned commit for the existing deploy script; it does not deploy the verified registry digest. Preserve its backup/rollback process and validate it independently. Neither its public health check nor a registry label check substitutes for server acceptance.
 
 ## Prerequisites
 
@@ -71,6 +82,8 @@ The checklist's HTTPS signal comes from the current request's `X-Forwarded-Proto
 The first-run checklist always leaves external UDP verification outstanding, even when the SFU is configured. Test with two actual clients on different networks: join the same voice channel, verify bidirectional audio/video, then reconnect. A bound socket or generic UDP port scan does not prove WebRTC works. Settings → Apps indicates integration configuration, not external connectivity.
 
 ## Storage
+
+Media admission defaults to 20 GiB of declared reservations globally, 4 GiB per owner, 2 GiB per ordinary upload, 16 incomplete uploads per owner and 10,000 total uploads. These provisional limits are configurable through the five `HOUSECALL_MEDIA_*` budget variables in [.env.example](../.env.example); both Compose recipes forward them. Sealed DMs retain their existing per-file cap and consume the aggregate budgets. See [storage admission and retention details](SETUP.md) before raising limits. They are not tenant capacity/billing promises or physical filesystem quotas: allow headroom for chunks/metadata, SQLite, logs and backups, and validate disk monitoring. Existing over-budget data is retained for reads/deletion. No new automatic expiry removes customer uploads; define retention and reviewed manual cleanup before paid hosting.
 
 The checklist obtains and rolls back a SQLite write lock; it does not test file uploads, free space or backup restoration. Verify an actual synthetic upload/download with scanner healthy, check free disk and inspect service health separately:
 

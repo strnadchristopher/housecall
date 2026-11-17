@@ -364,3 +364,82 @@ async fn validation_unknown_ids_and_pending_cap() {
         StatusCode::TOO_MANY_REQUESTS
     );
 }
+
+#[tokio::test]
+async fn early_request_cannot_poison_owner_bootstrap() {
+    let state = AppState::new(":memory:", SETUP).unwrap();
+    let slots = state.auth_slots.clone();
+    let db = state.db.clone();
+    let api = app(state, None);
+    let (_, public) = call(&api, "GET", "/api/instance", None, Value::Null).await;
+    assert_eq!(public["requests_open"], false);
+    let permits = slots.acquire_many(2).await.unwrap();
+    assert_eq!(request(&api, "early").await.0, StatusCode::FORBIDDEN);
+    assert_eq!(
+        db.lock()
+            .unwrap()
+            .query_row("SELECT COUNT(*) FROM users", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        0
+    );
+    drop(permits);
+    let (status, owner) = call(
+        &api,
+        "POST",
+        "/api/setup",
+        None,
+        json!({"setup_token":SETUP,"username":"owner","password":PW,"device_name":"test"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{owner}");
+    assert_eq!(request(&api, "early").await.0, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn closing_requests_during_password_work_is_rechecked() {
+    use std::{future::Future, task::Poll};
+    let state = AppState::new(":memory:", SETUP).unwrap();
+    let db = state.db.clone();
+    let api = app(state, None);
+    let (status, owner) = call(
+        &api,
+        "POST",
+        "/api/setup",
+        None,
+        json!({"setup_token":SETUP,"username":"owner","password":PW,"device_name":"test"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let mut pending = std::pin::pin!(request(&api, "racing"));
+    // Poll through admission to the asynchronous password worker without sleeps.
+    // The request cannot run its transaction recheck until we poll it again.
+    std::future::poll_fn(|cx| {
+        assert!(pending.as_mut().poll(cx).is_pending());
+        Poll::Ready(())
+    })
+    .await;
+    assert_eq!(
+        call(
+            &api,
+            "PATCH",
+            "/api/instance",
+            Some(&owner),
+            json!({"requests_open":false})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(pending.await.0, StatusCode::FORBIDDEN);
+    assert_eq!(
+        db.lock()
+            .unwrap()
+            .query_row(
+                "SELECT COUNT(*) FROM users WHERE username='racing'",
+                [],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+        0
+    );
+}

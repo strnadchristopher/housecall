@@ -456,3 +456,138 @@ async fn message_attachments_carry_a_display_kind() {
     }
     assert_eq!(kinds, ["image", "gif", "video_pending", "file"]);
 }
+
+#[tokio::test]
+async fn finite_media_admission_http_statuses_and_reclamation() {
+    use housecall_media::{Limits, Store};
+    let dir = tempfile::tempdir().unwrap();
+    let mut s = AppState::new(":memory:", "bootstrap-long-enough-for-test-secret").unwrap();
+    s.media = Some(Arc::new(
+        Store::with_limits(
+            dir.path(),
+            [7; 32],
+            Limits {
+                total_bytes: 12,
+                owner_bytes: 8,
+                upload_bytes: 6,
+                pending_per_owner: 2,
+                uploads: 4,
+            },
+        )
+        .unwrap(),
+    ));
+    s.scanner = Arc::new(Clean);
+    let api = app(s, None);
+    let (status,a)=json_req(&api,"POST","/api/setup",None,json!({"setup_token":"bootstrap-long-enough-for-test-secret","username":"owner","password":"password-long-enough","device_name":"test"})).await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, channel) = json_req(
+        &api,
+        "POST",
+        "/api/channels",
+        Some(&a),
+        json!({"name":"budget","kind":"channel"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let cid = channel["id"].as_str().unwrap();
+    let create = |length: &str| json!({"channel_id":cid,"filename":"fixture","length":length});
+    assert_eq!(
+        json_req(
+            &api,
+            "POST",
+            "/api/uploads",
+            Some(&a),
+            create("18446744073709551615")
+        )
+        .await
+        .0,
+        StatusCode::PAYLOAD_TOO_LARGE
+    );
+    let (status, one) = json_req(&api, "POST", "/api/uploads", Some(&a), create("6")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        json_req(&api, "POST", "/api/uploads", Some(&a), create("3"))
+            .await
+            .0,
+        StatusCode::INSUFFICIENT_STORAGE
+    );
+    let (status, two) = json_req(&api, "POST", "/api/uploads", Some(&a), create("2")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        json_req(&api, "POST", "/api/uploads", Some(&a), create("0"))
+            .await
+            .0,
+        StatusCode::TOO_MANY_REQUESTS
+    );
+    let id = one["id"].as_str().unwrap();
+    assert_eq!(
+        json_req(
+            &api,
+            "DELETE",
+            &format!("/api/uploads/{id}"),
+            Some(&a),
+            Value::Null
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let (status, replacement) = json_req(&api, "POST", "/api/uploads", Some(&a), create("6")).await;
+    assert_eq!(status, StatusCode::OK);
+    let id = replacement["id"].as_str().unwrap();
+    assert_eq!(
+        request(
+            &api,
+            "PATCH",
+            &format!("/api/uploads/{id}"),
+            Some(&a),
+            b"secret".to_vec(),
+            Some(("upload-offset", "0"))
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        json_req(
+            &api,
+            "POST",
+            &format!("/api/uploads/{id}/complete"),
+            Some(&a),
+            json!({})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let (status, bytes) = request(
+        &api,
+        "GET",
+        &format!("/api/media/{id}"),
+        Some(&a),
+        vec![],
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(bytes, b"secret");
+    let id = two["id"].as_str().unwrap();
+    assert_eq!(
+        json_req(
+            &api,
+            "DELETE",
+            &format!("/api/uploads/{id}"),
+            Some(&a),
+            Value::Null
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        json_req(&api, "POST", "/api/uploads", Some(&a), create("2"))
+            .await
+            .0,
+        StatusCode::OK
+    );
+}

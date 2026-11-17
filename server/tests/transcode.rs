@@ -437,6 +437,85 @@ async fn scanner_rejection_bad_input_and_timeout_never_publish_derivatives() {
     assert_eq!(end["error"], "processing_timeout");
 }
 #[test]
+fn legacy_interrupted_derivatives_reopen_before_configured_restart_recovery() {
+    let (dir, mut state, api) = fixture(Duration::from_secs(20));
+    drop(api);
+    let store = state.media.take().unwrap();
+    let source = store.create("owner", "room", "source", 2).unwrap();
+    store.append(source.id, "owner", 0, b"ok").unwrap();
+    store.finalize(source.id, "owner", &Clean).unwrap();
+    let video = store.create("owner", "room", "video", 1).unwrap();
+    let thumbnail = store.create("owner", "room", "thumbnail", 1).unwrap();
+    drop(store);
+    for id in [video.id, thumbnail.id] {
+        let path = dir.path().join(id.to_string()).join("meta.json");
+        let mut meta: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        meta["length"] = serde_json::json!(u64::MAX);
+        meta.as_object_mut().unwrap().remove("generated");
+        std::fs::write(path, serde_json::to_vec(&meta).unwrap()).unwrap();
+    }
+    {
+        let db = state.db.lock().unwrap();
+        db.execute("INSERT INTO media_jobs(id,source_id,owner_id,channel_id,status,video_id,thumbnail_id,created_at,updated_at) VALUES('legacy',?,'owner','room','running',?,?,0,0)",
+            params![source.id.to_string(), video.id.to_string(), thumbnail.id.to_string()]).unwrap();
+        housecall_server::transcode::init(&db).unwrap();
+    }
+    // Match main's order: the finite-budget Store must open before configure
+    // can reclaim the two recorded interrupted outputs. No FFmpeg process runs.
+    let limits = housecall_media::Limits {
+        total_bytes: 12,
+        owner_bytes: 8,
+        upload_bytes: 6,
+        pending_per_owner: 4,
+        uploads: 4,
+    };
+    state.media = Some(Arc::new(
+        Store::with_limits(dir.path(), [31; 32], limits).unwrap(),
+    ));
+    assert!(matches!(
+        state
+            .media
+            .as_ref()
+            .unwrap()
+            .create("owner", "room", "blocked", 1),
+        Err(housecall_media::Error::Capacity)
+    ));
+    state.transcoder = None;
+    housecall_server::transcode::configure(&mut state).unwrap();
+    assert!(
+        state.transcoder.is_some(),
+        "recovery fixture requires the configured FFmpeg file to exist"
+    );
+    let store = state.media.as_ref().unwrap();
+    for id in [video.id, thumbnail.id] {
+        assert!(matches!(
+            store.inspect(id, "owner"),
+            Err(housecall_media::Error::NotFound)
+        ));
+    }
+    let mut bytes = vec![];
+    store
+        .read_range(source.id, 0, 2)
+        .unwrap()
+        .read_to_end(&mut bytes)
+        .unwrap();
+    assert_eq!(bytes, b"ok");
+    store.create("owner", "room", "replacement", 6).unwrap();
+    let db = state.db.lock().unwrap();
+    let status: (String, i64, String) = db
+        .query_row(
+            "SELECT status,retryable,error FROM media_jobs WHERE id='legacy'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        status,
+        ("failed".into(), 1, "interrupted_by_restart".into())
+    );
+}
+
+#[test]
 fn restart_marks_jobs_failed_retryable_and_length_finalize_is_server_only() {
     let (_dir, state, _) = fixture(Duration::from_secs(20));
     let db = state.db.lock().unwrap();
@@ -451,7 +530,7 @@ fn restart_marks_jobs_failed_retryable_and_length_finalize_is_server_only() {
     store.append(normal.id, "owner", 0, b"ok").unwrap();
     assert!(store.finish_generated(normal.id, "owner", &Clean).is_err());
     let generated = store
-        .create("owner", "room", "generated", u64::MAX)
+        .create_generated("owner", "room", "generated", 16)
         .unwrap();
     store.append(generated.id, "owner", 0, b"ok").unwrap();
     let ready = store

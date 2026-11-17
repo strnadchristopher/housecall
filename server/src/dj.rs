@@ -141,7 +141,7 @@ impl Player {
         }
         let metadata = self
             .store
-            .create(OWNER, channel, "dj-track.mp4", u64::MAX)
+            .create_generated(OWNER, channel, "dj-track.mp4", MAX_OUTPUT)
             .map_err(ApiError::from)?;
         let asset = Uuid::new_v4().to_string();
         {

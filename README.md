@@ -2,13 +2,13 @@
 
 <img src="docs/readme/icon.svg" width="112" height="112" alt="Housecall logo">
 
-# Housecall
+# HouseCall
 
-**A private group chat you host yourself, for the people you'd actually invite over.**
+**Chat, calls and watch-together for your friends and community.**
 
-Text, voice, video and watch-together for a small circle of friends, on your own server and every device.
+Run your own community server, invite your people, and keep conversations together across the web and native apps.
 
-[![Latest release](https://img.shields.io/badge/release-v0.2.3--alpha-e6a94f?style=flat-square)](https://github.com/strnadchristopher/housecall/releases)
+[![Pre-release](https://img.shields.io/badge/status-pre--release-e6a94f?style=flat-square)](https://github.com/strnadchristopher/housecall/releases)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-web%20%7C%20macOS%20%7C%20Windows%20%7C%20Linux%20%7C%20iOS%20%7C%20Android-555?style=flat-square)](#download)
 [![Self-hosted](https://img.shields.io/badge/self--hosted-Docker-2496ED?style=flat-square&logo=docker&logoColor=white)](#quick-start-docker-compose)
@@ -38,13 +38,28 @@ Text, voice, video and watch-together for a small circle of friends, on your own
 
 ---
 
-## Why Housecall?
+## Why HouseCall?
 
-Big chat platforms are built for millions of strangers. Housecall is built for the dozen people in your group chat. You run it, you decide who's in, and nobody's friendships become a product.
+HouseCall gives a small community its own place to talk. The host controls membership and integrations, with channels, direct messages and shared activities in one app.
 
-- **Invite-only by design.** No public sign-ups. Share an invite link, or let people request access and approve them.
+- **Membership you approve.** Share an invite link, or review access requests. Community access requires an invitation or approval.
 - **Yours to run.** One Docker Compose file, one SQLite database, no third-party account.
-- **Every device.** Desktop apps, iOS and Android apps, and the web.
+- **Web and native clients.** Use a browser or the Tauri apps; mobile apps are still in testing.
+
+## Open HouseCall
+
+Visit [housecall.chat](https://housecall.chat) for the project, or [connect directly](https://housecall.chat/app/)
+with the community server address your host gave you. The portal reviews that address and opens
+the server's own frontend, where you log in and join under that host's rules.
+
+An optional [HouseCall account](https://housecall.chat/app/#account) saves an encrypted list of
+server addresses. It does not create a community login or grant membership. Registration depends
+on the account service's availability and operator review; direct connection needs no portal account.
+There is **no portal password reset or recovery**. Keep your password safe and export your list
+while it is unlocked if you need a backup. Reloading the page locks the list again.
+
+Private managed hosting is **in preparation**. Availability, service terms and pricing have not
+been announced. Self-hosting instructions are below.
 
 ## Features
 
@@ -54,8 +69,8 @@ Big chat platforms are built for millions of strangers. Housecall is built for t
 | 📞 **Voice & video** | Group calls on a built-in Rust SFU, camera and screen sharing, ringing for direct calls, native CallKit on iOS |
 | 🍿 **Watch together** | Synced Plex playback with subtitles, a shared DJ queue, GIFs via Giphy |
 | 📸 **Snaps** | View-once photos that open once per person and expire after 24 hours |
-| 🖼️ **Media** | Inline images, GIFs and video; resumable uploads encrypted at rest; optional ClamAV scanning |
-| 🔐 **Accounts** | Passkeys, per-device sessions kept in the OS keychain, owner roles and access requests |
+| 🖼️ **Media** | Inline images, GIFs and video; resumable uploads encrypted at rest; ordinary files stay quarantined until scanning succeeds |
+| 🔐 **Security & accounts** | Encrypted one-to-one DMs when both people have security keys; community passwords and passkeys, native OS credential storage, owner controls and access requests |
 | 🧭 **Setup wizard** | Create a server, pick channels, and check every integration from Settings |
 | 🔄 **Auto-updates** | Signed desktop updates, downloaded in the background |
 
@@ -67,7 +82,9 @@ and build from `client/src-tauri`. Housecall is pre-release software: expect rou
 
 ## Quick start (Docker Compose)
 
-Requirements: Docker with the Compose plugin and Python 3.
+Requirements: Docker with the Compose plugin and Python 3. Clone this repository and
+run the following from its root. This builds the source; older prebuilt server images
+do not automatically include the current publication fixes.
 
 ```sh
 python3 scripts/init-env.py        # creates .env with random secrets
@@ -97,10 +114,23 @@ More: [setup](docs/SETUP.md), [API](docs/API.md), [threat model](docs/THREAT-MOD
 ## Security status
 
 > [!WARNING]
-> Messages are **not** end-to-end encrypted today. The server owner can read them; uploaded
-> files are encrypted at rest on the server. An end-to-end encryption protocol is under
-> development and has had no independent security audit. Only run Housecall for people who
-> trust the person hosting it. See [SECURITY.md](SECURITY.md) and [docs/DECISIONS.md](docs/DECISIONS.md).
+> Channels, group DMs and calls are **not end-to-end encrypted**. The server operator can read
+> their messages, decrypt ordinary uploads and access call media. One-to-one DMs and their sealed
+> attachments use client-side encryption when both people have security keys. First contact trusts
+> the supplied keys: compare safety numbers. There is no forward secrecy, and older plaintext
+> messages remain plaintext. A host serving a modified web client can read what that browser can
+> access, including keys entered or linked there. Native clients reduce that web-publisher exposure
+> but still depend on trusted software and devices.
+
+Ordinary upload encryption uses a key held by the server; it does not hide files from the operator.
+Sealed DM attachments cannot be scanned by the server. Operators can see membership, message
+timing, sizes and other metadata. View-once photos cannot prevent recipients from copying them.
+The optional portal encrypts your saved list in the browser, but a compromised site or browser can
+read it while unlocked. Host, proxy, provider and backup policies also affect privacy.
+
+The encryption has had no independent external audit. Read [SECURITY.md](SECURITY.md), the
+[bounded November 2026 source review](docs/security/SECURITY-AUDIT-2026-11.md), and the
+[privacy explanation](https://housecall.chat/privacy) before choosing a host.
 
 ## Built with
 
@@ -108,7 +138,9 @@ More: [setup](docs/SETUP.md), [API](docs/API.md), [threat model](docs/THREAT-MOD
 
 ## Contributing
 
-Bug reports, ideas and pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md).
+Bug reports, ideas and pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md)
+for source builds and development. Report vulnerabilities privately through the route in
+[SECURITY.md](SECURITY.md), rather than a public issue.
 
 ## Support the project
 
@@ -126,4 +158,6 @@ If Housecall brings your people a little closer, you can say thanks on Ko-fi. It
 
 ## License
 
-[GNU AGPL-3.0](LICENSE)
+[GNU AGPL-3.0](LICENSE). If you distribute builds, provide the corresponding source as required
+by the licence. If you modify HouseCall and let people use it over a network, offer those users
+the corresponding source for your modified version. See the licence for the full terms.

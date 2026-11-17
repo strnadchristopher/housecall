@@ -42,6 +42,14 @@ pub fn public_routes() -> Router<AppState> {
 }
 
 fn requests_open(db: &Connection) -> Result<bool, ApiError> {
+    let owner_exists: bool = db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM users WHERE is_owner=1)",
+        [],
+        |r| r.get(0),
+    )?;
+    if !owner_exists {
+        return Ok(false);
+    }
     Ok(db
         .query_row(
             "SELECT value FROM instance_settings WHERE key=?",
@@ -88,6 +96,23 @@ struct NewRequest {
     #[serde(default)]
     message: Option<String>,
 }
+fn admit_request(db: &Connection) -> Result<(), ApiError> {
+    if !requests_open(db)? {
+        return Err(forbidden());
+    }
+    let pending: i64 = db.query_row(
+        "SELECT COUNT(*) FROM access_requests WHERE status='pending'",
+        [],
+        |r| r.get(0),
+    )?;
+    if pending >= MAX_PENDING {
+        return Err(ApiError(
+            StatusCode::TOO_MANY_REQUESTS,
+            "too many pending requests",
+        ));
+    }
+    Ok(())
+}
 async fn request(State(s): State<AppState>, Json(v): Json<NewRequest>) -> ApiResult<Value> {
     credentials(&v.username, &v.password, &v.device_name)?;
     let message = v.message.unwrap_or_default().trim().to_owned();
@@ -96,24 +121,12 @@ async fn request(State(s): State<AppState>, Json(v): Json<NewRequest>) -> ApiRes
     }
     {
         let db = s.db.lock().unwrap();
-        if !requests_open(&db)? {
-            return Err(forbidden());
-        }
-        let pending: i64 = db.query_row(
-            "SELECT COUNT(*) FROM access_requests WHERE status='pending'",
-            [],
-            |r| r.get(0),
-        )?;
-        if pending >= MAX_PENDING {
-            return Err(ApiError(
-                StatusCode::TOO_MANY_REQUESTS,
-                "too many pending requests",
-            ));
-        }
+        admit_request(&db)?;
     }
     let pw = password_hash(&s, v.password).await?;
     let mut db = s.db.lock().unwrap();
     let tx = db.transaction()?;
+    admit_request(&tx)?;
     if tx
         .query_row(
             "SELECT 1 FROM users WHERE username=?",

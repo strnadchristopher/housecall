@@ -15,7 +15,7 @@ embedded WASM. Dependency API/real crypto proof, static build and unit/store cra
 checks pass. These are not application HTTP/browser acceptance. See
 `evidence/GATES.md` for executed and parent-only gates. No deployment occurred.
 
-## Reproducible parent commands on Noah
+## Reproducible local verification
 
 Use Node >=20.19.0 and npm >=9. Node 20.19.2 is present here. The parent reports Debian 13's signed
 Node 20.19.2 package; target runtime checks remain required; this code needs standard
@@ -24,9 +24,10 @@ WebAssembly and WebCrypto over HTTPS (localhost HTTP is a fixture exception).
 Do not switch authentication routes or use a paid API.
 
 ```sh
-cd /home/christopher/GitHub/.worktrees/chriscord/hc-public-portal/portal
+cd /path/to/housecall/portal
 df -h .                     # STOP below 5GiB free; keep task artifacts below 2GiB
-export TMPDIR=/home/christopher/.hermes/cache/scratch
+export TMPDIR="${TMPDIR:-$HOME/.cache/housecall-portal-tests}"
+mkdir -p "$TMPDIR"
 npm ci --ignore-scripts --fetch-retries=0
 npm run verify:dependency
 npm audit --omit=dev
@@ -41,7 +42,7 @@ npm run test:browser
 `@serenity-kit/opaque` is pinned to 1.1.0, Playwright to 1.58.1. No semver ranges.
 Retain and review `package-lock.json`; subsequent installs use `npm ci --ignore-scripts`.
 OPAQUE packages inline WASM and needs no lifecycle compilation.
-Playwright's browser installation is a separate parent operation. Prefer Noah's
+Playwright's browser installation is a separate parent operation. Prefer an
 already installed matching Chromium; otherwise `npx playwright install chromium`
 only when disk budget permits. No traces, automatic failure screenshots or video:
 they could record passwords. The explicit screenshots are of an anonymous portal
@@ -55,8 +56,8 @@ actual files, checks API shape, pin and lock integrity, and performs real
 registration/two logins/stable exportKey/wrong-password rejection with explicit
 `memory-constrained` KSF on both registration and login. It prints no secrets.
 This does not prove WASM source equivalence or independently audit this app.
-Parent audit JSON (`/home/christopher/.local/state/housecall-domain-20261117/portal-dependency-audit.json`)
-reports zero advisories; this is neither a security audit nor a future guarantee.
+The recorded release dependency audit reported zero advisories; reproduce it
+with the commands above. This is neither an application audit nor a future guarantee.
 Review upstream source/provenance and any applicable advisory before registration.
 Browser WASM needs CSP `wasm-unsafe-eval`, never general `unsafe-eval`. Browser E2E
 must verify the copied ESM works. Its MIT license accompanies the built artifact.
@@ -179,7 +180,7 @@ reset exists. Password loss is unrecoverable without the password/unlocked list
 or export. Plaintext export is explicit and stays on the user's device.
 
 The footer's **Portal source** link points to the same-origin
-`/source/housecall-public-source.tar.gz`. Noah must serve the exact corresponding
+`/source/housecall-public-source.tar.gz`. The release operator must serve the exact corresponding
 source-only release archive there, excluding production secrets/state. This work
 adds the offer link, not an archive or a claim of current public availability;
 GitHub main does not yet contain this new API. Privacy remains linked separately.
@@ -204,7 +205,7 @@ colors, Apfel Grotezk/Inria Sans local fonts (licenses included), bare mark and
 door-shaped surfaces. Connect directly is the initial view (one address); Saved
 servers opens the optional account view. All prior actions remain available.
 No website files were edited and no designer was invoked. Rendered screenshots,
-keyboard/pointer inspection and adversarial UX are Noah's pending acceptance.
+keyboard/pointer inspection and adversarial UX require release-operator acceptance.
 
 `PORTAL-V1.md` describes this implemented convenience subset only. The established
 future identity/device/root/push/QR design in `ID-V1.md` was restored byte-for-byte

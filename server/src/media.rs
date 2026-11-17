@@ -17,6 +17,14 @@ impl From<Error> for ApiError {
     fn from(e: Error) -> Self {
         match e {
             Error::NotFound => Self(StatusCode::NOT_FOUND, "upload not found"),
+            Error::TooLarge => Self(StatusCode::PAYLOAD_TOO_LARGE, "upload too large"),
+            Error::Capacity => Self(
+                StatusCode::INSUFFICIENT_STORAGE,
+                "media capacity unavailable",
+            ),
+            Error::PendingLimit => {
+                Self(StatusCode::TOO_MANY_REQUESTS, "too many incomplete uploads")
+            }
             Error::Invalid => bad("invalid upload input"),
             Error::Conflict => Self(StatusCode::CONFLICT, "upload offset or state conflict"),
             Error::Quarantined => Self(StatusCode::LOCKED, "media remains quarantined"),

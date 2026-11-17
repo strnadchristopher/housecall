@@ -103,7 +103,7 @@ fixed `account_changed` code. CAS recovery keeps the typed address and offers
 Reload saved list; duplicate-name copy applies to registration only.
 
 The portal footer offers **Portal source** at
-`/source/housecall-public-source.tar.gz`, alongside Privacy. Noah must publish the
+`/source/housecall-public-source.tar.gz`, alongside Privacy. The release operator must publish the
 exact corresponding source-only archive at that same-origin path with the release;
 no archive is generated here, and current public availability is not claimed.
 Production secrets/state must never be included. GitHub main is not the source
@@ -130,7 +130,7 @@ Limits: 32KiB auth / 96KiB vault request, 128 pending exchanges (60s), 512 sessi
 (30min), 2,048 rate buckets (60s salt rotation), 30 requests/IP/minute and 300
 requests/global/minute, 64 active requests/connections. Limits fail closed with
 429/503. RAM expiry uses monotonic time; no persistent timestamps. Production
-Node 20.19+ (Debian 13 package candidate must be checked by Noah), memory cap in
+Node 20.19+ (Debian 13 package candidate must be checked by the release operator), memory cap in
 systemd. One process only; no cluster/shared DB.
 
 ## Dependency/release gates
@@ -151,7 +151,7 @@ filesystem only; init and service share the lock. Atomic snapshot/fsync preserve
 committed state; no auto initialization, DB reset or secret regeneration. Before
 switching an older O_EXCL candidate to this protocol, fully stop the old process.
 
-Before opening registration Noah must run real HTTP/account/direct/browser gates,
+Before opening registration the release operator must run real HTTP/account/direct/browser gates,
 one focused independent security review and adversarial UX. Registration defaults
 closed. See portal/README.md and evidence/GATES.md for exact commands/rollback.
 
