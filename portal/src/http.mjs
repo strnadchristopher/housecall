@@ -21,6 +21,7 @@ const files = new Map([
   ['/app/account-client.mjs', ['account-client.mjs', 'text/javascript']],
   ['/app/direct.mjs', ['direct.mjs', 'text/javascript']],
   ['/app/device-vault.mjs', ['device-vault.mjs', 'text/javascript']],
+  ['/app/account-identity.mjs', ['account-identity.mjs', 'text/javascript']],
   ['/app/vault.mjs', ['vault.mjs', 'text/javascript']],
   ['/app/styles.css', ['styles.css', 'text/css']],
   ['/app/opaque.mjs', ['opaque.mjs', 'text/javascript']],

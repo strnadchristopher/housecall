@@ -10,14 +10,14 @@ const communityPassword = 'synthetic community password';
 const accountPassword = 'synthetic account password';
 const username = () => 'fixture_' + crypto.randomUUID().replaceAll('-', '').slice(0, 12);
 async function account(page: Page, name: string, signup = true) {
-  await page.goto('/app/#' + (signup ? 'signup' : 'login'));
+  await page.goto('/#' + (signup ? 'signup' : 'login'));
   await page.getByLabel('Username', { exact: true }).fill(name);
   await page.getByLabel('Password', { exact: true }).fill(accountPassword);
   await page.getByRole('button', { name: signup ? 'Create account' : 'Log in', exact: true }).click();
   await expect(page.getByText('No servers yet', { exact: true })).toBeVisible();
 }
 async function direct(page: Page, origin: string, user = 'fixture_owner') {
-  await page.goto('/app/#direct');
+  await page.goto('/#direct');
   await page.getByLabel('Server address', { exact: true }).fill(origin);
   await page.getByLabel('Username', { exact: true }).fill(user);
   await page.getByLabel('Password', { exact: true }).fill(communityPassword);
@@ -49,9 +49,9 @@ async function closeSettings(page: Page) {
   else { await page.getByTestId('screen-settings').locator('.hc-header button').click(); await page.getByTestId('screen-settings').locator('.hc-header button').click(); }
 }
 
-test('production /app/ login modes, keyboard, 390px and visible errors', async ({ page }, info) => {
+test('hosted root login modes, keyboard, 390px and visible errors', async ({ page }, info) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/app/'); await expect(page.getByRole('heading', { name: 'Log in to HouseCall', exact: true })).toBeVisible();
+  await page.goto('/'); await expect(page.getByRole('heading', { name: 'Log in to HouseCall', exact: true })).toBeVisible();
   await page.getByLabel('Username', { exact: true }).fill('fixture_missing'); await page.keyboard.press('Enter');
   await expect(page.getByLabel('Password', { exact: true })).toBeFocused();
   await page.getByLabel('Password', { exact: true }).fill(accountPassword); await page.keyboard.press('Enter');
@@ -141,7 +141,7 @@ test('link after authentication, two communities, reload, fresh device auth and 
 test('two-tab guest promotion, reload, non-overwriting CAS and explicit logout clears device keys', async ({ page, context }) => {
   await direct(page, alpha);
   // Open the other guest before promotion so the BroadcastChannel change is exercised.
-  const tab = await context.newPage(); await tab.goto('/app/'); await expect(tab.getByTestId('screen-composer')).toBeVisible();
+  const tab = await context.newPage(); await tab.goto('/'); await expect(tab.getByTestId('screen-composer')).toBeVisible();
   await settings(page); await page.getByRole('button', { name: 'Create an account', exact: true }).click();
   const name = username(); await page.getByLabel('Username', { exact: true }).fill(name); await page.getByLabel('Password', { exact: true }).fill(accountPassword); await page.getByRole('button', { name: 'Create account', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Save this server', exact: true })).toBeVisible(); await page.getByRole('button', { name: 'Save this server', exact: true }).click();

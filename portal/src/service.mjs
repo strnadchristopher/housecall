@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { randomBytes, createHash, createHmac } from 'node:crypto';
 import { Limits, peerIP } from './limits.mjs';
 import { envelope, decode } from './vault.mjs';
+import { opaqueServerIdentity } from './account-identity.mjs';
 import { staticRequest, reply, headers, configureHTTP } from './http.mjs';
 const random = () => randomBytes(32).toString('base64url');
 const digest = s => createHash('sha256').update(s).digest('hex');
@@ -105,7 +106,7 @@ export function createPortal({ opaque, store, setup, indexKey, origin, registrat
       }
       if (path === '/api/account/login/start' && method === 'POST') {
         fields(v, ['username', 'startLoginRequest']); const name = username(v.username), id = index(name);
-        const result = opaque.server.startLogin({ serverSetup: setup, userIdentifier: id, registrationRecord: store.accounts.get(id)?.record ?? null, startLoginRequest: wire(v.startLoginRequest), identifiers: { client: name, server: origin } });
+        const result = opaque.server.startLogin({ serverSetup: setup, userIdentifier: id, registrationRecord: store.accounts.get(id)?.record ?? null, startLoginRequest: wire(v.startLoginRequest), identifiers: { client: name, server: opaqueServerIdentity(origin) } });
         return reply(res, 200, { exchange: exchange({ type: 'login', index: id, state: result.serverLoginState, name }), loginResponse: result.loginResponse });
       }
       if (path === '/api/account/login/finish' && method === 'POST') {

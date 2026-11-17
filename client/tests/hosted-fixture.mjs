@@ -63,11 +63,11 @@ try {
     let file;
     if (url.pathname.startsWith('/__fixture/modules/')) {
       const name = url.pathname.slice('/__fixture/modules/'.length);
-      if (!['account-client.mjs', 'vault.mjs', 'device-vault.mjs', 'direct.mjs', 'opaque.mjs'].includes(name)) { res.writeHead(404); res.end(); return; }
+      if (!['account-client.mjs', 'account-identity.mjs', 'vault.mjs', 'device-vault.mjs', 'direct.mjs', 'opaque.mjs'].includes(name)) { res.writeHead(404); res.end(); return; }
       file = name === 'opaque.mjs' ? resolve('dist-hosted/opaque.mjs') : resolve('../portal/src', name);
     } else {
-      const relative = url.pathname === '/app/' ? 'index.html' : url.pathname.slice('/app/'.length);
-      if (!url.pathname.startsWith('/app/') || !/^[a-zA-Z0-9_./-]+$/.test(relative) || relative.includes('..')) { res.writeHead(404); res.end(); return; }
+      const relative = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
+      if (!/^[a-zA-Z0-9_./-]+$/.test(relative) || relative.includes('..')) { res.writeHead(404); res.end(); return; }
       file = resolve('dist-hosted', relative);
     }
     try {

@@ -21,7 +21,7 @@ export function AccountLogin({ onBack }: { onBack?: () => void }) {
     <form ref={form} className="hc-onb__form hc-onb__form--compact" onSubmit={submit} onFocus={() => {
       if (matchMedia('(pointer: coarse)').matches) form.current?.querySelector('button[type=submit]')?.scrollIntoView({ block: 'nearest' });
     }}>
-      <div className="hc-onb__top">{onBack ? <IconButton icon="back" label="Back" onClick={onBack} /> : <a href="/" aria-label="HouseCall home"><Logo /></a>}</div>
+      <div className="hc-onb__top">{onBack ? <IconButton icon="back" label="Back" onClick={onBack} /> : <a href="https://housecall.chat/" aria-label="HouseCall home"><Logo /></a>}</div>
       <header className="hc-onb__title"><h1>{signup ? 'Create a HouseCall account' : 'Log in to HouseCall'}</h1></header>
       <Field label="Username" value={name} onChange={e => setName(e.target.value)} autoFocus autoComplete="username" autoCapitalize="none" spellCheck={false} required pattern="[A-Za-z0-9_]{3,32}" maxLength={32} enterKeyHint="next" onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); form.current?.querySelector<HTMLInputElement>('input[type=password]')?.focus(); } }} />
       <Field label="Password" aria-invalid={!!error} aria-describedby={error ? errorId : undefined} type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete={signup ? 'new-password' : 'current-password'} required minLength={12} maxLength={256} enterKeyHint="go" />

@@ -4,7 +4,7 @@ COPY client/package*.json ./
 RUN npm ci
 COPY client/ ./
 # Browser account modules are imported by the client, including ordinary builds.
-COPY portal/src/account-client.mjs portal/src/device-vault.mjs portal/src/direct.mjs portal/src/vault.mjs /build/portal/src/
+COPY portal/src/account-identity.mjs portal/src/account-client.mjs portal/src/device-vault.mjs portal/src/direct.mjs portal/src/vault.mjs /build/portal/src/
 RUN npm run build
 
 FROM rust:1.98-bookworm AS server

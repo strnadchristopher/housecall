@@ -10,7 +10,8 @@ import * as opaque from '@serenity-kit/opaque';
 import { vaultKey, seal, open, encode } from '../src/vault.mjs';
 if (!globalThis.crypto) globalThis.crypto = webcrypto;
 await opaque.ready;
-const origin = 'https://portal.example';
+const legacyOrigin = 'https://housecall.chat';
+let origin = legacyOrigin;
 const password = () => randomBytes(32).toString('base64url');
 test('REAL OPAQUE HTTP roundtrip, adversarial boundaries and full-process persistence', { timeout: 120000 }, async () => {
   const directory = mkdtempSync(join(tmpdir(), 'hc-portal-real-')); chmodSync(directory, 0o700);
@@ -19,7 +20,7 @@ test('REAL OPAQUE HTTP roundtrip, adversarial boundaries and full-process persis
   writeFileSync(db, '{"schema":1,"accounts":{}}', { mode: 0o600 });
   let child, base;
   async function boot() {
-    child = fork(new URL('./service-child.mjs', import.meta.url), { env: { ...process.env, PORTAL_STATE: directory, PORTAL_SECRETS_FILE: secrets }, stdio: ['ignore', 'ignore', 'ignore', 'ipc'] });
+    child = fork(new URL('./service-child.mjs', import.meta.url), { env: { ...process.env, PORTAL_TEST_ORIGIN: origin, PORTAL_STATE: directory, PORTAL_SECRETS_FILE: secrets }, stdio: ['ignore', 'ignore', 'ignore', 'ipc'] });
     const ready = await Promise.race([once(child, 'message').then(([value]) => value), once(child, 'exit').then(() => { throw new Error('Actual service exited before listening; inspect listener/state gate'); })]); assert.ok(ready.port, ready.error || 'Actual service must start'); base = 'http://127.0.0.1:' + ready.port;
   }
   async function stop() { const exited = once(child, 'exit'); child.kill('SIGTERM'); await exited; child = null; }
@@ -31,7 +32,7 @@ test('REAL OPAQUE HTTP roundtrip, adversarial boundaries and full-process persis
   async function register(name, pw) {
     const start = opaque.client.startRegistration({ password: pw });
     const response = await call('/register/start', { username: name, registrationRequest: start.registrationRequest }); assert.equal(response.status, 200);
-    const finish = opaque.client.finishRegistration({ password: pw, clientRegistrationState: start.clientRegistrationState, registrationResponse: response.value.registrationResponse, identifiers: { client: name, server: origin }, keyStretching: 'memory-constrained' });
+    const finish = opaque.client.finishRegistration({ password: pw, clientRegistrationState: start.clientRegistrationState, registrationResponse: response.value.registrationResponse, identifiers: { client: name, server: legacyOrigin }, keyStretching: 'memory-constrained' });
     const upload = { exchange: response.value.exchange, registrationRecord: finish.registrationRecord };
     assert.equal((await call('/register/finish', upload)).status, 201);
     assert.equal((await call('/register/finish', upload)).status, 401, 'registration exchange replay');
@@ -40,7 +41,7 @@ test('REAL OPAQUE HTTP roundtrip, adversarial boundaries and full-process persis
   async function login(name, pw) {
     const start = opaque.client.startLogin({ password: pw });
     const response = await call('/login/start', { username: name, startLoginRequest: start.startLoginRequest }); assert.equal(response.status, 200);
-    const finish = opaque.client.finishLogin({ password: pw, clientLoginState: start.clientLoginState, loginResponse: response.value.loginResponse, identifiers: { client: name, server: origin }, keyStretching: 'memory-constrained' });
+    const finish = opaque.client.finishLogin({ password: pw, clientLoginState: start.clientLoginState, loginResponse: response.value.loginResponse, identifiers: { client: name, server: legacyOrigin }, keyStretching: 'memory-constrained' });
     if (!finish) return null;
     const request = { exchange: response.value.exchange, finishLoginRequest: finish.finishLoginRequest };
     const authenticated = await call('/login/finish', request); assert.equal(authenticated.status, 200);
@@ -100,7 +101,7 @@ test('REAL OPAQUE HTTP roundtrip, adversarial boundaries and full-process persis
     assert.equal((await call('/', { expectedBinding: second.value.binding, confirmation: 'DELETE', account: first.value.binding }, { cookie: second.cookie, method: 'DELETE' })).status, 400, 'DELETE unknown field');
     assert.equal(readFileSync(db, 'utf8'), beforeBindingChecks, 'binding failures preserve exact database bytes');
     assert.deepEqual((await call('/vault', undefined, { cookie: second.cookie })).value, secondVault.value, 'B session and vault survive');
-    const finishB = opaque.client.finishLogin({ password: pw2, clientLoginState: pendingB.clientLoginState, loginResponse: pendingBResponse.value.loginResponse, identifiers: { client: 'roundtrip_two', server: origin }, keyStretching: 'memory-constrained' });
+    const finishB = opaque.client.finishLogin({ password: pw2, clientLoginState: pendingB.clientLoginState, loginResponse: pendingBResponse.value.loginResponse, identifiers: { client: 'roundtrip_two', server: legacyOrigin }, keyStretching: 'memory-constrained' });
     assert.equal((await call('/login/finish', { exchange: pendingBResponse.value.exchange, finishLoginRequest: finishB.finishLoginRequest })).status, 200, 'B pending exchange survives rejected deletion');
     await advance();
 
@@ -123,10 +124,12 @@ test('REAL OPAQUE HTTP roundtrip, adversarial boundaries and full-process persis
     assert.equal((await call('/status')).status, 429, 'actual HTTP rate limit');
     await advance();
     const oldCookie = second.cookie;
-    const contender = fork(new URL('./service-child.mjs', import.meta.url), { env: { ...process.env, PORTAL_STATE: directory, PORTAL_SECRETS_FILE: secrets }, stdio: ['ignore', 'ignore', 'ignore', 'ipc'] });
+    const contender = fork(new URL('./service-child.mjs', import.meta.url), { env: { ...process.env, PORTAL_TEST_ORIGIN: origin, PORTAL_STATE: directory, PORTAL_SECRETS_FILE: secrets }, stdio: ['ignore', 'ignore', 'ignore', 'ipc'] });
     const [exitCode] = await once(contender, 'exit'); assert.notEqual(exitCode, 0, 'second actual service cannot acquire live ownership');
     const crashed = once(child, 'exit'); child.kill('SIGKILL'); await crashed; child = null;
+    origin = 'https://app.housecall.chat';
     await boot();
+    assert.equal((await call('/status', undefined, { headers: { Origin: legacyOrigin } })).status, 403);
     assert.equal((await call('/vault', undefined, { cookie: oldCookie })).status, 401, 'restart invalidates RAM sessions');
     const restored = await login('roundtrip_one', pw); assert.ok(restored.exported === exported, 'setup/record persist');
     const persisted = await call('/vault', undefined, { cookie: restored.cookie });

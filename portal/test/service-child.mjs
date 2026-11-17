@@ -7,7 +7,7 @@ await opaque.ready;
 const secrets = JSON.parse(readFileSync(process.env.PORTAL_SECRETS_FILE, 'utf8'));
 const store = new Store(process.env.PORTAL_STATE);
 let tick = 0;
-const server = createPortal({ opaque, store, ...secrets, origin: 'https://portal.example', registrationOpen: true, now: () => performance.now() + tick });
+const server = createPortal({ opaque, store, ...secrets, origin: process.env.PORTAL_TEST_ORIGIN || 'https://portal.example', registrationOpen: true, now: () => performance.now() + tick });
 process.on('message', message => { if (message.advance) { tick += message.advance; process.send({ advanced: true }); } });
 server.on('error', () => { process.send({ error: 'Loopback listening unavailable' }); store.close(); process.exit(1); });
 server.listen(0, '127.0.0.1', () => process.send({ port: server.address().port }));

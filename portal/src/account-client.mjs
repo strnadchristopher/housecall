@@ -1,5 +1,6 @@
 import { vaultKey, seal, open } from './vault.mjs';
 import { deviceVault } from './device-vault.mjs';
+import { opaqueServerIdentity } from './account-identity.mjs';
 const accountChanged = () => Object.assign(new Error('Account changed in another tab. Log in again.'), { status: 409, code: 'account_changed' });
 export async function api(path, data, method = data === undefined ? 'GET' : 'POST') {
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 12000);
@@ -28,7 +29,7 @@ export class Account {
     if (!/^[a-z0-9_]{3,32}$/.test(name) || password.length < 12 || password.length > 256) throw new Error('Use a username of 3–32 letters, numbers or underscores and a password of 12–256 characters.');
     let opaque;
     try { opaque = await import('./opaque.mjs'); await opaque.ready; } catch { throw new Error('Account encryption is unavailable. Retry later. Direct connection is available.'); }
-    const identifiers = { client: name, server: location.origin };
+    const identifiers = { client: name, server: opaqueServerIdentity(location.origin) };
     if (register) {
       const start = opaque.client.startRegistration({ password });
       const reply = await api('/register/start', { username: name, registrationRequest: start.registrationRequest });

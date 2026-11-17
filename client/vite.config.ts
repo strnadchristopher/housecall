@@ -4,13 +4,13 @@ import { copyFileSync, mkdirSync, readFileSync } from "node:fs";
 
 const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string };
 export default defineConfig(({ mode }) => ({
-  base: mode === "hosted" ? "/app/" : "/",
+  base: "/",
   build: { outDir: mode === "hosted" ? "dist-hosted" : "dist" },
   plugins: [react(), {
     name: 'hosted-account-runtime',
     transformIndexHtml(html) { return mode === 'hosted' ? html.replace('viewport-fit=cover', 'viewport-fit=cover, interactive-widget=resizes-content') : html; },
     resolveId(source, importer) {
-      if (source === './opaque.mjs' && importer?.endsWith('/portal/src/account-client.mjs')) return { id: '/app/opaque.mjs', external: true };
+      if (source === './opaque.mjs' && importer?.endsWith('/portal/src/account-client.mjs')) return { id: '/opaque.mjs', external: true };
     },
     closeBundle() {
       if (mode !== 'hosted') return;

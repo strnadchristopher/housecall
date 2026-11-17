@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 mkdirSync(root + 'dist', { recursive: true });
 for (const name of ['index.html', 'styles.css']) copyFileSync(root + 'public/' + name, root + 'dist/' + name);
-for (const name of ['app', 'account-client', 'direct', 'vault', 'device-vault']) copyFileSync(root + 'src/' + name + '.mjs', root + 'dist/' + name + '.mjs');
+for (const name of ['app', 'account-client', 'direct', 'vault', 'device-vault', 'account-identity']) copyFileSync(root + 'src/' + name + '.mjs', root + 'dist/' + name + '.mjs');
 cpSync(root + 'public/assets', root + 'dist/assets', { recursive: true });
 const dependency = root + 'node_modules/@serenity-kit/opaque/';
 if (existsSync(dependency + 'esm/index.js')) {
