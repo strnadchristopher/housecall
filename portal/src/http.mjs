@@ -20,6 +20,7 @@ const files = new Map([
   ['/app/app.mjs', ['app.mjs', 'text/javascript']],
   ['/app/account-client.mjs', ['account-client.mjs', 'text/javascript']],
   ['/app/direct.mjs', ['direct.mjs', 'text/javascript']],
+  ['/app/device-vault.mjs', ['device-vault.mjs', 'text/javascript']],
   ['/app/vault.mjs', ['vault.mjs', 'text/javascript']],
   ['/app/styles.css', ['styles.css', 'text/css']],
   ['/app/opaque.mjs', ['opaque.mjs', 'text/javascript']],

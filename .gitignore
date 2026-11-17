@@ -26,3 +26,6 @@
 **/gen/android/app/src/main/jniLibs/
 
 **/.kotlin/
+
+/client/dist-hosted/
+/client/hosted-evidence/

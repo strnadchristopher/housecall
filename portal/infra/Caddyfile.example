@@ -1,4 +1,4 @@
-# EXAMPLE ONLY. Separate static front door; never deploy the repository chat app.
+# EXAMPLE ONLY. Hosted client assets are a separate build; chat servers release separately.
 {
     admin off
     log default {
@@ -9,7 +9,7 @@
 housecall.chat {
     # Deliberately no access-log directive. Global output discard also prevents
     # proxy error events from durably recording request IP/UA/URI metadata.
-    @portal path /app /app/* /api/account /api/account/*
+    @portal path /api/account /api/account/* /api/directory /api/directory/*
     header @portal {
         Referrer-Policy "no-referrer"
         X-Content-Type-Options "nosniff"
@@ -18,7 +18,17 @@ housecall.chat {
         Permissions-Policy "camera=(), microphone=(), geolocation=()"
         Content-Security-Policy "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; font-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; object-src 'none'"
     }
-    handle /api/account* {
+    @hosted path /app /app/*
+    header @hosted {
+        Referrer-Policy "no-referrer"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Cache-Control "no-store"
+        Permissions-Policy "camera=(self), microphone=(self), display-capture=(self), geolocation=()"
+        Content-Security-Policy "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https: wss:; img-src 'self' blob: data:; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' https:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; object-src 'none'"
+    }
+    @accountAPI path /api/account /api/account/* /api/directory /api/directory/*
+    handle @accountAPI {
         request_body {
             max_size 96KB
         }
@@ -36,7 +46,7 @@ housecall.chat {
         redir /app/ 308
     }
     handle_path /app/* {
-        root * /srv/housecall/portal/dist
+        root * /srv/housecall/client/dist-hosted
         file_server
     }
     handle /privacy {

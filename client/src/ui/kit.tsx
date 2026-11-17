@@ -98,7 +98,7 @@ function hash(text: string) {
  * the key so two accounts or hosts never share an entry. Entries live until the page closes: they
  * are at most 512 KB each and only as many as there are people and servers.
  */
-const pictures = new Map<string, Promise<string>>();
+const pictures = new WeakMap<Function, Map<string, Promise<string>>>();
 
 function usePicture(path: string | undefined) {
   const chat = useChat();
@@ -108,15 +108,17 @@ function usePicture(path: string | undefined) {
     if (!path) return;
     const key = `${chat.me.id}|${path}`;
     let live = true;
-    let pending = pictures.get(key);
+    let cache = pictures.get(chat.fetchMedia);
+    if (!cache) { cache = new Map(); pictures.set(chat.fetchMedia, cache); }
+    let pending = cache.get(key);
     if (!pending) {
       pending = chat.fetchMedia(path).then(blob => URL.createObjectURL(blob));
-      pictures.set(key, pending);
-      pending.catch(() => pictures.delete(key));
+      cache.set(key, pending);
+      pending.catch(() => cache.delete(key));
     }
     pending.then(next => { if (live) setUrl(next); }, () => {});
     return () => { live = false; };
-  }, [path, chat.me.id]);
+  }, [path, chat.me.id, chat.fetchMedia]);
   return url;
 }
 

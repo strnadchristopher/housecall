@@ -212,3 +212,66 @@ future identity/device/root/push/QR design in `ID-V1.md` was restored byte-for-b
 from 277414e272229e05d9138fd278f37705cefaf0d0. It is outside this task. The release
 base 984405e has no ID-V1 document: integrate only the new PORTAL-V1 contract and
 portal delta, never the entire unpublished candidate base.
+
+## Hosted client candidate (supersedes the standalone `/app/` routing above)
+
+The optional hosted webapp now has an explicit `client` build:
+
+```sh
+npm run build:hosted --prefix client
+```
+
+It produces `client/dist-hosted` with `/app/` asset paths, the existing React chat
+shell and the pinned portal OPAQUE runtime/license. The ordinary `client/dist`
+build remains the native/self-host build. `npm run build --prefix portal` still
+builds the legacy address-list page for compatibility tests and rollback; do not
+route the hosted candidate to that directory. Website `/` remains independent.
+
+The example Caddy file serves only the new hosted assets at `/app/`, the optional
+account API at `/api/account/*` and the separate public directory at `/api/directory`.
+Community REST, credentials, events, uploads, media and RTC go from the browser to
+the community. There is no generic proxy or probe endpoint on the VPS. The scoped
+`/app/` CSP allows those browser connections and blob media. Camera/microphone are
+self-only; account/directory responses retain the restrictive old policy. Logging,
+registration, hosting and persistent account state gates remain unchanged. Validate
+Caddy on the parent before any future rollout; no configuration was applied here.
+
+Directory publication is disabled unless `PORTAL_DIRECTORY_OPEN=yes-reviewed` is
+set. It shares the existing single process/state lock but writes only public metadata
+to a separate `directory.json`. It uses bounded DNS TXT resolution and server signatures,
+not community HTTP requests. Account snapshots and schema are untouched. Source releases
+must include the changed client, portal, server and dependency lockfiles/licenses,
+not only `portal/`. Preserve the existing exact corresponding-source download offer.
+The new account screen exposes `/source/housecall-public-source.tar.gz` through its
+home site. In this Caddy example the fallback website file server requires the
+archive at `/srv/housecall/website/source/housecall-public-source.tar.gz`; the
+link alone does not create or publish it. Publishing the exact source archive remains
+an operator release gate. No source archive or artifact has been uploaded here.
+
+Hosted account persistence is opt-in: the old portal stays memory-only. The browser
+stores a non-extractable AES-GCM key in IndexedDB, bound to the current account binding,
+and revalidates the HttpOnly session and encrypted list on reload. No password, raw
+export key, community session or invite is synchronized. This does not defend against
+same-origin script execution or copying a browser profile. Logout clears the local
+key and browser community sessions, including other open hosted tabs. Address list
+format 1, CAS revisions, rollback reads, plaintext export and account deletion remain.
+The hosted UI intentionally saves addresses only; first access on a fresh device
+requires community authentication. The browser password manager stores both forms
+under the hosted page's origin; field sections help distinguish them but cannot
+change that browser behavior. No account password recovery is offered.
+
+Run and review the exact parent gates in
+[`docs/ux/hosted-webapp-implementation.md`](../docs/ux/hosted-webapp-implementation.md).
+This candidate is not release-approved.
+
+The root Dockerfile's client stage copies the four required browser modules from
+`portal/src` as well as `client/`. It does not need portal server modules or portal
+node_modules for the ordinary build. Check that source boundary locally with
+`node client/scripts/check-docker-source.mjs`; this uses an isolated temporary
+source tree and existing installed client dependencies, not a full image build.
+The separate hosted build additionally requires the pinned portal OPAQUE artifact
+and license. A corresponding-source release must include all candidate changes,
+including new files and both dependency lockfiles; `git archive HEAD` in this
+uncommitted worktree would omit the candidate and must not be used as its source
+archive. Keep secrets, runtime state, dependency caches and generated test evidence
+out of that archive. No packaging or publication is performed by these checks.

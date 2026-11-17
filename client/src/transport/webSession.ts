@@ -103,6 +103,10 @@ export const webSession = {
   async remove(origin: string): Promise<void> {
     try { await tx("readwrite", s => s.delete(keyFor(origin))); } catch { /* nothing stored */ }
   },
+  /** Explicit browser-wide logout removes ciphertext and the non-extractable wrapping key. */
+  async clear(): Promise<void> {
+    try { await tx('readwrite', s => s.clear()); } catch { /* storage unavailable */ }
+  },
   async list(): Promise<string[]> {
     try {
       const keys = await tx<IDBValidKey[]>("readonly", s => s.getAllKeys());

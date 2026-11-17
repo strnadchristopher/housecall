@@ -1,3 +1,4 @@
+import { useHosted } from "../../hosted/HostedAccount";
 import { useSecurity } from "../../core/securityContext";
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { Preflight, ServerInfo } from "../../core/identity";
@@ -41,7 +42,7 @@ export function Onboarding() {
   const screens: Record<Mode, () => ReactNode> = {
     welcome: () => <Welcome go={go} />,
     "sign-up": () => <SignUp onBack={home} onServer={info => { setServer(info); go("server"); }} />,
-    server: () => server ? <Server info={server} onBack={() => go("sign-up", true)} onRequest={() => go("request")} /> : null,
+    server: () => server ? <Server onSignIn={() => { setPreset(undefined); go("sign-in"); }} info={server} onBack={() => go("sign-up", true)} onRequest={() => go("request")} /> : null,
     request: () => server ? <Request info={server} onBack={() => go("server", true)} onSent={() => go("pending")} /> : null,
     pending: () => <Pending onBack={() => go("welcome", true)} onLogIn={next => { setPreset(next); go("sign-in"); }} />,
     join: () => <Join name={server?.name} onBack={() => { identity.clearInvite(); home(); }} onHaveAccount={() => go("sign-in")} />,
@@ -132,7 +133,7 @@ function House() {
 
 function SignUp({ onBack, onServer }: { onBack: () => void; onServer: (info: ServerInfo) => void }) {
   const identity = useIdentity();
-  const [text, setText] = useState("");
+  const [text, setText] = useState(identity.address);
   const [problem, setProblem] = useState("");
   const [checking, setChecking] = useState(false);
   const submit = async (event: FormEvent) => {
@@ -168,7 +169,7 @@ function SignUp({ onBack, onServer }: { onBack: () => void; onServer: (info: Ser
 }
 
 /** A server's door: enter an invite code, or (when the owner allows it) ask to be let in. */
-function Server({ info, onBack, onRequest }: { info: ServerInfo; onBack: () => void; onRequest: () => void }) {
+function Server({ info, onBack, onRequest, onSignIn }: { onSignIn: () => void; info: ServerInfo; onBack: () => void; onRequest: () => void }) {
   const identity = useIdentity();
   const [code, setCode] = useState("");
   const [problem, setProblem] = useState("");
@@ -181,6 +182,7 @@ function Server({ info, onBack, onRequest }: { info: ServerInfo; onBack: () => v
     <form className="hc-onb__form" onSubmit={submit} noValidate>
       <Top onBack={onBack} />
       <Title door={info.name} text={C.joinTitle(info.name)} sub={hostOf(info.origin)} />
+      <Button kind="text" onClick={onSignIn}>{C.haveAccount}</Button>
       <Field label={C.inviteCode} value={code} onChange={event => { setCode(event.target.value); setProblem(""); }}
         autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="off" enterKeyHint="go" required />
       <ErrorLine text={problem} />
@@ -309,6 +311,7 @@ function Join({ name, onBack, onHaveAccount }: { name?: string; onBack: () => vo
  * the server's address).
  */
 function SignIn({ preset, onBack, onSignUp }: { preset?: Preset; onBack: () => void; onSignUp: () => void }) {
+  const hosted = useHosted();
   const security = useSecurity();
   const identity = useIdentity();
   const accounts = identity.remembered;
@@ -338,7 +341,7 @@ function SignIn({ preset, onBack, onSignUp }: { preset?: Preset; onBack: () => v
   };
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (picked) void identity.signIn({ address: identity.native ? picked.origin : "", username: picked.username, password });
+    if (picked) void identity.signIn({ address: picked.origin, username: picked.username, password });
     else void identity.signIn({ address, username: username.trim(), password });
   };
   const host = hostOf(picked?.origin || identity.address || location.origin);
@@ -379,10 +382,12 @@ function SignIn({ preset, onBack, onSignUp }: { preset?: Preset; onBack: () => v
           )}
           <Field label={C.password} type="password" value={password} onChange={event => setPassword(event.target.value)}
             autoComplete="current-password" autoFocus={!!picked} required />
-          <ErrorLine text={identity.error} />
+          {hosted?.account.list && <label className="hc-check"><input type="checkbox" checked={hosted.saveAfterLogin} onChange={e => hosted.setSaveAfterLogin(e.target.checked)} />Save to my HouseCall list</label>}
+          <ErrorLine text={identity.error || hosted?.error || ""} />
           <div className="hc-onb__actions">
             <Button kind="primary" type="submit" busy={identity.busy}>{C.logIn}</Button>
-            <Button onClick={() => void security?.act(() => security.openReceive())}>{copy.link.title}</Button>
+            {!hosted && <Button onClick={() => void security?.act(() => security.openReceive())}>{copy.link.title}</Button>}
+            {hosted && identity.adding && <Button kind="text" onClick={onSignUp}>Have an invite? Join instead</Button>}
             {!identity.adding && !preset && <Button kind="text" className="hc-onb__quiet" onClick={onSignUp}>{C.newHere}</Button>}
           </div>
         </>

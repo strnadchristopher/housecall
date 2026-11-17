@@ -1,3 +1,5 @@
+import { useHosted } from "../../hosted/HostedAccount";
+import { Discover } from "../../hosted/HostedViews";
 import { useEffect, useRef, useState } from "react";
 import { useCall, useChat } from "../../core/context";
 import { useCallSounds } from "../call/useCallSounds";
@@ -28,6 +30,7 @@ import { NavContext, isStaged, type Nav } from "./nav";
  * that slides out from the menu button; the right column is a sheet.
  */
 export function AppShell() {
+  const hosted = useHosted();
   const chat = useChat();
   const call = useCall();
   const phone = usePhone();
@@ -96,7 +99,7 @@ export function AppShell() {
           <Presence show={nav.main === "settings"}>
             <div className="hc-settings-layer hc-anim-slide-right"><CallStage away /><SettingsView />{phone && <CallStrip />}</div>
           </Presence>
-          {nav.main === "settings" ? null : staged ? (
+          {hosted?.view === "discover" ? <div className="hc-hosted-stage"><Discover /></div> : nav.main === "settings" ? null : staged ? (
             <>
               <ChannelHeader />
               <CallStage full />

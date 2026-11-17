@@ -116,3 +116,68 @@ With an existing configured tunnel, use `compose.yaml`'s loopback `127.0.0.1:431
 Follow [VM](apps/VM.md), [Gimme](apps/GIMME.md), [Plex](apps/PLEX.md), [DJ](apps/DJ.md) and [GIFs](apps/GIFS.md). Keys are host-wide; only the owner configures them. Docs links in the private app currently require GitHub repository access. For optional app settings in the easy install, add the documented keys to `.env` and recreate `app` with `docker compose --env-file .env -f compose.easy.yaml up -d app`.
 
 Before upgrades, stop writers and back up the app data plus private keys using your normal protected backup tooling; verify restoration on an isolated host. Pin `HOUSECALL_IMAGE` to the new release, pull and recreate. Do not delete volumes. Retain the prior image and pre-upgrade data backup for rollback; database migrations may require restoring that backup. VM is an explicit separate source-compose overlay, not included in the easy install.
+
+## Optional hosted browser client
+
+The hosted build is separate from your server's own client and the native release.
+To allow it, add this exact origin to the community server environment and restart
+through your normal release process:
+
+```sh
+HOUSECALL_CLIENT_ORIGINS=https://housecall.chat
+```
+
+Keep your existing server origin configuration. The hosted browser connects directly
+to your HTTPS REST API, uploads, events and media; RTC connects to your configured
+SFU. HouseCall's account service does not relay those requests. A trusted certificate,
+reachable HTTPS address and working SFU/ICE network configuration are still required.
+An IP address works only with a certificate trusted for that IP. Private addresses
+work only from browsers on a network that can reach them; browser local-network
+permission policies may also apply. The server's own web client remains available
+for older releases or incompatible browser configurations. Never disable TLS checks.
+
+### Optional public directory publication
+
+Requires a separate self-host server release containing `server/src/directory.rs`;
+updating the public website does not install this support on community servers.
+Existing servers remain private. A server owner may enable support with:
+
+```sh
+HOUSECALL_DIRECTORY_ENABLED=yes
+HOUSECALL_PUBLIC_URL=https://chat.your-domain.tld
+```
+
+Use the canonical HTTPS origin (no trailing slash, path, query, credentials or invite).
+Only the owner can read or change `/api/directory`. In the home server's Server
+profile, choose **List this server publicly**, copy the displayed DNS TXT record
+at `_housecall-directory.<hostname>` to your DNS provider, then confirm **Publish**.
+The TXT value is `housecall-directory=<sha256 of the server Ed25519 SPKI DER key>`.
+The signing key stays in this server's database; protect its file and backups.
+The browser receives the public fingerprint only. The server signs its own name,
+origin, public description, opt-in flag and timestamp and sends that metadata to
+`https://housecall.chat/api/directory/publish`, with no redirects or credentials.
+The directory verifies the signature and current DNS proof. It never probes the
+community over HTTP, fetches chat content, or accepts publication by a central user.
+
+Search exposes only the name, description and HTTPS address. It grants no admission,
+role or membership. Search does not contact listed communities; choosing Open starts
+the browser's direct authentication/invite/access-request flow. Owners can update
+or unlist using the same switch. Updates and removals require current DNS ownership.
+Listings expire from search seven days after publication; use **Update listing**
+to renew. There is no automatic renewal worker in this candidate. A server that is
+offline can therefore remain listed for up to seven days.
+
+For owner recovery, restore the server database/signing key and normal owner access.
+If the key is lost, establish normal server ownership first, generate a new key via
+Server profile, replace the DNS TXT value and republish. Current DNS control permits
+key rotation. Removing a TXT record alone does not immediately unlist an existing
+entry; publish an explicit unlist or wait for expiry. DNS access itself is managed
+outside HouseCall. No password-reset or membership recovery is added here.
+
+The central directory also requires the operator gate `PORTAL_DIRECTORY_OPEN=yes-reviewed`.
+Keep it closed until the exact-candidate cross-origin acceptance and service/Caddy
+checks described in `docs/ux/hosted-webapp-implementation.md` pass. Registration and
+hosting gates remain independent. A debug server binary accepts only a loopback
+`HOUSECALL_TEST_DIRECTORY_URL` for synthetic tests; release binaries always use the
+fixed public directory URL. Never run the browser acceptance against a release
+binary or a real community: it deliberately creates synthetic accounts and listings.

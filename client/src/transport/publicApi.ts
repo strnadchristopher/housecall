@@ -18,7 +18,7 @@ export async function publicJson<T>(origin: string, path: string, body?: unknown
     cache: "no-store",
     redirect: "error",
     signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-  }).catch(() => { throw new Error("Could not reach that server"); });
+  }).catch(() => { throw new Error(`Couldn't reach ${new URL(origin).host} from this browser. The server needs a trusted HTTPS certificate and must allow the HouseCall web app.`); });
   if (!response.ok) {
     const data = (await response.json().catch(() => ({}))) as { error?: string };
     throw new ApiError(response.status, data.error ?? `Request failed (${response.status})`);

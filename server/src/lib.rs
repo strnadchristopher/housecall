@@ -1,6 +1,7 @@
 pub mod access;
 pub mod activities;
 pub mod attach_kind;
+pub mod directory;
 pub mod dj;
 pub mod embeds;
 pub mod gimme;
@@ -317,6 +318,7 @@ pub fn app(state: AppState, static_dir: Option<&str>) -> Router {
         .merge(identity::routes())
         .merge(link::routes())
         .merge(access::routes())
+        .merge(directory::routes())
         .merge(setup::routes())
         .merge(profile::routes())
         .merge(snaps::routes())

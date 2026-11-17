@@ -1,3 +1,4 @@
+import { hosted } from "../hosted/config";
 export interface Session {
   token: string;
   device_key: string;
@@ -87,6 +88,7 @@ export class Api {
       credentials: "omit",
       cache: "no-store",
       redirect: "error",
+      signal: hosted ? (options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(30000)]) : AbortSignal.timeout(30000)) : options.signal,
     });
     if (!response.ok) {
       const data = (await response.json().catch(() => ({}))) as {

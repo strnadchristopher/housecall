@@ -1,0 +1,13 @@
+.hc-onb__form--compact .hc-onb__actions { margin-top: 0; }
+.hc-hosted-stage { width: min(100%, 640px); padding: var(--hc-space-5, 24px); margin: auto; overflow: auto; }
+.hc-hosted-home .hc-center { overflow: auto; }
+.hc-hosted-home .hc-left { justify-content: flex-start; }
+.hc-hosted-home h1 { font-size: var(--hc-text-lg); }
+@media (pointer: coarse) { [data-hosted] .hc-onb .hc-field input { min-height: var(--hc-row-touch, 48px); } }
+@media (max-width: 47.5em) {
+  .hc-hosted-home { display: flex; flex-direction: column; }
+  .hc-hosted-home .hc-left { display: flex; position: static; width: 100%; transform: none; visibility: visible; flex-shrink: 0; }
+  .hc-hosted-home > .hc-center:last-child { position: relative; inset: auto; flex: 1; min-height: 0; }
+}
+
+.hc-directory-settings code { overflow-wrap: anywhere; }

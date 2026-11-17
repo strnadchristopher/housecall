@@ -31,7 +31,7 @@ async function body(req, cap) {
   } finally { clearTimeout(timer); }
 }
 /** Inject the actual installed OPAQUE module, never a substitute. */
-export function createPortal({ opaque, store, setup, indexKey, origin, registrationOpen = false, proxy = false, now = () => performance.now(), exchangeTTL = 60000, sessionTTL = 1800000 }) {
+export function createPortal({ opaque, store, setup, indexKey, origin, registrationOpen = false, proxy = false, now = () => performance.now(), exchangeTTL = 60000, sessionTTL = 1800000, directory = null }) {
   if (new URL(origin).origin !== origin || !(origin.startsWith('https://') || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))) throw new Error('Invalid public origin');
   opaque.server.getPublicKey(setup); // Fail startup on invalid/missing persistent setup.
   decode(indexKey, 32, 32);
@@ -61,6 +61,17 @@ export function createPortal({ opaque, store, setup, indexKey, origin, registrat
   }
   const cookie = (res, value, maxAge) => res.setHeader('Set-Cookie', `__Host-hc=${value}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=${maxAge}`);
   const server = createServer({ maxHeaderSize: 8192 }, async (req, res) => {
+    if (directory && (req.url === '/api/directory/publish' || req.url?.startsWith('/api/directory?') || req.url === '/api/directory')) {
+      headers(res);
+      try {
+        if (!limits.allow(peerIP(req, proxy))) throw new Error();
+        if (req.method === 'POST' && req.url === '/api/directory/publish') return reply(res, 200, await directory.publish(await body(req, 4096)));
+        if (req.method !== 'GET' || req.url.startsWith('/api/directory/publish')) throw new Error();
+        const url = new URL(req.url, origin);
+        if ([...url.searchParams.keys()].some(k => !['q', 'offset'].includes(k))) throw new Error();
+        return reply(res, 200, directory.search(url.searchParams.get('q') || '', Number(url.searchParams.get('offset') || 0)));
+      } catch { return reply(res, 400, { error: 'Directory request refused. Check DNS ownership and retry.' }); }
+    }
     if (!req.url?.startsWith('/api/account')) return staticRequest(req, res);
     headers(res);
     try {

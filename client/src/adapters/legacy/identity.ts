@@ -1,3 +1,6 @@
+import { hostedTarget } from "../../hosted/target";
+import { useHosted } from "../../hosted/HostedAccount";
+import { hosted } from "../../hosted/config";
 import { useEffect, useRef, useState } from "react";
 import type { AccessRequestRecord, IdentityProvider, InviteResult, RequestStatus, SetupRow, UpdateState } from "../../core/identity";
 import { decodeInviteCode, encodeInviteCode } from "../../data/inviteCode";
@@ -30,6 +33,7 @@ export function useLegacyIdentity(
   server: { id: string; roles: Role[]; setRoles: (roles: Role[]) => void },
   onLinkScan: () => void,
 ): IdentityProvider {
+  const central = useHosted();
   const [inviteToken, setInviteToken] = useState(() => host.added ? host.token : initialInvite());
   const [address, setAddress] = useState(host.origin);
   const [push, setPush] = useState<NativePushStatus>();
@@ -88,14 +92,15 @@ export function useLegacyIdentity(
   const restoreStarted = useRef("");
   useEffect(() => {
     // Web: host-0 is this page's own origin (""), so an empty origin is valid there.
-    if (!host.restoring || (isNative() && !host.origin) || restoreStarted.current === (host.origin || "web")) return;
+    if (!host.restoring) { restoreStarted.current = ""; return; }
+    if ((isNative() && !host.origin) || restoreStarted.current === (host.origin || "web")) return;
     restoreStarted.current = host.origin || "web";
     const origin = host.origin;
     // The API accepts "" for same-origin web, but remembered account hints use
     // the canonical page origin, just like sign-in and the conversation writer.
     void c.restore(origin, name => lastConversation(hostOrigin, name)).then(result => {
       if (result === "ok") { if (c.auth) remember({ origin: hostOrigin, username: c.auth.user.username }); hosts.finishRestore(host.id); }
-      else if (host.added) hosts.remove(host.id);
+      else if (host.added && !hosted) hosts.remove(host.id);
       else hosts.finishRestore(host.id);
     });
   }, [host.restoring, host.origin]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -124,17 +129,19 @@ export function useLegacyIdentity(
     if (c.auth && c.channel) remember({ origin: hostOrigin, username: c.auth.user.username, lastConversationId: c.channel });
   }, [c.auth?.user.username, c.channel, hostOrigin]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const normalized = (origin: string) => { try { return origin ? parseServerInput(origin).origin : ""; } catch { return origin; } };
+  const normalized = (origin: string) => { if (hosted) return hostedTarget(origin).origin; try { return origin ? parseServerInput(origin).origin : ""; } catch { return origin; } };
   const authenticate = (path: string, origin: string, values: Record<string, unknown>) => c.run(async () => {
     const serverOrigin = host.added ? host.origin : normalized(origin);
+    if (hosted && !serverOrigin) throw new Error("Server address required");
     const target = serverOrigin || location.origin;
     const name = String(values.username ?? "");
     const pendingToken = path === "/api/login" ? inviteToken : "";
     consuming.current = true;
     try {
       await c.authenticate(path, { server_origin: serverOrigin, ...values }, lastConversation(target, name));
-      if (isNative()) hosts.connected(host.id, target);
+      if (isNative() || hosted) hosts.connected(host.id, target);
       remember({ origin: target, username: name });
+      if (central?.account.list && central.saveAfterLogin) await central.saveOrigin(target);
       // An approved access request is spent once its owner has logged in.
       for (const request of readPending()) if (request.origin === target && request.username === name) removePending(request.id);
       setPendingVersion(n => n + 1);
@@ -161,7 +168,7 @@ export function useLegacyIdentity(
     owner: !!c.auth?.user.is_owner,
     native: isNative(), address, inviteToken,
     remembered: readAccounts()
-      .filter(account => isNative() || account.origin === location.origin)
+      .filter(account => isNative() || account.origin === hostOrigin)
       .map(({ origin, username }) => ({ origin, username })),
     inviteAppLink: !isNative() && inviteToken && /^[a-f0-9]{64}$/.test(inviteToken)
       ? `housecall://invite?code=${encodeInviteCode(address || location.origin, inviteToken)}` : undefined,
@@ -199,7 +206,7 @@ export function useLegacyIdentity(
     }),
     addServer: input => {
       const parsed = parseServerInput(input);
-      if (!isNative()) {
+      if (!isNative() && !hosted) {
         if (!parsed.token) throw new Error("Paste the invite code the owner sent you.");
         if (parsed.origin !== location.origin) throw new Error("That invite is for another server. Open it in the HouseCall app.");
         if (c.auth) redeemOrAdd(parsed.origin, parsed.token);
@@ -214,7 +221,7 @@ export function useLegacyIdentity(
       const second = code?.trim() ?? "";
       const token = parsed.token || decodeInviteCode(second)?.token || (/^[a-f0-9]{64}$/.test(second) ? second : "");
       if (!token) throw new Error(isNative() ? "That's a server address. Ask its owner for an invite code." : "Paste the invite code the owner sent you.");
-      if (!isNative() && parsed.origin !== location.origin) throw new Error("That invite is for another server. Open it in the HouseCall app.");
+      if (!isNative() && !hosted && parsed.origin !== location.origin) throw new Error("That invite is for another server. Open it in the HouseCall app.");
       if (signedIn.current) { redeemOrAdd(parsed.origin, token); return; }
       setAddress(parsed.origin);
       setInviteToken(token);
@@ -228,8 +235,8 @@ export function useLegacyIdentity(
     },
     dismissJoin: () => setJoinOffer(undefined),
     checkServer: async address => {
-      const { origin } = parseServerInput(address);
-      if (!isNative() && origin !== location.origin) throw new Error("This app can only join the server it was opened from.");
+      const { origin } = hosted ? hostedTarget(address) : parseServerInput(address);
+      if (!isNative() && !hosted && origin !== location.origin) throw new Error("This app can only join the server it was opened from.");
       let info: { name?: unknown; requests_open?: unknown };
       try { info = await publicJson<typeof info>(origin, "/api/instance"); }
       catch (error) {
@@ -243,7 +250,7 @@ export function useLegacyIdentity(
     preflight: async address => {
       try {
         const { origin } = parseServerInput(address || location.origin);
-        if (!isNative() && origin !== location.origin) return undefined;
+        if (!isNative() && !hosted && origin !== location.origin) return undefined;
         const response = await fetch(origin + "/api/preflight", { credentials: "omit", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10_000) });
         if (!response.ok) return undefined;
         const data = (await response.json()) as Record<string, { ok?: unknown; reason?: unknown }>;
@@ -253,7 +260,7 @@ export function useLegacyIdentity(
     },
     requestAccess: input => c.attempt(async () => {
       const origin = parseServerInput(input.origin).origin;
-      if (!isNative() && origin !== location.origin) throw new Error("This app can only join the server it was opened from.");
+      if (!isNative() && !hosted && origin !== location.origin) throw new Error("This app can only join the server it was opened from.");
       const sent = await publicJson<{ id: string }>(origin, "/api/access-requests", {
         username: input.username, password: input.password, device_name: deviceName(), message: input.message?.trim() || undefined,
       });

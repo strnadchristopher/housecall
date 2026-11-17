@@ -197,6 +197,8 @@ export interface ChatStore extends ChatState {
    */
   openSnap(attachmentId: string): Promise<Blob | "gone">;
   /** Fetches an authenticated media path as a Blob (for inline display). */
+  directoryStatus(): Promise<{ origin: string; dnsName: string; dnsValue: string; listed: boolean; description: string }>;
+  publishDirectory(listed: boolean, description: string): Promise<void>;
   fetchMedia(path: string): Promise<Blob>;
   /** Binds a scanned video attachment to a player element; returns a disposer. */
   playVideo(element: HTMLVideoElement, messageId: string, attachmentId: string, onError: (message: string) => void): () => void;

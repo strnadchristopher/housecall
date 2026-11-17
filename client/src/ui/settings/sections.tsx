@@ -1,3 +1,4 @@
+import { DirectorySettings } from "../../hosted/DirectorySettings";
 import { NavRow } from "../kit";
 import { useSecurity } from "../../core/securityContext";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
@@ -98,6 +99,7 @@ export function ServerProfile() {
       </form>
       <PictureField label={copy.profile.serverIcon} remove={copy.profile.removeIcon} saveLabel={copy.profile.saveIcon}current={identity.serverIconUrl} shape="squircle" name={identity.serverName}
         save={image => identity.setServerIcon(image)} clear={() => identity.setServerIcon(undefined)} />
+      {identity.serverId === "home" && <DirectorySettings />}
     </div>
   );
 }

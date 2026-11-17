@@ -16,6 +16,11 @@ import { useDirectory, type HostEntry, type Hosts } from "./hosts";
  */
 export function LegacyHost({ host, hosts, updater, children }: { host: HostEntry; hosts: Hosts; updater: Updater; children: ReactNode }) {
   const c = useHousecall();
+  useEffect(() => {
+    const clear = (event: Event) => { (event as CustomEvent<Promise<void>[]>).detail.push(c.logout()); };
+    window.addEventListener('housecall-clear-sessions', clear);
+    return () => window.removeEventListener('housecall-clear-sessions', clear);
+  }, [c.logout]);
   const security = useSecurityUI(c, host, hosts);
   const active = hosts.active === host.id;
   const directory = useDirectory(hosts);

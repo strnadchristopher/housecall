@@ -1,4 +1,6 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { NavContext } from "./nav";
+import { useHosted } from "../../hosted/HostedAccount";
+import { useContext, useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useChat, useIdentity } from "../../core/context";
 import { Logo } from "../brand/Logo";
 import { copy } from "../copy";
@@ -14,6 +16,8 @@ import { useDismiss } from "../useDismiss";
  * a code for this host joins straight away.
  */
 export function ServerPicker() {
+  const hosted = useHosted();
+  const nav = useContext(NavContext);
   const chat = useChat();
   const identity = useIdentity();
   const [open, setOpen] = useState(false);
@@ -28,9 +32,11 @@ export function ServerPicker() {
   const current = chat.servers.find(server => server.current);
   const manyHosts = new Set(chat.servers.map(server => server.host)).size > 1;
   const [creating, setCreating] = useState(false);
-  const addRow = chat.servers.length;
-  const createRow = identity.owner ? chat.servers.length + 1 : -1;
-  const rows = chat.servers.length + 1 + (identity.owner ? 1 : 0);
+  const saved = hosted?.account.list?.servers.filter(origin => !hosted.hosts.hosts.some(host => host.origin === new URL(origin).origin && hosted.hosts.directory.get()[host.id]?.signedIn)) ?? [];
+  const addRow = chat.servers.length + saved.length;
+  const discoverRow = hosted ? addRow + 1 : -1;
+  const createRow = identity.owner ? addRow + 1 + (hosted ? 1 : 0) : -1;
+  const rows = addRow + 1 + (hosted ? 1 : 0) + (identity.owner ? 1 : 0);
 
   const close = (refocus = true) => {
     setOpen(false); setAdding(false); setAddError("");
@@ -48,10 +54,14 @@ export function ServerPicker() {
   useDismiss(open, () => close(false), target => !!list.current?.contains(target) || !!trigger.current?.contains(target), { escape: false });
 
   const choose = (at: number) => {
+    if (at === discoverRow) { close(); nav?.set({ main: 'chat', screen: 'main' }); hosted?.go('discover'); return; }
+    const savedOrigin = saved[at - chat.servers.length];
+    if (savedOrigin) { close(); hosted?.go('home'); hosted?.hosts.add(savedOrigin); return; }
     const server = chat.servers[at];
     if (at === createRow) { close(); setCreating(true); return; }
     if (!server) { setAdding(true); return; }
     close();
+    hosted?.go('home');
     if (!server.current) void chat.selectServer(server.key);
   };
   const onKey = (event: KeyboardEvent) => {
@@ -82,8 +92,8 @@ export function ServerPicker() {
         onClick={toggle} onKeyDown={event => { if (!open && (event.key === "ArrowDown" || event.key === "ArrowUp")) { event.preventDefault(); event.stopPropagation(); toggle(); } }}>
         {current?.iconUrl ? <Avatar name={current.name} src={current.iconUrl} shape="squircle" /> : <Logo open={open} label="" />}
         <span className="hc-picker__name">
-          <strong>{current?.name ?? identity.serverName}</strong>
-          <small data-state={chat.online ? "on" : "off"}>{chat.online ? copy.state.connected : copy.state.reconnecting}</small>
+          <strong>{current?.name ?? hosted?.account.name ?? identity.serverName}</strong>
+          {chat.servers.length > 0 && <small data-state={chat.online ? "on" : "off"}>{chat.online ? copy.state.connected : copy.state.reconnecting}</small>}
         </span>
         <span className="hc-picker__chev"><Icon name="down" /></span>
       </button>
@@ -99,6 +109,8 @@ export function ServerPicker() {
             {server.mentions > 0 && <span className="hc-dot" role="img" aria-label={copy.picker.mentions(server.mentions)} />}
           </button>
         ))}
+        {saved.map((origin, i) => <button key={origin} type="button" role="option" aria-selected={false} data-index={chat.servers.length + i} tabIndex={index === chat.servers.length + i ? 0 : -1} className="hc-picker__row" onClick={() => choose(chat.servers.length + i)}><span className="hc-picker__rowname"><strong>{new URL(origin).host}</strong><small>Log in needed</small></span></button>)}
+        {hosted && !adding && <button type="button" role="option" aria-selected={false} data-index={discoverRow} tabIndex={index === discoverRow ? 0 : -1} className="hc-picker__row" onClick={() => choose(discoverRow)}>Discover servers</button>}
         {!adding && (
           <button type="button" role="option" aria-selected={false} data-index={addRow} tabIndex={index === addRow ? 0 : -1}
             className="hc-picker__row hc-picker__add" style={{ ["--i" as string]: addRow }} onClick={() => choose(addRow)}>
@@ -113,7 +125,7 @@ export function ServerPicker() {
         )}
         {adding && (
           <form className="hc-picker__form" onSubmit={add}>
-            <Field label={identity.native ? copy.onboarding.addressOrLink : copy.onboarding.inviteCodeOrLink} value={input} onChange={event => setInput(event.target.value)} autoFocus autoCapitalize="none" required />
+            <Field label={identity.native || hosted ? copy.onboarding.addressOrLink : copy.onboarding.inviteCodeOrLink} value={input} onChange={event => setInput(event.target.value)} autoFocus autoCapitalize="none" required />
             <ErrorLine text={addError} />
             <Button kind="primary" type="submit">{copy.onboarding.connect}</Button>
           </form>

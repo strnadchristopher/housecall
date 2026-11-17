@@ -1,3 +1,4 @@
+import { Directory } from './directory.mjs';
 import { readFileSync } from 'node:fs';
 import { Store, privateFile } from './storage.mjs';
 import { createPortal } from './service.mjs';
@@ -10,7 +11,7 @@ try {
   store = new Store(process.env.PORTAL_STATE);
   const port = Number(process.env.PORTAL_PORT || 43180);
   if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid port');
-  const server = createPortal({ opaque, store, ...secrets, origin: process.env.PORTAL_ORIGIN, registrationOpen: process.env.PORTAL_REGISTRATION_OPEN === 'yes-reviewed', proxy: process.env.PORTAL_LOOPBACK_PROXY === 'yes' });
+  const server = createPortal({ opaque, store, directory: process.env.PORTAL_DIRECTORY_OPEN === 'yes-reviewed' ? new Directory({ directory: process.env.PORTAL_STATE }) : null, ...secrets, origin: process.env.PORTAL_ORIGIN, registrationOpen: process.env.PORTAL_REGISTRATION_OPEN === 'yes-reviewed', proxy: process.env.PORTAL_LOOPBACK_PROXY === 'yes' });
   server.on('error', () => { store.close(); process.stderr.write('Portal could not listen.\n'); process.exitCode = 1; });
   server.listen(port, '127.0.0.1', () => process.stdout.write('Portal listening on loopback.\n'));
   let stopping = false;

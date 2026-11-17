@@ -1,3 +1,5 @@
+import { useHosted } from "../hosted/HostedAccount";
+import { AccountLogin, DirectLogin, HostedHome } from "../hosted/HostedViews";
 import { useLayoutEffect, useRef } from 'react';
 import { useSecurity } from "../core/securityContext";
 import { IdentityFlow } from "./security/IdentityFlow";
@@ -11,8 +13,10 @@ import { DeviceNotice } from "./shell/DeviceNotice";
 
 /** Signed out: onboarding. Signed in: the shell. */
 export function Root() {
+  const hosted = useHosted();
   const identity = useIdentity();
   const security = useSecurity();
+  const ready = !identity.restoring && (!hosted?.restoring || identity.signedIn || hosted.view === 'direct');
   const notices = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const element = notices.current;
@@ -36,11 +40,12 @@ export function Root() {
         <UpdateBanner />
         {security && <DeviceNotice text={security.deviceNotice} onDone={security.dismissDeviceNotice} />}
       </div>
-      {!identity.restoring && (identity.signedIn ? <AppShell /> : <Onboarding />)}
+      {ready && <div hidden={!!hosted?.overlay} style={{ display: hosted?.overlay ? "none" : "contents" }}>{identity.signedIn ? <AppShell /> : identity.adding ? <Onboarding /> : hosted ? hosted.view === 'direct' ? <DirectLogin /> : hosted.account.list ? <HostedHome /> : <AccountLogin /> : <Onboarding />}</div>}
+      {ready && hosted?.overlay && <AccountLogin onBack={() => hosted.setOverlay(false)} />}
       {security && <IdentityFlow key={identity.me?.id ?? "signed-out"} />}
       {security?.flow === "show" && <ShowingFlow />}
       {security?.flow === "receive" && <ReceivingFlow key={security.receiver ? "receive" : "none"} />}
-      <Splash ready={!identity.restoring} server={identity.serverName} />
+      <Splash ready={ready} server={identity.serverName} />
     </div>
   );
 }

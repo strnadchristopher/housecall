@@ -1,3 +1,5 @@
+import { hosted } from "../../hosted/config";
+import { AccountSettings } from "../../hosted/HostedViews";
 import { SecurityPane } from "../security/IdentityFlow";
 import { useSecurity } from "../../core/securityContext";
 import { useState, type ReactNode } from "react";
@@ -29,6 +31,7 @@ export function SettingsView() {
   const groups: Group[] = [
     { label: copy.settings.you, rows: [
       { id: "account", label: copy.settings.account, lead: me ? <Avatar name={me.name} src={me.avatarUrl} size="sm" /> : <Icon name="people" />, detail: phone ? me?.name : undefined },
+      ...(hosted ? [{ id: "housecall", label: "HouseCall account", icon: "lock" } as Row] : []),
       { id: "appearance", label: copy.settings.appearance, icon: "accent", detail: phone ? ACCENTS.find(option => option.id === accent)?.label : undefined },
       { id: "notifications", label: copy.settings.notifications, icon: "bell" },
       { id: "call", label: copy.settings.call, icon: "mic" },
@@ -91,6 +94,7 @@ export function SettingsView() {
           <section key={section} className="hc-settings__pane hc-anim-slide-right" aria-label={title}>
             {!phone && <h2>{title}</h2>}
             <ErrorLine text={identity.error} onDismiss={identity.clearError} dismissLabel={copy.common.dismiss} />
+            {section === "housecall" && hosted && <AccountSettings />}
             {section === "security" && <SecurityPane />}
             {section === "qr" && <p>{copy.link.useApp}</p>}
             {section === "account" && identity.me && <Account />}

@@ -2,7 +2,7 @@ import { securitySession, securityUpdates } from "./securityRuntime";
 import type { DmContext, OpenedDmMessage } from "../../core/dm";
 import type { FileRef } from "../../crypto/dm";
 import { copy } from "../../ui/copy";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Attachment, ChatMessage, ChatStore, Conversation, Gif, LinkPreview, PendingUpload, Person, RequestCard, ServerEntry, Suggestion } from "../../core/chat";
 import type { useHousecall } from "../../hooks/useHousecall";
 import type { Message } from "../../state/messages";
@@ -178,11 +178,11 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
 
   const nameOf = (id: string) => { const member = c.members.find(candidate => candidate.id === id); return member ? userName(member) : id; };
   const avatarOf = (id: string) => { const member = c.members.find(candidate => candidate.id === id); return member ? avatarPath(member) : undefined; };
-  const fetchMedia = async (path: string): Promise<Blob> => {
+  const fetchMedia = useCallback(async (path: string): Promise<Blob> => {
     const response = await fetch(c.api.mediaRequest(path));
     if (!response.ok) throw new Error(`File unavailable (${response.status})`);
     return response.blob();
-  };
+  }, [c.api, c.auth?.token]);
   const view = (message: Message, visible: readonly Message[]): ChatMessage => {
     const raw = message;
     const encrypted = (row: Message) => row.enc === 1;
@@ -503,6 +503,8 @@ export function useLegacyChat(c: Housecall, host: HostEntry, hosts: Hosts, direc
       }
       return pending;
     },
+    directoryStatus: () => c.api.get('/api/directory'),
+    publishDirectory: async (listed, description) => { await c.api.put('/api/directory', { listed, description }); },
     fetchMedia,
     download: (attachment: Attachment) => c.run(async () => {
       const epoch = composeEpoch.current;
