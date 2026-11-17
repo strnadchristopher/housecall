@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+state/
+secrets.json
+test-results/
+playwright-report/
+evidence/*.png

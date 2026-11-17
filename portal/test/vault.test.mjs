@@ -1,0 +1,22 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { webcrypto } from 'node:crypto';
+import { vaultKey, seal, open, encode, envelope } from '../src/vault.mjs';
+if (!globalThis.crypto) globalThis.crypto = webcrypto;
+test('actual WebCrypto vault binds account and revision and detects alteration', async () => {
+  const exported = encode(crypto.getRandomValues(new Uint8Array(64)));
+  const binding = encode(crypto.getRandomValues(new Uint8Array(32)));
+  const key = await vaultKey(exported, binding);
+  const list = { format: 1, servers: ['https://private-marker.example/'] };
+  const box = await seal(key, binding, 1, list);
+  assert.deepEqual(await open(key, binding, 1, box), list);
+  assert.ok(!JSON.stringify(box).includes('private-marker'));
+  assert.equal(key.extractable, false);
+  await assert.rejects(open(key, binding, 2, box));
+  await assert.rejects(open(key, encode(new Uint8Array(32)), 1, box));
+  const wrong = await vaultKey(encode(new Uint8Array(64)), binding);
+  await assert.rejects(open(wrong, binding, 1, box));
+  await assert.rejects(open(key, binding, 1, { ...box, ciphertext: encode(new Uint8Array(32)) }));
+  assert.throws(() => envelope({ ...box, iv: box.iv + '=' }));
+  assert.throws(() => envelope({ ...box, plaintext: 'forbidden' }));
+});

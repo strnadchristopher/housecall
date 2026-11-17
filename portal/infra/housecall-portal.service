@@ -1,0 +1,38 @@
+[Unit]
+Description=HouseCall optional public account service
+After=network.target
+
+[Service]
+Type=simple
+User=housecall-portal
+Group=housecall-portal
+WorkingDirectory=/srv/housecall/portal
+EnvironmentFile=/etc/housecall-portal/service.env
+ExecStart=/usr/bin/node --max-old-space-size=384 src/main.mjs
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/housecall-portal
+InaccessiblePaths=/root /home
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictSUIDSGID=true
+LockPersonality=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+MemoryMax=768M
+MemorySwapMax=0
+CPUQuota=100%
+TasksMax=32
+LimitNOFILE=256
+# Generic startup/stop lines only. Application never emits per-request logs.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

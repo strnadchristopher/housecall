@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer"><meta name="color-scheme" content="dark">
+<title>Connect | HouseCall</title><link rel="icon" href="/app/assets/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="/app/styles.css">
+<script type="module" src="/app/app.mjs"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to connection</a>
+<header><a class="brand" href="/" aria-label="HouseCall home"><img src="/app/assets/icon.svg" width="32" height="32" alt="">HouseCall</a><a href="#account">Saved servers</a></header>
+<main id="main" tabindex="-1">
+<h1>Your way in</h1>
+<p class="lede">Your community has its own front door.</p>
+<nav aria-label="Connection options"><a href="#connect" id="direct-tab">Connect directly</a><a href="#account" id="account-tab">Your saved servers</a></nav>
+<section id="connect" aria-labelledby="direct-heading">
+<h2 id="direct-heading">Connect directly to a server</h2>
+<p>No HouseCall account needed. Your server handles its own login and membership.</p>
+<form id="direct-form">
+<label for="destination">Your server’s address</label>
+<input id="destination" name="destination" type="url" inputmode="url" placeholder="https://" required maxlength="2048" autocomplete="off" spellcheck="false">
+<button class="primary" id="review-button">Review destination</button>
+</form>
+<div id="destination-review" hidden>
+<p>You’re leaving HouseCall for <strong id="destination-text" dir="ltr"></strong></p>
+<p>Only continue if you trust this address. Log in there with your server’s own credentials.</p>
+<a id="continue" class="action" rel="noreferrer noopener" referrerpolicy="no-referrer">Continue to this server</a>
+</div>
+<p id="direct-status" role="status" aria-live="polite"></p>
+<noscript><p>JavaScript is needed to review an address here. You can still type your trusted server’s HTTPS address directly into your browser and use its own login.</p></noscript>
+</section>
+<section id="account" aria-labelledby="account-heading">
+<h2 id="account-heading">Your saved servers</h2>
+<p>A HouseCall account remembers your encrypted server list. Each community still has its own login and membership.</p>
+<details class="account-help"><summary>Before you log in</summary><p>Reloading locks your list. There is no password reset: keep your password safe or export your list while unlocked. A compromised website or browser can read data while you use it.</p></details>
+<form id="auth-form">
+<label for="username">HouseCall username</label>
+<input id="username" name="username" required minlength="3" maxlength="32" pattern="[A-Za-z0-9_]{3,32}" autocomplete="username" autocapitalize="none" spellcheck="false" aria-describedby="username-help">
+<p id="username-help">3–32 letters, numbers or underscores. Case is ignored. No email needed.</p>
+<label for="password">HouseCall password</label>
+<input id="password" name="password" type="password" required minlength="12" maxlength="256" autocomplete="current-password" aria-describedby="password-help">
+<p id="password-help">Use a unique password of at least 12 characters. Never enter a server’s password here.</p>
+<div class="actions"><button class="primary" id="login" type="submit" name="intent" value="login">Log in</button><button id="signup" type="submit" name="intent" value="signup">Create an account</button></div>
+</form>
+<p id="account-status" role="status" aria-live="polite">Checking account service… Direct connection is ready.</p>
+<button id="retry" type="button">Check service again</button>
+<div id="unlocked" hidden>
+<p id="vault-state"></p>
+<ul id="servers"></ul>
+<form id="add-form">
+<label for="saved-address">Server address to remember</label>
+<input id="saved-address" type="url" required maxlength="2048" placeholder="https://" autocomplete="off" spellcheck="false">
+<button class="primary">Save address</button>
+</form>
+<div class="actions"><button id="reload" type="button">Reload saved list</button><button id="export" type="button">Download server list</button><button id="logout" type="button">Log out</button><button id="reauth" type="button">Lock and log in again</button></div>
+<p id="export-warning">Download creates a plaintext file on this device. Keep it private.</p>
+<details><summary>Delete HouseCall account</summary>
+<p>This permanently removes the saved list and HouseCall account. It does not delete any server accounts. Log in again first if this tab has been unlocked for more than five minutes.</p>
+<form id="delete-form"><label for="delete-confirm">Type DELETE to confirm</label><input id="delete-confirm" required pattern="DELETE" autocomplete="off"><button>Delete account and saved list</button></form>
+</details>
+</div>
+</section>
+<footer><p>HouseCall receives transient connection metadata while serving this page and account requests. No analytics or request logs are part of this portal. Your server receives your connection when you continue there.</p><div class="footer-links"><a href="/privacy">Privacy</a><a href="/source/housecall-public-source.tar.gz">Portal source</a></div></footer>
+</main>
+</body></html>

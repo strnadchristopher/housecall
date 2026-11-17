@@ -1,0 +1,25 @@
+{
+  "name": "housecall-public-portal",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "init": "node scripts/init.mjs",
+    "start": "node src/main.mjs",
+    "start:direct": "node src/direct-main.mjs",
+    "test": "node --test --test-concurrency=1 test/direct.test.mjs test/vault.test.mjs test/storage.test.mjs",
+    "test:account": "node --test --test-concurrency=1 test/account.test.mjs",
+    "test:browser": "playwright test --workers=1",
+    "verify:dependency": "node scripts/verify-dependency.mjs",
+    "test:direct-http": "node --test --test-concurrency=1 test/direct-http.test.mjs"
+  },
+  "dependencies": {
+    "@serenity-kit/opaque": "1.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.58.1"
+  }
+}

@@ -1,0 +1,51 @@
+# EXAMPLE ONLY. Separate static front door; never deploy the repository chat app.
+{
+    admin off
+    log default {
+        output discard
+    }
+}
+
+housecall.chat {
+    # Deliberately no access-log directive. Global output discard also prevents
+    # proxy error events from durably recording request IP/UA/URI metadata.
+    @portal path /app /app/* /api/account /api/account/*
+    header @portal {
+        Referrer-Policy "no-referrer"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Cache-Control "no-store"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        Content-Security-Policy "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; font-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; object-src 'none'"
+    }
+    handle /api/account* {
+        request_body {
+            max_size 96KB
+        }
+        reverse_proxy 127.0.0.1:43180 {
+            # Backend trusts only this explicit loopback proxy, never the client's
+            # submitted forwarding chain. Do not enable another ingress without review.
+            header_up X-Forwarded-For {remote_host}
+            transport http {
+                dial_timeout 2s
+                response_header_timeout 12s
+            }
+        }
+    }
+    handle /app {
+        redir /app/ 308
+    }
+    handle_path /app/* {
+        root * /srv/housecall/portal/dist
+        file_server
+    }
+    handle /privacy {
+        root * /srv/housecall/website
+        rewrite * /privacy.html
+        file_server
+    }
+    handle {
+        root * /srv/housecall/website
+        file_server
+    }
+}
