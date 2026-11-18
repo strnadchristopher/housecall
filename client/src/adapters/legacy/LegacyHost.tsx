@@ -27,7 +27,7 @@ export function LegacyHost({ host, hosts, updater, children }: { host: HostEntry
   const chat = useLegacyChat(c, host, hosts, directory, active);
   const call = useLegacyCall(c);
   const chords = useLegacyChords(c, call, chat.store.requests, !!chat.store.dmSecurity && !chat.store.dmSecurity.peer.canSendPlaintext);
-  const identity = useLegacyIdentity(c, host, hosts, updater, { id: chat.serverId, roles: chat.roles, setRoles: chat.setRoles }, () => { hosts.setActive(host.id); void security.act(() => security.openReceive(true)); });
+  const identity = useLegacyIdentity(c, host, hosts, updater, { id: chat.serverId, roles: chat.roles, setRoles: chat.setRoles }, () => { hosts.setActive(host.id); if (c.auth && c.capabilities.link_request === true) security.openComputerLogin?.(); else void security.act(() => security.openReceive(true)); });
   // An inactive host renders nothing, so its call has no stage or controls.
   // Leave it rather than keep transmitting the microphone with nothing visible.
   const leaveCall = call.transport.leave;

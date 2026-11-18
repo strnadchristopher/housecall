@@ -10,7 +10,7 @@ export interface SecurityVault {
   readonly availability: StorageAvailability;
   loadIdentity(): Promise<InstallIdentity | null>;
   saveIdentity(identity: InstallIdentity): Promise<void>;
-  importIdentity(identity: InstallIdentity, pins: readonly PinImport[]): Promise<void>;
+  importIdentity(identity: InstallIdentity, pins: readonly PinImport[], current?: () => boolean): Promise<void>;
   removeIdentity(): Promise<void>;
   loadBindings(origin: string, accountId: string): Promise<ConversationBinding[]>;
   saveBindings(origin: string, accountId: string, bindings: readonly ConversationBinding[]): Promise<void>;

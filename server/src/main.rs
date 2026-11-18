@@ -37,6 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
     }
     let mut state = AppState::new_with_setup_token(&database, token.as_deref())?;
+    state.link_request_enabled = std::env::var("HOUSECALL_LINK_REQUEST").as_deref() == Ok("1");
     state.invite_mail =
         std::sync::Arc::new(InviteMailConfig::from_env().map_err(std::io::Error::other)?);
     if let Ok(origins) = std::env::var("HOUSECALL_CLIENT_ORIGINS") {

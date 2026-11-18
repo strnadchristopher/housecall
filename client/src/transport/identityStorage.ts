@@ -50,10 +50,11 @@ export class IdentityStorage implements SecurityVault {
   async saveIdentity(value: InstallIdentity) {
     return this.serial(async () => { (await this.recoverImport())?.seed.fill(0); await this.saveIdentityRecord(value); });
   }
-  async importIdentity(value: InstallIdentity, pins: readonly PinImport[]) {
+  async importIdentity(value: InstallIdentity, pins: readonly PinImport[], current?: () => boolean) {
     return this.serial(async () => {
       const updates = this.validateImport(pins);
       (await this.recoverImport())?.seed.fill(0);
+      if (current && !current()) throw new Error("Account changed or link cancelled");
       // One OS record write durably couples the adopted seed to every origin's trust.
       await this.saveIdentityRecord({ ...value, pinImport: updates });
       (await this.recoverImport())?.seed.fill(0);

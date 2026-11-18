@@ -1,3 +1,4 @@
+import { BrowserPhoneLogin } from '../security/RequestFlow';
 import { canScanLoginQr } from "../../transport/loginQr";
 import { useHosted } from "../../hosted/HostedAccount";
 import { useSecurity } from "../../core/securityContext";
@@ -387,6 +388,7 @@ function SignIn({ preset, onBack, onSignUp }: { preset?: Preset; onBack: () => v
           <ErrorLine text={identity.error || hosted?.error || ""} />
           <div className="hc-onb__actions">
             <Button kind="primary" type="submit" busy={identity.busy}>{C.logIn}</Button>
+            <BrowserPhoneLogin origin={target || undefined} />
             {!hosted && canScanLoginQr(identity.native) && <Button onClick={() => void security?.act(() => security.openReceive())}>{copy.link.title}</Button>}
             {hosted && identity.adding && <Button kind="text" onClick={onSignUp}>Have an invite? Join instead</Button>}
             {!identity.adding && !preset && <Button kind="text" className="hc-onb__quiet" onClick={onSignUp}>{C.newHere}</Button>}

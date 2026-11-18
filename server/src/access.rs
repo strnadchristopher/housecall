@@ -67,7 +67,7 @@ async fn instance(State(s): State<AppState>) -> ApiResult<Value> {
         .optional()?
         .unwrap_or_else(|| "Housecall".into());
     Ok(Json(
-        json!({"name":name,"requests_open":requests_open(&db)?}),
+        json!({"name":name,"requests_open":requests_open(&db)?,"capabilities":{"link_request":s.link_request_enabled}}),
     ))
 }
 

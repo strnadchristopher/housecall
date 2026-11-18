@@ -151,6 +151,7 @@ export interface IdentityProvider extends IdentityState {
   /** Owner only. Readiness is instance-wide (host environment), not per server. */
   loadSetupStatus(): Promise<SetupRow[]>;
   clearError(): void;
+  newPhoneLogin?(origin: string): import('./requestLink').RequestingLink;
   signIn(input: { address: string; username: string; password: string }): Promise<void>;
   join(input: { address: string; token: string; name: string; password: string }): Promise<void>;
   setup(input: { address: string; setupToken: string; username: string; password: string }): Promise<void>;

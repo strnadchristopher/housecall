@@ -14,7 +14,7 @@ import { SnapCamera } from '../snap/SnapCamera';
 import { deviceName } from '../../hooks/useHousecall';
 import { useSensitiveSurface } from './sensitiveSurface';
 
-function Qr({ text }: { text?: string }) {
+export function Qr({ text }: { text?: string }) {
   const code = qrcode(0, 'M'); code.addData(text ?? 'Housecall: hidden decoy'); code.make();
   const count = code.getModuleCount();
   let path = '';

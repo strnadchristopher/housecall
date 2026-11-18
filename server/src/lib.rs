@@ -120,6 +120,8 @@ pub struct AppState {
     pub live: Arc<voice::Live>,
     /// QR login links (LINK-V1). Memory only.
     pub links: link::Links,
+    pub link_requests: link::request::Requests,
+    pub link_request_enabled: bool,
 }
 #[derive(Clone)]
 pub struct InviteMailConfig {
@@ -271,6 +273,8 @@ impl AppState {
             rings: Default::default(),
             live: Default::default(),
             links: Default::default(),
+            link_requests: Default::default(),
+            link_request_enabled: false,
         })
     }
     fn limited(&self, key: String, max: u32) -> bool {
@@ -421,6 +425,8 @@ async fn public_limit(
     let path = req.uri().path();
     let route = if path.ends_with("/link/claim") {
         "link-claim"
+    } else if path.starts_with("/api/link/request") {
+        "link-request"
     } else if path.ends_with("/link/result") {
         "link-result"
     } else {
@@ -977,7 +983,7 @@ async fn me(State(s): State<AppState>, Extension(p): Extension<Principal>) -> Js
     user["bio"] = json!(bio);
     user["key_rev"] = json!(key_rev);
     Json(
-        json!({"user":user,"session_id":p.session_id,"capabilities":{"password":true,"passkeys":s.passkeys.is_some(),"chat":true,"embeds":true,"uploads":s.media.is_some(),"transcode":s.transcoder.is_some(),"plex":s.plex.is_some() && s.voice.is_some(),"voice":s.voice.is_some(),"activities":false,"activity_sync":true,"activity_playback":false,"vm_input":s.vm.is_some() && s.voice.is_some(),"vm_reset":s.vm.as_ref().is_some_and(|vm| vm.reset_socket.is_some()) && s.voice.is_some(),"vm_media":s.vm_media.configured() && s.voice.is_some(),"giphy":giphy::configured(),"gimme_dry_run":s.gimme.is_dry_run(),"dj":s.dj.is_some() && s.voice.is_some(),"push":false}}),
+        json!({"user":user,"session_id":p.session_id,"capabilities":{"link_request":s.link_request_enabled,"password":true,"passkeys":s.passkeys.is_some(),"chat":true,"embeds":true,"uploads":s.media.is_some(),"transcode":s.transcoder.is_some(),"plex":s.plex.is_some() && s.voice.is_some(),"voice":s.voice.is_some(),"activities":false,"activity_sync":true,"activity_playback":false,"vm_input":s.vm.is_some() && s.voice.is_some(),"vm_reset":s.vm.as_ref().is_some_and(|vm| vm.reset_socket.is_some()) && s.voice.is_some(),"vm_media":s.vm_media.configured() && s.voice.is_some(),"giphy":giphy::configured(),"gimme_dry_run":s.gimme.is_dry_run(),"dj":s.dj.is_some() && s.voice.is_some(),"push":false}}),
     )
 }
 async fn devices(

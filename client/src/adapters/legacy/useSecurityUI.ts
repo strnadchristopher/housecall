@@ -1,3 +1,4 @@
+import { ApprovingLink, RequestingLink } from '../../core/requestLink';
 import { useEffect, useRef, useState } from 'react';
 import { ReceivingLink, ShowingLink } from '../../core/linkService';
 import type { SecurityUI } from '../../core/securityContext';
@@ -17,6 +18,8 @@ export function useSecurityUI(c: Housecall, host: HostEntry, hosts: Hosts): Secu
   const [bootstrap, setBootstrap] = useState(false);
   const [flow, setFlow] = useState<SecurityUI['flow']>();
   const [receiver, setReceiver] = useState<ReceivingLink>();
+  const [approver, setApprover] = useState<ApprovingLink>();
+  const [requester, setRequester] = useState<RequestingLink>();
   const [showing, setShowing] = useState<ShowingLink>();
   const [scanImmediately, setScanImmediately] = useState(false);
   const [outcomes, setOutcomes] = useState<HostIdentitySync[]>([]);
@@ -69,7 +72,7 @@ export function useSecurityUI(c: Housecall, host: HostEntry, hosts: Hosts): Secu
     await c.acceptLinked(target, auth);
     if (installVault().native) hosts.connected(host.id, target);
   };
-  const close = () => { if (!linkIsRetained(receiver)) receiver?.cancel(); void showing?.cancel(); setReceiver(undefined); setShowing(undefined); setFlow(undefined); setError(''); };
+  const close = () => { void approver?.cancel(); void requester?.cancel(); setApprover(undefined); setRequester(undefined); if (!linkIsRetained(receiver)) receiver?.cancel(); void showing?.cancel(); setReceiver(undefined); setShowing(undefined); setFlow(undefined); setError(''); };
   const openReceive = async (scan = false) => {
     if (!canScanLoginQr(installVault().native)) return;
     let old: { origin: string; userId: string; sessionId: string } | undefined;
@@ -87,7 +90,11 @@ export function useSecurityUI(c: Housecall, host: HostEntry, hosts: Hosts): Secu
   }, [receiver, c.auth, busy, origin]);
   useEffect(() => () => { if (!linkIsRetained(receiver)) receiver?.cancel(); }, [receiver]);
   useEffect(() => () => { void showing?.cancel(); }, [showing]);
+  useEffect(() => () => { void approver?.cancel(); void requester?.cancel(); }, [approver, requester, session]);
   return {
+    approver, requester,
+    openComputerLogin: () => { if (!session || c.capabilities.link_request !== true || !canScanLoginQr(installVault().native)) return; close(); setApprover(new ApprovingLink(session.identity.remote, installVault(), c.auth!.user.id, exportLinkPins)); setFlow('approve'); },
+    openPhoneUnlock: () => { if (!session || installVault().native || !c.auth) return; close(); setRequester(new RequestingLink(origin, installVault(), c.api, async () => { throw new Error('Unlock cannot replace a session'); }, c.auth.user.id)); setFlow('request-unlock'); },
     bootstrap, status, service: session?.identity, origin, busy, error, flow, receiver, showing, scanImmediately, outcomes, exposures, deviceNotice,
     pendingLink: c.auth ? pendingLink(origin, c.auth.user.id) : undefined,
     retryLink: async kind => {

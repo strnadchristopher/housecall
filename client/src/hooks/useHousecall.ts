@@ -161,7 +161,7 @@ export function useHousecall() {
   );
   const run = useCallback(async (fn: () => Promise<void>) => { await attempt(fn); }, [attempt]);
   const establish = async (result: Auth) => {
-    generation.current++;
+    const establishment = ++generation.current;
     api.responseObserver = undefined; api.requestGuard = undefined; api.authenticate(result); account.current = result;
     const bindings = securitySession(api, api.serverOrigin(), result.user.id).dm.conversations;
     api.requestGuard = (path, options) => bindings.guard(path, options, selected.current);
@@ -171,6 +171,7 @@ export function useHousecall() {
     const me = await api.get<{ session_id: string; capabilities: Record<string, unknown> }>(
       "/api/me",
     );
+    if (establishment !== generation.current || !api.isSession(result)) throw new Error("Account changed");
     setCapabilities(me.capabilities); setSessionId(me.session_id);
     await refresh();
   };
@@ -340,9 +341,11 @@ export function useHousecall() {
     loading,
     sessionId,
     securityEvents,
-    acceptLinked: async (origin: string, result: Auth) => {
+    acceptLinked: async (origin: string, result: Auth, current?: () => boolean) => {
       await clearNativePush();
+      if (current && !current()) throw new Error("Account changed");
       api.configure(origin); await establish(result);
+      if (!api.isSession(result)) throw new Error("Account changed");
       if (await secureSession.set(origin, { token: result.token, device_key: result.device_key, username: result.user.username, expires_at: result.expires_at })) storedOrigin.current = origin;
     },
     authenticate,

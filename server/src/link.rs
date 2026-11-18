@@ -1,5 +1,6 @@
 //! LINK-V1 server side: QR login links. State lives in memory only (LINK-V1 11.1). Raw secrets and
 //! raw device keys are never stored, and nothing secret is logged.
+pub mod request;
 use crate::{
     bad, conflict, forbidden, missing, now, ApiError, ApiResult, AppState, Principal, User,
 };
@@ -128,6 +129,7 @@ pub fn ct_eq(a: &[u8], b: &[u8]) -> bool {
 
 pub fn routes() -> Router<AppState> {
     Router::new()
+        .merge(request::routes())
         .route("/link/start", post(start))
         .route("/link/{id}", get(status))
         .route("/link/{id}/approve", post(approve))
@@ -135,6 +137,7 @@ pub fn routes() -> Router<AppState> {
 }
 pub fn public_routes() -> Router<AppState> {
     Router::new()
+        .merge(request::public_routes())
         .route("/link/claim", post(claim))
         .route("/link/result", post(result))
 }

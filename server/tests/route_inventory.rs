@@ -14,8 +14,12 @@ fn inventory() -> BTreeSet<(String, String)> {
     let mut routes = BTreeSet::new();
     let mut local_peer_routes = BTreeSet::new();
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-    for file in std::fs::read_dir(root).unwrap() {
-        let path = file.unwrap().path();
+    let mut paths = std::fs::read_dir(&root)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .collect::<Vec<_>>();
+    paths.push(root.join("link/request.rs"));
+    for path in paths {
         if path.extension().and_then(|s| s.to_str()) != Some("rs") {
             continue;
         }
@@ -145,6 +149,10 @@ async fn every_declared_private_route_rejects_missing_stolen_and_revoked_credent
         ("POST".into(), "/api/passkeys/login/finish".into()),
         ("POST".into(), "/api/link/claim".into()),
         ("POST".into(), "/api/link/result".into()),
+        ("POST".into(), "/api/link/request".into()),
+        ("POST".into(), "/api/link/request/status".into()),
+        ("POST".into(), "/api/link/request/cancel".into()),
+        ("POST".into(), "/api/link/request/collect".into()),
     ]);
     assert!(public.is_subset(&all));
     let private = all.difference(&public).cloned().collect::<Vec<_>>();

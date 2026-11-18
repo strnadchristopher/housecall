@@ -11,7 +11,11 @@ export interface SecurityUI {
   busy: boolean;
   error: string;
   deviceNotice?: string;
-  flow?: 'identity' | 'receive' | 'show';
+  flow?: 'identity' | 'receive' | 'show' | 'approve' | 'request-unlock';
+  approver?: import('./requestLink').ApprovingLink;
+  requester?: import('./requestLink').RequestingLink;
+  openComputerLogin?(): void;
+  openPhoneUnlock?(): void;
   receiver?: ReceivingLink;
   pendingLink?: ReceivingLink;
   retryLink(kind: "exposure" | "revocation" | "session"): Promise<void>;

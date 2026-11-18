@@ -1,3 +1,4 @@
+import { ComputerApprovalFlow, PhoneUnlockFlow, RequestHousekeepingNotice } from './security/RequestFlow';
 import { canScanLoginQr } from "../transport/loginQr";
 import { useHosted } from "../hosted/HostedAccount";
 import { AccountLogin, DirectLogin, HostedHome } from "../hosted/HostedViews";
@@ -39,11 +40,14 @@ export function Root() {
     <div className="hc-root">
       <div className="hc-notices" ref={notices}>
         <UpdateBanner />
+        <RequestHousekeepingNotice />
         {security && <DeviceNotice text={security.deviceNotice} onDone={security.dismissDeviceNotice} />}
       </div>
       {ready && <div hidden={!!hosted?.overlay} style={{ display: hosted?.overlay ? "none" : "contents" }}>{identity.signedIn ? <AppShell /> : identity.adding ? <Onboarding /> : hosted ? hosted.view === 'direct' ? <DirectLogin /> : hosted.account.list ? <HostedHome /> : <AccountLogin /> : <Onboarding />}</div>}
       {ready && hosted?.overlay && <AccountLogin onBack={() => hosted.setOverlay(false)} />}
       {security && <IdentityFlow key={identity.me?.id ?? "signed-out"} />}
+      {security?.flow === "approve" && <ComputerApprovalFlow />}
+      {security?.flow === "request-unlock" && <PhoneUnlockFlow />}
       {security?.flow === "show" && <ShowingFlow />}
       {security?.flow === "receive" && canScanLoginQr(identity.native) && <ReceivingFlow key={security.receiver ? "receive" : "none"} />}
       <Splash ready={ready} server={identity.serverName} />

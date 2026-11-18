@@ -1,3 +1,5 @@
+import { RequestingLink } from '../../core/requestLink';
+import { installVault } from './securityRuntime';
 import { hostedTarget } from "../../hosted/target";
 import { useHosted } from "../../hosted/HostedAccount";
 import { hosted } from "../../hosted/config";
@@ -194,6 +196,18 @@ export function useLegacyIdentity(
     update: updater.state,
 
     clearError: () => void c.run(async () => {}),
+    newPhoneLogin: input => {
+      const target = hosted ? hostedTarget(input).origin : parseServerInput(input).origin;
+      if (isNative() || (!hosted && target !== location.origin) || c.api.hasSession()) throw new Error('Browser sign-in required');
+      const binding = c.api.captureBinding();
+      return new RequestingLink(target, installVault(), c.api, async (origin, auth, active) => {
+        if (!active() || !binding() || c.api.hasSession()) throw new Error('Account changed');
+        await c.acceptLinked(origin, auth, () => active() && binding() && !c.api.hasSession());
+        if (hosted) hosts.connected(host.id, origin);
+        remember({origin, username: auth.user.username});
+        if (central?.account.list && central.saveAfterLogin) await central.saveOrigin(origin);
+      });
+    },
     signIn: input => authenticate("/api/login", input.address, { username: input.username, password: input.password }),
     join: input => authenticate("/api/invites/accept", input.address, { token: input.token, username: input.name, password: input.password }),
     setup: input => authenticate("/api/setup", input.address, { setup_token: input.setupToken, username: input.username, password: input.password }),

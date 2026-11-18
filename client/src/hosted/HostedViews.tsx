@@ -1,3 +1,4 @@
+import { BrowserPhoneLogin } from '../ui/security/RequestFlow';
 import { hostedTarget } from "./target";
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useIdentity } from '../core/context';
@@ -48,6 +49,8 @@ export function DirectLogin() {
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not connect.'); }
     finally { setBusy(false); }
   };
+  let phoneOrigin: string | undefined;
+  try { if(address.trim()) phoneOrigin = hostedTarget(address).origin; } catch { /* Address is still being entered. */ }
   return <main className="hc-onb"><div className="hc-onb__screen"><form className="hc-onb__form hc-onb__form--compact" onSubmit={e => void submit(e)} onFocus={e => { if (matchMedia('(pointer: coarse)').matches) e.currentTarget.querySelector('button[type=submit]')?.scrollIntoView({ block: 'nearest' }); }}>
     <div className="hc-onb__top"><IconButton icon="back" label="Back" onClick={() => h.go('login')} /></div>
     <header className="hc-onb__title"><h1>Connect to a friend's server</h1></header>
@@ -59,6 +62,7 @@ export function DirectLogin() {
     <ErrorLine text={error || identity.error} />
     {error && address && <a href={(() => { try { return parseServerInput(address).origin; } catch { return undefined; } })()} rel="noreferrer noopener">Open server directly</a>}
     <div className="hc-onb__actions"><Button kind="primary" type="submit" busy={busy || identity.busy}>Log in</Button>
+      <BrowserPhoneLogin origin={phoneOrigin} />
       <Button kind="text" onClick={() => { try { identity.addServer(address); } catch (e) { setError(String(e)); } }}>Have an invite? Join instead</Button></div>
   </form></div></main>;
 }

@@ -724,7 +724,7 @@ async fn the_link_page_is_static_strict_and_sends_nothing() {
         let body =
             String::from_utf8(r.into_body().collect().await.unwrap().to_bytes().to_vec()).unwrap();
         if path == "/link" {
-            assert!(body.contains("Open in Housecall") && body.contains("Continue in browser"));
+            assert!(body.contains("Open in Housecall") && !body.contains("Continue in browser"));
             assert!(body.contains("housecall://link-scan") && !body.contains("link?c="));
             assert!(!body.contains("Get the app"));
             // every script is external
@@ -761,5 +761,344 @@ async fn the_link_page_is_static_strict_and_sends_nothing() {
     assert_eq!(
         api.clone().oneshot(req).await.unwrap().status(),
         StatusCode::METHOD_NOT_ALLOWED
+    );
+}
+
+// Request direction is additive: keep every V1 regression above unchanged.
+async fn request_fixture() -> (Router, AppState, Value, Value) {
+    let (_, mut state, _, alice, bob) = fixture().await;
+    state.link_request_enabled = true;
+    (app(state.clone(), None), state, alice, bob)
+}
+async fn request_start(api: &Router) -> Value {
+    public(api, "/api/link/request", json!({"device_name":"Browser","device_key":dkey(71),"browser_origin":"https://app.example.test"})).await
+}
+fn request_path(l: &Value, action: &str) -> String {
+    format!(
+        "/api/link/request/{}/{}",
+        l["link_id"].as_str().unwrap(),
+        action
+    )
+}
+async fn request_claim(api: &Router, phone: &Value, l: &Value) -> Reply {
+    call(
+        api,
+        "POST",
+        &request_path(l, "claim"),
+        phone,
+        json!({"secret":l["secret"],"ephemeral_pub":b43(9),"claim_tag":B64.encode([3u8;16])}),
+    )
+    .await
+}
+async fn request_approve(api: &Router, phone: &Value, l: &Value, wrapped: Value) -> Reply {
+    call(
+        api,
+        "POST",
+        &request_path(l, "approve"),
+        phone,
+        json!({"confirmation":"47","wrapped_keys":wrapped}),
+    )
+    .await
+}
+fn request_proof(l: &Value) -> Value {
+    json!({"link_id":l["link_id"],"secret":l["secret"],"device_key":dkey(71)})
+}
+#[tokio::test]
+async fn request_direction_is_off_by_default_and_separate_from_v1() {
+    let (api, _, _, alice, _) = fixture().await;
+    assert_eq!(
+        post_public(
+            &api,
+            "/api/link/request",
+            json!({"device_name":"Browser","device_key":dkey(71)})
+        )
+        .await
+        .status,
+        StatusCode::NOT_FOUND
+    );
+    let (api, _, alice2, _) = request_fixture().await;
+    let l = start(&api, &alice2).await;
+    assert_eq!(
+        request_claim(&api, &alice2, &l).await.status,
+        StatusCode::NOT_FOUND
+    );
+    let l = request_start(&api).await;
+    assert_eq!(
+        post_public(&api, "/api/link/claim", claim_body(&l, &dkey(2)))
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    // V1 still starts, claims, and approves normally.
+    let _ = alice;
+}
+#[tokio::test]
+async fn request_requires_both_approval_and_private_one_shot_confirmation() {
+    let (api, _, alice, _) = request_fixture().await;
+    let l = request_start(&api).await;
+    assert_eq!(request_claim(&api, &alice, &l).await.status, StatusCode::OK);
+    let mut proof = request_proof(&l);
+    proof["confirmation"] = json!("47");
+    assert_eq!(
+        post_public(&api, "/api/link/request/collect", proof.clone())
+            .await
+            .status,
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        request_approve(&api, &alice, &l, Value::Null).await.status,
+        StatusCode::OK
+    );
+    let status = post_public(&api, "/api/link/request/status", request_proof(&l))
+        .await
+        .json();
+    assert!(status.get("confirmation").is_none());
+    assert!(status["claim"].get("confirmation").is_none());
+    let result = post_public(&api, "/api/link/request/collect", proof.clone()).await;
+    assert_eq!(result.status, StatusCode::OK);
+    assert_eq!(result.json()["user"]["id"], alice["user"]["id"]);
+    assert_eq!(
+        post_public(&api, "/api/link/request/collect", proof)
+            .await
+            .status,
+        StatusCode::CONFLICT
+    );
+    // A correct number before approval did not consume the attempt.
+}
+#[tokio::test]
+async fn request_wrong_or_missing_confirmation_burns_even_for_a_raw_client() {
+    for value in [
+        Value::Null,
+        json!("00"),
+        json!("0047"),
+        json!(47),
+        json!({}),
+    ] {
+        let (api, _, alice, _) = request_fixture().await;
+        let l = request_start(&api).await;
+        request_claim(&api, &alice, &l).await;
+        request_approve(&api, &alice, &l, Value::Null).await;
+        let mut proof = request_proof(&l);
+        proof["confirmation"] = value;
+        assert_eq!(
+            post_public(&api, "/api/link/request/collect", proof.clone())
+                .await
+                .status,
+            StatusCode::CONFLICT
+        );
+        proof["confirmation"] = json!("47");
+        assert_eq!(
+            post_public(&api, "/api/link/request/collect", proof)
+                .await
+                .status,
+            StatusCode::CONFLICT
+        );
+    }
+}
+#[tokio::test]
+async fn approved_request_can_be_cancelled_and_device_key_cannot_be_swapped() {
+    let (api, _, alice, _) = request_fixture().await;
+    let l = request_start(&api).await;
+    request_claim(&api, &alice, &l).await;
+    request_approve(&api, &alice, &l, Value::Null).await;
+    let mut wrong = request_proof(&l);
+    wrong["device_key"] = json!(dkey(72));
+    wrong["confirmation"] = json!("47");
+    assert_eq!(
+        post_public(&api, "/api/link/request/collect", wrong)
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        post_public(&api, "/api/link/request/cancel", request_proof(&l))
+            .await
+            .status,
+        StatusCode::OK
+    );
+    let mut proof = request_proof(&l);
+    proof["confirmation"] = json!("47");
+    assert_eq!(
+        post_public(&api, "/api/link/request/collect", proof)
+            .await
+            .status,
+        StatusCode::CONFLICT
+    );
+}
+#[tokio::test]
+async fn unlock_is_account_and_session_bound_and_never_mints_a_session() {
+    let (api, state, alice, bob) = request_fixture().await;
+    let l = call(
+        &api,
+        "POST",
+        "/api/link/unlock-request",
+        &alice,
+        json!({"device_name":"Browser","device_key":dkey(71)}),
+    )
+    .await
+    .json();
+    assert_eq!(
+        request_claim(&api, &bob, &l).await.status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(request_claim(&api, &alice, &l).await.status, StatusCode::OK);
+    assert_eq!(
+        request_approve(&api, &alice, &l, Value::Null).await.status,
+        StatusCode::BAD_REQUEST
+    );
+    let mut blob = vec![1u8; 79];
+    blob[0] = 1;
+    assert_eq!(
+        request_approve(&api, &alice, &l, json!(B64.encode(blob)))
+            .await
+            .status,
+        StatusCode::OK
+    );
+    let before: i64 = state
+        .db
+        .lock()
+        .unwrap()
+        .query_row("SELECT count(*) FROM sessions", [], |r| r.get(0))
+        .unwrap();
+    let mut proof = request_proof(&l);
+    proof["confirmation"] = json!("47");
+    assert_eq!(
+        post_public(&api, "/api/link/request/collect", proof.clone())
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        call(
+            &api,
+            "POST",
+            &request_path(&l, "collect"),
+            &bob,
+            proof.clone()
+        )
+        .await
+        .status,
+        StatusCode::NOT_FOUND
+    );
+    let out = call(&api, "POST", &request_path(&l, "collect"), &alice, proof).await;
+    assert_eq!(out.status, StatusCode::OK);
+    assert!(out.json().get("token").is_none());
+    assert!(out.json()["wrapped_keys"].is_string());
+    let after: i64 = state
+        .db
+        .lock()
+        .unwrap()
+        .query_row("SELECT count(*) FROM sessions", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(before, after);
+}
+#[tokio::test]
+async fn request_double_claim_and_expiry_fail_closed() {
+    let (api, state, alice, _) = request_fixture().await;
+    let l = request_start(&api).await;
+    assert_eq!(request_claim(&api, &alice, &l).await.status, StatusCode::OK);
+    assert_eq!(
+        request_claim(&api, &alice, &l).await.status,
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        request_approve(&api, &alice, &l, Value::Null).await.status,
+        StatusCode::CONFLICT
+    );
+    let l = request_start(&api).await;
+    housecall_server::link::request::age_for_test(&state, l["link_id"].as_str().unwrap(), 121000);
+    assert_eq!(
+        request_claim(&api, &alice, &l).await.status,
+        StatusCode::GONE
+    );
+}
+
+#[tokio::test]
+async fn request_wrong_secrets_result_window_and_approver_revocation() {
+    let (api, state, alice, _) = request_fixture().await;
+    let l = request_start(&api).await;
+    let mut wrong = request_proof(&l);
+    wrong["secret"] = json!(b43(17));
+    for _ in 0..3 {
+        assert_eq!(
+            post_public(&api, "/api/link/request/status", wrong.clone())
+                .await
+                .status,
+            StatusCode::NOT_FOUND
+        );
+    }
+    assert_eq!(
+        request_claim(&api, &alice, &l).await.status,
+        StatusCode::CONFLICT
+    );
+    let l = request_start(&api).await;
+    request_claim(&api, &alice, &l).await;
+    request_approve(&api, &alice, &l, Value::Null).await;
+    housecall_server::link::request::age_for_test(&state, l["link_id"].as_str().unwrap(), 61000);
+    let mut proof = request_proof(&l);
+    proof["confirmation"] = json!("47");
+    assert_eq!(
+        post_public(&api, "/api/link/request/collect", proof)
+            .await
+            .status,
+        StatusCode::GONE
+    );
+    let l = request_start(&api).await;
+    request_claim(&api, &alice, &l).await;
+    request_approve(&api, &alice, &l, Value::Null).await;
+    let sid = call(&api, "GET", "/api/me", &alice, json!({})).await.json()["session_id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    state
+        .db
+        .lock()
+        .unwrap()
+        .execute("DELETE FROM sessions WHERE id=?", [sid])
+        .unwrap();
+    let mut proof = request_proof(&l);
+    proof["confirmation"] = json!("47");
+    assert_eq!(
+        post_public(&api, "/api/link/request/collect", proof)
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+}
+#[tokio::test]
+async fn request_cap_does_not_starve_v1_and_configured_cors_covers_request_routes() {
+    let (api, state, alice, _) = request_fixture().await;
+    for _ in 0..200 {
+        request_start(&api).await;
+    }
+    assert_eq!(
+        post_public(
+            &api,
+            "/api/link/request",
+            json!({"device_name":"Browser","device_key":dkey(71)})
+        )
+        .await
+        .status,
+        StatusCode::TOO_MANY_REQUESTS
+    );
+    start(&api, &alice).await;
+    let mut state = state;
+    state.client_origins = vec!["https://app.example.test".parse().unwrap()];
+    let api = app(state, None);
+    let request = Request::builder()
+        .method("OPTIONS")
+        .uri("/api/link/request/collect")
+        .header("origin", "https://app.example.test")
+        .header("access-control-request-method", "POST")
+        .header("access-control-request-headers", "content-type")
+        .body(Body::empty())
+        .unwrap();
+    let response = api.oneshot(request).await.unwrap();
+    assert_eq!(
+        response
+            .headers()
+            .get("access-control-allow-origin")
+            .unwrap(),
+        "https://app.example.test"
     );
 }

@@ -26,8 +26,8 @@ describe('actual static handoff executable, without a browser or network', () =>
     }
     expect(page(code, 'http://remote.example.test').nodes.has('ok')).toBe(false);
   });
-  it('strips before DOM access and offers only a payload-free native handoff', () => {
-    const { nodes } = page(code); expect(nodes.get('ok')?.hidden).toBe(false);
+  it.each(['hcl1','hcr1'])('strips before DOM access and offers only a payload-free native handoff (%s)', tag => {
+    const { nodes } = page(code.replace('hcl1', tag)); expect(nodes.get('ok')?.hidden).toBe(false);
     expect(nodes.get('web')?.href).toBe('/');
     expect(script).not.toContain('#link=');
     const html = readFileSync('public/link/index.html', 'utf8');

@@ -1,3 +1,4 @@
+import { useRequestCapability } from './RequestFlow';
 import { canScanLoginQr } from "../../transport/loginQr";
 import { SecurityIllustration } from "./SecurityIllustration";
 import { useLayoutEffect, useEffect, useRef, useState } from 'react';
@@ -48,6 +49,7 @@ export function SecurityExplanation({ open, onClose }: { open: boolean; onClose(
 
 export function IdentityFlow() {
   const security = useSecurity()!, identity = useIdentity();
+  const phoneUnlock = useRequestCapability(!identity.native ? security.origin : undefined);
   const s = security.service;
   const status = security.status;
   const [step, setStep] = useState('home');
@@ -140,7 +142,7 @@ export function IdentityFlow() {
         {status.phase === 'ready' || status.phase === 'recovery-ahead' ? <>
           {nativeOnly ? <p>{C.e2e.sheet.browser}</p> : <><Button kind="primary" onClick={() => setStep('view-password')}>{C.security.view}</Button><Button onClick={() => setStep('replace')}>{C.security.replace}</Button></>}
           {status.phase === 'recovery-ahead' && <ErrorLine text={C.security.viewReplaced} />}
-        </> : <><p>{nativeOnly ? C.e2e.lockedBrowser : canScanLoginQr(identity.native) ? C.e2e.lockedBody : C.e2e.lockedRecovery}</p>{canScanLoginQr(identity.native) && <Button kind="primary" onClick={() => run(() => security.openReceive())}>{C.keys.getScan}</Button>}<Button onClick={importStart}>{C.keys.getWords}</Button></>}
+        </> : <><p>{nativeOnly ? C.e2e.lockedBrowser : canScanLoginQr(identity.native) ? C.e2e.lockedBody : C.e2e.lockedRecovery}</p>{canScanLoginQr(identity.native) && <Button kind="primary" onClick={() => run(() => security.openReceive())}>{C.keys.getScan}</Button>}{phoneUnlock && <Button kind="primary" onClick={()=>security.openPhoneUnlock?.()}>Unlock with your phone</Button>}<Button onClick={importStart}>{C.keys.getWords}</Button></>}
         {identity.native && <Button kind="text" onClick={() => setStep('reset')}>{status.phase === 'needs-import' ? canScanLoginQr(identity.native) ? C.keys.getNeither : C.keys.noRecovery : C.security.reset}</Button>}
         {status.phase === 'collision' && identity.native && <Button onClick={() => setStep('use-existing')}>{C.keys.collideThis}</Button>}
       </>}

@@ -11,20 +11,20 @@ export function validOrigin(origin: unknown): origin is string {
   if (typeof origin !== 'string') return false;
   try { const u = new URL(origin); return u.origin === origin && (u.protocol === 'https:' || (u.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname))); } catch { return false; }
 }
-export function formatQr(origin: string, linkId: Uint8Array, secret: Uint8Array, showingPub: Uint8Array): string {
+export function formatQr(origin: string, linkId: Uint8Array, secret: Uint8Array, showingPub: Uint8Array, direction: 'hcl1' | 'hcr1' = 'hcl1'): string {
   requireThat(validOrigin(origin)); bytes(linkId, 16); bytes(secret, 32); validateAgreementKey(showingPub);
   const id = Array.from(linkId, b => b.toString(16).padStart(2, '0')).join('');
-  const text = `${origin}/link#hcl1.${id}.${b64u(secret)}.${b64u(showingPub)}`;
+  const text = `${origin}/link#${direction}.${id}.${b64u(secret)}.${b64u(showingPub)}`;
   requireThat(text.length <= 512); return text;
 }
-export function parseQr(text: unknown): Result<QrPayload> {
+export function parseQr(text: unknown, direction: 'hcl1' | 'hcr1' = 'hcl1'): Result<QrPayload> {
   return attempt(() => {
     requireThat(typeof text === 'string' && text.length <= 512);
     const hash = text.indexOf('#'); requireThat(hash >= 0);
     const before = text.slice(0, hash); requireThat(before.endsWith('/link'));
     const origin = before.slice(0, -5); requireThat(validOrigin(origin));
     const parts = text.slice(hash + 1).split('.');
-    requireThat(parts.length === 4 && parts[0] === 'hcl1' && /^[0-9a-f]{32}$/.test(parts[1]));
+    requireThat(parts.length === 4 && parts[0] === direction && /^[0-9a-f]{32}$/.test(parts[1]));
     const linkId = Uint8Array.from(parts[1].match(/../g)!, s => Number.parseInt(s, 16));
     const secret = unwrap(unb64u(parts[2])), showingPub = unwrap(unb64u(parts[3]));
     bytes(secret, 32); bytes(showingPub, 32);
@@ -39,10 +39,11 @@ export function newEphemeral(rng?: RandomSource): { priv: Uint8Array; pub: Uint8
   const priv = randomBytes(32, rng); return { priv, pub: x25519.getPublicKey(priv) };
 }
 export function confirmationCode(codeBytes: Uint8Array): string { bytes(codeBytes, 4); return (readU32(codeBytes, 0) % 100).toString().padStart(2, '0'); }
-export function linkKeys({ linkId, secret, showingPub, claimingPub, sharedSecret: ss }: { linkId: Uint8Array; secret: Uint8Array; showingPub: Uint8Array; claimingPub: Uint8Array; sharedSecret: Uint8Array }): { salt: Uint8Array; wrapKey: Uint8Array; claimTag: Uint8Array; codeBytes: Uint8Array; code: string } {
+export function linkKeys({ linkId, secret, showingPub, claimingPub, sharedSecret: ss, direction = 'hcl1' }: { direction?: 'hcl1' | 'hcr1'; linkId: Uint8Array; secret: Uint8Array; showingPub: Uint8Array; claimingPub: Uint8Array; sharedSecret: Uint8Array }): { salt: Uint8Array; wrapKey: Uint8Array; claimTag: Uint8Array; codeBytes: Uint8Array; code: string } {
   bytes(linkId, 16); bytes(secret, 32); validateAgreementKey(showingPub); validateAgreementKey(claimingPub); bytes(ss, 32); requireThat(ss.some(b => b !== 0), 'INVALID_KEY');
-  const salt = sha256(concat(utf8('housecall link v1'), linkId, secret, showingPub, claimingPub));
-  const wrapKey = H(ss, salt, 'housecall link v1 wrap'), claimTag = H(ss, salt, 'housecall link v1 claim', 16), codeBytes = H(ss, salt, 'housecall link v1 code', 4);
+  const domain = direction === 'hcr1' ? 'housecall link v2 request' : 'housecall link v1';
+  const salt = sha256(concat(utf8(domain), linkId, secret, showingPub, claimingPub));
+  const wrapKey = H(ss, salt, `${domain} wrap`), claimTag = H(ss, salt, `${domain} claim`, 16), codeBytes = H(ss, salt, `${domain} code`, 4);
   return { salt, wrapKey, claimTag, codeBytes, code: confirmationCode(codeBytes) };
 }
 export function typedCodeMatches(typed: unknown, code: unknown): boolean {

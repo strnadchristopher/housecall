@@ -1,3 +1,4 @@
+import { canScanLoginQr } from '../../transport/loginQr';
 import { DirectorySettings } from "../../hosted/DirectorySettings";
 import { NavRow } from "../kit";
 import { useSecurity } from "../../core/securityContext";
@@ -110,6 +111,7 @@ export function Devices() {
   useEffect(() => { void identity.loadDevices(); }, []);
   return (
     <ul className="hc-results" data-testid="screen-devices">
+      {canScanLoginQr(identity.native) && identity.capabilities.some(c=>c.id==='link_request' && c.available) && <li><NavRow label="Log in on a computer" onClick={() => security?.openComputerLogin?.()} /></li>}
       {identity.native && <li><NavRow label={copy.link.title} onClick={() => security?.openShowing()} /></li>}
       <li className="hc-note">{copy.security.stolen}</li>
       {identity.devices.map(device => (

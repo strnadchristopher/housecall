@@ -44,6 +44,13 @@ export class Api {
   authenticate(session?: Session) {
     this.sessionGeneration++; this.session = session;
   }
+  forkSession() {
+    if (!this.session) throw new Error('Authenticated session required');
+    const api = new Api(this.serverOrigin()); api.authenticate({ ...this.session }); return api;
+  }
+  isSession(session: Session) { return this.session?.token === session.token && this.session?.device_key === session.device_key; }
+  hasSession() { return this.session !== undefined; }
+  captureBinding() { const generation = this.sessionGeneration, origin = this.serverOrigin(); return () => generation === this.sessionGeneration && origin === this.serverOrigin(); }
   isCurrentSessionError(error: ApiError) { return error.sessionGeneration === undefined || error.sessionGeneration === this.sessionGeneration; }
   /** Native/HLS media gets auth headers without exposing credentials to media URLs or redirects. */
   mediaRequest(url: string, init: RequestInit = {}): Request {
