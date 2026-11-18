@@ -33,6 +33,7 @@ services:
       SFU_BIND: 0.0.0.0:${SFU_PORT:-50000}
       SFU_PUBLIC_IP: ${SFU_PUBLIC_IP:-127.0.0.1}
       HOUSECALL_CLIENT_ORIGINS: ${HOUSECALL_CLIENT_ORIGINS:-tauri://localhost,http://tauri.localhost}
+      HOUSECALL_LINK_REQUEST: ${HOUSECALL_LINK_REQUEST:-0}
       HOUSECALL_ANDROID_PASSKEY_ORIGINS: ${HOUSECALL_ANDROID_PASSKEY_ORIGINS:-}
       GIPHY_API_KEY: ${GIPHY_API_KEY:-}
       PLEX_URL: ${PLEX_URL:-}
@@ -74,7 +75,7 @@ services:
     read_only: true
     cap_drop: [ALL]
     cap_add: [CHOWN, FOWNER]
-    security_opt: [no-new-privileges:true]
+    security_opt: ['no-new-privileges:true']
     mem_limit: 32m
     pids_limit: 16
   scanner:
@@ -112,7 +113,7 @@ services:
     cap_add: [NET_ADMIN, CHOWN]
     read_only: true
     tmpfs: ["/tmp:size=1m,mode=1777"]
-    security_opt: [no-new-privileges:true]
+    security_opt: ['no-new-privileges:true']
     healthcheck:
       test: ["CMD-SHELL", "nft list chain inet housecall_vm_47191 output >/dev/null"]
       interval: 5s
@@ -144,7 +145,7 @@ services:
     tmpfs:
       - /tmp:size=64m,mode=1777
     cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
+    security_opt: ['no-new-privileges:true']
     mem_limit: 3g
     pids_limit: 128
 volumes:

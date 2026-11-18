@@ -124,7 +124,7 @@ To allow it, add this exact origin to the community server environment and resta
 through your normal release process:
 
 ```sh
-HOUSECALL_CLIENT_ORIGINS=https://housecall.chat
+HOUSECALL_CLIENT_ORIGINS=tauri://localhost,http://tauri.localhost,https://app.housecall.chat
 ```
 
 Keep your existing server origin configuration. The hosted browser connects directly
@@ -135,6 +135,14 @@ An IP address works only with a certificate trusted for that IP. Private address
 work only from browsers on a network that can reach them; browser local-network
 permission policies may also apply. The server's own web client remains available
 for older releases or incompatible browser configurations. Never disable TLS checks.
+
+### Optional sign-in with your phone
+
+On a server build that supports it, set `HOUSECALL_LINK_REQUEST=1` and recreate
+the app service. The browser shows **Log in with your phone** for that server.
+In an updated HouseCall mobile app, sign in to the same server, then choose
+**Settings → Log in on a computer** to scan and approve. This applies to community
+accounts, not the optional HouseCall account. Password login remains available.
 
 ### Optional public directory publication
 
