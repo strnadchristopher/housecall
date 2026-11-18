@@ -11,7 +11,6 @@
     document.getElementById("missing").hidden = !!valid;
     if (valid) {
       document.getElementById("host").textContent = location.host;
-      document.getElementById("web").href = "/#link=" + fragment;
     } else document.getElementById("ok").remove();
     fragment = "";
   }, { once: true });

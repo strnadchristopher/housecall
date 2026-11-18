@@ -1,3 +1,4 @@
+import { canScanLoginQr } from "./loginQr";
 import { decodeInviteCode } from "../data/inviteCode";
 
 export interface InviteLink { token: string; server_origin: string }
@@ -56,7 +57,7 @@ export function subscribeInviteLinks(
       if (!stopped && typeof result.url === "string") {
         // Android: a housecall:// link captured by InviteLinkInbox.
         if (result.url === 'housecall://link-scan') {
-          onLinkScan?.();
+          if (canScanLoginQr(true)) onLinkScan?.();
           await call("native_auth", { action: "acknowledgeInvite", payload: { id: result.id } });
           return;
         }
@@ -91,7 +92,7 @@ export function subscribeInviteLinks(
     try {
       const result = await call<{ url?: string | null }>("scheme_invite_take", {});
       if (!stopped && typeof result?.url === "string") {
-        if (result.url === 'housecall://link-scan') { onLinkScan?.(); return; }
+        if (result.url === 'housecall://link-scan') { if (canScanLoginQr(true)) onLinkScan?.(); return; }
         const parsed = parseSchemeInvite(result.url);
         if (parsed) onInvite(parsed);
         else onError?.(new Error("Invalid invitation link"));
@@ -114,11 +115,8 @@ export function subscribeInviteLinks(
   };
 }
 
-/** Web handoff: strip the fragment synchronously before parsing/rendering/network calls.
- * Native callers must scan with their own camera; never use this code as a native handoff. */
-export function takeBrowserLinkFragment(): string | undefined {
+/** Discard legacy browser QR secrets before render. They can no longer start a receive flow. */
+export function stripBrowserLinkFragment(): void {
   if (typeof window === 'undefined' || !location.hash.startsWith('#link=')) return;
-  const fragment = location.hash.slice(6);
   history.replaceState(history.state, '', location.pathname + location.search);
-  return `${location.origin}/link#${fragment}`;
 }

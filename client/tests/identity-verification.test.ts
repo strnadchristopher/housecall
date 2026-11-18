@@ -3,7 +3,7 @@ import { verifyLinkApproval } from '../src/transport/linkVerification';
 import { Api } from '../src/transport/api';
 import { SecurityApi } from '../src/adapters/legacy/security';
 import { memoryOnlyNativeStorage } from '../src/transport/identityStorage';
-import { parseSchemeInvite, takeBrowserLinkFragment } from '../src/transport/deepLinks';
+import { parseSchemeInvite, stripBrowserLinkFragment } from '../src/transport/deepLinks';
 import { parseDeepLink } from '../src/crypto/link';
 afterEach(() => { vi.unstubAllGlobals(); });
 it('cancelled OS verification cannot fall through to password; desktop fallback checks real password route with session headers', async () => {
@@ -20,8 +20,8 @@ it('web has no native approval or native memory fallback; code-carrying schemes 
   expect(parseDeepLink('housecall://link-scan')).toEqual({ ok: true, value: { action: 'scan' } });
   for (const text of ['housecall://link?c=hcl1.secret', 'housecall://link-scan?c=secret', 'housecall://link-scan#secret']) { expect(parseDeepLink(text).ok).toBe(false); expect(parseSchemeInvite(text)).toBeUndefined(); }
 });
-it('browser link fragments are stripped synchronously before returning data to a controller', () => {
+it('legacy browser link fragments are stripped synchronously and discarded', () => {
   vi.stubGlobal('window', {}); vi.stubGlobal('location', { origin: 'https://chat.example.test', hash: '#link=hcl1.id.secret.A', pathname: '/', search: '' });
   const replaceState = vi.fn(); vi.stubGlobal('history', { state: null, replaceState });
-  expect(takeBrowserLinkFragment()).toBe('https://chat.example.test/link#hcl1.id.secret.A'); expect(replaceState).toHaveBeenCalledWith(null, '', '/');
+  expect(stripBrowserLinkFragment()).toBeUndefined(); expect(replaceState).toHaveBeenCalledWith(null, '', '/');
 });

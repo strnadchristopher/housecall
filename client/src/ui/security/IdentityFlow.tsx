@@ -1,3 +1,4 @@
+import { canScanLoginQr } from "../../transport/loginQr";
 import { SecurityIllustration } from "./SecurityIllustration";
 import { useLayoutEffect, useEffect, useRef, useState } from 'react';
 import { useIdentity } from '../../core/context';
@@ -15,7 +16,7 @@ export function SecurityPane() {
   const completion = security.pendingLink?.snapshot();
   const ready = security.status?.phase === 'ready' || security.status?.phase === 'recovery-ahead';
   return <div className="hc-stack" data-testid="screen-security">
-    <div className={`hc-status ${ready ? '' : 'is-off'}`}><Icon name={ready ? 'lock' : 'key'} /><span><strong>{ready ? identity.native ? C.security.on : C.e2e.label.browser : C.e2e.lockedTitle}</strong><small>{ready ? identity.native ? C.security.onBody : C.e2e.sheet.browser : identity.native ? C.e2e.lockedBody : C.e2e.lockedBrowser}</small></span></div>
+    <div className={`hc-status ${ready ? '' : 'is-off'}`}><Icon name={ready ? 'lock' : 'key'} /><span><strong>{ready ? identity.native ? C.security.on : C.e2e.label.browser : C.e2e.lockedTitle}</strong><small>{ready ? identity.native ? C.security.onBody : C.e2e.sheet.browser : identity.native ? canScanLoginQr(identity.native) ? C.e2e.lockedBody : C.e2e.lockedRecovery : C.e2e.lockedBrowser}</small></span></div>
     {security.status?.replacementDeviceName && <p role="alert">{C.keys.replacedOn(security.status.replacementDeviceName)}</p>}
     <ErrorLine text={security.error} />
     {completion?.phase === 'completed' && completion.exposureReportPending && <><p role="alert">{C.security.pendingExposure}</p><Button onClick={() => void security.act(() => security.retryLink('exposure'))}>{C.common.retry}</Button></>}
@@ -139,8 +140,8 @@ export function IdentityFlow() {
         {status.phase === 'ready' || status.phase === 'recovery-ahead' ? <>
           {nativeOnly ? <p>{C.e2e.sheet.browser}</p> : <><Button kind="primary" onClick={() => setStep('view-password')}>{C.security.view}</Button><Button onClick={() => setStep('replace')}>{C.security.replace}</Button></>}
           {status.phase === 'recovery-ahead' && <ErrorLine text={C.security.viewReplaced} />}
-        </> : <><p>{nativeOnly ? C.e2e.lockedBrowser : C.e2e.lockedBody}</p><Button kind="primary" onClick={() => run(() => security.openReceive())}>{C.keys.getScan}</Button><Button onClick={importStart}>{C.keys.getWords}</Button></>}
-        {identity.native && <Button kind="text" onClick={() => setStep('reset')}>{status.phase === 'needs-import' ? C.keys.getNeither : C.security.reset}</Button>}
+        </> : <><p>{nativeOnly ? C.e2e.lockedBrowser : canScanLoginQr(identity.native) ? C.e2e.lockedBody : C.e2e.lockedRecovery}</p>{canScanLoginQr(identity.native) && <Button kind="primary" onClick={() => run(() => security.openReceive())}>{C.keys.getScan}</Button>}<Button onClick={importStart}>{C.keys.getWords}</Button></>}
+        {identity.native && <Button kind="text" onClick={() => setStep('reset')}>{status.phase === 'needs-import' ? canScanLoginQr(identity.native) ? C.keys.getNeither : C.keys.noRecovery : C.security.reset}</Button>}
         {status.phase === 'collision' && identity.native && <Button onClick={() => setStep('use-existing')}>{C.keys.collideThis}</Button>}
       </>}
       {identity.native && ['ready', 'recovery-ahead'].includes(status.phase) && <Button onClick={() => run(async () => { await s!.publish(); await security.synchronize(); })}>{C.keys.publish}</Button>}
@@ -161,7 +162,7 @@ export function IdentityFlow() {
       <p>{C.recovery.enterBody}</p><label className="hc-field"><span>{C.recovery.field} · {C.recovery.count(count)}</span><textarea rows={5} autoComplete="off" autoCapitalize="none" spellCheck={false} value={typed} onChange={e => setTyped(e.target.value)} /></label>
       {identity.native && <p className="hc-note">{C.recovery.local}</p>}
       <Button kind="primary" type="submit" disabled={count !== 24} busy={security.busy}>{C.recovery.unlock}</Button>
-      <Button kind="text" onClick={() => { setTyped(''); run(() => security.openReceive()); }}>{C.recovery.otherDevice}</Button>
+      {canScanLoginQr(identity.native) && <Button kind="text" onClick={() => { setTyped(''); run(() => security.openReceive()); }}>{C.recovery.otherDevice}</Button>}
     </form>}
     {(step === 'words' || step === 'view') && words && <>
       <p>{C.recovery.body}</p><ol className="hc-words" aria-label={C.recovery.field}>{words.split(' ').map((word, i) => <li key={i}>{word}</li>)}</ol><p className="hc-note">{C.recovery.care}</p>

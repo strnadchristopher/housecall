@@ -1,3 +1,4 @@
+import { canScanLoginQr } from "../transport/loginQr";
 import { useHosted } from "../hosted/HostedAccount";
 import { AccountLogin, DirectLogin, HostedHome } from "../hosted/HostedViews";
 import { useLayoutEffect, useRef } from 'react';
@@ -44,7 +45,7 @@ export function Root() {
       {ready && hosted?.overlay && <AccountLogin onBack={() => hosted.setOverlay(false)} />}
       {security && <IdentityFlow key={identity.me?.id ?? "signed-out"} />}
       {security?.flow === "show" && <ShowingFlow />}
-      {security?.flow === "receive" && <ReceivingFlow key={security.receiver ? "receive" : "none"} />}
+      {security?.flow === "receive" && canScanLoginQr(identity.native) && <ReceivingFlow key={security.receiver ? "receive" : "none"} />}
       <Splash ready={ready} server={identity.serverName} />
     </div>
   );

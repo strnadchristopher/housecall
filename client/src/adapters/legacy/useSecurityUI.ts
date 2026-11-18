@@ -7,7 +7,7 @@ import type { Housecall } from './chat';
 import { finishLinkHousekeeping, linkIsRetained, pendingLink, retainLink, chooseMemoryOnly, coordinator, exportLinkPins, installVault, securitySession, securityUpdates } from './securityRuntime';
 import type { HostEntry, Hosts } from './hosts';
 import { copy } from '../../ui/copy';
-import { takeInitialLink } from '../../transport/initialLink';
+import { canScanLoginQr } from '../../transport/loginQr';
 
 export function useSecurityUI(c: Housecall, host: HostEntry, hosts: Hosts): SecurityUI {
   const [, bump] = useState(0);
@@ -71,6 +71,7 @@ export function useSecurityUI(c: Housecall, host: HostEntry, hosts: Hosts): Secu
   };
   const close = () => { if (!linkIsRetained(receiver)) receiver?.cancel(); void showing?.cancel(); setReceiver(undefined); setShowing(undefined); setFlow(undefined); setError(''); };
   const openReceive = async (scan = false) => {
+    if (!canScanLoginQr(installVault().native)) return;
     let old: { origin: string; userId: string; sessionId: string } | undefined;
     if (c.auth) {
       const me = await c.api.get<{ session_id: string }>('/api/me');
@@ -78,18 +79,6 @@ export function useSecurityUI(c: Housecall, host: HostEntry, hosts: Hosts): Secu
     }
     receiver?.cancel(); setReceiver(new ReceivingLink(installVault(), old, adoptReceived)); setScanImmediately(scan); setFlow('receive');
   };
-  useEffect(() => {
-    let alive = true;
-    // Defer consuming the one-shot fragment until after StrictMode's mount probe.
-    queueMicrotask(() => {
-      if (!alive) return;
-      const initial = takeInitialLink(); if (!initial) return;
-      const r = new ReceivingLink(installVault(), undefined, adoptReceived);
-      try { r.scan(initial, 'browser'); setReceiver(r); setFlow('receive'); }
-      catch { setError(copy.camera.scanWrong); setReceiver(r); setFlow('receive'); }
-    });
-    return () => { alive = false; };
-  }, []);
   useEffect(() => {
     if (!receiver || !c.auth || receiver.snapshot().phase !== 'completed') return;
     const before = pendingLink(origin, c.auth.user.id);

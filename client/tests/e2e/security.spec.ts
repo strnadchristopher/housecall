@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { b64u, publicIdentityKey, deriveIdentity, destroyIdentity } from '../../src/crypto/identity';
 import { copy } from '../../src/ui/copy';
 import { DmService } from '../../src/adapters/legacy/dm';
+import { ReceivingLink } from '../../src/core/linkService';
 import { IdentityStorage } from '../../src/transport/identityStorage';
 import { Api } from '../../src/transport/api';
 import { recoveryKey, recoveryWords, sealBackup } from '../../src/crypto/backup';
@@ -98,9 +99,9 @@ async function noticeLayout(page: Page) {
   await page.setViewportSize({ width: 1280, height: 800 });
 }
 
-async function nativeFixture(context: BrowserContext, seed: Uint8Array) {
+async function nativeFixture(context: BrowserContext, seed?: Uint8Array) {
   await context.addInitScript(({ seed }) => {
-    const records = new Map<string, unknown>(); records.set('identity', { seed: encodeFixtureSeed(seed), recovery_rev: 1, confirmed: true });
+    const records = new Map<string, unknown>(); if (seed) records.set('identity', { seed: encodeFixtureSeed(seed), recovery_rev: 1, confirmed: true });
     function encodeFixtureSeed(bytes: number[]) { return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
     Object.assign(window, { __TAURI_INTERNALS__: { invoke: async (command: string, args: Record<string, any> = {}) => {
       if (command.endsWith('|identity_get')) return { identity: records.get('identity') };
@@ -118,7 +119,7 @@ async function nativeFixture(context: BrowserContext, seed: Uint8Array) {
       if (command === 'scheme_invite_take') return {};
       throw new Error('Native command unavailable in presentation fixture');
     } } });
-  }, { seed: Array.from(seed) });
+  }, { seed: seed ? Array.from(seed) : undefined });
 }
 
 test.use({ actionTimeout: 10_000, navigationTimeout: 15_000 });
@@ -223,7 +224,37 @@ test('security vertical slice: real browser imports, sealed send/read/edit/reply
   for (const c of contexts) await c.close();
 });
 
-test('fragment removal and native QR number/verification presentation use real link endpoints', async ({ browser, request }) => {
+test('web login, legacy deep link and DM unlock never request a scanner; recovery still unlocks', async ({ browser }) => {
+  for (const width of [1280, 390]) {
+    const context = await browser.newContext({ viewport: { width, height: 844 }, ...(width === 390 ? { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)' } : {}) });
+    await context.addInitScript(() => {
+      Object.assign(window, { loginCameraCalls: 0 });
+      Object.defineProperty(navigator.mediaDevices, 'getUserMedia', { configurable: true, value: () => {
+        (window as any).loginCameraCalls++; throw new Error('Login/unlock must not request camera');
+      } });
+    });
+    const page = await context.newPage(); let linkRequests = 0;
+    page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/link')) linkRequests++; });
+    await page.goto('/#link=hcl1.legacy-secret');
+    expect(new URL(page.url()).hash).toBe('');
+    await expect(page.getByTestId('screen-link-receive')).toHaveCount(0);
+    await fillSignIn(page, 'security_owner');
+    await expect(page.getByRole('button', { name: copy.link.title, exact: true })).toHaveCount(0);
+    await logInButton(page).click();
+    const flow = page.getByTestId('security-flow'); await expect(flow).toBeVisible();
+    await expect(flow.getByRole('button', { name: copy.keys.getScan, exact: true })).toHaveCount(0);
+    await flow.getByRole('button', { name: 'Cancel', exact: true }).click(); await openDm(page);
+    const banner = page.locator('.hc-keybanner');
+    await expect(banner.getByRole('button', { name: copy.e2e.useDevice, exact: true })).toHaveCount(0);
+    await banner.getByRole('button', { name: copy.e2e.enterKey, exact: true }).click();
+    await importKey(page, aliceSeed, true);
+    await expect(page.locator(`li[data-message-id="${fixture.seedId}"] .hc-md`)).toHaveText(fixture.seedText);
+    expect(await page.evaluate(() => (window as any).loginCameraCalls)).toBe(0); expect(linkRequests).toBe(0);
+    await context.close();
+  }
+});
+
+test('native QR number/verification presentation uses a service claimant and real link endpoints', async ({ browser, request }) => {
   // Explicit shared beforeAll provisions this account even when this case is run alone.
   const auth: Auth = await json(request, '/api/login', { username: 'security_owner', password, device_name: 'fixture native session' });
   const nativeContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
@@ -242,16 +273,11 @@ test('fragment removal and native QR number/verification presentation use real l
   await expect(showing.locator('.hc-qr')).not.toHaveClass(/is-hidden/);
   // Decode actual rendered QR modules; no product hook, secret attribute or test-only QR injection.
   const qr = await readShowingQr(native);
-  const browserContext = await browser.newContext();
-  await browserContext.addInitScript(value => history.replaceState(null, '', '/#link=' + value), qr.split('#')[1]);
-  const receiving = await browserContext.newPage(); await receiving.goto('/');
-  expect(new URL(receiving.url()).hash).toBe('');
-  await expect(receiving.getByTestId('screen-link-receive')).toContainText('Log in on');
-  await receiving.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(receiving.getByTestId('screen-link-receive')).toContainText('whoever runs'); await shots(receiving, 'qr-browser-warning');
-  await receiving.getByRole('button', { name: 'Continue', exact: true }).click();
-  const number = await receiving.locator('.hc-plates').getAttribute('aria-label');
-  await receiving.getByRole('button', { name: 'Continue', exact: true }).click();
+  // Claim through the service fixture: browsers no longer expose a receiving UI.
+  const receiving = new ReceivingLink(new IdentityStorage());
+  receiving.scan(qr, 'browser'); await receiving.confirmHost('synthetic service claimant', true);
+  const state = receiving.snapshot(); if (state.phase !== 'account-confirmation') throw new Error('Expected confirmation');
+  const number = state.code; receiving.confirmAccount();
   await expect(showing.locator('#hc-link-code')).toBeVisible();
   await expect(showing.getByRole('button', { name: /^(Approve|Yes)$/ })).toHaveCount(0);
   expect(approvals).toBe(0);
@@ -260,42 +286,19 @@ test('fragment removal and native QR number/verification presentation use real l
   expect(approvals).toBe(0); await shots(native, 'qr-verification');
   await showing.getByRole('button', { name: 'Deny', exact: true }).click();
   expect(approvals).toBe(0); await shots(native, 'qr-denied');
-  await expect(receiving.getByTestId('screen-link-receive')).toContainText('Your other device said no');
-  const successContext = await browser.newContext();
-  const successPage = await successContext.newPage();
+  await expect(receiving.poll()).rejects.toThrow(); expect(receiving.snapshot().phase).toBe('denied'); receiving.cancel();
   await showing.getByRole('button', { name: 'Make a new code', exact: true }).click();
   await expect(showing.locator('.hc-qr')).not.toHaveClass(/is-hidden/);
-  const nextQr = await readShowingQr(native);
-  await successContext.addInitScript(value => history.replaceState(null, '', '/#link=' + value), nextQr.split('#')[1]);
-  let failExposureOnce = true;
-  await successPage.route('**/api/me/key-exposure', route => {
-    if (route.request().method() === 'POST' && failExposureOnce) { failExposureOnce = false; return route.fulfill({ status: 503, json: { error: 'temporary fixture report failure' } }); }
-    return route.continue();
-  });
-  await successPage.goto('/');
-  await successPage.getByRole('button', { name: 'Continue', exact: true }).click();
-  await successPage.getByRole('button', { name: 'Continue', exact: true }).click();
-  const nextNumber = await successPage.locator('.hc-plates').getAttribute('aria-label');
-  await successPage.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(showing.locator('#hc-link-code')).toBeVisible();
-  await showing.locator('#hc-link-code').fill(nextNumber!);
+  const successful = new ReceivingLink(new IdentityStorage());
+  successful.scan(await readShowingQr(native), 'browser'); await successful.confirmHost('synthetic service claimant', true);
+  const next = successful.snapshot(); if (next.phase !== 'account-confirmation') throw new Error('Expected confirmation');
+  successful.confirmAccount();
+  await expect(showing.locator('#hc-link-code')).toBeVisible(); await showing.locator('#hc-link-code').fill(next.code);
   const ownerPassword = showing.getByLabel('Your password', { exact: true }); await expect(ownerPassword).toBeVisible();
-  expect(approvals).toBe(0);
-  await ownerPassword.fill(password);
-  await showing.getByRole('button', { name: 'Log in Housecall browser', exact: true }).click();
-  await expect(showing).toContainText('Housecall browser is now logged in');
-  expect(approvals).toBe(1); await shots(native, 'qr-approved');
-  await expect(successPage.getByTestId('screen-link-receive')).toContainText('Browser exposure report failed.');
-  await shots(successPage, 'qr-exposure-retry');
-  // Leaving success retains pending housekeeping in the real Security pane.
-  await successPage.getByRole('button', { name: 'Done', exact: true }).click();
-  await successPage.getByRole('button', { name: 'Settings', exact: true }).click();
-  await successPage.getByTestId('screen-settings').getByRole('button', { name: 'Security', exact: true }).click();
-  await expect(successPage.getByTestId('screen-security')).toContainText('Browser exposure report failed.');
-  await successPage.getByTestId('screen-security').getByRole('button', { name: 'Retry', exact: true }).click();
-  await expect(successPage.getByTestId('screen-security')).not.toContainText('Browser exposure report failed.');
-  await successPage.getByTestId('screen-settings').getByRole('button', { name: 'Close', exact: true }).click();
-  await openDm(successPage); await expect(successPage.locator(`li[data-message-id="${fixture.seedId}"] .hc-md`)).toHaveText(fixture.seedText);
+  expect(approvals).toBe(0); await ownerPassword.fill(password);
+  await showing.getByRole('button', { name: 'Log in synthetic service claimant', exact: true }).click();
+  await expect(showing).toContainText('synthetic service claimant is now logged in'); expect(approvals).toBe(1);
+  expect((await successful.poll())?.user.id).toBe(auth.user.id); successful.cancel();
   await showing.getByRole('button', { name: 'Done', exact: true }).click();
   await native.getByTestId('screen-settings').getByRole('button', { name: 'Security', exact: true }).click();
   await native.getByTestId('screen-security').getByRole('button', { name: 'View recovery key', exact: true }).click();
@@ -308,8 +311,7 @@ test('fragment removal and native QR number/verification presentation use real l
   await keyFlow.getByRole('button', { name: 'Replace recovery key', exact: true }).click();
   await expect(keyFlow).toContainText('Replacing does not stop old words that have already leaked.'); await shots(native, 'recovery-replace-warning');
   await keyFlow.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await successContext.close();
-  await nativeContext.close(); await browserContext.close();
+  await nativeContext.close();
   // Both /link delivery paths reject missing/malformed data without an actionable link.
   const staticPage = await request.get('http://127.0.0.1:3031/link');
   expect(staticPage.ok()).toBe(true); expect(await staticPage.text()).toContain('href="housecall://link-scan"');
@@ -451,13 +453,16 @@ async function showingDevice(context: BrowserContext) {
   return page;
 }
 
-test('signed-in locked QR receiver adopts before revoking and ignores an in-flight old 401 while success stays open', async ({ browser, request }) => {
-  const showingContext = await browser.newContext(), receivingContext = await browser.newContext();
+test('signed-in locked native phone QR receiver adopts before revoking and ignores an in-flight old 401 while success stays open', async ({ browser, request }) => {
+  const showingContext = await browser.newContext(), receivingContext = await browser.newContext({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)' });
+  await nativeFixture(receivingContext);
   const source = await showingDevice(showingContext), qr = await readShowingQr(source);
   const receiver = await receivingContext.newPage();
   const loginResponse = receiver.waitForResponse(r => new URL(r.url()).pathname === '/api/login' && r.request().method() === 'POST');
-  await login(receiver, 'security_owner'); const old: Auth = await (await loginResponse).json();
-  await receiver.route('**/api/me/key-exposure', route => route.fulfill({ status: 503, json: { error: 'temporary signed-in fixture exposure failure' } }), { times: 1 });
+  await receiver.goto('/'); await fillSignIn(receiver, 'security_owner');
+  const address = receiver.getByLabel('Server address', { exact: true }); if (await address.isVisible()) await address.fill('http://localhost:1420');
+  await logInButton(receiver).click(); await expect(receiver.getByTestId('security-flow')).toBeVisible();
+  const old: Auth = await (await loginResponse).json();
   const oldMe = await (await request.get('/api/me', { headers: headers(old) })).json();
   // Hold one genuine old-session event request. Release it with the real 401 only after
   // revocation; the replacement must already be driving the app by then.
@@ -507,14 +512,13 @@ test('signed-in locked QR receiver adopts before revoking and ignores an in-flig
     throw new Error(`Real QR video did not decode: ${JSON.stringify(diagnostic)}`, { cause: error });
   }
   await receiving.getByRole('button', { name: 'Continue', exact: true }).click();
-  await receiving.getByRole('button', { name: 'Continue', exact: true }).click();
   const number = await receiving.locator('.hc-plates').getAttribute('aria-label');
   await receiving.getByRole('button', { name: 'Continue', exact: true }).click();
   const showing = source.getByTestId('screen-qr'); await expect(showing.locator('#hc-link-code')).toBeVisible();
   await showing.locator('#hc-link-code').fill(number!);
   await showing.getByLabel('Your password', { exact: true }).fill(password);
   const adoption = receiver.waitForRequest(req => new URL(req.url()).pathname === '/api/me' && !!req.headers().authorization && req.headers().authorization !== `Bearer ${old.token}`);
-  await showing.getByRole('button', { name: 'Log in Housecall browser', exact: true }).click();
+  await showing.getByRole('button', { name: 'Log in Housecall mobile', exact: true }).click();
   const replacementHeaders = (await adoption).headers();
   await expect(receiving).toContainText("You're in");
   await expect.poll(async () => (await request.get('/api/me', { headers: headers(old) })).status()).toBe(401);
@@ -533,18 +537,9 @@ test('signed-in locked QR receiver adopts before revoking and ignores an in-flig
   }
   const currentMe = await request.get('/api/me', { headers: { Authorization: replacementHeaders.authorization, 'X-Device-Key': replacementHeaders['x-device-key'] } });
   expect(currentMe.ok()).toBe(true); expect((await currentMe.json()).session_id).not.toBe(oldMe.session_id);
-  await expect(receiving).toContainText('Browser exposure report failed.');
-  // Adoption already happened. Leaving via Back must retain pending completion work too.
   await receiving.getByRole('button', { name: 'Back', exact: true }).click();
-  await receiver.getByRole('button', { name: 'Settings', exact: true }).click();
-  await receiver.getByTestId('screen-settings').getByRole('button', { name: 'Security', exact: true }).click();
-  const securityPane = receiver.getByTestId('screen-security');
-  await expect(securityPane).toContainText('Browser exposure report failed.');
-  await securityPane.getByRole('button', { name: 'Retry', exact: true }).click();
-  await expect(securityPane).not.toContainText('Browser exposure report failed.');
-  await receiver.getByTestId('screen-settings').getByRole('button', { name: 'Close', exact: true }).click();
   await openDm(receiver); await expect(receiver.locator(`li[data-message-id="${fixture.seedId}"] .hc-md`)).toHaveText(fixture.seedText);
-  // A genuine revocation of the current generation must still sign out and clear browser keys.
+  // A genuine revocation of the current generation must still sign out.
   const currentSession = (await (await request.get('/api/me', { headers: { Authorization: replacementHeaders.authorization, 'X-Device-Key': replacementHeaders['x-device-key'] } })).json()).session_id;
   await json(request, `/api/devices/${currentSession}`, undefined, fixture.alice, 'DELETE');
   await expect(receiver.getByTestId('screen-welcome').or(receiver.getByTestId('screen-sign-in'))).toBeVisible();

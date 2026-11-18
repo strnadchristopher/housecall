@@ -1,3 +1,4 @@
+import { canScanLoginQr } from "../../transport/loginQr";
 import { useEffect, useRef, useState } from 'react';
 import qrcode from 'qrcode-generator';
 import jsQR from 'jsqr';
@@ -105,6 +106,12 @@ export function ShowingFlow() {
 }
 
 export function ReceivingFlow() {
+  const identity = useIdentity();
+  // Guard before mounting any receiver hooks, polling or camera, including direct callers.
+  return canScanLoginQr(identity.native) ? <PhoneReceivingFlow /> : null;
+}
+
+function PhoneReceivingFlow() {
   const security = useSecurity()!, identity = useIdentity(), r = security.receiver;
   const [state, setState] = useState<ReceivingState>(() => r?.snapshot() ?? { phase: 'idle' });
   const [scanning, setScanning] = useState(security.scanImmediately);
@@ -112,7 +119,6 @@ export function ReceivingFlow() {
   const [receiveError, setReceiveError] = useState('');
   const [found, setFound] = useState(false);
   const foundTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const [browserWarning, setBrowserWarning] = useState(false);
   const [completedAuth, setCompletedAuth] = useState<Auth>();
   const [origin, setOrigin] = useState('');
   const locked = useRef(false);
@@ -152,15 +158,15 @@ export function ReceivingFlow() {
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
     const found = jsQR(pixels.data, pixels.width, pixels.height); pixels.data.fill(0); canvas.width = canvas.height = 0;
     if (!found) return;
-    try { r.scan(found.data, identity.native ? 'native-camera' : 'browser'); locked.current = true; setFound(true); foundTimer.current = setTimeout(() => { setScanning(false); setFound(false); refresh(); }, 320); }
+    try { r.scan(found.data, 'native-camera'); locked.current = true; setFound(true); foundTimer.current = setTimeout(() => { setScanning(false); setFound(false); refresh(); }, 320); }
     catch { setWrong(copy.camera.scanWrong); clearTimeout(wrongTimer.current); wrongTimer.current = setTimeout(() => setWrong(''), 3000); }
   }} />;
   const phase = state.phase;
-  const title = phase === 'host-confirmation' ? `${copy.link.newOn(new URL(state.origin).host)}` : browserWarning ? copy.link.new.browserTitle : phase === 'account-confirmation' || phase === 'waiting' ? copy.link.newAs(state.username) : phase === 'completed' ? copy.link.new.in : phase === 'expired' ? copy.link.new.expiredTitle : phase === 'denied' ? copy.link.new.deniedTitle : phase === 'burnt' ? copy.link.new.burntTitle : copy.link.title;
+  const title = phase === 'host-confirmation' ? `${copy.link.newOn(new URL(state.origin).host)}` : phase === 'account-confirmation' || phase === 'waiting' ? copy.link.newAs(state.username) : phase === 'completed' ? copy.link.new.in : phase === 'expired' ? copy.link.new.expiredTitle : phase === 'denied' ? copy.link.new.deniedTitle : phase === 'burnt' ? copy.link.new.burntTitle : copy.link.title;
   return <Sheet open onClose={cancel} title={title} testId="screen-link-receive" fullScreen>
     <ErrorLine text={receiveError || security.error} />
     {phase === 'idle' || phase === 'cancelled' ? <><ol className="hc-qrsteps">{copy.link.new.steps.map((t, i) => <li key={t}><span className="hc-qrsteps__n">{i + 1}</span><span>{t}</span></li>)}</ol><Button kind="primary" onClick={() => { locked.current = false; setFound(false); setScanning(true); }}>{copy.link.new.scan}</Button><Button kind="text" onClick={cancel}>{copy.link.new.password}</Button></> : null}
-    {phase === 'host-confirmation' && (browserWarning ? <><p>{copy.link.new.browserBody(new URL(state.origin).host)}</p><Button kind="primary" busy={security.busy} onClick={() => run(async () => { await r!.confirmHost(deviceName(), true); setBrowserWarning(false); })}>{copy.link.new.continue}</Button></> : <><p>{copy.link.new.chose}</p><Button kind="primary" onClick={() => identity.native ? run(() => r!.confirmHost(deviceName())) : setBrowserWarning(true)}>{copy.link.new.continue}</Button></>)}
+    {phase === 'host-confirmation' && <><p>{copy.link.new.chose}</p><Button kind="primary" onClick={() => run(() => r!.confirmHost(deviceName()))}>{copy.link.new.continue}</Button></>}
     {(phase === 'account-confirmation' || phase === 'waiting') && <div className="hc-qrnew"><p>{copy.link.new.typeThere}</p><div className="hc-plates" aria-label={state.code}>{state.code.split('').map((d, i) => <span className="hc-plate" key={i}>{d}</span>)}</div>{phase === 'account-confirmation' ? <Button kind="primary" onClick={() => { r!.confirmAccount(); refresh(); }}>{copy.link.new.continue}</Button> : <p className="hc-qrnew__wait" role="status">{copy.link.new.waiting}</p>}</div>}
     {phase === 'claiming' && <p role="status">{copy.common.loading}</p>}
     {phase === 'collision' && <><p>{copy.keys.installWarning}</p><Button kind="primary" onClick={() => run(async () => { setCompletedAuth(await r!.acceptInstallReplacement(true)); })}>{copy.link.new.continue}</Button></>}

@@ -1,5 +1,5 @@
 import { resetSensitiveSurface } from "./ui/security/sensitiveSurface";
-import { captureInitialLink } from "./transport/initialLink";
+import { stripBrowserLinkFragment } from "./transport/deepLinks";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { applyDirection } from "./ui/tokens/direction";
@@ -9,7 +9,7 @@ import "./hosted/hosted.css";
 import { hosted } from "./hosted/config";
 import { App } from "./App";
 
-captureInitialLink();
+stripBrowserLinkFragment();
 resetSensitiveSurface();
 applyDirection();
 if (hosted) {

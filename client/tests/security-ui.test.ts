@@ -26,11 +26,12 @@ describe('actual static handoff executable, without a browser or network', () =>
     }
     expect(page(code, 'http://remote.example.test').nodes.has('ok')).toBe(false);
   });
-  it('strips before DOM access and allows only the browser fragment handoff; native href is fixed in HTML', () => {
+  it('strips before DOM access and offers only a payload-free native handoff', () => {
     const { nodes } = page(code); expect(nodes.get('ok')?.hidden).toBe(false);
-    expect(nodes.get('web')?.href).toBe('/#link=' + code.slice(1));
+    expect(nodes.get('web')?.href).toBe('/');
+    expect(script).not.toContain('#link=');
     const html = readFileSync('public/link/index.html', 'utf8');
-    expect(html).toContain('href="housecall://link-scan"'); expect(html).not.toContain('link?c=');
+    expect(html).toContain('href="housecall://link-scan"'); expect(html).not.toContain('link?c='); expect(html).not.toContain('id="web"'); expect(html).not.toContain('Continue in browser');
     expect(html.indexOf('<script src=')).toBeLessThan(html.indexOf('<body>'));
     expect(html).not.toContain('<style>'); expect(html).not.toContain('hc-hash');
     for (const name of ['index.html', 'link.js', 'link.css']) expect(readFileSync('public/link/' + name, 'utf8')).toBe(readFileSync('../server/src/link_page/' + name, 'utf8'));
